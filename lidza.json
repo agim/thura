@@ -6,6 +6,10 @@
     "url": "http://127.0.0.1:5173",
     "dist": "dist"
   },
+  "packs": [
+    "lidza/db",
+    "lidza/auth"
+  ],
   "sdk": {},
   "deploy": {}
 }

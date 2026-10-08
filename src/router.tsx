@@ -5,10 +5,27 @@ import {
   Link,
   Outlet,
   type RouterHistory,
+  useRouterState,
 } from '@tanstack/react-router'
 import { Home } from './pages/Home'
 import { About } from './pages/About'
 import { RouteError } from './ErrorBoundary'
+import { Workspace } from './pages/Workspace'
+import { Contacts } from './pages/Contacts'
+
+function RootLayout() {
+  const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' })
+  if (workspace) return <main className="workspace-frame"><Outlet /></main>
+  return <>
+    <nav className="flex gap-4 border-b border-line px-6 py-3" aria-label="Main navigation">
+      <Link to="/">Home</Link>
+      <Link to="/about">About</Link>
+      <Link to="/workspace">Workspace</Link>
+      <Link to="/contacts">Your contacts</Link>
+    </nav>
+    <main className="mx-auto max-w-3xl px-6 py-6"><Outlet /></main>
+  </>
+}
 
 // Code-based routes. Add a page: create it under src/pages, declare a route
 // here, add it to the tree. Paths under /api are never routed here; they
@@ -18,27 +35,15 @@ import { RouteError } from './ErrorBoundary'
 // `staticData: { static: true }`: its prerendered HTML ships without the
 // client runtime, and `enhance: ['name']` adds src/enhance/name.ts alone.
 export const rootRoute = createRootRoute({
-  component: () => (
-    <>
-      <nav className="flex gap-4 border-b border-line px-6 py-3">
-        <Link to="/" className="text-ink no-underline [&.active]:font-semibold [&.active]:text-brand">
-          Home
-        </Link>
-        <Link to="/about" className="text-ink no-underline [&.active]:font-semibold [&.active]:text-brand">
-          About
-        </Link>
-      </nav>
-      <main className="mx-auto max-w-3xl px-6 py-6">
-        <Outlet />
-      </main>
-    </>
-  ),
+  component: RootLayout,
 })
 
 const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: Home })
 const aboutRoute = createRoute({ getParentRoute: () => rootRoute, path: '/about', component: About, staticData: { static: true } })
 
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute])
+const workspaceRoute = createRoute({ getParentRoute: () => rootRoute, path: '/workspace', component: Workspace })
+const contactsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/contacts', component: Contacts })
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).

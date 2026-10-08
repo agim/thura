@@ -29,11 +29,11 @@ _Open._
 
 ### Who owns the data, and who may see it? <!-- brief:ownership -->
 
-_Open._
+Each workspace owns its data; access is limited to its members and explicit grants.
 
 ### Which roles are there? <!-- brief:roles -->
 
-_Open._
+Owner, admin, and member.
 
 ### Which personal data does it keep? <!-- brief:personal_data -->
 
@@ -51,7 +51,7 @@ _Open._
 
 ### Who may create an account? <!-- brief:registration -->
 
-_Open._
+Invite-only workspaces; no public self-registration.
 
 ## Design
 
@@ -129,7 +129,7 @@ _Open._
 
 ### When should an agent push? <!-- brief:push -->
 
-_Open._
+Push completed implementation slices to agim/thura after local checks; do not wait for GitHub Actions results. Continue implementing until done.
 
 ### What must an agent ask before doing? <!-- brief:approval -->
 

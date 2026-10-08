@@ -1654,6 +1654,14 @@ This app's own conventions, one recipe each; the framework never edits
 this section. Add one with `lidza recipe add "Title"` or by hand (see
 "Add a recipe").
 
+### Scope a query in this app
+
+The brief's ownership model (docs/brief.md): Each workspace owns its data; access is limited to its members and explicit grants.
+
+1. Read the Data section of `docs/brief.md` and the framework recipe "Scope a query to the signed-in user".
+2. Put the access rule in one helper in `handlers/access.go` and call it from every handler; filter every query in `db/queries` by it.
+3. Test it: another user lists nothing and gets 404 on the first user's id; `lidza check`, then `lidza test`.
+
 ## Packs
 
 A pack is Rust compiled to WASM, run by the app in a bounded pool with a

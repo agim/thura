@@ -8,3 +8,138 @@ type Greeting {
   name    string @min(1) @max(100)
   message string
 }
+
+model Workspace {
+  id uuid @id @default(uuid())
+  name string @min(1) @max(120)
+  createdAt time @default(now())
+}
+
+model Contact {
+  id uuid @id @default(uuid())
+  workspaceId uuid @ref(Workspace) @index
+  name string @min(1) @max(200)
+  email string @email @max(254)
+  company string @default("") @max(200)
+  phone string @default("") @max(80)
+  favorite bool @default(false)
+  createdAt time @default(now())
+}
+
+type WorkspaceList {
+  items Workspace[]
+}
+type ContactList {
+  items Contact[]
+}
+type ContactInput {
+  name string @min(1) @max(200)
+  email string @email @max(254)
+  company string? @max(200)
+  phone string? @max(80)
+  favorite bool
+}
+
+type ProvisionAccountInput {
+  email string @email @max(254)
+  name string @min(1) @max(200)
+  password string @min(12) @max(200)
+}
+type CreateWorkspaceInput {
+  name string @min(1) @max(120)
+  ownerEmail string @email @max(254)
+}
+
+// Types of the auth pack.
+model AuthSession @table("auth_session") {
+  id          string @id
+  subject     string @index
+  refreshHash string @unique
+  prevRefreshHash string?
+  rotatedAt   time?
+  expiresAt   time
+  revokedAt   time?
+  remember    bool   @default(true)
+  createdAt   time   @default(now())
+}
+
+model AuthToken @table("auth_token") {
+  id        string @id
+  purpose   string @index
+  subject   string @index
+  hash      string @unique
+  expiresAt time
+  usedAt    time?
+  createdAt time   @default(now())
+}
+
+// Every account that ever signed in, kept by the auth pack: who, when
+// first and last, and whether an admin disabled it.
+model AuthAccount @table("auth_account") {
+  subject     string @id
+  label       string?
+  disabledAt  time?
+  firstSeenAt time   @default(now())
+  lastSeenAt  time   @default(now())
+}
+
+// The pack's own users, for apps that mount its sign-in (auth.Mount):
+// email and password for local sign-in, or no password for an account
+// that only signs in through a provider. An app with its own users table
+// leaves this one empty.
+model AuthUser @table("auth_user") {
+  subject      string @id
+  email        string? @unique
+  name         string?
+  passwordHash string?
+  verifiedAt   time?
+  createdAt    time   @default(now())
+  updatedAt    time   @default(now())
+}
+
+// One row per provider account (Google, GitHub, an OIDC issuer) linked
+// to a subject; id is provider:providerSubject.
+model AuthIdentity @table("auth_identity") {
+  id              string @id
+  provider        string @index
+  providerSubject string
+  subject         string @index
+  email           string?
+  name            string?
+  createdAt       time   @default(now())
+  lastUsedAt      time   @default(now())
+}
+
+// One row per external account a user connected (auth.Conn): the grant's
+// tokens sealed with the master key, never sent to the browser; id is
+// provider:owner.
+model AuthConnection @table("auth_connection") {
+  id            string @id
+  owner         string
+  provider      string
+  subject       string
+  login         string @default("")
+  scopes        string @default("")
+  tokenType     string @default("")
+  accessSealed  string
+  refreshSealed string @default("")
+  expiresAt     time?
+  reconnect     bool   @default(false)
+  createdAt     time   @default(now())
+  updatedAt     time   @default(now())
+  @@unique(owner, provider)
+}
+
+// One role a subject holds in a scope (auth.Roles): a team, a
+// workspace, or "" for the whole app. The roles' permissions are the
+// app's, in code.
+model AuthMember @table("auth_member") {
+  id        uuid   @id @default(uuid())
+  subject   string
+  scope     string @default("")
+  role      string
+  grantedBy string?
+  createdAt time   @default(now())
+  @@unique(subject, scope, role)
+  @@index(scope, role)
+}

@@ -4,6 +4,11 @@ A Līdza application: a Go control plane, a react frontend, one
 binary. `docs/lidza-guide.md` is the guide, `docs/decisions.md` says why
 the app is built the way it is.
 
+The first implementation integrates the supplied six-app prototype at
+`/workspace` and provides real workspace-scoped Contacts at `/contacts`.
+See [implementation status](docs/implementation-status.md) for account
+provisioning, validation, and the remaining features.
+
 ## Run
 
 ```sh

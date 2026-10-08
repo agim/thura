@@ -4,7 +4,263 @@ package schema
 
 import (
 	"github.com/agim/lidza/pkg/validate"
+	"time"
 )
+
+// Workspace is a row of the workspace table.
+type Workspace struct {
+	ID        string    `json:"id" db:"id"`
+	Name      string    `json:"name" db:"name"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of Workspace from schema.lidza.
+func (v Workspace) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 120 {
+		errs.Add("name", "max", "at most 120 character(s)")
+	}
+	return errs.Result()
+}
+
+// Contact is a row of the contact table.
+type Contact struct {
+	ID          string    `json:"id" db:"id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	Name        string    `json:"name" db:"name"`
+	Email       string    `json:"email" db:"email"`
+	Company     string    `json:"company" db:"company"`
+	Phone       string    `json:"phone" db:"phone"`
+	Favorite    bool      `json:"favorite" db:"favorite"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of Contact from schema.lidza.
+func (v Contact) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if len(v.Email) > 254 {
+		errs.Add("email", "max", "at most 254 character(s)")
+	}
+	if v.Email != "" && !validate.Email(v.Email) {
+		errs.Add("email", "email", "not an email address")
+	}
+	if v.Company == "" {
+		errs.Add("company", "required", "required")
+	}
+	if len(v.Company) > 200 {
+		errs.Add("company", "max", "at most 200 character(s)")
+	}
+	if v.Phone == "" {
+		errs.Add("phone", "required", "required")
+	}
+	if len(v.Phone) > 80 {
+		errs.Add("phone", "max", "at most 80 character(s)")
+	}
+	return errs.Result()
+}
+
+// AuthSession is a row of the auth_session table.
+type AuthSession struct {
+	ID              string     `json:"id" db:"id"`
+	Subject         string     `json:"subject" db:"subject"`
+	RefreshHash     string     `json:"refreshHash" db:"refresh_hash"`
+	PrevRefreshHash *string    `json:"prevRefreshHash" db:"prev_refresh_hash"`
+	RotatedAt       *time.Time `json:"rotatedAt" db:"rotated_at"`
+	ExpiresAt       time.Time  `json:"expiresAt" db:"expires_at"`
+	RevokedAt       *time.Time `json:"revokedAt" db:"revoked_at"`
+	Remember        bool       `json:"remember" db:"remember"`
+	CreatedAt       time.Time  `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of AuthSession from schema.lidza.
+func (v AuthSession) Validate() error {
+	var errs validate.Errors
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.RefreshHash == "" {
+		errs.Add("refreshHash", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthToken is a row of the auth_token table.
+type AuthToken struct {
+	ID        string     `json:"id" db:"id"`
+	Purpose   string     `json:"purpose" db:"purpose"`
+	Subject   string     `json:"subject" db:"subject"`
+	Hash      string     `json:"hash" db:"hash"`
+	ExpiresAt time.Time  `json:"expiresAt" db:"expires_at"`
+	UsedAt    *time.Time `json:"usedAt" db:"used_at"`
+	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of AuthToken from schema.lidza.
+func (v AuthToken) Validate() error {
+	var errs validate.Errors
+	if v.Purpose == "" {
+		errs.Add("purpose", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Hash == "" {
+		errs.Add("hash", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthAccount is a row of the auth_account table.
+type AuthAccount struct {
+	Subject     string     `json:"subject" db:"subject"`
+	Label       *string    `json:"label" db:"label"`
+	DisabledAt  *time.Time `json:"disabledAt" db:"disabled_at"`
+	FirstSeenAt time.Time  `json:"firstSeenAt" db:"first_seen_at"`
+	LastSeenAt  time.Time  `json:"lastSeenAt" db:"last_seen_at"`
+}
+
+// Validate applies the rules of AuthAccount from schema.lidza.
+func (v AuthAccount) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
+// AuthUser is a row of the auth_user table.
+type AuthUser struct {
+	Subject      string     `json:"subject" db:"subject"`
+	Email        *string    `json:"email" db:"email"`
+	Name         *string    `json:"name" db:"name"`
+	PasswordHash *string    `json:"passwordHash" db:"password_hash"`
+	VerifiedAt   *time.Time `json:"verifiedAt" db:"verified_at"`
+	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of AuthUser from schema.lidza.
+func (v AuthUser) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
+// AuthIdentity is a row of the auth_identity table.
+type AuthIdentity struct {
+	ID              string    `json:"id" db:"id"`
+	Provider        string    `json:"provider" db:"provider"`
+	ProviderSubject string    `json:"providerSubject" db:"provider_subject"`
+	Subject         string    `json:"subject" db:"subject"`
+	Email           *string   `json:"email" db:"email"`
+	Name            *string   `json:"name" db:"name"`
+	CreatedAt       time.Time `json:"createdAt" db:"created_at"`
+	LastUsedAt      time.Time `json:"lastUsedAt" db:"last_used_at"`
+}
+
+// Validate applies the rules of AuthIdentity from schema.lidza.
+func (v AuthIdentity) Validate() error {
+	var errs validate.Errors
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if v.ProviderSubject == "" {
+		errs.Add("providerSubject", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthConnection is a row of the auth_connection table.
+type AuthConnection struct {
+	ID            string     `json:"id" db:"id"`
+	Owner         string     `json:"owner" db:"owner"`
+	Provider      string     `json:"provider" db:"provider"`
+	Subject       string     `json:"subject" db:"subject"`
+	Login         string     `json:"login" db:"login"`
+	Scopes        string     `json:"scopes" db:"scopes"`
+	TokenType     string     `json:"tokenType" db:"token_type"`
+	AccessSealed  string     `json:"accessSealed" db:"access_sealed"`
+	RefreshSealed string     `json:"refreshSealed" db:"refresh_sealed"`
+	ExpiresAt     *time.Time `json:"expiresAt" db:"expires_at"`
+	Reconnect     bool       `json:"reconnect" db:"reconnect"`
+	CreatedAt     time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt     time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of AuthConnection from schema.lidza.
+func (v AuthConnection) Validate() error {
+	var errs validate.Errors
+	if v.Owner == "" {
+		errs.Add("owner", "required", "required")
+	}
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Login == "" {
+		errs.Add("login", "required", "required")
+	}
+	if v.Scopes == "" {
+		errs.Add("scopes", "required", "required")
+	}
+	if v.TokenType == "" {
+		errs.Add("tokenType", "required", "required")
+	}
+	if v.AccessSealed == "" {
+		errs.Add("accessSealed", "required", "required")
+	}
+	if v.RefreshSealed == "" {
+		errs.Add("refreshSealed", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthMember is a row of the auth_member table.
+type AuthMember struct {
+	ID        string    `json:"id" db:"id"`
+	Subject   string    `json:"subject" db:"subject"`
+	Scope     string    `json:"scope" db:"scope"`
+	Role      string    `json:"role" db:"role"`
+	GrantedBy *string   `json:"grantedBy" db:"granted_by"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of AuthMember from schema.lidza.
+func (v AuthMember) Validate() error {
+	var errs validate.Errors
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Scope == "" {
+		errs.Add("scope", "required", "required")
+	}
+	if v.Role == "" {
+		errs.Add("role", "required", "required")
+	}
+	return errs.Result()
+}
 
 // Greeting is an API type.
 type Greeting struct {
@@ -26,6 +282,155 @@ func (v Greeting) Validate() error {
 	}
 	if v.Message == "" {
 		errs.Add("message", "required", "required")
+	}
+	return errs.Result()
+}
+
+// WorkspaceList is an API type.
+type WorkspaceList struct {
+	Items []Workspace `json:"items"`
+}
+
+// Validate applies the rules of WorkspaceList from schema.lidza.
+func (v WorkspaceList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// ContactList is an API type.
+type ContactList struct {
+	Items []Contact `json:"items"`
+}
+
+// Validate applies the rules of ContactList from schema.lidza.
+func (v ContactList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// ContactInput is an API type.
+type ContactInput struct {
+	Name     string  `json:"name"`
+	Email    string  `json:"email"`
+	Company  *string `json:"company"`
+	Phone    *string `json:"phone"`
+	Favorite bool    `json:"favorite"`
+}
+
+// Validate applies the rules of ContactInput from schema.lidza.
+func (v ContactInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if len(v.Email) > 254 {
+		errs.Add("email", "max", "at most 254 character(s)")
+	}
+	if v.Email != "" && !validate.Email(v.Email) {
+		errs.Add("email", "email", "not an email address")
+	}
+	if v.Company != nil {
+		x := *v.Company
+		if len(x) > 200 {
+			errs.Add("company", "max", "at most 200 character(s)")
+		}
+	}
+	if v.Phone != nil {
+		x := *v.Phone
+		if len(x) > 80 {
+			errs.Add("phone", "max", "at most 80 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// ProvisionAccountInput is an API type.
+type ProvisionAccountInput struct {
+	Email    string `json:"email"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+// Validate applies the rules of ProvisionAccountInput from schema.lidza.
+func (v ProvisionAccountInput) Validate() error {
+	var errs validate.Errors
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if len(v.Email) > 254 {
+		errs.Add("email", "max", "at most 254 character(s)")
+	}
+	if v.Email != "" && !validate.Email(v.Email) {
+		errs.Add("email", "email", "not an email address")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.Password == "" {
+		errs.Add("password", "required", "required")
+	}
+	if len(v.Password) < 12 {
+		errs.Add("password", "min", "at least 12 character(s)")
+	}
+	if len(v.Password) > 200 {
+		errs.Add("password", "max", "at most 200 character(s)")
+	}
+	return errs.Result()
+}
+
+// CreateWorkspaceInput is an API type.
+type CreateWorkspaceInput struct {
+	Name       string `json:"name"`
+	OwnerEmail string `json:"ownerEmail"`
+}
+
+// Validate applies the rules of CreateWorkspaceInput from schema.lidza.
+func (v CreateWorkspaceInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 120 {
+		errs.Add("name", "max", "at most 120 character(s)")
+	}
+	if v.OwnerEmail == "" {
+		errs.Add("ownerEmail", "required", "required")
+	}
+	if len(v.OwnerEmail) > 254 {
+		errs.Add("ownerEmail", "max", "at most 254 character(s)")
+	}
+	if v.OwnerEmail != "" && !validate.Email(v.OwnerEmail) {
+		errs.Add("ownerEmail", "email", "not an email address")
 	}
 	return errs.Result()
 }

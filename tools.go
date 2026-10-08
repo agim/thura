@@ -1,6 +1,13 @@
 package main
 
-import "github.com/agim/lidza"
+import (
+	"context"
+	"github.com/agim/lidza"
+	"github.com/agim/lidza/packs/auth"
+	"strings"
+	"thura/internal/workspace"
+	"thura/schema"
+)
 
 // tools lists the app's MCP tools: functions an agent can call through
 // `lidza mcp` (as app_<name>) and, with LIDZA_MCP_TOKEN set, through the
@@ -15,5 +22,10 @@ import "github.com/agim/lidza"
 //		return n, err
 //	}),
 func tools() []lidza.Tool {
-	return nil
+	return []lidza.Tool{
+		lidza.ToolFunc("provision_account", "Operator only: provision an invited local account. Password input must not be saved in source or logs.", func(ctx context.Context, in schema.ProvisionAccountInput) (auth.Profile, error) {
+			return auth.From(ctx).CreateUser(ctx, strings.ToLower(strings.TrimSpace(in.Email)), strings.TrimSpace(in.Name), in.Password)
+		}),
+		lidza.ToolFunc("create_workspace", "Operator only: create a workspace and grant ownership to an already provisioned account.", workspace.Create),
+	}
 }

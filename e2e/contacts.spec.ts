@@ -1,0 +1,28 @@
+import { expect, test } from '@playwright/test'
+
+test('invited owner manages shared contacts across reload and signs out', async ({ page }) => {
+  const name = `Browser contact ${Date.now()}`
+  await page.goto('/contacts')
+  await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Contacts', exact: true })).toBeVisible()
+  await page.getByLabel('Name', { exact: true }).fill(name)
+  await page.getByLabel('Email', { exact: true }).fill('browser-contact@example.com')
+  await page.getByLabel('Company', { exact: true }).fill('Test Studio')
+  await page.getByRole('button', { name: 'Save contact', exact: true }).click()
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
+  await page.getByRole('button', { name: `Edit ${name}`, exact: true }).click()
+  await page.getByLabel('Name', { exact: true }).fill(`${name} updated`)
+  await page.getByRole('button', { name: 'Save contact', exact: true }).click()
+  await expect(page.getByRole('heading', { name: `${name} updated`, exact: true })).toBeVisible()
+  page.once('dialog', dialog => dialog.accept())
+  await page.getByRole('button', { name: `Delete ${name} updated`, exact: true }).click()
+  await expect(page.getByRole('heading', { name: `${name} updated`, exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Sign in to Thura' })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Sign in to Thura' })).toBeVisible()
+})

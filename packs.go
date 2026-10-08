@@ -2,7 +2,17 @@
 
 package main
 
-import "github.com/agim/lidza"
+import (
+	"github.com/agim/lidza"
 
-// packs lists the packs lidza.json enables; none yet. `lidza pack scaffold <name>` adds one.
-func packs() []lidza.Pack { return nil }
+	auth "github.com/agim/lidza/packs/auth"
+	db "github.com/agim/lidza/packs/db"
+)
+
+// packs lists the packs lidza.json enables, started in this order.
+func packs() []lidza.Pack {
+	return []lidza.Pack{
+		db.Pack(),
+		auth.Pack(),
+	}
+}
