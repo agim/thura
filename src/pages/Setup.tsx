@@ -7,6 +7,7 @@ import { userError } from '../lib/errors'
 export function Setup() {
   const status = useQuery({ queryKey: ['setup-status'], queryFn: () => api.setupStatus(), retry: false })
   const session = useQuery({ queryKey: ['session'], queryFn: () => api.authSession(), retry: false })
+  const logout = useMutation({ mutationFn: () => api.authLogout(), onSuccess: async () => { await Promise.all([session.refetch(), status.refetch()]) } })
   const [token, setToken] = useState('')
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -29,8 +30,13 @@ export function Setup() {
     {status.data && !status.data.open && !status.data.claimed && <p>The deployment operator must enable first-account setup with a private setup token before an administrator can be created.</p>}
     {status.data?.claimed && <>
       <p>{status.data.published ? 'Server configuration has been published.' : 'Your administrator can resume the setup wizard at any time.'}</p>
-      {!session.data?.user && <SignIn />}
-      {session.data?.user && <a className="inline-block rounded border p-2" href="/admin/setup">Open server setup wizard</a>}
+      {!session.data?.user && <SignIn setup />}
+      {session.data?.user && status.data.administrator && <a className="inline-block rounded border p-2" href="/admin/setup">Open server setup wizard</a>}
+      {session.data?.user && !status.data.administrator && <>
+        <p>Only the server administrator can complete server setup.</p>
+        <button className="rounded border p-2" disabled={logout.isPending} onClick={() => logout.mutate()}>Sign out to switch accounts</button>
+        {logout.isError && <p role="alert">{userError(logout.error)}</p>}
+      </>}
     </>}
   </section>
 }

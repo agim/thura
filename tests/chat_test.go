@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"github.com/google/uuid"
 	"net/http"
 	"net/http/httptest"
@@ -57,7 +56,7 @@ func TestChatScopesPrivateRoomsAndIdempotentSends(t *testing.T) {
 	t.Setenv("MATRIX_SERVER_URL", matrix.URL)
 	t.Setenv("MATRIX_SERVER_NAME", "matrix.test")
 	t.Setenv("MATRIX_AS_TOKEN", token)
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	pool := db.From(ctx)
 	suffix := time.Now().UnixNano()

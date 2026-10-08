@@ -7,7 +7,6 @@ import (
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/storage"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"github.com/golang-jwt/jwt/v5"
 	"io"
 	"net/http"
@@ -35,7 +34,7 @@ func TestOfficeSignedCallbacksVersionConflictAndRevocation(t *testing.T) {
 	t.Setenv("OFFICE_SERVER_URL", documents.URL)
 	t.Setenv("OFFICE_APP_URL", "http://app.example")
 	t.Setenv("OFFICE_JWT_SECRET", secret)
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("office-%d@example.com", time.Now().UnixNano())
 	pw := "forest waterfall copper lantern 7193"

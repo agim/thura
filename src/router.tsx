@@ -10,6 +10,8 @@ import {
 } from '@tanstack/react-router'
 import { RouteError } from './ErrorBoundary'
 import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@lidza/client'
 import pageMetadata from '../app/page-metadata.json'
 
 function PageHead() {
@@ -31,7 +33,15 @@ function PageHead() {
 }
 
 function RootLayout() {
+  const path = useRouterState({ select: state => state.location.pathname })
+  const setup = useQuery({ queryKey: ['setup-status'], queryFn: () => api.setupStatus(), enabled: typeof window !== 'undefined', retry: false })
+  const unfinished = setup.data && (!setup.data.claimed || !setup.data.published)
+  const target = setup.data?.claimed && setup.data.administrator ? '/admin/setup' : '/setup'
+  useEffect(() => {
+    if (unfinished && path !== target) window.location.replace(target)
+  }, [unfinished, path, target])
   const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' || state.location.pathname === '/app' })
+  if (unfinished) return <><PageHead /><main className="mx-auto max-w-3xl px-6 py-6">{path === target ? <Outlet /> : <p role="status">Opening server setup…</p>}</main></>
   if (workspace) return <><PageHead /><main className="workspace-frame"><Outlet /></main></>
   return <>
     <PageHead />

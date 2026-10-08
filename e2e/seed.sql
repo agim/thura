@@ -34,3 +34,10 @@ INSERT INTO calendar_reply_grant(id,attendee_id,token_hash,sequence,expires_at) 
 -- Synthetic peer for the dedicated real-media meeting suite.
 INSERT INTO auth_user(subject,email,name,password_hash) VALUES ('thura-meeting-peer-fixture','meeting-peer-e2e@example.com','Test Meeting Peer','$argon2id$v=19$m=65536,t=3,p=2$wwjJYHkBhjBqsUkagwIJLA$96ZgNf8PIpnIC6wkfHuoh39j5n77Hs1ufezVtQrRIV4') ON CONFLICT(subject) DO NOTHING;
 INSERT INTO auth_member(subject,scope,role) VALUES ('thura-meeting-peer-fixture','a0000000-0000-4000-8000-000000000001','member') ON CONFLICT(subject,scope,role) DO NOTHING;
+
+-- Browser fixtures use explicit .env.test providers rather than real wizard
+-- credentials. Mark this synthetic installation configured; bootstrap tests
+-- exercise fresh state in isolated databases and mocked browser responses.
+INSERT INTO server_setup(id,published_revision)
+VALUES ('00000000-0000-4000-8000-000000000001',1)
+ON CONFLICT(id) DO UPDATE SET published_revision=1;

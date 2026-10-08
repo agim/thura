@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"net/http"
 	"testing"
 	"thura/app"
@@ -17,7 +16,7 @@ import (
 )
 
 func TestDriveResumeVersionsAndShareRevocation(t *testing.T) {
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("drive-%d@example.com", time.Now().UnixNano())
 	pw := "maple meadow waterfall lantern 7593"

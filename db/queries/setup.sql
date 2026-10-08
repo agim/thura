@@ -4,6 +4,9 @@ INSERT INTO server_setup(id) VALUES('00000000-0000-4000-8000-000000000001') ON C
 SELECT * FROM server_setup WHERE id='00000000-0000-4000-8000-000000000001';
 -- name: LockServerSetup :one
 SELECT * FROM server_setup WHERE id='00000000-0000-4000-8000-000000000001' FOR UPDATE;
+-- name: GetServerSetupRouting :one
+SELECT subject,published_revision,EXISTS(SELECT 1 FROM auth_user) AS has_accounts
+FROM server_setup WHERE id='00000000-0000-4000-8000-000000000001';
 -- name: CountSetupAccounts :one
 SELECT COUNT(*) FROM auth_user;
 -- name: ClaimServerSetup :exec

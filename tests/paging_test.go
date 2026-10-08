@@ -10,7 +10,6 @@ import (
 
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"thura/internal/mailbox"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -18,7 +17,7 @@ import (
 
 func TestDirectoryAndMailPagingSearchIsolation(t *testing.T) {
 	t.Setenv("JOBS_WORKERS", "0")
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	password := "lilac copper meadow lantern 7829"
 	var spaces []schema.Workspace

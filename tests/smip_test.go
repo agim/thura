@@ -59,7 +59,7 @@ func newSmipApp(t *testing.T, domain, peer string) *smipApp {
 	}
 	t.Setenv("SMIP_ENABLED", "true")
 	t.Setenv("SMIP_CONFIG", string(raw))
-	server := lidzatest.Start(t, app.New(nil))
+	server := startConfigured(t, app.New(nil))
 	ctx := server.Context()
 	password := "smip river meadow lantern 87334"
 	stamp := time.Now().UnixNano()
@@ -386,7 +386,7 @@ func TestSmipImportFailuresRollbackAndRecover(t *testing.T) {
 func TestSmipDisabledReceiverAndAnonymousReview(t *testing.T) {
 	t.Setenv("SMIP_ENABLED", "false")
 	t.Setenv("SMIP_CONFIG", "")
-	server := lidzatest.Start(t, app.New(nil))
+	server := startConfigured(t, app.New(nil))
 	if response := server.JSON(t, "POST", smip.ApplicationMessagePath, map[string]string{}, nil); response.StatusCode != 503 {
 		t.Fatalf("disabled receiver got %d", response.StatusCode)
 	}

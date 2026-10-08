@@ -65,6 +65,24 @@ func (q *Queries) GetServerSetup(ctx context.Context) (ServerSetup, error) {
 	return i, err
 }
 
+const getServerSetupRouting = `-- name: GetServerSetupRouting :one
+SELECT subject,published_revision,EXISTS(SELECT 1 FROM auth_user) AS has_accounts
+FROM server_setup WHERE id='00000000-0000-4000-8000-000000000001'
+`
+
+type GetServerSetupRoutingRow struct {
+	Subject           string `json:"subject"`
+	PublishedRevision int32  `json:"published_revision"`
+	HasAccounts       bool   `json:"has_accounts"`
+}
+
+func (q *Queries) GetServerSetupRouting(ctx context.Context) (GetServerSetupRoutingRow, error) {
+	row := q.db.QueryRow(ctx, getServerSetupRouting)
+	var i GetServerSetupRoutingRow
+	err := row.Scan(&i.Subject, &i.PublishedRevision, &i.HasAccounts)
+	return i, err
+}
+
 const lockServerSetup = `-- name: LockServerSetup :one
 SELECT id, subject, workspace_id, revision, published_revision, draft, published, step, published_at FROM server_setup WHERE id='00000000-0000-4000-8000-000000000001' FOR UPDATE
 `

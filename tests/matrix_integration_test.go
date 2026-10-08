@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"github.com/google/uuid"
 	"net/url"
 	"testing"
@@ -24,7 +23,7 @@ func TestMatrixRealFederationAndBan(t *testing.T) {
 	t.Setenv("MATRIX_SERVER_URL", "http://127.0.0.1:8108")
 	t.Setenv("MATRIX_SERVER_NAME", "matrix-a.thura.test:8448")
 	t.Setenv("MATRIX_AS_TOKEN", "thura-matrix-a-application-service-fixture-token-99184")
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	cfgA, err := provider.Load()
 	if err != nil {

@@ -1,6 +1,6 @@
 # Resumable server setup
 
-Open `/setup` on a new deployment to create its first server administrator, then sign in and open `/admin/setup`. The wizard is part of the official Līdza admin frame. Workspace owners/admins do not automatically become server administrators.
+A deployment with no users automatically redirects page requests to `/setup` to create its first server administrator. Until configuration has been published, signed-out visitors stay on `/setup` for sign-in, and the signed-in server administrator automatically opens `/admin/setup`. Other application and built-in admin pages redirect to the appropriate setup page; ordinary app APIs return HTTP 503 with a setup-required response. Health checks, setup resources and essential sign-in endpoints remain available. Redirects are not cached, and saving an unfinished draft does not unlock the app. Publishing configuration unlocks normal routes; restarting a draft later preserves availability through the existing published settings. The wizard is part of the official Līdza admin frame. Workspace owners/admins do not automatically become server administrators.
 
 ## Before the first account
 

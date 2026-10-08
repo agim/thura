@@ -20,7 +20,7 @@ import (
 // from these types, so the frontend cannot drift from the API.
 func routes(r *router.Router) {
 	mountAdmin(r)
-	router.Route(r, "GET /api/v1/setup/status", handlers.SetupStatus)
+	router.Route(r, "GET /api/v1/setup/status", handlers.SetupStatus, auth.Optional())
 	router.Route(r, "POST /api/v1/setup/claim", handlers.ClaimSetup, auth.Throttle())
 	// Versioned peer wire endpoint; all application routes stay under /api.
 	r.HandleFunc("POST /api/v1/smip/v0.1/messages", federation.Receive)

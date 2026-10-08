@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"github.com/google/uuid"
 	"strings"
 	"testing"
@@ -21,7 +20,7 @@ func TestCalendarMeetingLinkPreservesLocationAndScopesAccess(t *testing.T) {
 	t.Setenv("LIVEKIT_PUBLIC_URL", "ws://localhost:7880")
 	t.Setenv("LIVEKIT_API_KEY", "calendar-test")
 	t.Setenv("LIVEKIT_API_SECRET", "synthetic-calendar-test-secret-791934")
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("calendar-meet-%d@example.com", time.Now().UnixNano())
 	password := "river forest lantern copper 4938"

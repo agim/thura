@@ -13,7 +13,6 @@ import (
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/storage"
-	"github.com/agim/lidza/pkg/lidzatest"
 	q "thura/db/queries/gen"
 	"thura/internal/drive"
 	"thura/internal/platform/objectgc"
@@ -24,7 +23,7 @@ import (
 func TestDriveQuotaReservationPurgeAndCleanup(t *testing.T) {
 	t.Setenv("DRIVE_QUOTA_BYTES", "1048576")
 	t.Setenv("STORAGE_DIR", t.TempDir())
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("drive-ops-%d@example.com", time.Now().UnixNano())
 	pw := "maple meadow waterfall lantern 7593"

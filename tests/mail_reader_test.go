@@ -18,7 +18,6 @@ import (
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/storage"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"thura/app"
 	"thura/internal/mailbox"
 	"thura/internal/workspace"
@@ -28,7 +27,7 @@ import (
 func TestMailReaderSanitizationAndScopedCIDImages(t *testing.T) {
 	const secret = "synthetic-reader-secret-at-least-32-characters"
 	t.Setenv("MAIL_INBOUND_SECRET", secret)
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("reader-%d@example.com", time.Now().UnixNano())
 	pw := "copper waterfall mountain lamp 8624"

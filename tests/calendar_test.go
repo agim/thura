@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"io"
 	"net/http"
 	"strings"
@@ -18,7 +17,7 @@ import (
 )
 
 func TestCalendarPrivacyConcurrentVersionsAndICSImport(t *testing.T) {
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	suffix := time.Now().UnixNano()
 	email := fmt.Sprintf("calendar-%d@example.com", suffix)

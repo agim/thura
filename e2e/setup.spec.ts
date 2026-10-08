@@ -44,3 +44,27 @@ test('setup preserves failed input and recovers an ambiguous first-account respo
   await expect(page.getByRole('button', { name: 'Create administrator', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
 })
+
+test('unconfigured app navigation automatically opens setup without normal navigation', async ({ page }) => {
+  await page.route('**/api/v1/setup/status', route => route.fulfill({ json: { open: true, claimed: false, published: false, administrator: false } }))
+  await page.goto('/app')
+  await expect(page).toHaveURL(/\/setup$/)
+  await expect(page.getByLabel('Administrator email', { exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCount(0)
+})
+
+test('administrator sign-in automatically opens the unfinished configuration wizard', async ({ page }) => {
+  let signedIn = false
+  await page.route('**/api/v1/setup/status', route => route.fulfill({ json: { open: false, claimed: true, published: false, administrator: signedIn } }))
+  await page.route('**/api/v1/auth/session', route => route.fulfill({ json: { user: signedIn ? { id: 'public-setup-operator' } : null } }))
+  await page.route('**/api/v1/auth/login', route => { signedIn = true; return route.fulfill({ json: {} }) })
+  await page.route('**/admin/setup', route => route.fulfill({ contentType: 'text/html', body: '<h1>Native configuration wizard fixture</h1>' }))
+  await page.goto('/setup')
+  await expect(page.getByRole('link', { name: 'Forgot your password?' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Explore the sample workspace' })).toHaveCount(0)
+  await page.getByLabel('Email', { exact: true }).fill('operator@browser.example')
+  await page.getByLabel('Password', { exact: true }).fill('public browser test password 4829')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page).toHaveURL(/\/admin\/setup$/)
+  await expect(page.getByRole('heading', { name: 'Native configuration wizard fixture' })).toBeVisible()
+})

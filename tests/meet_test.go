@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"github.com/google/uuid"
 	lkauth "github.com/livekit/protocol/auth"
 	"io"
@@ -62,7 +61,7 @@ func TestMeetingScopedTokensWebhooksAndRevocation(t *testing.T) {
 	t.Setenv("LIVEKIT_PUBLIC_URL", "ws://localhost:7880")
 	t.Setenv("LIVEKIT_API_KEY", key)
 	t.Setenv("LIVEKIT_API_SECRET", secret)
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	pool := db.From(ctx)
 	suffix := time.Now().UnixNano()

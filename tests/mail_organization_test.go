@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"strings"
 	"testing"
 	"thura/app"
@@ -16,7 +15,7 @@ import (
 
 func TestMailOrganizationRepliesAndScopedThreads(t *testing.T) {
 	t.Setenv("JOBS_WORKERS", "0")
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("organization-%d@example.com", time.Now().UnixNano())
 	password := "river forest lantern copper 4938"

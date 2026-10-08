@@ -70,9 +70,9 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 // Middleware for the API only goes on the router (r.Use in routes.go).
 func appMiddleware() []middleware.Middleware {
 	if os.Getenv("LIDZA_MODE") == "dev" {
-		return nil
+		return []middleware.Middleware{setup.Gate}
 	}
-	return []middleware.Middleware{func(next http.Handler) http.Handler {
+	return []middleware.Middleware{setup.Gate, func(next http.Handler) http.Handler {
 		var once sync.Once
 		var handler http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

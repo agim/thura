@@ -11,7 +11,6 @@ import (
 
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"thura/internal/mailbox"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -19,7 +18,7 @@ import (
 
 func TestForwardAttachmentsAreAtomicAndMailboxScoped(t *testing.T) {
 	t.Setenv("JOBS_WORKERS", "0")
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("forward-%d@example.com", time.Now().UnixNano())
 	password := "river forest lantern copper 4938"

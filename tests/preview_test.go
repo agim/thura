@@ -14,7 +14,6 @@ import (
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/storage"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"thura/app"
 	q "thura/db/queries/gen"
 	"thura/internal/drive"
@@ -24,7 +23,7 @@ import (
 )
 
 func TestPrivateDrivePreviewVersionsRevocationAndCleanup(t *testing.T) {
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	stamp := time.Now().UnixNano()
 	email, outsiderEmail := fmt.Sprintf("preview-%d@example.com", stamp), fmt.Sprintf("preview-other-%d@example.com", stamp)

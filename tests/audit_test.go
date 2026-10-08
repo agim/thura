@@ -12,14 +12,13 @@ import (
 	"github.com/agim/lidza/packs/audit"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"thura/app"
 	"thura/internal/workspace"
 	"thura/schema"
 )
 
 func TestWorkspaceAuditAuthorizationPagingAndRollback(t *testing.T) {
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	pool := db.From(ctx)
 	password := "audit meadow lantern waterfall 8319"

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -350,6 +351,11 @@ func TestSetupPublishAuditRollbackRestartAndPolicyActivation(t *testing.T) {
 func TestSetupEnforcedSharingAndInvitationRestrictions(t *testing.T) {
 	s := setupServer(t)
 	in := claimSetup(t, s)
+	completeSetup(t, s)
+	revision, _, _ := setupRow(t, s)
+	if r := setupForm(t, s, "publish", url.Values{"revision": {strconv.Itoa(revision)}, "confirm": {"publish"}}); strings.Contains(r.Header.Get("Location"), "error=") {
+		t.Fatal("policy fixture setup publication failed")
+	}
 	w, e := workspace.Create(s.Context(), schema.CreateWorkspaceInput{Name: "Restricted team", OwnerEmail: in.Email})
 	if e != nil {
 		t.Fatal(e)
@@ -398,6 +404,11 @@ func TestSetupEnforcedSharingAndInvitationRestrictions(t *testing.T) {
 func TestSetupInvitationAcceptanceRechecksReducedQuota(t *testing.T) {
 	s := setupServer(t)
 	in := claimSetup(t, s)
+	completeSetup(t, s)
+	revision, _, _ := setupRow(t, s)
+	if r := setupForm(t, s, "publish", url.Values{"revision": {strconv.Itoa(revision)}, "confirm": {"publish"}}); strings.Contains(r.Header.Get("Location"), "error=") {
+		t.Fatal("policy fixture setup publication failed")
+	}
 	w, e := workspace.Create(s.Context(), schema.CreateWorkspaceInput{Name: "Seat limit", OwnerEmail: in.Email})
 	if e != nil {
 		t.Fatal(e)

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/pkg/lidzatest"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -58,7 +57,7 @@ func TestPersistentMailAndConnectorRouting(t *testing.T) {
 		t.Setenv(prefix+"MAIL_BASE_URL", config[0])
 		t.Setenv(prefix+"MAIL_API_KEY", config[1])
 	}
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("mail-owner-%d@example.com", time.Now().UnixNano())
 	pw := "copper meadow waterfall lantern 9134"
@@ -150,7 +149,7 @@ func TestPersistentMailAndConnectorRouting(t *testing.T) {
 
 func TestSignedInboundMIME(t *testing.T) {
 	t.Setenv("MAIL_INBOUND_SECRET", "fixture-inbound-secret-with-at-least-32-characters")
-	srv := lidzatest.Start(t, app.New(nil))
+	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("inbound-owner-%d@example.com", time.Now().UnixNano())
 	pw := "copper waterfall mountain lamp 8624"
