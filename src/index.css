@@ -23,3 +23,13 @@
 .workspace-frame { padding: 24px; min-height: 100dvh; background: light-dark(#edece5, #131714); }
 #orbit-workspace .demo-banner { padding: 10px 18px; background: var(--canvas); border-bottom: 1px solid var(--line); font-size: 13px; }
 @media (max-width: 600px) { .workspace-frame { padding: 0; } }
+
+#orbit-workspace .mailbox-picker { display: flex; align-items: center; gap: 12px; padding: 12px 18px; }
+#orbit-workspace .ws-brand select { max-width: 220px; margin-left: 8px; }
+#orbit-workspace .ws-account a, #orbit-workspace .ws-account button { display: inline-flex; align-items: center; gap: 6px; }
+#orbit-mail-vibrant .mailrow { width: 100%; display: flex; flex-direction: column; align-items: start; text-align: left; border-bottom: 1px solid var(--line); padding: 16px; border-radius: 0; }
+#orbit-mail-vibrant .mailrow.selected { background: var(--tealsoft); }
+#orbit-mail-vibrant .composer-form { display: flex; flex-direction: column; gap: 12px; }
+#orbit-mail-vibrant .composer-form label { display: flex; flex-direction: column; gap: 4px; }
+#orbit-mail-vibrant .safe-email { width: 100%; min-height: 300px; border: 0; background: white; }
+@media(max-width:600px) { #orbit-workspace .ws-brand { flex-wrap: wrap; } #orbit-workspace .mailbox-picker select { min-width: 0; max-width: 75%; } }

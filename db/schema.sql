@@ -3,6 +3,8 @@
 
 CREATE TYPE workspace_role AS ENUM ('owner', 'admin', 'member');
 
+CREATE TYPE mail_folder AS ENUM ('inbox', 'drafts', 'sent', 'archive', 'trash', 'spam');
+
 CREATE TABLE workspace (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name varchar(120) NOT NULL,
@@ -34,6 +36,53 @@ CREATE TABLE invitation (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX invitation_workspace_id_idx ON invitation (workspace_id);
+
+CREATE TABLE mailbox (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  name varchar(120) NOT NULL,
+  address varchar(254) NOT NULL,
+  config_prefix varchar(100) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX mailbox_workspace_id_idx ON mailbox (workspace_id);
+
+CREATE TABLE mail_item (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  mailbox_id uuid NOT NULL REFERENCES mailbox(id),
+  author_id text NOT NULL,
+  folder mail_folder NOT NULL,
+  from_address text NOT NULL DEFAULT '',
+  to_address text NOT NULL DEFAULT '',
+  cc text NOT NULL DEFAULT '',
+  bcc text NOT NULL DEFAULT '',
+  subject text NOT NULL DEFAULT '',
+  text_body text NOT NULL DEFAULT '',
+  html_body text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT 'draft',
+  starred boolean NOT NULL DEFAULT false,
+  unread boolean NOT NULL DEFAULT false,
+  provider_id text NOT NULL DEFAULT '',
+  raw_key text NOT NULL DEFAULT '',
+  external_id text,
+  thread_id text NOT NULL DEFAULT '',
+  send_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX mail_item_mailbox_id_idx ON mail_item (mailbox_id);
+CREATE UNIQUE INDEX mail_item_mailbox_id_external_id_key ON mail_item (mailbox_id, external_id);
+
+CREATE TABLE mail_attachment (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  item_id uuid NOT NULL REFERENCES mail_item(id),
+  name text NOT NULL,
+  content_type text NOT NULL,
+  size integer NOT NULL,
+  object_key text NOT NULL,
+  content_id text NOT NULL DEFAULT ''
+);
+CREATE INDEX mail_attachment_item_id_idx ON mail_attachment (item_id);
 
 CREATE TABLE auth_session (
   id text PRIMARY KEY,

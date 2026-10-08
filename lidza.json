@@ -10,7 +10,8 @@
     "lidza/db",
     "lidza/auth",
     "lidza/jobs",
-    "lidza/mail"
+    "lidza/mail",
+    "lidza/storage"
   ],
   "sdk": {},
   "deploy": {}

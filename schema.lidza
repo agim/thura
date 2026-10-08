@@ -98,6 +98,94 @@ type RoleInput {
   role WorkspaceRole
 }
 
+enum MailFolder { inbox drafts sent archive trash spam }
+
+model Mailbox {
+  id uuid @id @default(uuid())
+  workspaceId uuid @ref(Workspace) @index
+  name string @max(120)
+  address string @email @max(254)
+  configPrefix string @max(100)
+  createdAt time @default(now())
+}
+model MailItem {
+  id uuid @id @default(uuid())
+  mailboxId uuid @ref(Mailbox) @index
+  authorId string
+  folder MailFolder
+  fromAddress string @default("")
+  toAddress string @default("")
+  cc string @default("")
+  bcc string @default("")
+  subject string @default("")
+  textBody text @default("")
+  htmlBody text @default("")
+  status string @default("draft")
+  starred bool @default(false)
+  unread bool @default(false)
+  providerId string @default("")
+  rawKey string @default("")
+  externalId string?
+  threadId string @default("")
+  sendAt time?
+  createdAt time @default(now())
+  updatedAt time @default(now())
+  @@unique(mailboxId, externalId)
+}
+model MailAttachment {
+  id uuid @id @default(uuid())
+  itemId uuid @ref(MailItem) @index
+  name string
+  contentType string
+  size int
+  objectKey string
+  contentId string @default("")
+}
+type MailboxList {
+  items Mailbox[]
+}
+type MailItemList {
+  items MailItem[]
+}
+type AttachmentView {
+  id uuid
+  name string
+  contentType string
+  size int
+}
+type MailDetail {
+  item MailItem
+  attachments AttachmentView[]
+}
+type DraftInput {
+  to string? @max(2000)
+  cc string? @max(2000)
+  bcc string? @max(2000)
+  subject string? @max(500)
+  text string? @max(500000)
+  html string? @max(500000)
+  threadId string? @max(500)
+}
+type MailFlags {
+  folder MailFolder?
+  starred bool?
+  unread bool?
+}
+type SendMailInput {
+  sendAt time?
+}
+type ProvisionMailboxInput {
+  workspaceId uuid
+  name string @min(1) @max(120)
+  address string @email @max(254)
+  configPrefix string? @max(100)
+}
+type FileContent {
+  name string
+  contentType string
+  data string
+}
+
 // Types of the auth pack.
 model AuthSession @table("auth_session") {
   id          string @id

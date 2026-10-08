@@ -56,7 +56,7 @@ function WorkspaceContacts() {
   </div>
 }
 
-function ContactBook({ workspaceId }: { workspaceId: string }) {
+export function ContactBook({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()
   const [edit, setEdit] = useState<Contact | null>(null)
   const [form, setForm] = useState<ContactInput>(emptyContact)

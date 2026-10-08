@@ -10,6 +10,52 @@ import (
 	"time"
 )
 
+type MailFolder string
+
+const (
+	MailFolderInbox   MailFolder = "inbox"
+	MailFolderDrafts  MailFolder = "drafts"
+	MailFolderSent    MailFolder = "sent"
+	MailFolderArchive MailFolder = "archive"
+	MailFolderTrash   MailFolder = "trash"
+	MailFolderSpam    MailFolder = "spam"
+)
+
+func (e *MailFolder) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MailFolder(s)
+	case string:
+		*e = MailFolder(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MailFolder: %T", src)
+	}
+	return nil
+}
+
+type NullMailFolder struct {
+	MailFolder MailFolder `json:"mail_folder"`
+	Valid      bool       `json:"valid"` // Valid is true if MailFolder is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMailFolder) Scan(value interface{}) error {
+	if value == nil {
+		ns.MailFolder, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MailFolder.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMailFolder) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MailFolder), nil
+}
+
 type WorkspaceRole string
 
 const (
@@ -177,6 +223,40 @@ type JobSchedule struct {
 	UpdatedAt time.Time  `json:"updated_at"`
 }
 
+type MailAttachment struct {
+	ID          string `json:"id"`
+	ItemID      string `json:"item_id"`
+	Name        string `json:"name"`
+	ContentType string `json:"content_type"`
+	Size        int32  `json:"size"`
+	ObjectKey   string `json:"object_key"`
+	ContentID   string `json:"content_id"`
+}
+
+type MailItem struct {
+	ID          string     `json:"id"`
+	MailboxID   string     `json:"mailbox_id"`
+	AuthorID    string     `json:"author_id"`
+	Folder      MailFolder `json:"folder"`
+	FromAddress string     `json:"from_address"`
+	ToAddress   string     `json:"to_address"`
+	Cc          string     `json:"cc"`
+	Bcc         string     `json:"bcc"`
+	Subject     string     `json:"subject"`
+	TextBody    string     `json:"text_body"`
+	HTMLBody    string     `json:"html_body"`
+	Status      string     `json:"status"`
+	Starred     bool       `json:"starred"`
+	Unread      bool       `json:"unread"`
+	ProviderID  string     `json:"provider_id"`
+	RawKey      string     `json:"raw_key"`
+	ExternalID  *string    `json:"external_id"`
+	ThreadID    string     `json:"thread_id"`
+	SendAt      *time.Time `json:"send_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
 type MailMessage struct {
 	ID          string     `json:"id"`
 	Recipient   string     `json:"recipient"`
@@ -196,6 +276,15 @@ type MailMessage struct {
 	Attempts    int32      `json:"attempts"`
 	CreatedAt   time.Time  `json:"created_at"`
 	SentAt      *time.Time `json:"sent_at"`
+}
+
+type Mailbox struct {
+	ID           string    `json:"id"`
+	WorkspaceID  string    `json:"workspace_id"`
+	Name         string    `json:"name"`
+	Address      string    `json:"address"`
+	ConfigPrefix string    `json:"config_prefix"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type Workspace struct {

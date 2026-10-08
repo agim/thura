@@ -1,0 +1,41 @@
+import { expect, test } from '@playwright/test'
+
+test('shared mailbox persists drafts, uploads privately, queues and undoes sending', async ({ page }) => {
+  const subject = `Persistent mail ${Date.now()}`
+  await page.goto('/app')
+  await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('button', { name: 'Compose', exact: true }).click()
+  await page.getByLabel('To', { exact: true }).fill('recipient@example.com')
+  await page.getByLabel('Subject', { exact: true }).fill(subject)
+  await page.getByLabel('Message', { exact: true }).fill('A durable draft body')
+  await page.getByLabel('Attachments', { exact: true }).setInputFiles({ name: 'note.txt', mimeType: 'text/plain', buffer: Buffer.from('Private attachment') })
+  await expect(page.getByText('note.txt', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Draft saved')
+  await page.reload()
+  await page.getByRole('button', { name: 'Drafts', exact: true }).click()
+  await page.getByRole('button').filter({ has: page.getByText(subject, { exact: true }) }).click()
+  await expect(page.getByLabel('Message', { exact: true })).toHaveValue('A durable draft body')
+  await expect(page.getByText('note.txt', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Send', exact: true }).click()
+  await page.getByRole('button', { name: 'Undo send', exact: true }).click()
+  await expect(page.getByLabel('Message', { exact: true })).toHaveValue('A durable draft body')
+  await expect(page.getByText('Sending cancelled. Draft restored.', { exact: true })).toBeVisible()
+})
+
+test('mail HTML cannot run scripts, navigate, or load remote images', async ({ page }) => {
+  let tracking = 0
+  await page.route('https://tracking.invalid/**', route => { tracking++; return route.abort() })
+  await page.goto('/app')
+  await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('button').filter({ has: page.getByText('HTML safety fixture', { exact: true }) }).click()
+  const body = page.frameLocator('iframe[title="Email body · external content blocked"]')
+  await expect(body.getByText('Safe fixture body', { exact: true })).toBeVisible()
+  await expect(body.locator('script, img, a[href]')).toHaveCount(0)
+  expect(await page.locator('body').getAttribute('data-injected')).toBeNull()
+  expect(tracking).toBe(0)
+})

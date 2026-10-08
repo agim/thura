@@ -5,6 +5,7 @@ import (
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/auth"
 	"strings"
+	"thura/internal/mailbox"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -23,6 +24,7 @@ import (
 //	}),
 func tools() []lidza.Tool {
 	return []lidza.Tool{
+		lidza.ToolFunc("provision_mailbox", "Operator only: assign a sending address and credential prefix to a workspace mailbox.", mailbox.Provision),
 		lidza.ToolFunc("provision_account", "Operator only: provision an invited local account. Password input must not be saved in source or logs.", func(ctx context.Context, in schema.ProvisionAccountInput) (auth.Profile, error) {
 			return auth.From(ctx).CreateUser(ctx, strings.ToLower(strings.TrimSpace(in.Email)), strings.TrimSpace(in.Name), in.Password)
 		}),

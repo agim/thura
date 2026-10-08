@@ -14,9 +14,10 @@ import { Workspace } from './pages/Workspace'
 import { Contacts } from './pages/Contacts'
 import { Members } from './pages/Members'
 import { Invite, Forgot, Reset, Verify } from './pages/Account'
+import { AppWorkspace } from './pages/App'
 
 function RootLayout() {
-  const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' })
+  const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' || state.location.pathname === '/app' })
   if (workspace) return <main className="workspace-frame"><Outlet /></main>
   return <>
     <nav className="flex flex-wrap gap-4 border-b border-line px-6 py-3" aria-label="Main navigation">
@@ -24,6 +25,7 @@ function RootLayout() {
       <Link to="/about">About</Link>
       <Link to="/workspace">Workspace</Link>
       <Link to="/contacts">Your contacts</Link>
+      <Link to="/app">Open Thura</Link>
       <Link to="/members">Members</Link>
     </nav>
     <main className="mx-auto max-w-3xl px-6 py-6"><Outlet /></main>
@@ -51,7 +53,8 @@ const inviteRoute = createRoute({ getParentRoute: () => rootRoute, path: '/invit
 const forgotRoute = createRoute({ getParentRoute: () => rootRoute, path: '/forgot', component: Forgot })
 const resetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset', component: Reset })
 const verifyRoute = createRoute({ getParentRoute: () => rootRoute, path: '/verify', component: Verify })
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute])
+const appRoute = createRoute({ getParentRoute: () => rootRoute, path: '/app', component: AppWorkspace })
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).

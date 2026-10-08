@@ -42,3 +42,13 @@ Touches: lidza.json, packs.go
 Why: Send invitations and account recovery using the official provider boundary.
 
 Touches: lidza.json, packs.go
+
+## 2026-10-08: Pack storage added
+
+Why: Store immutable inbound MIME and private mail/Drive attachments through the official local/S3 boundary.
+
+Touches: lidza.json, packs.go
+
+## 2026-10-08: Mailbox-specific delivery and signed inbound relay
+
+Why: Resolve each mailbox’s sealed credential prefix inside a custom delivery job using a non-queued official Mail instance; preserve the global invitation handler. Serialize draft/send/undo transitions and verify HMAC over raw MIME before ingestion. Keep storage private, expose capture truthfully, and sandbox sanitized email HTML. Document at-least-once transport and deployment relay requirements.

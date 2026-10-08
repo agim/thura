@@ -17,6 +17,7 @@ import (
 func routes(r *router.Router) {
 	auth.Mount(r, auth.Options{NoRegister: true, Providers: []auth.Provider{}, Title: "Thura"})
 	router.Route(r, "GET /api/v1/hello/{name}", hello)
+	router.Route(r, "POST /api/v1/inbound/{mailboxId}", handlers.ReceiveMail, router.UploadLimit(12<<20))
 	router.Route(r.Group("/api/v1/invitations", auth.Optional()), "POST /api/v1/invitations/accept", handlers.AcceptInvite, auth.Throttle())
 	g := r.Group("/api/v1", auth.Require())
 	router.Route(g, "GET /api/v1/workspaces", handlers.ListWorkspaces)
@@ -30,6 +31,16 @@ func routes(r *router.Router) {
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/invitations", handlers.ListInvites)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/invitations", handlers.InviteMember)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/invitations/{id}", handlers.RevokeInvite)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes", handlers.ListMailboxes)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages", handlers.ListMail)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages", handlers.CreateMailDraft)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}", handlers.GetMail)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}", handlers.UpdateMailDraft)
+	router.Route(g, "PATCH /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}", handlers.UpdateMailFlags)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/send", handlers.SendMail)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/undo", handlers.UndoMail)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/attachments", handlers.UploadMailAttachment, router.UploadLimit(10<<20))
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/attachments/{attachmentId}", handlers.DownloadMailAttachment)
 }
 
 // hello greets by name. Greeting is defined in schema.lidza.

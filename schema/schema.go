@@ -30,6 +30,31 @@ func (v WorkspaceRole) Valid() bool {
 	return false
 }
 
+// MailFolder is the MailFolder enum.
+type MailFolder string
+
+const (
+	MailFolderInbox   MailFolder = "inbox"
+	MailFolderDrafts  MailFolder = "drafts"
+	MailFolderSent    MailFolder = "sent"
+	MailFolderArchive MailFolder = "archive"
+	MailFolderTrash   MailFolder = "trash"
+	MailFolderSpam    MailFolder = "spam"
+)
+
+// MailFolderValues lists every MailFolder.
+var MailFolderValues = []MailFolder{MailFolderInbox, MailFolderDrafts, MailFolderSent, MailFolderArchive, MailFolderTrash, MailFolderSpam}
+
+// Valid reports whether v is one of the MailFolder values.
+func (v MailFolder) Valid() bool {
+	for _, x := range MailFolderValues {
+		if v == x {
+			return true
+		}
+	}
+	return false
+}
+
 // Workspace is a row of the workspace table.
 type Workspace struct {
 	ID        string    `json:"id" db:"id"`
@@ -143,6 +168,154 @@ func (v Invitation) Validate() error {
 	}
 	if v.InvitedBy == "" {
 		errs.Add("invitedBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// Mailbox is a row of the mailbox table.
+type Mailbox struct {
+	ID           string    `json:"id" db:"id"`
+	WorkspaceID  string    `json:"workspaceId" db:"workspace_id"`
+	Name         string    `json:"name" db:"name"`
+	Address      string    `json:"address" db:"address"`
+	ConfigPrefix string    `json:"configPrefix" db:"config_prefix"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of Mailbox from schema.lidza.
+func (v Mailbox) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) > 120 {
+		errs.Add("name", "max", "at most 120 character(s)")
+	}
+	if v.Address == "" {
+		errs.Add("address", "required", "required")
+	}
+	if len(v.Address) > 254 {
+		errs.Add("address", "max", "at most 254 character(s)")
+	}
+	if v.Address != "" && !validate.Email(v.Address) {
+		errs.Add("address", "email", "not an email address")
+	}
+	if v.ConfigPrefix == "" {
+		errs.Add("configPrefix", "required", "required")
+	}
+	if len(v.ConfigPrefix) > 100 {
+		errs.Add("configPrefix", "max", "at most 100 character(s)")
+	}
+	return errs.Result()
+}
+
+// MailItem is a row of the mail_item table.
+type MailItem struct {
+	ID          string     `json:"id" db:"id"`
+	MailboxID   string     `json:"mailboxId" db:"mailbox_id"`
+	AuthorID    string     `json:"authorId" db:"author_id"`
+	Folder      MailFolder `json:"folder" db:"folder"`
+	FromAddress string     `json:"fromAddress" db:"from_address"`
+	ToAddress   string     `json:"toAddress" db:"to_address"`
+	Cc          string     `json:"cc" db:"cc"`
+	Bcc         string     `json:"bcc" db:"bcc"`
+	Subject     string     `json:"subject" db:"subject"`
+	TextBody    string     `json:"textBody" db:"text_body"`
+	HTMLBody    string     `json:"htmlBody" db:"html_body"`
+	Status      string     `json:"status" db:"status"`
+	Starred     bool       `json:"starred" db:"starred"`
+	Unread      bool       `json:"unread" db:"unread"`
+	ProviderID  string     `json:"providerId" db:"provider_id"`
+	RawKey      string     `json:"rawKey" db:"raw_key"`
+	ExternalID  *string    `json:"externalId" db:"external_id"`
+	ThreadID    string     `json:"threadId" db:"thread_id"`
+	SendAt      *time.Time `json:"sendAt" db:"send_at"`
+	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of MailItem from schema.lidza.
+func (v MailItem) Validate() error {
+	var errs validate.Errors
+	if v.MailboxID == "" {
+		errs.Add("mailboxId", "required", "required")
+	}
+	if v.AuthorID == "" {
+		errs.Add("authorId", "required", "required")
+	}
+	if v.Folder == "" {
+		errs.Add("folder", "required", "required")
+	}
+	if v.Folder != "" && !v.Folder.Valid() {
+		errs.Add("folder", "enum", "unknown MailFolder value")
+	}
+	if v.FromAddress == "" {
+		errs.Add("fromAddress", "required", "required")
+	}
+	if v.ToAddress == "" {
+		errs.Add("toAddress", "required", "required")
+	}
+	if v.Cc == "" {
+		errs.Add("cc", "required", "required")
+	}
+	if v.Bcc == "" {
+		errs.Add("bcc", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.TextBody == "" {
+		errs.Add("textBody", "required", "required")
+	}
+	if v.HTMLBody == "" {
+		errs.Add("htmlBody", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	if v.ProviderID == "" {
+		errs.Add("providerId", "required", "required")
+	}
+	if v.RawKey == "" {
+		errs.Add("rawKey", "required", "required")
+	}
+	if v.ThreadID == "" {
+		errs.Add("threadId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailAttachment is a row of the mail_attachment table.
+type MailAttachment struct {
+	ID          string `json:"id" db:"id"`
+	ItemID      string `json:"itemId" db:"item_id"`
+	Name        string `json:"name" db:"name"`
+	ContentType string `json:"contentType" db:"content_type"`
+	Size        int    `json:"size" db:"size"`
+	ObjectKey   string `json:"objectKey" db:"object_key"`
+	ContentID   string `json:"contentId" db:"content_id"`
+}
+
+// Validate applies the rules of MailAttachment from schema.lidza.
+func (v MailAttachment) Validate() error {
+	var errs validate.Errors
+	if v.ItemID == "" {
+		errs.Add("itemId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.ContentType == "" {
+		errs.Add("contentType", "required", "required")
+	}
+	if v.ObjectKey == "" {
+		errs.Add("objectKey", "required", "required")
+	}
+	if v.ContentID == "" {
+		errs.Add("contentId", "required", "required")
 	}
 	return errs.Result()
 }
@@ -751,6 +924,236 @@ func (v RoleInput) Validate() error {
 	}
 	if v.Role != "" && !v.Role.Valid() {
 		errs.Add("role", "enum", "unknown WorkspaceRole value")
+	}
+	return errs.Result()
+}
+
+// MailboxList is an API type.
+type MailboxList struct {
+	Items []Mailbox `json:"items"`
+}
+
+// Validate applies the rules of MailboxList from schema.lidza.
+func (v MailboxList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// MailItemList is an API type.
+type MailItemList struct {
+	Items []MailItem `json:"items"`
+}
+
+// Validate applies the rules of MailItemList from schema.lidza.
+func (v MailItemList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// AttachmentView is an API type.
+type AttachmentView struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	ContentType string `json:"contentType"`
+	Size        int    `json:"size"`
+}
+
+// Validate applies the rules of AttachmentView from schema.lidza.
+func (v AttachmentView) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.ContentType == "" {
+		errs.Add("contentType", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailDetail is an API type.
+type MailDetail struct {
+	Item        MailItem         `json:"item"`
+	Attachments []AttachmentView `json:"attachments"`
+}
+
+// Validate applies the rules of MailDetail from schema.lidza.
+func (v MailDetail) Validate() error {
+	var errs validate.Errors
+	if err := v.Item.Validate(); err != nil {
+		errs.Add("item", "nested", err.Error())
+	}
+	for _, x := range v.Attachments {
+		if err := x.Validate(); err != nil {
+			errs.Add("attachments", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// DraftInput is an API type.
+type DraftInput struct {
+	To       *string `json:"to"`
+	Cc       *string `json:"cc"`
+	Bcc      *string `json:"bcc"`
+	Subject  *string `json:"subject"`
+	Text     *string `json:"text"`
+	HTML     *string `json:"html"`
+	ThreadID *string `json:"threadId"`
+}
+
+// Validate applies the rules of DraftInput from schema.lidza.
+func (v DraftInput) Validate() error {
+	var errs validate.Errors
+	if v.To != nil {
+		x := *v.To
+		if len(x) > 2000 {
+			errs.Add("to", "max", "at most 2000 character(s)")
+		}
+	}
+	if v.Cc != nil {
+		x := *v.Cc
+		if len(x) > 2000 {
+			errs.Add("cc", "max", "at most 2000 character(s)")
+		}
+	}
+	if v.Bcc != nil {
+		x := *v.Bcc
+		if len(x) > 2000 {
+			errs.Add("bcc", "max", "at most 2000 character(s)")
+		}
+	}
+	if v.Subject != nil {
+		x := *v.Subject
+		if len(x) > 500 {
+			errs.Add("subject", "max", "at most 500 character(s)")
+		}
+	}
+	if v.Text != nil {
+		x := *v.Text
+		if len(x) > 500000 {
+			errs.Add("text", "max", "at most 500000 character(s)")
+		}
+	}
+	if v.HTML != nil {
+		x := *v.HTML
+		if len(x) > 500000 {
+			errs.Add("html", "max", "at most 500000 character(s)")
+		}
+	}
+	if v.ThreadID != nil {
+		x := *v.ThreadID
+		if len(x) > 500 {
+			errs.Add("threadId", "max", "at most 500 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// MailFlags is an API type.
+type MailFlags struct {
+	Folder  *MailFolder `json:"folder"`
+	Starred *bool       `json:"starred"`
+	Unread  *bool       `json:"unread"`
+}
+
+// Validate applies the rules of MailFlags from schema.lidza.
+func (v MailFlags) Validate() error {
+	var errs validate.Errors
+	if v.Folder != nil {
+		x := *v.Folder
+		if x != "" && !x.Valid() {
+			errs.Add("folder", "enum", "unknown MailFolder value")
+		}
+	}
+	return errs.Result()
+}
+
+// SendMailInput is an API type.
+type SendMailInput struct {
+	SendAt *time.Time `json:"sendAt"`
+}
+
+// Validate applies the rules of SendMailInput from schema.lidza.
+func (v SendMailInput) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
+// ProvisionMailboxInput is an API type.
+type ProvisionMailboxInput struct {
+	WorkspaceID  string  `json:"workspaceId"`
+	Name         string  `json:"name"`
+	Address      string  `json:"address"`
+	ConfigPrefix *string `json:"configPrefix"`
+}
+
+// Validate applies the rules of ProvisionMailboxInput from schema.lidza.
+func (v ProvisionMailboxInput) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 120 {
+		errs.Add("name", "max", "at most 120 character(s)")
+	}
+	if v.Address == "" {
+		errs.Add("address", "required", "required")
+	}
+	if len(v.Address) > 254 {
+		errs.Add("address", "max", "at most 254 character(s)")
+	}
+	if v.Address != "" && !validate.Email(v.Address) {
+		errs.Add("address", "email", "not an email address")
+	}
+	if v.ConfigPrefix != nil {
+		x := *v.ConfigPrefix
+		if len(x) > 100 {
+			errs.Add("configPrefix", "max", "at most 100 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// FileContent is an API type.
+type FileContent struct {
+	Name        string `json:"name"`
+	ContentType string `json:"contentType"`
+	Data        string `json:"data"`
+}
+
+// Validate applies the rules of FileContent from schema.lidza.
+func (v FileContent) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.ContentType == "" {
+		errs.Add("contentType", "required", "required")
+	}
+	if v.Data == "" {
+		errs.Add("data", "required", "required")
 	}
 	return errs.Result()
 }

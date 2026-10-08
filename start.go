@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"github.com/agim/lidza"
+	"github.com/agim/lidza/packs/jobs"
 	"github.com/agim/lidza/pkg/middleware"
+	"thura/internal/mailbox"
 )
 
 // onStart runs after the packs have started and before the app listens:
@@ -12,6 +14,7 @@ import (
 // cache, lidza.Provide a service the packs do not. main.go is generated
 // once and left alone; this file is the app's.
 func onStart(ctx context.Context, s *lidza.Services) error {
+	jobs.FromServices(s).Handle(mailbox.DeliveryJob, mailbox.Deliver)
 	return nil
 }
 
