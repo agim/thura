@@ -68,6 +68,9 @@ func routes(r *router.Router) {
 	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/attachments", handlers.UploadMailAttachment, router.UploadLimit(10<<20))
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/attachments/{attachmentId}", handlers.DownloadMailAttachment)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive", handlers.ListDrive)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/quota", handlers.DriveQuota)
+	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/drive/files/{id}", handlers.PurgeDriveFile)
+
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/folders", handlers.CreateDriveFolder)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/uploads", handlers.BeginDriveUpload)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/uploads/{id}", handlers.GetDriveUpload)

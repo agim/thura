@@ -2,7 +2,7 @@
 
 Status: proposed roadmap for review. This document plans implementation; it does not approve dependencies, change the product brief, or start implementation.
 
-Implementation has since started at the user's request. See [implementation-status.md](implementation-status.md) for the delivered first slice and its limits. The descriptions below preserve the planning baseline.
+Implementation has since started at the user's request. See [implementation-status.md](implementation-status.md) for the delivered six-app first version, operations and remaining deployment gates. The descriptions below preserve the planning baseline.
 
 ## Basis and current state
 

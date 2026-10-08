@@ -358,7 +358,7 @@ model FileVersion {
  id uuid @id @default(uuid())
  fileId uuid @ref(DriveFile) @index
  number int
- objectKey string
+ objectKey string @index
  checksum string
  size int
  createdBy string
@@ -385,7 +385,7 @@ model UploadChunk {
  number int
  size int
  checksum string
- objectKey string
+ objectKey string @index
  @@unique(sessionId,number)
 }
 model ShareGrant {
@@ -760,4 +760,10 @@ type MeetingAccess {
  serverUrl string
  expiresAt time
  meeting Meeting
+}
+
+type DriveQuota {
+ retained int
+ reserved int
+ limit int
 }

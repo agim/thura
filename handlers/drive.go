@@ -33,20 +33,13 @@ func ListDrive(ctx context.Context, r *router.Request[router.None]) (schema.Driv
 	return out, err
 }
 func CreateDriveFolder(ctx context.Context, r *router.Request[schema.FolderInput]) (schema.DriveFolder, error) {
-	w := r.Param("workspaceId")
-	if err := workspace.RequireMember(ctx, w); err != nil {
-		return schema.DriveFolder{}, err
-	}
-	queries := q.New(db.From(ctx))
-	if err := drive.CheckFolder(ctx, queries, w, r.Body.ParentID); err != nil {
-		return schema.DriveFolder{}, err
-	}
-	name, err := drive.Name(r.Body.Name)
-	if err != nil {
-		return schema.DriveFolder{}, err
-	}
-	f, err := queries.CreateDriveFolder(ctx, q.CreateDriveFolderParams{WorkspaceID: w, ParentID: r.Body.ParentID, Name: name})
-	return drive.Folder(f), err
+	return drive.CreateFolder(ctx, r.Param("workspaceId"), r.Body)
+}
+func DriveQuota(ctx context.Context, r *router.Request[router.None]) (schema.DriveQuota, error) {
+	return drive.Quota(ctx, r.Param("workspaceId"))
+}
+func PurgeDriveFile(ctx context.Context, r *router.Request[router.None]) (router.None, error) {
+	return router.None{}, drive.Purge(ctx, r.Param("workspaceId"), r.Param("id"))
 }
 func BeginDriveUpload(ctx context.Context, r *router.Request[schema.UploadInput]) (schema.UploadState, error) {
 	return drive.Begin(ctx, r.Param("workspaceId"), r.Body)

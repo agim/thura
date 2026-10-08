@@ -8,6 +8,10 @@ const CHUNK = 1024 * 1024
 export function LiveDrive({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()
   const list = useQuery({ queryKey: ['drive', workspaceId], queryFn: () => api.listDrive({ workspaceId }), refetchInterval: 5000 })
+  const quota = useQuery({ queryKey: ['drive', workspaceId, 'quota'], queryFn: () => api.driveQuota({ workspaceId }), refetchInterval: 15000 })
+  const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.listMembers({ workspaceId }) })
+  const session = useQuery({ queryKey: ['session'], queryFn: () => api.authSession() })
+  const manager = members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin'))
   const [folder, setFolder] = useState('')
   const [trash, setTrash] = useState(false)
   const [search, setSearch] = useState('')
@@ -16,6 +20,7 @@ export function LiveDrive({ workspaceId }: { workspaceId: string }) {
   const [selected, setSelected] = useState('')
   const refresh = () => client.invalidateQueries({ queryKey: ['drive', workspaceId] })
   const current = list.data?.files.find(f => f.id === selected)
+  const purge = useMutation({ mutationFn: (id: string) => api.purgeDriveFile({ workspaceId, id }), onSuccess: async () => { setSelected(''); await refresh() } })
   const createFolder = useMutation({ mutationFn: () => api.createDriveFolder({ workspaceId }, { name, parentId: folder || undefined }), onSuccess: async () => { setName(''); await refresh() } })
   const upload = useMutation({ mutationFn: async ({ file, replacing }: { file: File; replacing?: DriveFile }) => {
     if (file.size < 1 || file.size > 10 * CHUNK) throw new Error('Choose a file between 1 byte and 10 MB.')
@@ -31,7 +36,7 @@ export function LiveDrive({ workspaceId }: { workspaceId: string }) {
     const state = await api.getDriveUpload({ workspaceId, id })
     if (new Date(state.session.expiresAt).getTime() <= Date.now()) { sessionStorage.removeItem(key); throw new Error('Upload expired. Select the file again to restart.') }
     const count = Math.ceil(file.size / CHUNK)
-    for (let number = 0; number < count; number++) {
+    for (let number = 0; !state.session.completedAt && number < count; number++) {
       if (!state.chunks.includes(number)) await api.putDriveChunk({ workspaceId, id, number: String(number) }, new File([file.slice(number * CHUNK, (number + 1) * CHUNK)], file.name))
       setProgress(`Uploaded ${number + 1} of ${count} chunks`)
     }
@@ -44,12 +49,14 @@ export function LiveDrive({ workspaceId }: { workspaceId: string }) {
   function submit(e: FormEvent) { e.preventDefault(); createFolder.mutate() }
   return <div className="ws-page live-drive"><div className="ws-page-head"><h2>Drive</h2><span className="ws-muted">Private workspace files · 10 MB per upload</span></div>
     {failure && <p role="alert">{failure.message}</p>}
+    {quota.data && <p>Drive storage: {(quota.data.retained / CHUNK).toFixed(1)} MiB retained + {(quota.data.reserved / CHUNK).toFixed(1)} MiB reserved / {(quota.data.limit / CHUNK).toFixed(0)} MiB. Trash and version history count toward storage.</p>}
+    {(quota.error || purge.error) && <p role="alert">{quota.error?.message || purge.error?.message}</p>}
     <div className="row"><button onClick={() => { setTrash(false); setFolder(''); setSelected('') }}>All files</button><button onClick={() => { setTrash(true); setSelected('') }}>Trash</button><label>Search files<input value={search} onChange={e => setSearch(e.target.value)} /></label></div>
     {!trash && <><label>Upload file<input type="file" disabled={upload.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate({ file }); e.target.value = '' }} /></label><form className="row" onSubmit={submit}><label>New folder<input required maxLength={200} value={name} onChange={e => setName(e.target.value)} /></label><button disabled={createFolder.isPending}>Create folder</button></form>
       <p>Folder: {list.data?.folders.find(f => f.id === folder)?.name || 'Root'}</p><div className="row">{list.data?.folders.filter(f => (f.parentId || '') === folder).map(f => <button key={f.id} onClick={() => { setFolder(f.id); setSelected('') }}>📁 {f.name}</button>)}</div></>}
     {progress && <p role="status">{progress}{upload.isError ? ' · interrupted; select the same file to resume' : ''}</p>}
     {list.isPending && <p role="status">Loading files…</p>}
-    <div className="drive-grid">{files.map(f => <article key={f.id} className="drive-card"><h3><button onClick={() => setSelected(f.id)}>{f.name}</button></h3><p>{Math.ceil(f.size / 1024)} KB · version {f.currentVersion}</p><div className="row">{!trash && <button onClick={() => download.mutate(f)}>Download {f.name}</button>}<button disabled={flags.isPending} onClick={() => flags.mutate({ file: f, values: { trashed: !f.trashed } })}>{trash ? 'Restore' : 'Move to trash'} {f.name}</button></div></article>)}</div>
+    <div className="drive-grid">{files.map(f => <article key={f.id} className="drive-card"><h3><button onClick={() => setSelected(f.id)}>{f.name}</button></h3><p>{Math.ceil(f.size / 1024)} KB · version {f.currentVersion}</p><div className="row">{!trash && <button onClick={() => download.mutate(f)}>Download {f.name}</button>}<button disabled={flags.isPending} onClick={() => flags.mutate({ file: f, values: { trashed: !f.trashed } })}>{trash ? 'Restore' : 'Move to trash'} {f.name}</button>{trash && manager && <button disabled={purge.isPending} onClick={() => { if (confirm(`Permanently delete ${f.name}, all its versions and share links? This cannot be undone. Copies already sent through Chat remain on Matrix.`)) purge.mutate(f.id) }}>Delete permanently {f.name}</button>}</div></article>)}</div>
     {list.data && files.length === 0 && <p>No files in this view.</p>}
     {current && <section className="drive-detail"><h3>{current.name}</h3>{!current.trashed && <><label>Move to folder<select value={current.folderId || ''} onChange={e => flags.mutate({ file: current, values: { folderId: e.target.value } })}><option value="">Root</option>{list.data?.folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>Upload new version<input type="file" disabled={upload.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate({ file, replacing: current }); e.target.value = '' }} /></label>{/\.(docx|xlsx)$/i.test(current.name) && <OfficeEditor key={current.id} workspaceId={workspaceId} fileId={current.id} />}<FileHistory key={`${current.id}:${current.currentVersion}`} workspaceId={workspaceId} file={current} /><FileSharing key={current.id} workspaceId={workspaceId} file={current} /></>}</section>}
     <p className="ws-muted">Uploads can resume for 24 hours in this browser tab. Select the same file after an interruption. Files in trash cannot be downloaded through share links.</p>

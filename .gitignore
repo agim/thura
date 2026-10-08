@@ -11,3 +11,5 @@ playwright-report/
 test-results/
 config/master.key
 storage/
+
+__pycache__/

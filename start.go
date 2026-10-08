@@ -11,8 +11,10 @@ import (
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/jobs"
 	"github.com/agim/lidza/pkg/middleware"
+	"thura/internal/drive"
 	"thura/internal/mailbox"
 	"thura/internal/meet"
+	"thura/internal/platform/objectgc"
 	livekit "thura/internal/providers/livekit"
 	provider "thura/internal/providers/onlyoffice"
 )
@@ -32,7 +34,16 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 		return err
 	}
 	jobs.FromServices(s).Handle(meet.ReconcileJob, meet.Reconcile, jobs.Concurrency(1))
-	return jobs.FromServices(s).Schedule(meet.ReconcileJob, jobs.Every(time.Minute), nil)
+	if err := jobs.FromServices(s).Schedule(meet.ReconcileJob, jobs.Every(time.Minute), nil); err != nil {
+		return err
+	}
+	jobs.FromServices(s).Handle(drive.CleanupJob, drive.Cleanup, jobs.Concurrency(1))
+	if err := jobs.FromServices(s).Schedule(drive.CleanupJob, jobs.Every(time.Hour), nil); err != nil {
+		return err
+	}
+	jobs.FromServices(s).Handle(objectgc.DeleteJob, objectgc.Delete, jobs.Concurrency(2))
+	jobs.FromServices(s).Handle(objectgc.SweepJob, objectgc.Sweep, jobs.Concurrency(2))
+	return jobs.FromServices(s).Schedule(objectgc.SweepJob, jobs.Every(24*time.Hour), nil)
 }
 
 // appMiddleware wraps the whole app, pages and API alike, outermost

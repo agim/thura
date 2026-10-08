@@ -156,12 +156,23 @@ func Save(ctx context.Context, id string, in schema.OfficeCallback, header strin
 	if signedKey != in.Key || signedStatus != float64(in.Status) || signedURL != address {
 		return fail, router.Errorf(401, "callback fields do not match the signed payload")
 	}
+	preSession, err := q.New(db.From(ctx)).GetOfficeSession(ctx, id)
+	if err != nil {
+		return fail, router.Errorf(404, "document session not found")
+	}
+	preFile, err := q.New(db.From(ctx)).GetSharedFile(ctx, preSession.FileID)
+	if err != nil {
+		return fail, err
+	}
 	tx, err := db.From(ctx).Begin(ctx)
 	if err != nil {
 		return fail, err
 	}
 	defer tx.Rollback(ctx)
 	queries := q.New(tx)
+	if _, err = queries.LockWorkspace(ctx, preFile.WorkspaceID); err != nil {
+		return fail, err
+	}
 	s, err := queries.LockOfficeSession(ctx, id)
 	if err != nil {
 		return fail, router.Errorf(404, "document session not found")
@@ -193,6 +204,12 @@ func Save(ctx context.Context, id string, in schema.OfficeCallback, header strin
 	}
 	if f.Trashed || f.CurrentVersion != s.BaseVersion {
 		return fail, router.Errorf(409, "document changed; recover the editor copy before reopening")
+	}
+	if f.CurrentVersion >= 100 {
+		return fail, router.Errorf(409, "file version limit reached; recover the editor copy")
+	}
+	if err = drive.CheckQuota(ctx, queries, f.WorkspaceID, int64(len(b)), nil); err != nil {
+		return fail, err
 	}
 	key := "drive/files/" + f.ID + "/" + uuid.NewString()
 	store := storage.From(ctx)

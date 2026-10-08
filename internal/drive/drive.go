@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/platform/objectgc"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -85,7 +86,38 @@ func Begin(ctx context.Context, w string, in schema.UploadInput) (schema.UploadS
 	if err = in.Validate(); err != nil {
 		return schema.UploadState{}, err
 	}
-	queries := q.New(db.From(ctx))
+	tx, err := db.From(ctx).Begin(ctx)
+	if err != nil {
+		return schema.UploadState{}, err
+	}
+	defer tx.Rollback(ctx)
+	queries := q.New(tx)
+	if _, err = queries.LockWorkspace(ctx, w); err != nil {
+		return schema.UploadState{}, err
+	}
+	if err = CheckQuota(ctx, queries, w, int64(in.Size), nil); err != nil {
+		return schema.UploadState{}, err
+	}
+	activeCount, err := queries.CountWorkspaceUploads(ctx, w)
+	if err != nil {
+		return schema.UploadState{}, err
+	}
+	if activeCount >= 100 {
+		return schema.UploadState{}, router.Errorf(409, "at most 100 pending uploads per workspace")
+	}
+	if in.FileID == nil {
+		count, xerr := queries.CountWorkspaceFiles(ctx, w)
+		if xerr != nil {
+			return schema.UploadState{}, xerr
+		}
+		pending, xerr := queries.CountPendingNewFiles(ctx, w)
+		if xerr != nil {
+			return schema.UploadState{}, xerr
+		}
+		if count+pending >= 500 {
+			return schema.UploadState{}, router.Errorf(409, "workspace file limit reached")
+		}
+	}
 	if err = CheckFolder(ctx, queries, w, in.FolderID); err != nil {
 		return schema.UploadState{}, err
 	}
@@ -99,6 +131,9 @@ func Begin(ctx context.Context, w string, in schema.UploadInput) (schema.UploadS
 		}
 	}
 	u, err := queries.CreateUpload(ctx, q.CreateUploadParams{WorkspaceID: w, Subject: auth.CurrentUser(ctx).ID, FileID: in.FileID, FolderID: in.FolderID, Name: name, ContentType: in.ContentType, ExpectedSize: int32(in.Size), BaseVersion: int32(in.BaseVersion), ExpiresAt: lidza.Now(ctx).Add(24 * time.Hour)})
+	if err == nil {
+		err = tx.Commit(ctx)
+	}
 	return schema.UploadState{Session: Session(u), Chunks: []int{}}, err
 }
 func Upload(ctx context.Context, w, id string) (q.UploadSession, error) {
@@ -132,7 +167,13 @@ func lockUpload(ctx context.Context, w, id string) (pgx.Tx, *q.Queries, q.Upload
 		return nil, nil, q.UploadSession{}, err
 	}
 	queries := q.New(tx)
+	if _, err = queries.LockWorkspace(ctx, w); err != nil {
+		return nil, nil, q.UploadSession{}, errors.Join(err, tx.Rollback(ctx))
+	}
 	u, err := queries.LockUpload(ctx, q.LockUploadParams{WorkspaceID: w, ID: id, Subject: auth.CurrentUser(ctx).ID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		err = router.Errorf(404, "upload not found")
+	}
 	if err != nil {
 		return nil, nil, u, errors.Join(err, tx.Rollback(ctx))
 	}
@@ -155,12 +196,26 @@ func PutChunk(ctx context.Context, w, id string, n int, b []byte) error {
 	if n < 0 || n >= count || len(b) != expected {
 		return router.Errorf(422, "wrong chunk number or size")
 	}
+	previous, xerr := queries.GetUploadChunk(ctx, q.GetUploadChunkParams{SessionID: id, Number: int32(n)})
+	if xerr != nil && !errors.Is(xerr, pgx.ErrNoRows) {
+		return xerr
+	}
+	if xerr == nil && previous.Checksum == Hash(b) {
+		if _, staterr := storage.From(ctx).Stat(ctx, previous.ObjectKey); staterr == nil {
+			return nil
+		} else if !errors.Is(staterr, storage.ErrNotFound) {
+			return staterr
+		}
+	}
 	key := "drive/uploads/" + u.ID + "/" + uuid.NewString()
 	store := storage.From(ctx)
 	if _, err = store.Put(ctx, key, bytes.NewReader(b), storage.PutOptions{ContentType: "application/octet-stream"}); err != nil {
 		return err
 	}
 	_, err = queries.PutUploadChunk(ctx, q.PutUploadChunkParams{SessionID: id, Number: int32(n), Size: int32(len(b)), Checksum: Hash(b), ObjectKey: key})
+	if err == nil && xerr == nil {
+		err = objectgc.QueueDelete(ctx, tx, previous.ObjectKey)
+	}
 	if err == nil {
 		err = tx.Commit(ctx)
 	}
@@ -218,6 +273,9 @@ func Finish(ctx context.Context, w, id string) (schema.DriveFile, error) {
 	if content.Len() != int(u.ExpectedSize) {
 		return schema.DriveFile{}, router.Errorf(409, "size mismatch")
 	}
+	if err = CheckQuota(ctx, queries, w, int64(u.ExpectedSize), &u.ID); err != nil {
+		return schema.DriveFile{}, err
+	}
 	var f q.DriveFile
 	if u.FileID == nil {
 		f, err = queries.CreateDriveFile(ctx, q.CreateDriveFileParams{WorkspaceID: w, FolderID: u.FolderID, Name: u.Name, ContentType: u.ContentType, Size: u.ExpectedSize})
@@ -225,6 +283,9 @@ func Finish(ctx context.Context, w, id string) (schema.DriveFile, error) {
 		f, err = queries.LockDriveFile(ctx, q.LockDriveFileParams{WorkspaceID: w, ID: *u.FileID})
 		if err == nil && (f.Trashed || f.CurrentVersion != u.BaseVersion) {
 			return schema.DriveFile{}, router.Errorf(409, "newer version exists or file is in trash")
+		}
+		if err == nil && f.CurrentVersion >= 100 {
+			return schema.DriveFile{}, router.Errorf(409, "file version limit reached")
 		}
 		if err == nil {
 			f, err = queries.UpdateDriveVersion(ctx, q.UpdateDriveVersionParams{WorkspaceID: w, ID: f.ID, Size: u.ExpectedSize})
@@ -241,6 +302,16 @@ func Finish(ctx context.Context, w, id string) (schema.DriveFile, error) {
 	_, err = queries.AddFileVersion(ctx, q.AddFileVersionParams{FileID: f.ID, Number: f.CurrentVersion, ObjectKey: key, Checksum: Hash(content.Bytes()), Size: f.Size, CreatedBy: u.Subject})
 	if err == nil {
 		err = queries.CompleteUpload(ctx, q.CompleteUploadParams{ID: id, FileID: &f.ID})
+		if err == nil {
+			for _, c := range chunks {
+				if err = objectgc.QueueDelete(ctx, tx, c.ObjectKey); err != nil {
+					break
+				}
+			}
+		}
+		if err == nil {
+			err = queries.DeleteUploadChunks(ctx, id)
+		}
 	}
 	if err == nil {
 		err = tx.Commit(ctx)

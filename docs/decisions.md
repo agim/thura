@@ -109,3 +109,7 @@ Why: Use the official LiveKit token grants and signed webhook verifier rather th
 ## 2026-10-08: Dependency github.com/teambition/rrule-go
 
 Why: Use a maintained MIT recurrence parser rather than inventing RRULE parsing. The Calendar wrapper bounds occurrence count and time range and tests timezone/DST semantics.
+
+## Drive budgets and reference-aware recovery
+
+Serialize workspace quota reservations and immutable version saves with the workspace lock. Count all retained versions and active upload reservations; bound files, folders, sessions and versions so API listings cannot silently hide newly created resources. Purge requires an administrator and an already trashed file. Queue object deletions in the metadata transaction and recheck references in workers. A 48-hour orphan grace period protects in-flight writes, with prefix subdivision to avoid first-page starvation. Offline recovery bundles keep a checksummed Postgres dump and local object inventory together, refusing populated restore targets. Provider state and secrets require separate operator backup sets.

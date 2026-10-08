@@ -254,6 +254,7 @@ CREATE TABLE file_version (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX file_version_file_id_idx ON file_version (file_id);
+CREATE INDEX file_version_object_key_idx ON file_version (object_key);
 CREATE UNIQUE INDEX file_version_file_id_number_key ON file_version (file_id, number);
 
 CREATE TABLE upload_session (
@@ -281,6 +282,7 @@ CREATE TABLE upload_chunk (
   object_key text NOT NULL
 );
 CREATE INDEX upload_chunk_session_id_idx ON upload_chunk (session_id);
+CREATE INDEX upload_chunk_object_key_idx ON upload_chunk (object_key);
 CREATE UNIQUE INDEX upload_chunk_session_id_number_key ON upload_chunk (session_id, number);
 
 CREATE TABLE share_grant (

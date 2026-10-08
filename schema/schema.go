@@ -2782,3 +2782,16 @@ func (v MeetingAccess) Validate() error {
 	}
 	return errs.Result()
 }
+
+// DriveQuota is an API type.
+type DriveQuota struct {
+	Retained int `json:"retained"`
+	Reserved int `json:"reserved"`
+	Limit    int `json:"limit"`
+}
+
+// Validate applies the rules of DriveQuota from schema.lidza.
+func (v DriveQuota) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
