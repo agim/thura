@@ -1624,13 +1624,14 @@ func (v MailDetail) Validate() error {
 
 // DraftInput is an API type.
 type DraftInput struct {
-	To       *string `json:"to"`
-	Cc       *string `json:"cc"`
-	Bcc      *string `json:"bcc"`
-	Subject  *string `json:"subject"`
-	Text     *string `json:"text"`
-	HTML     *string `json:"html"`
-	ThreadID *string `json:"threadId"`
+	ForwardID *string `json:"forwardId"`
+	To        *string `json:"to"`
+	Cc        *string `json:"cc"`
+	Bcc       *string `json:"bcc"`
+	Subject   *string `json:"subject"`
+	Text      *string `json:"text"`
+	HTML      *string `json:"html"`
+	ThreadID  *string `json:"threadId"`
 }
 
 // Validate applies the rules of DraftInput from schema.lidza.

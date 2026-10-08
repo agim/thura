@@ -58,3 +58,7 @@
 #orbit-workspace .live-calendar .fc{--fc-border-color:var(--line);--fc-page-bg-color:var(--paper);--fc-neutral-bg-color:var(--canvas);--fc-list-event-hover-bg-color:var(--canvas);--fc-today-bg-color:var(--tealsoft);--fc-button-bg-color:var(--teal);--fc-button-border-color:var(--teal);--fc-button-hover-bg-color:var(--ink);--fc-button-active-bg-color:var(--ink);margin:20px 0}
 #orbit-workspace .live-calendar .fc-button{background:var(--teal);color:var(--paper)}
 @media(max-width:700px){#orbit-workspace .live-calendar .fc-toolbar{flex-wrap:wrap;gap:12px}#orbit-workspace .live-calendar .fc-toolbar-title{font-size:18px}}
+
+#orbit-mail-vibrant .recipient-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#orbit-mail-vibrant .recipient-field [role="group"] { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+#orbit-mail-vibrant .recipient-field [role="group"] button { text-align: left; overflow-wrap: anywhere; }

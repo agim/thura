@@ -109,7 +109,7 @@ func CreateMailDraft(ctx context.Context, r *router.Request[schema.DraftInput]) 
 		return schema.MailItem{}, err
 	}
 	in := r.Body
-	i, err := queries.New(db.From(ctx)).CreateDraft(ctx, queries.CreateDraftParams{MailboxID: m.ID, AuthorID: auth.CurrentUser(ctx).ID, FromAddress: m.Address, ToAddress: mailbox.Text(in.To), Cc: mailbox.Text(in.Cc), Bcc: mailbox.Text(in.Bcc), Subject: mailbox.Text(in.Subject), TextBody: mailbox.Text(in.Text), HTMLBody: mailbox.Text(in.HTML), ThreadID: mailbox.Text(in.ThreadID)})
+	i, err := mailbox.CreateDraft(ctx, m, auth.CurrentUser(ctx).ID, in)
 	if err == nil {
 		r.Status(http.StatusCreated)
 	}
@@ -121,6 +121,9 @@ func UpdateMailDraft(ctx context.Context, r *router.Request[schema.DraftInput]) 
 		return schema.MailItem{}, err
 	}
 	in := r.Body
+	if in.ForwardID != nil {
+		return schema.MailItem{}, router.Errorf(422, "forwardId is only allowed when creating a draft")
+	}
 	if err = mailbox.CheckEditable(i); err != nil {
 		return schema.MailItem{}, err
 	}

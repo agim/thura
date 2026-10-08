@@ -19,3 +19,8 @@ The signature binds all message bytes and the delivery ID. Repeated deliveries r
 Raw MIME and attachments remain private in the official storage pack (local or S3). Uploads are limited to ten attachments and 10 MB combined; inbound MIME parsing also limits depth, parts and decoded body size. Downloads check current workspace membership and attachment ownership. The reader strips active/remote HTML content and renders it in a sandbox with a deny-by-default CSP. External images and links are blocked. No end-to-end encryption claim is made.
 
 Storage and database transactions are separate: an interrupted inbound transaction can leave unreferenced private objects. A production operator should apply an orphan-retention cleanup policy. Do not automatically delete hash-addressed raw objects on rollback because another delivery may reference the same bytes.
+
+
+Recipient suggestions search the shared workspace Contacts directory by name/email after two typed characters. Select a suggestion by clicking or tabbing to its button and pressing Enter; earlier comma-separated recipients are retained. Suggestions are optional and manual entry remains available.
+
+Forward creates a new draft with the source's private attachments, within the same mailbox. Replies omit attachments. Forwarded files receive separate metadata IDs and retain references to immutable stored bytes. The existing attachment limits and current membership checks still apply. Future retention/purge jobs must check every attachment reference before deleting a stored object; deleting or trashing a source must not invalidate a forward.

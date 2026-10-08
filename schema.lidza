@@ -160,6 +160,7 @@ type MailDetail {
   attachments AttachmentView[]
 }
 type DraftInput {
+  forwardId uuid?
   to string? @max(2000)
   cc string? @max(2000)
   bcc string? @max(2000)

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type MailItem, type MailFolder, type DraftInput } from '@lidza/client'
 import { downloadContent } from '../lib/download'
+import { RecipientInput } from './RecipientInput'
 import { DraftAutosave } from '../lib/draft-autosave'
 import DOMPurify from 'dompurify'
 
@@ -36,7 +37,7 @@ function MailView({ workspaceId, mailboxId }: { workspaceId: string; mailboxId: 
   async function reply(all = false, forward = false) {
     if (!current) return
     try {
-      const i = await api.createMailDraft({ workspaceId, mailboxId }, { to: forward ? '' : current.folder === 'sent' ? current.toAddress : current.fromAddress, cc: all ? current.cc : '', subject: `${forward ? 'Fwd' : 'Re'}: ${current.subject}`, text: `\n\nOn ${new Date(current.createdAt).toLocaleString()}, ${current.fromAddress} wrote:\n${current.textBody}`, threadId: current.threadId || current.id })
+      const i = await api.createMailDraft({ workspaceId, mailboxId }, { forwardId: forward ? current.id : undefined, to: forward ? '' : current.folder === 'sent' ? current.toAddress : current.fromAddress, cc: all ? current.cc : '', subject: `${forward ? 'Fwd' : 'Re'}: ${current.subject}`, text: `\n\nOn ${new Date(current.createdAt).toLocaleString()}, ${current.fromAddress} wrote:\n${current.textBody}`, threadId: current.threadId || current.id })
       setEditing(i); setSelected(i.id); setFolder('drafts'); await refresh()
     } catch (e) { setReaderError(String(e)) }
   }
@@ -102,7 +103,8 @@ function DraftEditor({ item, workspaceId, mailboxId, saved }: { item: MailItem; 
   function submit(e: FormEvent) { e.preventDefault(); setError(''); send.mutate() }
   return <form className="composer-form" onSubmit={submit}>
     <h3 className="title">Compose message</h3>
-    {([['to', 'To'], ['cc', 'Cc'], ['bcc', 'Bcc'], ['subject', 'Subject']] as const).map(([field, label]) => <label key={field}>{label}<input disabled={send.isPending} value={input[field] ?? ''} onChange={e => change(field, e.target.value)} /></label>)}
+    {([['to', 'To'], ['cc', 'Cc'], ['bcc', 'Bcc']] as const).map(([field, label]) => <RecipientInput key={field} workspaceId={workspaceId} label={label} disabled={send.isPending} value={input[field] ?? ''} onChange={value => change(field, value)} />)}
+    <label>Subject<input disabled={send.isPending} value={input.subject ?? ''} onChange={e => change('subject', e.target.value)} /></label>
     <label>Message<textarea disabled={send.isPending} aria-label="Message" value={input.text ?? ''} onChange={e => change('text', e.target.value)} /></label>
     <label>Attachments<input type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
     <ul>{detail.data?.attachments.map(a => <li key={a.id}>{a.name}</li>)}</ul>

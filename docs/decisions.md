@@ -129,3 +129,10 @@ Persist edits after a 750 ms pause with one write in flight per editor. Drain ne
 ## Bounded complete Mail and Contacts lists
 
 Replace the latest-200/first-500 API truncation with ordered cursor pages and literal server-side search. Fetch one extra row to prove whether another page exists; validate limits/search/cursor size and enforce membership before reading or parsing a cursor. Use timestamp/ID and name/ID pairs to handle tied sort values without offsets. Cursors select positions, not permissions, and concurrent edits can reorder a live listing; the client deduplicates IDs while rendering. No snapshot-consistency guarantee is implied.
+
+
+## Mail contact suggestions and attachment-preserving forwards
+
+Recipient fields query the existing workspace-scoped Contacts API after a short pause, returning at most ten matches. Explicit keyboard-focusable buttons insert only the address into the unfinished last comma-separated recipient. Manual entry remains available when the directory is unavailable. No Contacts page module or new dependency is loaded.
+
+Creating a forward locks its source message, checks that it belongs to the authorized target mailbox, and copies attachment metadata in the draft transaction. New attachment IDs reference the same immutable private objects, preserving bytes without a second storage write. Replies do not copy attachments. The existing ten-file/10 MiB combined limit applies to forwards; rejection rolls back draft creation. Any future Mail purge must check all attachment object references before deleting source objects. `forwardId` is a create-only field and is rejected on draft updates.
