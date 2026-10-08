@@ -33,3 +33,7 @@
 #orbit-mail-vibrant .composer-form label { display: flex; flex-direction: column; gap: 4px; }
 #orbit-mail-vibrant .safe-email { width: 100%; min-height: 300px; border: 0; background: white; }
 @media(max-width:600px) { #orbit-workspace .ws-brand { flex-wrap: wrap; } #orbit-workspace .mailbox-picker select { min-width: 0; max-width: 75%; } }
+#orbit-workspace .drive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1rem 0}
+#orbit-workspace .drive-card,#orbit-workspace .drive-detail{border:1px solid var(--ws-border);border-radius:12px;padding:1rem;overflow-wrap:anywhere}
+#orbit-workspace .drive-detail label{display:block;margin:.75rem 0}
+#orbit-workspace .drive-detail input,#orbit-workspace .drive-detail select{display:block;max-width:100%}

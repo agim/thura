@@ -586,6 +586,183 @@ func (v MailMessage) Validate() error {
 	return errs.Result()
 }
 
+// DriveFolder is a row of the drive_folder table.
+type DriveFolder struct {
+	ID          string    `json:"id" db:"id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	ParentID    *string   `json:"parentId" db:"parent_id"`
+	Name        string    `json:"name" db:"name"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of DriveFolder from schema.lidza.
+func (v DriveFolder) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	return errs.Result()
+}
+
+// DriveFile is a row of the drive_file table.
+type DriveFile struct {
+	ID             string    `json:"id" db:"id"`
+	WorkspaceID    string    `json:"workspaceId" db:"workspace_id"`
+	FolderID       *string   `json:"folderId" db:"folder_id"`
+	Name           string    `json:"name" db:"name"`
+	ContentType    string    `json:"contentType" db:"content_type"`
+	Size           int       `json:"size" db:"size"`
+	CurrentVersion int       `json:"currentVersion" db:"current_version"`
+	Trashed        bool      `json:"trashed" db:"trashed"`
+	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of DriveFile from schema.lidza.
+func (v DriveFile) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.ContentType == "" {
+		errs.Add("contentType", "required", "required")
+	}
+	return errs.Result()
+}
+
+// FileVersion is a row of the file_version table.
+type FileVersion struct {
+	ID        string    `json:"id" db:"id"`
+	FileID    string    `json:"fileId" db:"file_id"`
+	Number    int       `json:"number" db:"number"`
+	ObjectKey string    `json:"objectKey" db:"object_key"`
+	Checksum  string    `json:"checksum" db:"checksum"`
+	Size      int       `json:"size" db:"size"`
+	CreatedBy string    `json:"createdBy" db:"created_by"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of FileVersion from schema.lidza.
+func (v FileVersion) Validate() error {
+	var errs validate.Errors
+	if v.FileID == "" {
+		errs.Add("fileId", "required", "required")
+	}
+	if v.ObjectKey == "" {
+		errs.Add("objectKey", "required", "required")
+	}
+	if v.Checksum == "" {
+		errs.Add("checksum", "required", "required")
+	}
+	if v.CreatedBy == "" {
+		errs.Add("createdBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// UploadSession is a row of the upload_session table.
+type UploadSession struct {
+	ID           string     `json:"id" db:"id"`
+	WorkspaceID  string     `json:"workspaceId" db:"workspace_id"`
+	Subject      string     `json:"subject" db:"subject"`
+	FileID       *string    `json:"fileId" db:"file_id"`
+	FolderID     *string    `json:"folderId" db:"folder_id"`
+	Name         string     `json:"name" db:"name"`
+	ContentType  string     `json:"contentType" db:"content_type"`
+	ExpectedSize int        `json:"expectedSize" db:"expected_size"`
+	BaseVersion  int        `json:"baseVersion" db:"base_version"`
+	ExpiresAt    time.Time  `json:"expiresAt" db:"expires_at"`
+	CompletedAt  *time.Time `json:"completedAt" db:"completed_at"`
+	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of UploadSession from schema.lidza.
+func (v UploadSession) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.ContentType == "" {
+		errs.Add("contentType", "required", "required")
+	}
+	return errs.Result()
+}
+
+// UploadChunk is a row of the upload_chunk table.
+type UploadChunk struct {
+	ID        string `json:"id" db:"id"`
+	SessionID string `json:"sessionId" db:"session_id"`
+	Number    int    `json:"number" db:"number"`
+	Size      int    `json:"size" db:"size"`
+	Checksum  string `json:"checksum" db:"checksum"`
+	ObjectKey string `json:"objectKey" db:"object_key"`
+}
+
+// Validate applies the rules of UploadChunk from schema.lidza.
+func (v UploadChunk) Validate() error {
+	var errs validate.Errors
+	if v.SessionID == "" {
+		errs.Add("sessionId", "required", "required")
+	}
+	if v.Checksum == "" {
+		errs.Add("checksum", "required", "required")
+	}
+	if v.ObjectKey == "" {
+		errs.Add("objectKey", "required", "required")
+	}
+	return errs.Result()
+}
+
+// ShareGrant is a row of the share_grant table.
+type ShareGrant struct {
+	ID          string     `json:"id" db:"id"`
+	FileID      string     `json:"fileId" db:"file_id"`
+	TokenHash   string     `json:"tokenHash" db:"token_hash"`
+	TargetEmail string     `json:"targetEmail" db:"target_email"`
+	ExpiresAt   time.Time  `json:"expiresAt" db:"expires_at"`
+	RevokedAt   *time.Time `json:"revokedAt" db:"revoked_at"`
+	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of ShareGrant from schema.lidza.
+func (v ShareGrant) Validate() error {
+	var errs validate.Errors
+	if v.FileID == "" {
+		errs.Add("fileId", "required", "required")
+	}
+	if v.TokenHash == "" {
+		errs.Add("tokenHash", "required", "required")
+	}
+	if v.TargetEmail == "" {
+		errs.Add("targetEmail", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -1154,6 +1331,259 @@ func (v FileContent) Validate() error {
 	}
 	if v.Data == "" {
 		errs.Add("data", "required", "required")
+	}
+	return errs.Result()
+}
+
+// DriveListing is an API type.
+type DriveListing struct {
+	Folders []DriveFolder `json:"folders"`
+	Files   []DriveFile   `json:"files"`
+}
+
+// Validate applies the rules of DriveListing from schema.lidza.
+func (v DriveListing) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Folders {
+		if err := x.Validate(); err != nil {
+			errs.Add("folders", "nested", err.Error())
+			break
+		}
+	}
+	for _, x := range v.Files {
+		if err := x.Validate(); err != nil {
+			errs.Add("files", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// FolderInput is an API type.
+type FolderInput struct {
+	Name     string  `json:"name"`
+	ParentID *string `json:"parentId"`
+}
+
+// Validate applies the rules of FolderInput from schema.lidza.
+func (v FolderInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	return errs.Result()
+}
+
+// UploadInput is an API type.
+type UploadInput struct {
+	Name        string  `json:"name"`
+	ContentType string  `json:"contentType"`
+	Size        int     `json:"size"`
+	FileID      *string `json:"fileId"`
+	FolderID    *string `json:"folderId"`
+	BaseVersion int     `json:"baseVersion"`
+}
+
+// Validate applies the rules of UploadInput from schema.lidza.
+func (v UploadInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.ContentType == "" {
+		errs.Add("contentType", "required", "required")
+	}
+	if len(v.ContentType) > 200 {
+		errs.Add("contentType", "max", "at most 200 character(s)")
+	}
+	if v.Size < 1 {
+		errs.Add("size", "min", "at least 1")
+	}
+	if v.Size > 10485760 {
+		errs.Add("size", "max", "at most 10485760")
+	}
+	if v.BaseVersion < 0 {
+		errs.Add("baseVersion", "min", "at least 0")
+	}
+	return errs.Result()
+}
+
+// UploadState is an API type.
+type UploadState struct {
+	Session UploadSession `json:"session"`
+	Chunks  []int         `json:"chunks"`
+}
+
+// Validate applies the rules of UploadState from schema.lidza.
+func (v UploadState) Validate() error {
+	var errs validate.Errors
+	if err := v.Session.Validate(); err != nil {
+		errs.Add("session", "nested", err.Error())
+	}
+	return errs.Result()
+}
+
+// DriveFlags is an API type.
+type DriveFlags struct {
+	Name     *string `json:"name"`
+	FolderID *string `json:"folderId"`
+	Trashed  bool    `json:"trashed"`
+}
+
+// Validate applies the rules of DriveFlags from schema.lidza.
+func (v DriveFlags) Validate() error {
+	var errs validate.Errors
+	if v.Name != nil {
+		x := *v.Name
+		if len(x) < 1 {
+			errs.Add("name", "min", "at least 1 character(s)")
+		}
+		if len(x) > 200 {
+			errs.Add("name", "max", "at most 200 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// VersionView is an API type.
+type VersionView struct {
+	Number    int       `json:"number"`
+	Checksum  string    `json:"checksum"`
+	Size      int       `json:"size"`
+	CreatedBy string    `json:"createdBy"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// Validate applies the rules of VersionView from schema.lidza.
+func (v VersionView) Validate() error {
+	var errs validate.Errors
+	if v.Checksum == "" {
+		errs.Add("checksum", "required", "required")
+	}
+	if v.CreatedBy == "" {
+		errs.Add("createdBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// VersionList is an API type.
+type VersionList struct {
+	Items []VersionView `json:"items"`
+}
+
+// Validate applies the rules of VersionList from schema.lidza.
+func (v VersionList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// ShareInput is an API type.
+type ShareInput struct {
+	TargetEmail *string   `json:"targetEmail"`
+	ExpiresAt   time.Time `json:"expiresAt"`
+}
+
+// Validate applies the rules of ShareInput from schema.lidza.
+func (v ShareInput) Validate() error {
+	var errs validate.Errors
+	if v.TargetEmail != nil {
+		x := *v.TargetEmail
+		if x != "" && !validate.Email(x) {
+			errs.Add("targetEmail", "email", "not an email address")
+		}
+	}
+	return errs.Result()
+}
+
+// ShareView is an API type.
+type ShareView struct {
+	ID          string     `json:"id"`
+	TargetEmail string     `json:"targetEmail"`
+	ExpiresAt   time.Time  `json:"expiresAt"`
+	RevokedAt   *time.Time `json:"revokedAt"`
+}
+
+// Validate applies the rules of ShareView from schema.lidza.
+func (v ShareView) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.TargetEmail == "" {
+		errs.Add("targetEmail", "required", "required")
+	}
+	return errs.Result()
+}
+
+// ShareList is an API type.
+type ShareList struct {
+	Items []ShareView `json:"items"`
+}
+
+// Validate applies the rules of ShareList from schema.lidza.
+func (v ShareList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// ShareCreated is an API type.
+type ShareCreated struct {
+	Grant ShareView `json:"grant"`
+	Token string    `json:"token"`
+}
+
+// Validate applies the rules of ShareCreated from schema.lidza.
+func (v ShareCreated) Validate() error {
+	var errs validate.Errors
+	if err := v.Grant.Validate(); err != nil {
+		errs.Add("grant", "nested", err.Error())
+	}
+	if v.Token == "" {
+		errs.Add("token", "required", "required")
+	}
+	return errs.Result()
+}
+
+// OpenShareInput is an API type.
+type OpenShareInput struct {
+	Token string `json:"token"`
+}
+
+// Validate applies the rules of OpenShareInput from schema.lidza.
+func (v OpenShareInput) Validate() error {
+	var errs validate.Errors
+	if v.Token == "" {
+		errs.Add("token", "required", "required")
+	}
+	if len(v.Token) < 20 {
+		errs.Add("token", "min", "at least 20 character(s)")
+	}
+	if len(v.Token) > 200 {
+		errs.Add("token", "max", "at most 200 character(s)")
 	}
 	return errs.Result()
 }

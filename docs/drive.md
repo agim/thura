@@ -1,0 +1,11 @@
+# Private Drive
+
+Drive uses the official storage pack, with Postgres metadata. Members of the workspace can create folders, upload files, move files, view history, share read-only links, and move files to/from trash. Each query for member access includes workspace and file IDs. Share access is a separate explicit grant to one file.
+
+Uploads accept 1 byte–10 MB in 1 MB chunks. A session belongs to the initiating member and expires after 24 hours. A client can inspect completed chunk numbers, resend a chunk, and retry finalization. Finalization checks all chunks, byte count, and SHA-256, stores an immutable version, and commits file metadata and completion together. A replacement records the version it started from: a newer edit or a move to trash causes a conflict instead of losing newer content. The browser keeps only upload IDs/fingerprints in session storage; selecting identical bytes resumes after reload. Object contents and auth credentials never enter that storage.
+
+File downloads go through the authenticated app gateway, verify the checksum, and return bounded base64 content to the generated client. The browser forces a download as binary; HTML/SVG is never embedded as an active preview. This first implementation has a 500-file/folder listing limit and a 100-version history limit. It does not yet generate thumbnail/PDF previews.
+
+Read-only shares last at most 30 days and use random 256-bit tokens stored only as hashes. The token stays in the share page's fragment; the generated client posts it in the request body. A blank recipient allows anyone with the link; a specified email requires sign-in to the corresponding account. The share follows the current version of the file. Every download rechecks expiry, revocation, and trash. A download already in flight or bytes already downloaded cannot be revoked. No presigned public object URLs are issued.
+
+Trashing preserves all versions and disables downloads. Restore re-enables unexpired, unrevoked shares. Permanent deletion, storage quotas, expired-chunk cleanup, and office editing are subsequent implementation slices. Storage and database transactions are separate: interrupted writes and replaced chunks can leave private orphan objects until cleanup. Back up both Postgres and the configured storage; neither alone reconstructs the workspace.

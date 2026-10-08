@@ -52,3 +52,7 @@ Touches: lidza.json, packs.go
 ## 2026-10-08: Mailbox-specific delivery and signed inbound relay
 
 Why: Resolve each mailbox’s sealed credential prefix inside a custom delivery job using a non-queued official Mail instance; preserve the global invitation handler. Serialize draft/send/undo transitions and verify HMAC over raw MIME before ingestion. Keep storage private, expose capture truthfully, and sandbox sanitized email HTML. Document at-least-once transport and deployment relay requirements.
+
+## 2026-10-08: Private versioned Drive with resumable uploads and gateway shares
+
+Why: Use 1 MB chunks and 24-hour sessions scoped to the initiating member, with a 10 MB file limit. Verify chunk/file SHA-256, serialize finalization, preserve immutable versions and reject stale replacements. Share tokens are random and hashed; downloads recheck expiry, revocation and trash through the app, optionally matching an authenticated recipient. No public object URLs or executable previews are issued.

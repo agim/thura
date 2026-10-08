@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/agim/lidza/packs/auth"
+	"github.com/agim/lidza/pkg/middleware"
 	"github.com/agim/lidza/pkg/router"
 	"thura/handlers"
 
@@ -19,6 +20,7 @@ func routes(r *router.Router) {
 	router.Route(r, "GET /api/v1/hello/{name}", hello)
 	router.Route(r, "POST /api/v1/inbound/{mailboxId}", handlers.ReceiveMail, router.UploadLimit(12<<20))
 	router.Route(r.Group("/api/v1/invitations", auth.Optional()), "POST /api/v1/invitations/accept", handlers.AcceptInvite, auth.Throttle())
+	router.Route(r.Group("/api/v1/shares", auth.Optional()), "POST /api/v1/shares/open", handlers.OpenDriveShare, middleware.RateLimit(middleware.RateLimitOptions{RPS: 1, Burst: 10}))
 	g := r.Group("/api/v1", auth.Require())
 	router.Route(g, "GET /api/v1/workspaces", handlers.ListWorkspaces)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts", handlers.ListContacts)
@@ -41,6 +43,18 @@ func routes(r *router.Router) {
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/undo", handlers.UndoMail)
 	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/attachments", handlers.UploadMailAttachment, router.UploadLimit(10<<20))
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/attachments/{attachmentId}", handlers.DownloadMailAttachment)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive", handlers.ListDrive)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/folders", handlers.CreateDriveFolder)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/uploads", handlers.BeginDriveUpload)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/uploads/{id}", handlers.GetDriveUpload)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/drive/uploads/{id}/chunks/{number}", handlers.PutDriveChunk, router.UploadLimit(1<<20))
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/uploads/{id}/finish", handlers.FinishDriveUpload)
+	router.Route(g, "PATCH /api/v1/workspaces/{workspaceId}/drive/files/{id}", handlers.UpdateDriveFile)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/files/{id}/content", handlers.DownloadDriveFile)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/files/{id}/versions", handlers.ListDriveVersions)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares", handlers.CreateDriveShare)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares", handlers.ListDriveShares)
+	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares/{shareId}", handlers.RevokeDriveShare)
 }
 
 // hello greets by name. Greeting is defined in schema.lidza.

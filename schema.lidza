@@ -334,3 +334,121 @@ model MailMessage @table("mail_message") {
   createdAt  time   @default(now()) @index
   sentAt     time?
 }
+
+model DriveFolder {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace) @index
+ parentId uuid?
+ name string @min(1) @max(200)
+ createdAt time @default(now())
+}
+model DriveFile {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace) @index
+ folderId uuid?
+ name string @min(1) @max(200)
+ contentType string
+ size int
+ currentVersion int @default(1)
+ trashed bool @default(false)
+ createdAt time @default(now())
+ updatedAt time @default(now())
+}
+model FileVersion {
+ id uuid @id @default(uuid())
+ fileId uuid @ref(DriveFile) @index
+ number int
+ objectKey string
+ checksum string
+ size int
+ createdBy string
+ createdAt time @default(now())
+ @@unique(fileId,number)
+}
+model UploadSession {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace) @index
+ subject string
+ fileId uuid?
+ folderId uuid?
+ name string
+ contentType string
+ expectedSize int
+ baseVersion int
+ expiresAt time
+ completedAt time?
+ createdAt time @default(now())
+}
+model UploadChunk {
+ id uuid @id @default(uuid())
+ sessionId uuid @ref(UploadSession) @index
+ number int
+ size int
+ checksum string
+ objectKey string
+ @@unique(sessionId,number)
+}
+model ShareGrant {
+ id uuid @id @default(uuid())
+ fileId uuid @ref(DriveFile) @index
+ tokenHash string @unique
+ targetEmail string @default("")
+ expiresAt time
+ revokedAt time?
+ createdAt time @default(now())
+}
+type DriveListing {
+ folders DriveFolder[]
+ files DriveFile[]
+}
+type FolderInput {
+ name string @min(1) @max(200)
+ parentId uuid?
+}
+type UploadInput {
+ name string @min(1) @max(200)
+ contentType string @max(200)
+ size int @min(1) @max(10485760)
+ fileId uuid?
+ folderId uuid?
+ baseVersion int @min(0)
+}
+type UploadState {
+ session UploadSession
+ chunks int[]
+}
+type DriveFlags {
+ name string? @min(1) @max(200)
+ folderId uuid?
+ trashed bool
+}
+type VersionView {
+ number int
+ checksum string
+ size int
+ createdBy string
+ createdAt time
+}
+type VersionList {
+ items VersionView[]
+}
+type ShareInput {
+ targetEmail string? @email
+ expiresAt time
+}
+type ShareView {
+ id uuid
+ targetEmail string
+ expiresAt time
+ revokedAt time?
+}
+type ShareList {
+ items ShareView[]
+}
+type ShareCreated {
+ grant ShareView
+ token string
+}
+type OpenShareInput {
+ token string @min(20) @max(200)
+}

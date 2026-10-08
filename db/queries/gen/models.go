@@ -186,6 +186,38 @@ type Contact struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type DriveFile struct {
+	ID             string    `json:"id"`
+	WorkspaceID    string    `json:"workspace_id"`
+	FolderID       *string   `json:"folder_id"`
+	Name           string    `json:"name"`
+	ContentType    string    `json:"content_type"`
+	Size           int32     `json:"size"`
+	CurrentVersion int32     `json:"current_version"`
+	Trashed        bool      `json:"trashed"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type DriveFolder struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	ParentID    *string   `json:"parent_id"`
+	Name        string    `json:"name"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type FileVersion struct {
+	ID        string    `json:"id"`
+	FileID    string    `json:"file_id"`
+	Number    int32     `json:"number"`
+	ObjectKey string    `json:"object_key"`
+	Checksum  string    `json:"checksum"`
+	Size      int32     `json:"size"`
+	CreatedBy string    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Invitation struct {
 	ID          string        `json:"id"`
 	WorkspaceID string        `json:"workspace_id"`
@@ -285,6 +317,40 @@ type Mailbox struct {
 	Address      string    `json:"address"`
 	ConfigPrefix string    `json:"config_prefix"`
 	CreatedAt    time.Time `json:"created_at"`
+}
+
+type ShareGrant struct {
+	ID          string     `json:"id"`
+	FileID      string     `json:"file_id"`
+	TokenHash   string     `json:"token_hash"`
+	TargetEmail string     `json:"target_email"`
+	ExpiresAt   time.Time  `json:"expires_at"`
+	RevokedAt   *time.Time `json:"revoked_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+type UploadChunk struct {
+	ID        string `json:"id"`
+	SessionID string `json:"session_id"`
+	Number    int32  `json:"number"`
+	Size      int32  `json:"size"`
+	Checksum  string `json:"checksum"`
+	ObjectKey string `json:"object_key"`
+}
+
+type UploadSession struct {
+	ID           string     `json:"id"`
+	WorkspaceID  string     `json:"workspace_id"`
+	Subject      string     `json:"subject"`
+	FileID       *string    `json:"file_id"`
+	FolderID     *string    `json:"folder_id"`
+	Name         string     `json:"name"`
+	ContentType  string     `json:"content_type"`
+	ExpectedSize int32      `json:"expected_size"`
+	BaseVersion  int32      `json:"base_version"`
+	ExpiresAt    time.Time  `json:"expires_at"`
+	CompletedAt  *time.Time `json:"completed_at"`
+	CreatedAt    time.Time  `json:"created_at"`
 }
 
 type Workspace struct {
