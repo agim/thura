@@ -37,6 +37,7 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 	if err := jobs.FromServices(s).Schedule(meet.ReconcileJob, jobs.Every(time.Minute), nil); err != nil {
 		return err
 	}
+	jobs.FromServices(s).Handle(drive.PreviewJob, drive.GeneratePreview, jobs.Concurrency(1))
 	jobs.FromServices(s).Handle(drive.CleanupJob, drive.Cleanup, jobs.Concurrency(1))
 	if err := jobs.FromServices(s).Schedule(drive.CleanupJob, jobs.Every(time.Hour), nil); err != nil {
 		return err

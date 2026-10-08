@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise offline recovery from a stopped, synthetic *_test database."""
 import argparse
+import base64
 import importlib.util
 import json
 import os
@@ -31,7 +32,33 @@ def main():
     backup_args = argparse.Namespace(storage=args.storage, bundle=bundle,
                                      pg_container=args.pg_container)
     created = False
+    preview_workspace = str(uuid.uuid4())
+    preview_file = str(uuid.uuid4())
+    original_key = f"drive/files/{preview_file}/{uuid.uuid4()}"
+    preview_key = f"drive/previews/{preview_file}/{uuid.uuid4()}"
+    fixture_paths = [args.storage / original_key, args.storage / preview_key]
+    seeded = False
     try:
+        # Always exercise retained derived metadata, even when browser tests
+        # correctly purged their own previews. This source is a stopped *_test
+        # database; all fixture rows/objects are removed in finally.
+        image = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMQLc3+DwADjQH1XdOL8wAAAABJRU5ErkJggg==")
+        for path in fixture_paths:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(image)
+        checksum = recovery.digest(fixture_paths[0])
+        recovery.pg(args, ["psql", "-X", "-v", "ON_ERROR_STOP=1", "-c", f"""
+            BEGIN;
+            INSERT INTO workspace(id,name) VALUES('{preview_workspace}','Offline preview recovery fixture');
+            INSERT INTO drive_file(id,workspace_id,name,content_type,size)
+              VALUES('{preview_file}','{preview_workspace}','recovery.png','image/png',{len(image)});
+            INSERT INTO file_version(file_id,number,object_key,checksum,size,created_by)
+              VALUES('{preview_file}',1,'{original_key}','{checksum}',{len(image)},'offline-recovery-fixture');
+            INSERT INTO drive_preview(file_id,version,status,object_key,checksum,content_type,width,height)
+              VALUES('{preview_file}',1,'ready','{preview_key}','{checksum}','image/png',1,1);
+            COMMIT;
+        """])
+        seeded = True
         recovery.backup(backup_args)
         tables = recovery.pg(args, ["psql", "-X", "-Atc",
             "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename"])
@@ -62,6 +89,15 @@ def main():
                 raise RuntimeError("version object escaped storage root")
             if path.stat().st_size != version["size"] or recovery.digest(path) != version["hash"]:
                 raise RuntimeError("version bytes do not match restored metadata")
+        previews = recovery.pg(args, ["psql", "-X", "-Atc",
+            "SELECT COALESCE(json_agg(json_build_object('key',object_key,'hash',checksum)),'[]') FROM drive_preview WHERE status='ready'"])
+        preview_rows = json.loads(previews)
+        if not preview_rows:
+            raise RuntimeError("derived-preview recovery fixture missing")
+        for preview in preview_rows:
+            path = (restored / preview["key"]).resolve()
+            if restored.resolve() not in path.parents or recovery.digest(path) != preview["hash"]:
+                raise RuntimeError("preview bytes do not match restored metadata")
         # A populated destination must never be overwritten.
         try:
             recovery.restore(argparse.Namespace(storage=args.output / "refused",
@@ -83,11 +119,22 @@ def main():
         else:
             raise RuntimeError("restore accepted corrupted backup bytes")
         print(f"Recovery fixture passed: {len(tables)} table counts, all object hashes, "
-              "version metadata, populated-target refusal and corruption refusal")
+              "version/preview metadata, populated-target refusal and corruption refusal")
     finally:
         os.environ["DATABASE_URL"] = source_url
         if created:
             recovery.pg(args, ["dropdb", fixture_db])
+        if seeded:
+            recovery.pg(args, ["psql", "-X", "-v", "ON_ERROR_STOP=1", "-c", f"""
+                BEGIN;
+                DELETE FROM drive_preview WHERE file_id='{preview_file}';
+                DELETE FROM file_version WHERE file_id='{preview_file}';
+                DELETE FROM drive_file WHERE id='{preview_file}';
+                DELETE FROM workspace WHERE id='{preview_workspace}';
+                COMMIT;
+            """])
+        for path in fixture_paths:
+            path.unlink(missing_ok=True)
     return 0
 
 

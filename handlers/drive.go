@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"context"
+	"github.com/agim/lidza/packs/audit"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/pkg/router"
 	"io"
 	"strconv"
 	q "thura/db/queries/gen"
 	"thura/internal/drive"
+	"thura/internal/platform/auditlog"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -39,7 +41,8 @@ func DriveQuota(ctx context.Context, r *router.Request[router.None]) (schema.Dri
 	return drive.Quota(ctx, r.Param("workspaceId"))
 }
 func PurgeDriveFile(ctx context.Context, r *router.Request[router.None]) (router.None, error) {
-	return router.None{}, drive.Purge(ctx, r.Param("workspaceId"), r.Param("id"))
+	err := drive.Purge(ctx, r.Param("workspaceId"), r.Param("id"))
+	return router.None{}, auditlog.Refused(ctx, "drive.purge", r.Param("workspaceId"), "file", err)
 }
 func BeginDriveUpload(ctx context.Context, r *router.Request[schema.UploadInput]) (schema.UploadState, error) {
 	return drive.Begin(ctx, r.Param("workspaceId"), r.Body)
@@ -117,7 +120,8 @@ func ListDriveVersions(ctx context.Context, r *router.Request[router.None]) (sch
 	return out, err
 }
 func CreateDriveShare(ctx context.Context, r *router.Request[schema.ShareInput]) (schema.ShareCreated, error) {
-	return drive.Grant(ctx, r.Param("workspaceId"), r.Param("id"), r.Body)
+	out, err := drive.Grant(ctx, r.Param("workspaceId"), r.Param("id"), r.Body)
+	return out, auditlog.Refused(ctx, "drive.share.create", r.Param("workspaceId"), "file", err)
 }
 func ListDriveShares(ctx context.Context, r *router.Request[router.None]) (schema.ShareList, error) {
 	f, err := drive.Get(ctx, r.Param("workspaceId"), r.Param("id"))
@@ -131,7 +135,8 @@ func ListDriveShares(ctx context.Context, r *router.Request[router.None]) (schem
 	}
 	return out, err
 }
-func RevokeDriveShare(ctx context.Context, r *router.Request[router.None]) (router.None, error) {
+func RevokeDriveShare(ctx context.Context, r *router.Request[router.None]) (out router.None, err error) {
+	defer func() { err = auditlog.Refused(ctx, "drive.share.revoke", r.Param("workspaceId"), "file", err) }()
 	f, err := drive.Get(ctx, r.Param("workspaceId"), r.Param("id"))
 	if err != nil {
 		return router.None{}, err
@@ -139,12 +144,30 @@ func RevokeDriveShare(ctx context.Context, r *router.Request[router.None]) (rout
 	if !workspace.ValidID(r.Param("shareId")) {
 		return router.None{}, router.Errorf(404, "share not found")
 	}
-	n, err := q.New(db.From(ctx)).RevokeShareGrant(ctx, q.RevokeShareGrantParams{ID: r.Param("shareId"), FileID: f.ID})
-	if err == nil && n == 0 {
-		err = router.Errorf(404, "share not found")
+	tx, err := db.From(ctx).Begin(ctx)
+	if err != nil {
+		return router.None{}, err
 	}
-	return router.None{}, err
+	defer tx.Rollback(ctx)
+	n, err := q.New(tx).RevokeShareGrant(ctx, q.RevokeShareGrantParams{ID: r.Param("shareId"), FileID: f.ID})
+	if err != nil {
+		return router.None{}, err
+	}
+	if n == 0 {
+		return router.None{}, router.Errorf(404, "share not found")
+	}
+	if err = audit.From(ctx).RecordTx(ctx, tx, audit.Event{Action: "drive.share.revoke", Scope: f.WorkspaceID, Resource: "file/" + f.ID, Meta: map[string]string{"share_id": r.Param("shareId")}}); err != nil {
+		return router.None{}, err
+	}
+	return router.None{}, tx.Commit(ctx)
 }
 func OpenDriveShare(ctx context.Context, r *router.Request[schema.OpenShareInput]) (schema.FileContent, error) {
 	return drive.Open(ctx, r.Body.Token)
+}
+
+func GetDrivePreview(ctx context.Context, r *router.Request[router.None]) (schema.FilePreview, error) {
+	return drive.Preview(ctx, r.Param("workspaceId"), r.Param("id"))
+}
+func RequestDrivePreview(ctx context.Context, r *router.Request[router.None]) (schema.FilePreview, error) {
+	return drive.RequestPreview(ctx, r.Param("workspaceId"), r.Param("id"))
 }

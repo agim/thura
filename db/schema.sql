@@ -39,6 +39,35 @@ CREATE TABLE invitation (
 );
 CREATE INDEX invitation_workspace_id_idx ON invitation (workspace_id);
 
+CREATE TABLE drive_file (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  folder_id uuid,
+  name varchar(200) NOT NULL,
+  content_type text NOT NULL,
+  size integer NOT NULL,
+  current_version integer NOT NULL DEFAULT 1,
+  trashed boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX drive_file_workspace_id_idx ON drive_file (workspace_id);
+
+CREATE TABLE drive_preview (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  file_id uuid NOT NULL UNIQUE REFERENCES drive_file(id),
+  version integer NOT NULL,
+  status text NOT NULL DEFAULT 'pending',
+  object_key text NOT NULL DEFAULT '',
+  checksum text NOT NULL DEFAULT '',
+  content_type text NOT NULL DEFAULT '',
+  width integer NOT NULL DEFAULT 0,
+  height integer NOT NULL DEFAULT 0,
+  truncated boolean NOT NULL DEFAULT false,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  job_id text NOT NULL DEFAULT ''
+);
+
 CREATE TABLE mailbox (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspace(id),
@@ -232,20 +261,6 @@ CREATE TABLE drive_folder (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX drive_folder_workspace_id_idx ON drive_folder (workspace_id);
-
-CREATE TABLE drive_file (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspace(id),
-  folder_id uuid,
-  name varchar(200) NOT NULL,
-  content_type text NOT NULL,
-  size integer NOT NULL,
-  current_version integer NOT NULL DEFAULT 1,
-  trashed boolean NOT NULL DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX drive_file_workspace_id_idx ON drive_file (workspace_id);
 
 CREATE TABLE file_version (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -482,4 +497,19 @@ CREATE TABLE mail_tag (
 CREATE INDEX mail_tag_item_id_idx ON mail_tag (item_id);
 CREATE INDEX mail_tag_label_id_idx ON mail_tag (label_id);
 CREATE UNIQUE INDEX mail_tag_item_id_label_id_key ON mail_tag (item_id, label_id);
+
+CREATE TABLE audit_event (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  at timestamptz NOT NULL DEFAULT now(),
+  actor text NOT NULL,
+  action text NOT NULL,
+  resource text NOT NULL DEFAULT '',
+  scope text NOT NULL DEFAULT '',
+  outcome text NOT NULL,
+  request_id text NOT NULL DEFAULT '',
+  meta jsonb NOT NULL
+);
+CREATE INDEX audit_event_at_id_idx ON audit_event (at, id);
+CREATE INDEX audit_event_actor_at_idx ON audit_event (actor, at);
+CREATE INDEX audit_event_scope_at_idx ON audit_event (scope, at);
 

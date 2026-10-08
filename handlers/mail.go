@@ -276,3 +276,7 @@ func mailPage(rows []queries.MailItem, limit int32) schema.MailItemList {
 	}
 	return out
 }
+
+func InlineMailImage(ctx context.Context, r *router.Request[router.None]) (schema.FileContent, error) {
+	return mailbox.InlineImage(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Param("id"), r.Param("attachmentId"))
+}

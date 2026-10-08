@@ -114,7 +114,7 @@ func (q *Queries) DeleteUploadSession(ctx context.Context, id string) error {
 }
 
 const driveObjectReferenced = `-- name: DriveObjectReferenced :one
-SELECT (EXISTS(SELECT 1 FROM file_version v WHERE v.object_key=$1) OR EXISTS(SELECT 1 FROM upload_chunk c WHERE c.object_key=$1))::boolean AS referenced
+SELECT (EXISTS(SELECT 1 FROM file_version v WHERE v.object_key=$1) OR EXISTS(SELECT 1 FROM upload_chunk c WHERE c.object_key=$1) OR EXISTS(SELECT 1 FROM drive_preview p WHERE p.object_key=$1))::boolean AS referenced
 `
 
 func (q *Queries) DriveObjectReferenced(ctx context.Context, objectKey string) (bool, error) {

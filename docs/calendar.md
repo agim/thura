@@ -1,6 +1,6 @@
 # Calendar
 
-Workspace members can use shared calendars; personal calendars are visible only to their creator. Events, attendees, exceptions, and sequences live in Postgres. Every route checks current workspace membership and personal-calendar ownership. Shared-calendar members can edit its events. Timezone views default to America/New_York and accept IANA identifiers; the binary includes timezone data.
+Workspace members can use shared calendars; personal calendars are visible only to their creator. Events, attendees, exceptions, and sequences live in Postgres. Every route checks current workspace membership and personal-calendar ownership. Shared-calendar members can edit its events. Timezone views default to the browser's IANA timezone (UTC if unavailable) and accept IANA identifiers; the binary includes timezone data.
 
 All-day events store start/end dates separately, with an exclusive end date. Timed events store instants plus their recurrence timezone. The browser rejects nonexistent local start/end times and chooses the first ambiguous fall-back time. Recurrence expansion preserves the local wall clock, skips nonexistent DST occurrences before counting, and uses the first ambiguous occurrence. Daily/weekly/monthly/yearly rules require COUNT or UNTIL, produce at most 1,000 occurrences, and finish within ten years. Clock-frequency rules, multi-time expansions and Easter extensions are refused. Views span at most 93 days and return at most 5,000 occurrences. A workspace can have 100 calendars and 1,000 stored events.
 
@@ -10,7 +10,7 @@ ICS import is limited to 1 MB/200 VEVENT records; export is limited to 8 MB. Imp
 
 The UI uses FullCalendar 6.1.21 standard MIT plugins and Luxon 3.7.2. These versions share compatible peer dependencies, including React 19. The widget is loaded only when Calendar opens. Its CSSOM stylesheet uses the CSP hash of an empty style element; other inline styles/scripts remain blocked. Recurrence uses the MIT-licensed rrule-go 1.8.2 with explicit time/iteration bounds and DST normalization.
 
-Calendar creation/editing/import currently stores data without sending invitations. Invitations, RSVP handling and reminders are the next slice. ICS interoperability is bounded to the documented subset; external calendar synchronization and CalDAV remain deferred.
+Calendar creation/editing/import stores data without automatically sending invitations. Invitations are an explicit action, with RSVP grants and personal reminders described below. ICS interoperability is bounded to the documented subset; external calendar synchronization and CalDAV remain deferred.
 
 ## Invitations, replies, and reminders
 

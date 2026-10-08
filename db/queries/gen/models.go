@@ -143,6 +143,18 @@ func (ns NullWorkspaceRole) Value() (driver.Value, error) {
 	return string(ns.WorkspaceRole), nil
 }
 
+type AuditEvent struct {
+	ID        string    `json:"id"`
+	At        time.Time `json:"at"`
+	Actor     string    `json:"actor"`
+	Action    string    `json:"action"`
+	Resource  string    `json:"resource"`
+	Scope     string    `json:"scope"`
+	Outcome   string    `json:"outcome"`
+	RequestID string    `json:"request_id"`
+	Meta      []byte    `json:"meta"`
+}
+
 type AuthAccount struct {
 	Subject     string     `json:"subject"`
 	Label       *string    `json:"label"`
@@ -324,6 +336,21 @@ type DriveFolder struct {
 	ParentID    *string   `json:"parent_id"`
 	Name        string    `json:"name"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type DrivePreview struct {
+	ID          string    `json:"id"`
+	FileID      string    `json:"file_id"`
+	Version     int32     `json:"version"`
+	Status      string    `json:"status"`
+	ObjectKey   string    `json:"object_key"`
+	Checksum    string    `json:"checksum"`
+	ContentType string    `json:"content_type"`
+	Width       int32     `json:"width"`
+	Height      int32     `json:"height"`
+	Truncated   bool      `json:"truncated"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	JobID       string    `json:"job_id"`
 }
 
 type EventAttendee struct {

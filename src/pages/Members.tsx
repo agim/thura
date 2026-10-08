@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type WorkspaceRole } from '@lidza/client'
 import { SignIn } from '../components/SignIn'
+import { WorkspaceHistory } from '../components/WorkspaceHistory'
 
 export function Members() {
   const session = useQuery({ queryKey: ['session'], queryFn: () => api.authSession() })
@@ -28,7 +29,7 @@ function Membership({ workspaceId, subject }: { workspaceId: string; subject: st
   const invites = useQuery({ queryKey: ['invitations', workspaceId], queryFn: () => api.listInvites({ workspaceId }), enabled: manager })
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<WorkspaceRole>('member')
-  const refresh = async () => { await client.invalidateQueries({ queryKey: ['members', workspaceId] }); await client.invalidateQueries({ queryKey: ['invitations', workspaceId] }) }
+  const refresh = async () => { await client.invalidateQueries({ queryKey: ['members', workspaceId] }); await client.invalidateQueries({ queryKey: ['invitations', workspaceId] }); await client.invalidateQueries({ queryKey: ['workspace-audit', workspaceId] }) }
   const invite = useMutation({ mutationFn: () => api.inviteMember({ workspaceId }, { email, role }), onSuccess: async () => { setEmail(''); await refresh() } })
   const change = useMutation({ mutationFn: ({ target, role }: { target: string; role: WorkspaceRole }) => api.changeRole({ workspaceId, subject: target }, { role }), onSuccess: refresh })
   const remove = useMutation({ mutationFn: (target: string) => api.removeMember({ workspaceId, subject: target }), onSuccess: refresh })
@@ -58,6 +59,7 @@ function Membership({ workspaceId, subject }: { workspaceId: string; subject: st
       <ul className="space-y-2">{!invites.isError && invites.data?.items.map(i => <li key={i.id} className="rounded border p-3">{i.email} · {i.role} · {i.acceptedAt ? 'Accepted' : i.revokedAt ? 'Revoked' : new Date(i.expiresAt) <= new Date() ? 'Expired' : 'Pending'}
         {!i.acceptedAt && !i.revokedAt && <button type="button" disabled={busy} className="ml-4" onClick={() => revoke.mutate(i.id)}>Revoke {i.email}</button>}
       </li>)}</ul>
+      <WorkspaceHistory workspaceId={workspaceId} members={members.data?.items ?? []} />
     </>}
   </div>
 }

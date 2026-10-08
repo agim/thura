@@ -20,6 +20,7 @@ import (
 	"mime/multipart"
 	"mime/quotedprintable"
 	stdmail "net/mail"
+	"net/textproto"
 	"strconv"
 	"strings"
 	queries "thura/db/queries/gen"
@@ -61,13 +62,7 @@ func Parse(raw []byte) (ParsedMail, error) {
 		if depth > 6 || parts > 50 {
 			return errors.New("MIME nesting or part count exceeds limit")
 		}
-		get := func(key string) string {
-			v := header[key]
-			if len(v) > 0 {
-				return v[0]
-			}
-			return ""
-		}
+		get := func(key string) string { return textproto.MIMEHeader(header).Get(key) }
 		ct := get("Content-Type")
 		if ct == "" {
 			ct = "text/plain"

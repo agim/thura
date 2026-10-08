@@ -26,7 +26,7 @@ type sweepPayload struct {
 	Prefix string `json:"prefix"`
 }
 
-var allowed = regexp.MustCompile(`^drive/(files|uploads)/[0-9a-f/-]*$`)
+var allowed = regexp.MustCompile(`^drive/(files|uploads|previews)/[0-9a-f/-]*$`)
 
 func QueueDelete(ctx context.Context, tx pgx.Tx, key string) error {
 	if !allowed.MatchString(key) || len(key) > 100 {
@@ -59,7 +59,7 @@ func Sweep(ctx context.Context, raw json.RawMessage) error {
 		return err
 	}
 	if in.Prefix == "" {
-		for _, prefix := range []string{"drive/files/", "drive/uploads/"} {
+		for _, prefix := range []string{"drive/files/", "drive/uploads/", "drive/previews/"} {
 			if err := queueSweep(ctx, prefix); err != nil {
 				return err
 			}

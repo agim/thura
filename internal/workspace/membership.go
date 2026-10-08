@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/agim/lidza"
+	"github.com/agim/lidza/packs/audit"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/mail"
@@ -88,6 +89,9 @@ func Invite(ctx context.Context, id string, in schema.InviteInput) (schema.Invit
 	}
 	_, err = mail.From(ctx).SendTx(ctx, tx, mail.Message{To: in.Email, Subject: "Invitation to " + w.Name, Text: "You have been invited to " + w.Name + " on Thura.\n\n" + mail.From(ctx).Link("/invite?token="+token) + "\n\nThis invitation expires in 72 hours. If you did not expect it, ignore this email."})
 	if err != nil {
+		return schema.InviteView{}, err
+	}
+	if err = audit.From(ctx).RecordTx(ctx, tx, audit.Event{Action: "invitation.create", Scope: id, Resource: "invitation/" + inv.ID, Meta: map[string]string{"role": string(in.Role)}}); err != nil {
 		return schema.InviteView{}, err
 	}
 	return InviteView(inv), tx.Commit(ctx)
@@ -173,6 +177,9 @@ func Accept(ctx context.Context, in schema.AcceptInviteInput) (schema.Workspace,
 	if err = q.AcceptInvitation(ctx, inv.ID); err != nil {
 		return schema.Workspace{}, err
 	}
+	if err = audit.From(ctx).RecordTx(audit.System(ctx, "invitation-accept"), tx, audit.Event{Action: "invitation.accept", Scope: w.ID, Resource: "invitation/" + inv.ID, Meta: map[string]string{"member_subject": subject, "role": string(inv.Role)}}); err != nil {
+		return schema.Workspace{}, err
+	}
 	return schema.Workspace{ID: w.ID, Name: w.Name, CreatedAt: w.CreatedAt}, tx.Commit(ctx)
 }
 
@@ -207,6 +214,13 @@ func ChangeMember(ctx context.Context, id, subject, newRole string) error {
 			return err
 		}
 	}
+	action := "member.role"
+	if newRole == "" {
+		action = "member.remove"
+	}
+	if err = audit.From(ctx).RecordTx(ctx, tx, audit.Event{Action: action, Scope: id, Resource: "member/" + subject, Meta: map[string]string{"previous_role": targetRole, "role": newRole}}); err != nil {
+		return err
+	}
 	return tx.Commit(ctx)
 }
 
@@ -225,6 +239,9 @@ func Revoke(ctx context.Context, id, invitationID string) error {
 	}
 	if n == 0 {
 		return router.Errorf(http.StatusNotFound, "pending invitation not found")
+	}
+	if err = audit.From(ctx).RecordTx(ctx, tx, audit.Event{Action: "invitation.revoke", Scope: id, Resource: "invitation/" + invitationID}); err != nil {
+		return err
 	}
 	return tx.Commit(ctx)
 }

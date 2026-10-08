@@ -4,6 +4,23 @@ Status: implementation roadmap with historical planning detail. The developer au
 
 Implementation has since started at the user's request. See [implementation-status.md](implementation-status.md) for the delivered six-app first version, operations and remaining deployment gates. The descriptions below preserve the planning baseline.
 
+## Active first-release completion
+
+The developer confirmed that this completion goal is the first release and that SMIP stays in a separate chat/track. Do not mark the entire roadmap complete because an individual release check passes. Compare each deliverable with implementation and its acceptance evidence.
+
+| Milestone | Current evidence and remaining work |
+| --- | --- |
+| 0. Brief and integration boundaries | Brief completed; prototype, Postfix, ONLYOFFICE, Matrix and LiveKit integration evidence recorded in implementation status. |
+| 1. Accounts and permissions | Membership/invitations and revocation are implemented. Durable transaction-bound audit history and manager-only history browsing are implemented. Go tests prove rollback, scoped paging/filters and revoked access; browser checks cover manager controls and ordinary-member refusal. |
+| 2. Mail and Contacts | Core drafts, delivery, conversations, labels and contact handoffs are implemented. Server sanitization, sandboxed formatted reading and opt-in bounded CID images are implemented. Go/browser checks cover scoped CID images, raw/original byte preservation, inert HTML and reload resetting image consent. Hosted-native ingress adapters and expanded contact fields stay outside this release. |
+| 3. Drive and Office | Uploads, versions, shares, quotas, cleanup and editing are implemented. Private background PNG/text previews are implemented. Go/browser checks prove retry, obsolete-job refusal, checksum verification, access revocation, purge cleanup, inert text and reload persistence. |
+| 4. Calendar | Events, recurrence, invitations, RSVP and reminders are implemented. Connector documentation now reflects delivered invitations/reminders and the browser timezone default. |
+| 5. Chat | Matrix federation and authorization are implemented. History retention, anchored paging and bounded reconnect bridging are implemented. Browser checks cover outage/history retention, intervening pages, the 20-page cap, explicit continuation and revoked access; real Matrix federation/browser fixtures pass. |
+| 6. Meet | Member-only media/token/webhook flows are implemented and locally tested. Public TURN and physical-device acceptance depend on each deployment. Recording/transcription remain deferred. |
+| 7. Operations | Deployment and offline recovery tooling are implemented. Recovery passes 42 table counts and 1,109 file checksums including previews. The full Go suite, all 44 browser checks and the production build pass; strict verification and all 12 production-page size/CLS budgets pass. Deployment-specific acceptance remains with the operator. |
+
+Native collaborative sheets, E2EE/device recovery, CalDAV/IMAP, recording/transcription, AI summaries, SMIP and public deployment are outside this confirmed first-release goal. The milestones below retain the original research/planning detail rather than silently expanding that scope.
+
 ## Basis and current state
 
 Thura is a Go and React application created with published Līdza v0.1.88. Its initial planning baseline was commit 637ff65c99b4a4d558c89679fb4216ed260224c5 in agim/thura. At that baseline the starter had a greeting API and two routes. The six live apps and Matrix federation have since been implemented; SMIP remains a separate protocol track.

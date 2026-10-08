@@ -13,7 +13,7 @@ access through third-party Matrix clients. The Go API boundary keeps immediate
 local revocation enforceable while key/device design remains open. Text is
 rendered as text, including externally supplied HTML strings. Replies, read
 markers, backward pagination, periodic polling/reconnect, and Drive-file copies
-are supported. Matrix event transaction IDs deduplicate retries. Failed sends
+are supported. Mounted conversations retain and deduplicate displayed windows instead of replacing history with each 50-event poll. The older-history cursor stays anchored to the first displayed window. Reconnect fetches intervening pages until it reaches retained history, with at most 20 provider pages per refresh; larger gaps expose “Load missed messages” to continue. Temporary errors preserve the displayed history, while an authorization error hides it and disables sending. History is reloaded from Matrix after navigation/reload; it is not stored in browser storage. Times use the browser locale/timezone. Matrix event transaction IDs deduplicate retries. Failed sends
 retain the transaction ID until the user changes the message.
 
 Shared channels require invite-only room join rules and joined-member history.
@@ -60,7 +60,7 @@ initial design; the Matrix client-server protocol is isolated in
 
 The dedicated real-service test passed and runs with two isolated homeservers,
 `matrix-a.thura.test:8448` and `matrix-b.thura.test:8448`, client ports 8108/8109.
-It runs with `go test -tags matrixintegration -run TestMatrixRealFederationAndBan -v .`.
+It runs with `go test -tags matrixintegration -run TestMatrixRealFederationAndBan -v ./tests` under the test environment, with `JOBS_WORKERS=0` when the test controls jobs directly.
 These are synthetic fixture credentials and data. Self-signed test certificates
 and private-network federation allowances must never be copied to production.
 

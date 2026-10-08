@@ -49,7 +49,7 @@ unexpired uploads reserve their full expected size. Workspace locks serialize
 reservations, version saves, folder creation, and permanent deletion. Each
 workspace permits 500 retained files, 500 folders, 100 active uploads and 100
 versions per file. Mail attachments and Matrix copies are outside this Drive
-quota. Budget their storage separately; physical Drive bytes can temporarily
+quota, as are bounded derived Drive previews. Budget their storage separately; physical Drive bytes can temporarily
 exceed logical usage while chunks and deletion jobs await cleanup.
 
 Hourly upload cleanup processes at most 100 expired sessions per run. Completed
@@ -58,8 +58,12 @@ jobs commit in the same database transaction as removal of their references;
 the worker rechecks references before touching storage. Daily orphan sweeps
 subdivide full 500-object listings into bounded prefix jobs, preserving objects
 newer than 48 hours and anything still referenced. They only touch generated
-`drive/files/` and `drive/uploads/` keys. Retries tolerate already-missing objects.
+`drive/files/`, `drive/uploads/` and `drive/previews/` keys. Retries tolerate already-missing objects.
 Storage failure leaves a retryable job rather than silently forgetting deletion.
+
+Preview jobs use one decoder worker across nodes and the ordinary durable retry budget. Failed previews can be explicitly retried; unsupported files remain downloadable.
+
+Workspace owners/admins can browse scoped audit history from Members, filter by action/outcome and page through records. Workspace creation, invitations, membership/role changes, file-share creation/revocation and permanent deletion record successful events in the business transaction. Refused access/sharing changes record denied/failed outcomes with static action/resource names and HTTP status, without request bodies, addresses or tokens. Actors come from the authenticated context; provisioning uses a named system actor. The official audit pack also records operator admin actions. `AUDIT_RETENTION` defaults to `8760h` and prunes daily; `0` keeps all events. Choose retention and access controls per deployment, back up the audit table, and monitor failed audit writes: a required audit failure rolls back the associated change. This is an operational history, not an immutable external audit archive.
 
 Watch Līdza job status/failures and structured request logs. Include queue age,
 mail delivery failures, storage capacity, Postgres backups, document callbacks,
@@ -128,12 +132,10 @@ Integration state is an additional backup set:
 On a clean instance verify account sign-in/recovery, membership, private file
 bytes/checksums and history, revoked shares, calendar UID/sequence/RSVP state,
 provider connectivity and job idempotency before routing traffic. A local
-metadata/object restore recovered 38 table counts and verified 551 checksummed
-files, every retained version against its metadata, populated-target refusal
-and corrupted-backup refusal. The reproducible synthetic test is
-`python3 scripts/recovery-fixture.py --storage .lidza/test-storage --output .lidza/recovery-check --pg-container lidza-dev-postgres --maintenance-ack`
+metadata/object restore checks all table counts, checksummed files, retained versions and derived-preview metadata, populated-target refusal and corrupted-backup refusal. See the latest measured result in [implementation status](implementation-status.md). The reproducible synthetic test is
+`python3 scripts/recovery-fixture.py --storage .lidza/test-storage --output .lidza/recovery-check --maintenance-ack`
 with a privately exported `DATABASE_URL` ending in `_test` and all writers stopped.
-The fixture drops only its uniquely named recovery database; it retains its
+The fixture seeds and then removes a tiny preview in the synthetic source database/storage, and drops its uniquely named recovery database; it retains its
 local output for inspection. It deliberately corrupts its test snapshot after
 verifying recovery, so that snapshot is not a usable backup. Production
 integration-state recovery, real mail-domain delivery and physical-device/TURN

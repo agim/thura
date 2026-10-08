@@ -195,6 +195,46 @@ func (v Invitation) Validate() error {
 	return errs.Result()
 }
 
+// DrivePreview is a row of the drive_preview table.
+type DrivePreview struct {
+	ID          string    `json:"id" db:"id"`
+	FileID      string    `json:"fileId" db:"file_id"`
+	Version     int       `json:"version" db:"version"`
+	Status      string    `json:"status" db:"status"`
+	ObjectKey   string    `json:"objectKey" db:"object_key"`
+	Checksum    string    `json:"checksum" db:"checksum"`
+	ContentType string    `json:"contentType" db:"content_type"`
+	Width       int       `json:"width" db:"width"`
+	Height      int       `json:"height" db:"height"`
+	Truncated   bool      `json:"truncated" db:"truncated"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+	JobID       string    `json:"jobId" db:"job_id"`
+}
+
+// Validate applies the rules of DrivePreview from schema.lidza.
+func (v DrivePreview) Validate() error {
+	var errs validate.Errors
+	if v.FileID == "" {
+		errs.Add("fileId", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	if v.ObjectKey == "" {
+		errs.Add("objectKey", "required", "required")
+	}
+	if v.Checksum == "" {
+		errs.Add("checksum", "required", "required")
+	}
+	if v.ContentType == "" {
+		errs.Add("contentType", "required", "required")
+	}
+	if v.JobID == "" {
+		errs.Add("jobId", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Mailbox is a row of the mailbox table.
 type Mailbox struct {
 	ID           string    `json:"id" db:"id"`
@@ -1255,6 +1295,43 @@ func (v MailTag) Validate() error {
 	return errs.Result()
 }
 
+// AuditEvent is a row of the audit_event table.
+type AuditEvent struct {
+	ID        string          `json:"id" db:"id"`
+	At        time.Time       `json:"at" db:"at"`
+	Actor     string          `json:"actor" db:"actor"`
+	Action    string          `json:"action" db:"action"`
+	Resource  string          `json:"resource" db:"resource"`
+	Scope     string          `json:"scope" db:"scope"`
+	Outcome   string          `json:"outcome" db:"outcome"`
+	RequestID string          `json:"requestId" db:"request_id"`
+	Meta      json.RawMessage `json:"meta" db:"meta"`
+}
+
+// Validate applies the rules of AuditEvent from schema.lidza.
+func (v AuditEvent) Validate() error {
+	var errs validate.Errors
+	if v.Actor == "" {
+		errs.Add("actor", "required", "required")
+	}
+	if v.Action == "" {
+		errs.Add("action", "required", "required")
+	}
+	if v.Resource == "" {
+		errs.Add("resource", "required", "required")
+	}
+	if v.Scope == "" {
+		errs.Add("scope", "required", "required")
+	}
+	if v.Outcome == "" {
+		errs.Add("outcome", "required", "required")
+	}
+	if v.RequestID == "" {
+		errs.Add("requestId", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -1601,6 +1678,117 @@ func (v RoleInput) Validate() error {
 	return errs.Result()
 }
 
+// AuditDetail is an API type.
+type AuditDetail struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// Validate applies the rules of AuditDetail from schema.lidza.
+func (v AuditDetail) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.Value == "" {
+		errs.Add("value", "required", "required")
+	}
+	return errs.Result()
+}
+
+// WorkspaceAuditRecord is an API type.
+type WorkspaceAuditRecord struct {
+	ID        string        `json:"id"`
+	At        time.Time     `json:"at"`
+	Actor     string        `json:"actor"`
+	Action    string        `json:"action"`
+	Resource  string        `json:"resource"`
+	Outcome   string        `json:"outcome"`
+	RequestID string        `json:"requestId"`
+	Details   []AuditDetail `json:"details"`
+}
+
+// Validate applies the rules of WorkspaceAuditRecord from schema.lidza.
+func (v WorkspaceAuditRecord) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.Actor == "" {
+		errs.Add("actor", "required", "required")
+	}
+	if v.Action == "" {
+		errs.Add("action", "required", "required")
+	}
+	if v.Resource == "" {
+		errs.Add("resource", "required", "required")
+	}
+	if v.Outcome == "" {
+		errs.Add("outcome", "required", "required")
+	}
+	if v.RequestID == "" {
+		errs.Add("requestId", "required", "required")
+	}
+	for _, x := range v.Details {
+		if err := x.Validate(); err != nil {
+			errs.Add("details", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// WorkspaceAuditList is an API type.
+type WorkspaceAuditList struct {
+	Items      []WorkspaceAuditRecord `json:"items"`
+	NextCursor string                 `json:"nextCursor"`
+}
+
+// Validate applies the rules of WorkspaceAuditList from schema.lidza.
+func (v WorkspaceAuditList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	if v.NextCursor == "" {
+		errs.Add("nextCursor", "required", "required")
+	}
+	return errs.Result()
+}
+
+// FilePreview is an API type.
+type FilePreview struct {
+	FileID      string `json:"fileId"`
+	Version     int    `json:"version"`
+	Status      string `json:"status"`
+	ContentType string `json:"contentType"`
+	Data        string `json:"data"`
+	Width       int    `json:"width"`
+	Height      int    `json:"height"`
+	Truncated   bool   `json:"truncated"`
+}
+
+// Validate applies the rules of FilePreview from schema.lidza.
+func (v FilePreview) Validate() error {
+	var errs validate.Errors
+	if v.FileID == "" {
+		errs.Add("fileId", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	if v.ContentType == "" {
+		errs.Add("contentType", "required", "required")
+	}
+	if v.Data == "" {
+		errs.Add("data", "required", "required")
+	}
+	return errs.Result()
+}
+
 // MailboxList is an API type.
 type MailboxList struct {
 	Items []Mailbox `json:"items"`
@@ -1645,6 +1833,7 @@ type AttachmentView struct {
 	Name        string `json:"name"`
 	ContentType string `json:"contentType"`
 	Size        int    `json:"size"`
+	ContentID   string `json:"contentId"`
 }
 
 // Validate applies the rules of AttachmentView from schema.lidza.
@@ -1658,6 +1847,9 @@ func (v AttachmentView) Validate() error {
 	}
 	if v.ContentType == "" {
 		errs.Add("contentType", "required", "required")
+	}
+	if v.ContentID == "" {
+		errs.Add("contentId", "required", "required")
 	}
 	return errs.Result()
 }

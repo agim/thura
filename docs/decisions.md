@@ -152,3 +152,17 @@ Why: Navigation snapshots never initialize an editable draft until a fresh autho
 ## 2026-10-08: SMIP/0.1 chat and file transport reference
 
 Why: Implement the developer-specified two-server chat/file protocol in isolated internal/smip and docs/protocols files while app completion proceeds separately. Use standard Ed25519 and TLS 1.3, explicitly paired keys/recipient policies, fixed canonical signing bytes, atomic durable receipts and immutable retry IDs. The Unix reference journal deliberately uses a private single-writer persistent filesystem for atomic rename/fsync tests; eventual Thura adapters must use database/storage packs. The first reference is server-readable and not mounted in Thura; payload encryption, public discovery and application adapters need separate versioned work. Map Matrix, SMTP, calendar, file and media boundaries rather than silently weakening their semantics.
+
+## 2026-10-08: Pack audit added
+
+Why: Complete roadmap milestone 1 with durable transactional workspace access and sharing audit events and operator audit visibility using the official pack.
+
+Touches: lidza.json, packs.go
+
+## 2026-10-08: Complete private previews and the isolated email reader
+
+Why: Use standard-library bounded image decoders and the official storage/jobs packs. Cache one private version-bound Drive preview per file, re-encode first-frame PNG/JPEG/GIF thumbnails, and escape bounded UTF-8 text. Mail retains raw/source MIME while one server formatting allowlist, DOMPurify and sandbox/CSP protect reading; opt-in authorized CID thumbnails never enable remote content. PDF and active-document previews remain unsupported.
+
+## 2026-10-08: Retain Matrix history across polling and reconnect
+
+Why: Keep displayed windows by event ID, anchor backward paging to the first window and bridge reconnect gaps through at most 20 provider pages per refresh. Expose remaining gaps for explicit continuation, preserve history through transient failures and hide it on authorization errors. SMIP remains a separate first-release-excluded track.

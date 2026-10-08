@@ -5,6 +5,7 @@ package app
 import (
 	"github.com/agim/lidza"
 
+	audit "github.com/agim/lidza/packs/audit"
 	auth "github.com/agim/lidza/packs/auth"
 	db "github.com/agim/lidza/packs/db"
 	jobs "github.com/agim/lidza/packs/jobs"
@@ -20,5 +21,6 @@ func packs() []lidza.Pack {
 		jobs.Pack(),
 		mail.Pack(),
 		storage.Pack(),
+		audit.Pack(),
 	}
 }

@@ -30,4 +30,4 @@ DELETE FROM file_version WHERE file_id=$1;
 -- name: DeleteDriveFile :exec
 DELETE FROM drive_file WHERE workspace_id=$1 AND id=$2;
 -- name: DriveObjectReferenced :one
-SELECT (EXISTS(SELECT 1 FROM file_version v WHERE v.object_key=$1) OR EXISTS(SELECT 1 FROM upload_chunk c WHERE c.object_key=$1))::boolean AS referenced;
+SELECT (EXISTS(SELECT 1 FROM file_version v WHERE v.object_key=$1) OR EXISTS(SELECT 1 FROM upload_chunk c WHERE c.object_key=$1) OR EXISTS(SELECT 1 FROM drive_preview p WHERE p.object_key=$1))::boolean AS referenced;

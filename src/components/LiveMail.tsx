@@ -5,7 +5,7 @@ import { downloadContent } from '../lib/download'
 import { RecipientInput } from './RecipientInput'
 import { DraftAutosave } from '../lib/draft-autosave'
 import { X } from 'lucide-react'
-import DOMPurify from 'dompurify'
+import { MailReader } from './MailReader'
 import { MailOrganization, MailSignature, MailConversation } from './MailTools'
 
 export function LiveMail({ workspaceId, initialDraft }: { workspaceId: string; initialDraft?: MailItem }) {
@@ -61,21 +61,13 @@ function MailView({ workspaceId, mailboxId, signature, initialDraft }: { workspa
           <MailConversation key={current.id} scope={{ workspaceId, mailboxId }} item={current} onSelect={i => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null) }} /><h3 className="title">{current.subject || '(No subject)'}</h3><p className="small quiet">From {current.fromAddress} · To {current.toAddress}</p>
           <p className="small quiet">{current.status === 'captured' ? 'Captured by the development provider. This message was not delivered.' : current.status}</p>
           {current.status === 'queued' && <button disabled={undo.isPending} onClick={() => undo.mutate(current.id)}>Undo send</button>}
-          {current.textBody ? <div className="message">{current.textBody}</div> : <SafeEmail html={current.htmlBody} />}
+          <MailReader key={current.id} workspaceId={workspaceId} mailboxId={mailboxId} id={current.id} html={current.htmlBody} text={current.textBody} attachments={detail.data?.attachments || []} />
           {detail.data?.attachments.map(a => <button className="attachment" key={a.id} onClick={() => void download(a.id)}>Download {a.name} · {Math.ceil(a.size / 1024)} KB</button>)}
           <div className="row replybar"><button onClick={() => void reply()}>Reply</button><button onClick={() => void reply(true)}>Reply all</button><button onClick={() => void reply(false, true)}>Forward</button></div>
         </> : <p className="empty">Select a message or compose a new one.</p>}
       </section>
     </div><footer className="footer" aria-live="polite">{notice || 'Messages are stored in your workspace.'}</footer>
   </div>
-}
-
-function SafeEmail({ html }: { html: string }) {
-  // HTML is never inserted into the app DOM. Remove active/remote content and
-  // navigation, then render in a sandbox with a deny-by-default CSP.
-  const clean = DOMPurify.sanitize(html, { FORBID_TAGS: ['style', 'img', 'svg', 'math', 'iframe', 'form', 'video', 'audio'], FORBID_ATTR: ['style', 'href', 'src', 'srcset', 'action'] })
-  const srcDoc = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font:14px/1.6 system-ui;overflow-wrap:anywhere}</style>${clean}`
-  return <iframe title="Email body · external content blocked" sandbox="" referrerPolicy="no-referrer" srcDoc={srcDoc} className="safe-email" />
 }
 
 type DraftEditorProps = { item: MailItem; workspaceId: string; mailboxId: string; saved: (i: MailItem) => Promise<void> }

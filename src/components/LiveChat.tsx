@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, type ChatRoom, type ChatMessage, type Contact } from '@lidza/client'
+import { api, ApiError, type ChatRoom, type ChatMessage, type Contact } from '@lidza/client'
 import { downloadContent } from '../lib/download'
 import { userError } from '../lib/errors'
 export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string; contact?: Contact; onMeet?: (name: string) => void }) {
@@ -35,29 +35,67 @@ function ChatConversation({ room, manager, onMeet }: { room: ChatRoom; manager: 
   const [transactionId, setTransactionId] = useState('')
   const [replyTo, setReplyTo] = useState('')
   const [remote, setRemote] = useState('')
-  const [older, setOlder] = useState<ChatMessage[]>([])
+  const [history, setHistory] = useState<ChatMessage[]>([])
+  const seen = useRef(new Map<string, ChatMessage>())
+  const [gap, setGap] = useState('')
   const [cursor, setCursor] = useState<string | null>(null)
   const [fileId, setFileId] = useState('')
   const [fileTransaction, setFileTransaction] = useState('')
   const drive = useQuery({ queryKey: ['drive', room.workspaceId], queryFn: () => api.listDrive({ workspaceId: room.workspaceId }) })
   const params = { workspaceId: room.workspaceId, id: room.id }
-  const timeline = useQuery({ queryKey: ['chat-timeline', room.id], queryFn: () => api.chatTimeline(params), refetchInterval: 5000, retry: 2 })
+  const timeline = useQuery({ queryKey: ['chat-timeline', room.id], queryFn: async () => {
+    const latest = await api.chatTimeline(params)
+    const items = [...latest.items]
+    let next = latest.next || ''
+    const overlaps = () => items.some(item => seen.current.has(item.id))
+    // Bridge a shifted latest window after reconnect. Bound each refresh to
+    // 20 provider pages, exposing any remaining gap for explicit continuation.
+    if (seen.current.size && !overlaps()) {
+      const visited = new Set<string>()
+      for (let page = 0; next && !overlaps() && page < 20 && !visited.has(next); page++) {
+        visited.add(next)
+        const earlier = await api.chatTimeline(params, { query: { from: next } })
+        items.push(...earlier.items)
+        next = earlier.next || ''
+      }
+    } else { next = '' }
+    return { ...latest, items, gap: overlaps() ? '' : next }
+  }, refetchInterval: 5000, retry: (attempts, error) => attempts < 2 && !(error instanceof ApiError && [401, 403, 404].includes(error.status)) })
+  const denied = timeline.error instanceof ApiError && [401, 403, 404].includes(timeline.error.status)
+  useEffect(() => {
+    if (denied) { seen.current.clear(); setHistory([]); setGap(''); return }
+    if (!timeline.data) return
+    for (const item of timeline.data.items) seen.current.set(item.id, item)
+    setHistory([...seen.current.values()])
+    setGap(previous => timeline.data.gap || previous)
+    setCursor(previous => previous === null ? timeline.data.next || '' : previous)
+  }, [timeline.data, denied])
   const send = useMutation({ mutationFn: (id: string) => api.sendChatMessage(params, { body, transactionId: id, replyTo: replyTo || undefined }), onSuccess: async () => { setBody(''); setTransactionId(''); setReplyTo(''); await timeline.refetch() } })
-  const backfill = useMutation({ mutationFn: () => api.chatTimeline(params, { query: { from: cursor || timeline.data?.next || undefined } }), onSuccess: r => { setOlder(previous => [...previous, ...r.items]); setCursor(r.next || ''); } })
+  const keep = (items: ChatMessage[]) => {
+    for (const item of items) seen.current.set(item.id, item)
+    setHistory([...seen.current.values()])
+  }
+  const backfill = useMutation({ mutationFn: () => api.chatTimeline(params, { query: { from: cursor || undefined } }), onSuccess: r => { keep(r.items); setCursor(r.next || ''); } })
+  const missed = useMutation({ mutationFn: () => api.chatTimeline(params, { query: { from: gap } }), onSuccess: r => {
+    const overlap = r.items.some(item => seen.current.has(item.id))
+    keep(r.items)
+    setGap(overlap ? '' : r.next || '')
+  } })
   const fileSend = useMutation({ mutationFn: (transactionId: string) => api.sendChatFile(params, { transactionId, fileId }), onSuccess: async () => { setFileId(''); setFileTransaction(''); await timeline.refetch() } })
   const download = useMutation({ mutationFn: (eventId: string) => api.downloadChatFile(params, { query: { eventId } }), onSuccess: downloadContent })
   const invite = useMutation({ mutationFn: () => api.inviteChatRemote(params, { userId: remote }), onSuccess: () => setRemote('') })
   const ban = useMutation({ mutationFn: () => api.banChatRemote(params, { userId: remote }), onSuccess: () => setRemote('') })
   const receipt = useMutation({ mutationFn: (eventId: string) => api.markChatRead(params, { eventId }) })
-  const all = [...new Map([...older, ...(timeline.data?.items || [])].map(m => [m.id, m])).values()].sort((a, b) => a.timestamp - b.timestamp)
-  const latest = timeline.data?.items[0]
-  return <section><h3>{room.name}</h3>{onMeet && <button onClick={() => onMeet(room.name)}>Prepare meeting for this conversation</button>}{timeline.isError && <p role="alert">Connection interrupted: {userError(timeline.error)}. Retrying automatically.</p>}
-    <button disabled={backfill.isPending || cursor === '' || (!cursor && !timeline.data?.next)} onClick={() => backfill.mutate()}>Load older messages</button>
-    <ol className="chat-messages" aria-label="Messages">{all.map(m => <li key={m.id}><strong>{m.sender}</strong> <time dateTime={new Date(m.timestamp).toISOString()}>{new Date(m.timestamp).toLocaleString('en-US', { timeZone: 'America/New_York' })}</time>{m.replyTo && <p>Reply to: {all.find(r => r.id === m.replyTo)?.body || m.replyTo}</p>}<p className="chat-body">{m.body}</p>{m.file && <button disabled={download.isPending} onClick={() => download.mutate(m.id)}>Download {m.file.name}</button>}<button onClick={() => { setReplyTo(m.id); setTransactionId('') }}>Reply</button></li>)}</ol>
+  const all = denied ? [] : [...new Map([...history, ...(timeline.data?.items || [])].map(m => [m.id, m])).values()].sort((a, b) => a.timestamp - b.timestamp)
+  const latest = denied ? undefined : timeline.data?.items[0]
+  return <section><h3>{room.name}</h3>{onMeet && <button onClick={() => onMeet(room.name)}>Prepare meeting for this conversation</button>}{timeline.isError && <p role="alert">{denied ? 'Conversation access is unavailable' : 'Connection interrupted'}: {userError(timeline.error)}.{!denied && ' Retrying automatically.'}</p>}
+    <button disabled={denied || backfill.isPending || cursor === null || cursor === ''} onClick={() => backfill.mutate()}>Load older messages</button>
+    {!denied && gap && <p role="status">More messages arrived while disconnected. <button disabled={missed.isPending} onClick={() => missed.mutate()}>Load missed messages</button></p>}
+    <ol className="chat-messages" aria-label="Messages">{all.map(m => <li key={m.id}><strong>{m.sender}</strong> <time dateTime={new Date(m.timestamp).toISOString()}>{new Date(m.timestamp).toLocaleString()}</time>{m.replyTo && <p>Reply to: {all.find(r => r.id === m.replyTo)?.body || m.replyTo}</p>}<p className="chat-body">{m.body}</p>{m.file && <button disabled={download.isPending} onClick={() => download.mutate(m.id)}>Download {m.file.name}</button>}<button onClick={() => { setReplyTo(m.id); setTransactionId('') }}>Reply</button></li>)}</ol>
     {latest && <button disabled={receipt.isPending} onClick={() => receipt.mutate(latest.id)}>Mark conversation read</button>}
     <form onSubmit={e => { e.preventDefault(); const id = transactionId || crypto.randomUUID(); setTransactionId(id); send.mutate(id) }}><label>Message<textarea required maxLength={10000} value={body} onChange={e => { setBody(e.target.value); setTransactionId('') }} /></label>{replyTo && <p>Replying to {all.find(m => m.id === replyTo)?.body || replyTo} <button type="button" onClick={() => setReplyTo('')}>Clear reply</button></p>}<button disabled={send.isPending || timeline.isError}>Send message</button></form>
-    <form className="row" onSubmit={e => { e.preventDefault(); const id = fileTransaction || crypto.randomUUID(); setFileTransaction(id); fileSend.mutate(id) }}><label>Share a Drive file<select required value={fileId} onChange={e => { setFileId(e.target.value); setFileTransaction('') }}><option value="">Select a file</option>{drive.data?.files.filter(f => !f.trashed).map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label><button disabled={!fileId || fileSend.isPending}>Send file</button><p>This sends a copy to the room and any invited remote servers. Revoking a Drive share does not recall this copy.</p></form>
+    <form className="row" onSubmit={e => { e.preventDefault(); const id = fileTransaction || crypto.randomUUID(); setFileTransaction(id); fileSend.mutate(id) }}><label>Share a Drive file<select required value={fileId} onChange={e => { setFileId(e.target.value); setFileTransaction('') }}><option value="">Select a file</option>{drive.data?.files.filter(f => !f.trashed).map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label><button disabled={!fileId || fileSend.isPending || denied}>Send file</button><p>This sends a copy to the room and any invited remote servers. Revoking a Drive share does not recall this copy.</p></form>
     {manager && !room.direct && <form className="row" onSubmit={e => { e.preventDefault(); invite.mutate() }}><label>External Matrix user<input required maxLength={254} value={remote} placeholder="@person:example.com" onChange={e => setRemote(e.target.value)} /></label><button disabled={invite.isPending || ban.isPending}>Invite external user</button><button type="button" disabled={!remote || invite.isPending || ban.isPending} onClick={() => { if (confirm('Ban this external user from this channel?')) ban.mutate() }}>Ban external user</button><p>Workspace owners and admins can grant external access to this channel only. Remote servers retain messages they receive.</p></form>}
-    {(send.error || backfill.error || invite.error || ban.error || receipt.error || fileSend.error || download.error || drive.error) && <p role="alert">{userError(send.error || backfill.error || invite.error || ban.error || receipt.error || fileSend.error || download.error || drive.error)}</p>}
+    {(send.error || backfill.error || missed.error || invite.error || ban.error || receipt.error || fileSend.error || download.error || drive.error) && <p role="alert">{userError(send.error || backfill.error || missed.error || invite.error || ban.error || receipt.error || fileSend.error || download.error || drive.error)}</p>}
   </section>
 }

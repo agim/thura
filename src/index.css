@@ -73,3 +73,6 @@
 .mail-tools input:not([type=checkbox]), .mail-tools select, .mail-tools textarea { width: 100%; min-width: 0; }
 .mail-tools .row { flex-wrap: wrap; margin: 8px 0; }
 .mail-tools button { white-space: normal; }
+
+#orbit-workspace .file-preview img{display:block;max-width:100%;height:auto;margin-top:1rem}
+#orbit-workspace .file-preview pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:24rem;overflow:auto;padding:1rem;border:1px solid var(--line);border-radius:8px}

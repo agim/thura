@@ -99,6 +99,50 @@ type RoleInput {
   role WorkspaceRole
 }
 
+type AuditDetail {
+  name string
+  value string
+}
+type WorkspaceAuditRecord {
+  id uuid
+  at time
+  actor string
+  action string
+  resource string
+  outcome string
+  requestId string
+  details AuditDetail[]
+}
+type WorkspaceAuditList {
+  items WorkspaceAuditRecord[]
+  nextCursor string
+}
+
+model DrivePreview {
+  id uuid @id @default(uuid())
+  fileId uuid @ref(DriveFile) @unique
+  version int
+  status string @default("pending")
+  objectKey string @default("")
+  checksum string @default("")
+  contentType string @default("")
+  width int @default(0)
+  height int @default(0)
+  truncated bool @default(false)
+  updatedAt time @default(now())
+  jobId string @default("")
+}
+type FilePreview {
+  fileId uuid
+  version int
+  status string
+  contentType string
+  data string
+  width int
+  height int
+  truncated bool
+}
+
 enum MailFolder { inbox drafts sent archive trash spam }
 
 model Mailbox {
@@ -158,6 +202,7 @@ type AttachmentView {
   name string
   contentType string
   size int
+  contentId string
 }
 type MailDetail {
   item MailItem
@@ -808,4 +853,22 @@ type MailSignatureInput {
 type BindMeetingInput {
  meetingId uuid
  sequence int
+}
+
+// Types of the audit pack.
+// The audit log (packs/audit): who did what to which resource, when,
+// and how it went; newest first by at, then id.
+model AuditEvent @table("audit_event") {
+  id        uuid   @id @default(uuid())
+  at        time   @default(now())
+  actor     string
+  action    string
+  resource  string @default("")
+  scope     string @default("")
+  outcome   string
+  requestId string @default("")
+  meta      json
+  @@index(at, id)
+  @@index(actor, at)
+  @@index(scope, at)
 }

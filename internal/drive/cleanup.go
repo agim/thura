@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/agim/lidza"
+	"github.com/agim/lidza/packs/audit"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/pkg/router"
@@ -106,6 +107,18 @@ func Purge(ctx context.Context, w, id string) error {
 	if !f.Trashed {
 		return router.Errorf(409, "move the file to trash before permanently deleting it")
 	}
+	preview, err := queries.GetDrivePreview(ctx, id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	if preview.ObjectKey != "" {
+		if err = objectgc.QueueDelete(ctx, tx, preview.ObjectKey); err != nil {
+			return err
+		}
+	}
+	if err = queries.DeleteDrivePreview(ctx, id); err != nil {
+		return err
+	}
 	versions, err := queries.ListFileVersions(ctx, id)
 	if err != nil {
 		return err
@@ -130,6 +143,9 @@ func Purge(ctx context.Context, w, id string) error {
 		}
 	}
 	if err = queries.DeleteDriveFile(ctx, q.DeleteDriveFileParams{WorkspaceID: w, ID: id}); err != nil {
+		return err
+	}
+	if err = audit.From(ctx).RecordTx(ctx, tx, audit.Event{Action: "drive.purge", Scope: w, Resource: "file/" + id}); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/agim/lidza"
+	"github.com/agim/lidza/packs/audit"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/storage"
@@ -364,8 +365,23 @@ func Grant(ctx context.Context, w, id string, in schema.ShareInput) (schema.Shar
 	if in.TargetEmail != nil {
 		target = strings.ToLower(strings.TrimSpace(*in.TargetEmail))
 	}
-	grant, err := q.New(db.From(ctx)).CreateShareGrant(ctx, q.CreateShareGrantParams{FileID: id, TokenHash: Hash([]byte(token)), TargetEmail: target, ExpiresAt: in.ExpiresAt})
-	return schema.ShareCreated{Grant: Share(grant), Token: token}, err
+	tx, err := db.From(ctx).Begin(ctx)
+	if err != nil {
+		return schema.ShareCreated{}, err
+	}
+	defer tx.Rollback(ctx)
+	grant, err := q.New(tx).CreateShareGrant(ctx, q.CreateShareGrantParams{FileID: id, TokenHash: Hash([]byte(token)), TargetEmail: target, ExpiresAt: in.ExpiresAt})
+	if err != nil {
+		return schema.ShareCreated{}, err
+	}
+	audience := "link"
+	if target != "" {
+		audience = "account"
+	}
+	if err = audit.From(ctx).RecordTx(ctx, tx, audit.Event{Action: "drive.share.create", Scope: w, Resource: "file/" + id, Meta: map[string]string{"share_id": grant.ID, "audience": audience}}); err != nil {
+		return schema.ShareCreated{}, err
+	}
+	return schema.ShareCreated{Grant: Share(grant), Token: token}, tx.Commit(ctx)
 }
 func Open(ctx context.Context, token string) (schema.FileContent, error) {
 	queries := q.New(db.From(ctx))

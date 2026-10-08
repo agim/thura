@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/agim/lidza/packs/audit"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	queries "thura/db/queries/gen"
@@ -33,6 +34,9 @@ func Create(ctx context.Context, in schema.CreateWorkspaceInput) (schema.Workspa
 		return schema.Workspace{}, err
 	}
 	if err = q.GrantWorkspaceOwner(ctx, queries.GrantWorkspaceOwnerParams{Subject: p.Subject, Scope: row.ID}); err != nil {
+		return schema.Workspace{}, err
+	}
+	if err = audit.From(ctx).RecordTx(audit.System(ctx, "workspace-provision"), tx, audit.Event{Action: "workspace.create", Scope: row.ID, Resource: "workspace/" + row.ID, Meta: map[string]string{"owner_subject": p.Subject}}); err != nil {
 		return schema.Workspace{}, err
 	}
 	return schema.Workspace{ID: row.ID, Name: row.Name, CreatedAt: row.CreatedAt}, tx.Commit(ctx)
