@@ -42,6 +42,7 @@ function RootLayout() {
       <Link to="/contacts">Your contacts</Link>
       <Link to="/app">Open Thura</Link>
       <Link to="/members">Members</Link>
+      <Link to="/setup">Server setup</Link>
     </nav>
     <main className="mx-auto max-w-3xl px-6 py-6"><Outlet /></main>
   </>
@@ -72,7 +73,8 @@ const rsvpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rsvp', 
 const shareRoute = createRoute({ getParentRoute: () => rootRoute, path: '/share', component: lazyRouteComponent(() => import('./pages/Share'), 'SharedFile'), staticData: { module: 'src/pages/Share.tsx' } })
 
 const appRoute = createRoute({ getParentRoute: () => rootRoute, path: '/app', component: lazyRouteComponent(() => import('./pages/App'), 'AppWorkspace'), staticData: { module: 'src/pages/App.tsx' } })
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute, shareRoute, rsvpRoute])
+const setupRoute = createRoute({ getParentRoute: () => rootRoute, path: "/setup", component: lazyRouteComponent(() => import("./pages/Setup"), "Setup"), staticData: { module: "src/pages/Setup.tsx" } })
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute, shareRoute, rsvpRoute, setupRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).

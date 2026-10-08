@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
 	"thura/internal/platform/objectgc"
+	"thura/internal/serverpolicy"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -346,6 +347,9 @@ func Content(ctx context.Context, f q.DriveFile, number int) (schema.FileContent
 	return schema.FileContent{Name: f.Name, ContentType: f.ContentType, Data: base64.StdEncoding.EncodeToString(b)}, nil
 }
 func Grant(ctx context.Context, w, id string, in schema.ShareInput) (schema.ShareCreated, error) {
+	if err := serverpolicy.Share(in.TargetEmail == nil || strings.TrimSpace(*in.TargetEmail) == ""); err != nil {
+		return schema.ShareCreated{}, err
+	}
 	f, err := Get(ctx, w, id)
 	if err != nil {
 		return schema.ShareCreated{}, err
@@ -390,6 +394,9 @@ func Open(ctx context.Context, token string) (schema.FileContent, error) {
 		return schema.FileContent{}, router.Errorf(404, "share not found")
 	}
 	if err != nil {
+		return schema.FileContent{}, err
+	}
+	if err := serverpolicy.Share(g.TargetEmail == ""); err != nil {
 		return schema.FileContent{}, err
 	}
 	if g.RevokedAt != nil || !g.ExpiresAt.After(lidza.Now(ctx)) {

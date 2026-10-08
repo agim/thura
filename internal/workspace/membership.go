@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	queries "thura/db/queries/gen"
+	"thura/internal/serverpolicy"
 	"thura/schema"
 )
 
@@ -71,6 +72,20 @@ func Invite(ctx context.Context, id string, in schema.InviteInput) (schema.Invit
 		return schema.InviteView{}, err
 	}
 	defer tx.Rollback(ctx)
+	policy, err := serverpolicy.Load()
+	if err != nil {
+		return schema.InviteView{}, err
+	}
+	if actorRole == "admin" && !policy.AdminInvites {
+		return schema.InviteView{}, router.Errorf(403, "server administrator restricts invitations to owners")
+	}
+	seats, err := q.SetupWorkspaceSeats(ctx, queries.SetupWorkspaceSeatsParams{Scope: id, ExpiresAt: lidza.Now(ctx)})
+	if err != nil {
+		return schema.InviteView{}, err
+	}
+	if int(seats) >= policy.MaxMembers {
+		return schema.InviteView{}, router.Errorf(409, "workspace member and invitation quota reached")
+	}
 	if actorRole != "owner" && in.Role != schema.WorkspaceRoleMember {
 		return schema.InviteView{}, router.Errorf(http.StatusForbidden, "only owners can invite administrators or owners")
 	}
@@ -168,6 +183,20 @@ func Accept(ctx context.Context, in schema.AcceptInviteInput) (schema.Workspace,
 	}
 	// Joining never changes an existing member's role through an old invite.
 	if _, err := q.WorkspaceRole(ctx, queries.WorkspaceRoleParams{Scope: inv.WorkspaceID, Subject: subject}); errors.Is(err, pgx.ErrNoRows) {
+		policy, err := serverpolicy.Load()
+		if err != nil {
+			return schema.Workspace{}, err
+		}
+		members, err := q.SetupWorkspaceMembers(ctx, inv.WorkspaceID)
+		if err != nil {
+			return schema.Workspace{}, err
+		}
+		if int(members) >= policy.MaxMembers {
+			return schema.Workspace{}, router.Errorf(409, "workspace member quota reached")
+		}
+		if inviterRole == "admin" && !policy.AdminInvites {
+			return schema.Workspace{}, gone
+		}
 		if err = q.GrantWorkspaceMember(ctx, queries.GrantWorkspaceMemberParams{Scope: inv.WorkspaceID, Subject: subject, Role: string(inv.Role), GrantedBy: &inv.InvitedBy}); err != nil {
 			return schema.Workspace{}, err
 		}

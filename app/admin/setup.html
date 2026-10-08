@@ -1,0 +1,28 @@
+{{define "content"}}
+{{with .Data}}
+<h1>Set up your Thura server</h1>
+<p>Save each step to pause and resume. Draft settings remain inactive until published and the server is restarted. Saved secrets are never displayed.</p>
+<nav aria-label="Setup steps"><ol>{{range .Steps}}<li><a href="?step={{.ID}}">{{.Title}}</a></li>{{end}}</ol></nav>
+<p>Draft revision {{.Revision}} · Published revision {{.PublishedRevision}}</p>
+<h2>{{.Step.Title}}</h2>
+{{if ne .Step.ID "review"}}
+<form method="post" action="setup/save" autocomplete="off">
+<input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="step" value="{{.Step.ID}}"><input type="hidden" name="back" value="?step={{.Step.ID}}">
+{{range .Step.Fields}}<div class="mb-3"><label class="form-label" for="{{.Name}}">{{.Label}}</label>
+{{if eq .Kind "select"}}{{$value := .Value}}<select class="form-select" id="{{.Name}}" name="{{.Name}}">{{range .Options}}<option value="{{.}}" {{if eq . $value}}selected{{end}}>{{.}}</option>{{end}}</select>
+{{else if eq .Kind "textarea"}}<textarea class="form-control" id="{{.Name}}" name="{{.Name}}" maxlength="32768">{{.Value}}</textarea>
+{{else if eq .Kind "secret"}}<input class="form-control" type="password" id="{{.Name}}" name="{{.Name}}" maxlength="32768" autocomplete="new-password" value=""><p>{{if .Saved}}Secret saved; leave blank to keep it.{{else}}No secret saved.{{end}}</p><label><input type="checkbox" name="clear_{{.Name}}" value="true"> Clear saved secret</label>
+{{else}}<input class="form-control" type="{{.Kind}}" id="{{.Name}}" name="{{.Name}}" value="{{.Value}}" maxlength="32768">{{end}}
+<p class="form-hint">{{.Help}}</p></div>{{end}}
+<button class="btn btn-primary" type="submit">Save this step</button></form>
+{{else}}
+<p>{{.Message}}</p>
+{{if .Validation}}<p role="alert">Not ready to publish: {{.Validation}}</p>{{else}}<p>Required configuration fields are complete. Provider credentials have not been tested by this validation.</p>{{end}}
+<p>Stored secret names:</p><ul>{{range .Secrets}}<li>{{.}}</li>{{else}}<li>None</li>{{end}}</ul>
+<p>Deployment checklist: verified sending domain and SPF/DKIM/DMARC, inbound raw-MIME relay, private S3 bucket or persistent local disk, public DNS and TLS, protected master key, tested backups and restore. Configure Postgres, any optional Valkey service and the system service before opening this wizard. Optional Matrix, ONLYOFFICE, LiveKit/TURN and SMIP peers need their own service configuration.</p>
+<p>Publishing does not deploy a host, provision DNS/buckets, send email, migrate existing storage or restart processes. Restart every server node after publication. Environment variables can override saved configuration; remove conflicting overrides deliberately in deployment settings.</p>
+<form method="post" action="setup/publish"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="back" value="?step=review"><label for="confirm-publish">Type publish to confirm</label><input id="confirm-publish" name="confirm" required pattern="publish"><button class="btn btn-primary" {{if .Validation}}disabled{{end}}>Publish configuration</button></form>
+{{end}}
+<hr><h2>Restart the wizard</h2><p>Resets the draft, including its saved credentials. The published revision and administrator account are preserved.</p>
+<form method="post" action="setup/restart"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="step" value="server"><input type="hidden" name="back" value="?step=server"><label for="confirm-restart">Type restart to confirm</label><input id="confirm-restart" name="confirm" required pattern="restart"><button class="btn btn-secondary">Restart draft</button></form>
+{{end}}{{end}}

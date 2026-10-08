@@ -577,3 +577,15 @@ CREATE TABLE smip_outbox (
 );
 CREATE INDEX smip_outbox_workspace_id_idx ON smip_outbox (workspace_id);
 
+CREATE TABLE server_setup (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject text NOT NULL DEFAULT '',
+  workspace_id uuid,
+  revision integer NOT NULL DEFAULT 0,
+  published_revision integer NOT NULL DEFAULT 0,
+  draft text NOT NULL DEFAULT '',
+  published text NOT NULL DEFAULT '',
+  step text NOT NULL DEFAULT 'server',
+  published_at timestamptz
+);
+

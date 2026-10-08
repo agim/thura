@@ -1514,6 +1514,37 @@ func (v SmipOutbox) Validate() error {
 	return errs.Result()
 }
 
+// ServerSetup is a row of the server_setup table.
+type ServerSetup struct {
+	ID                string     `json:"id" db:"id"`
+	Subject           string     `json:"subject" db:"subject"`
+	WorkspaceID       *string    `json:"workspaceId" db:"workspace_id"`
+	Revision          int        `json:"revision" db:"revision"`
+	PublishedRevision int        `json:"publishedRevision" db:"published_revision"`
+	Draft             string     `json:"draft" db:"draft"`
+	Published         string     `json:"published" db:"published"`
+	Step              string     `json:"step" db:"step"`
+	PublishedAt       *time.Time `json:"publishedAt" db:"published_at"`
+}
+
+// Validate applies the rules of ServerSetup from schema.lidza.
+func (v ServerSetup) Validate() error {
+	var errs validate.Errors
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Draft == "" {
+		errs.Add("draft", "required", "required")
+	}
+	if v.Published == "" {
+		errs.Add("published", "required", "required")
+	}
+	if v.Step == "" {
+		errs.Add("step", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -3598,6 +3629,66 @@ func (v SmipDispatchJob) Validate() error {
 	var errs validate.Errors
 	if v.ID == "" {
 		errs.Add("id", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SetupStatus is an API type.
+type SetupStatus struct {
+	Open      bool `json:"open"`
+	Claimed   bool `json:"claimed"`
+	Published bool `json:"published"`
+}
+
+// Validate applies the rules of SetupStatus from schema.lidza.
+func (v SetupStatus) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
+// SetupClaimInput is an API type.
+type SetupClaimInput struct {
+	Token    string `json:"token"`
+	Email    string `json:"email"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+// Validate applies the rules of SetupClaimInput from schema.lidza.
+func (v SetupClaimInput) Validate() error {
+	var errs validate.Errors
+	if v.Token == "" {
+		errs.Add("token", "required", "required")
+	}
+	if len(v.Token) > 512 {
+		errs.Add("token", "max", "at most 512 character(s)")
+	}
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if len(v.Email) > 254 {
+		errs.Add("email", "max", "at most 254 character(s)")
+	}
+	if v.Email != "" && !validate.Email(v.Email) {
+		errs.Add("email", "email", "not an email address")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 100 {
+		errs.Add("name", "max", "at most 100 character(s)")
+	}
+	if v.Password == "" {
+		errs.Add("password", "required", "required")
+	}
+	if len(v.Password) < 12 {
+		errs.Add("password", "min", "at least 12 character(s)")
+	}
+	if len(v.Password) > 1024 {
+		errs.Add("password", "max", "at most 1024 character(s)")
 	}
 	return errs.Result()
 }

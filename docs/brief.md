@@ -55,7 +55,7 @@ Removing membership revokes access while shared data remains owned by the worksp
 
 ### How do people sign in? <!-- brief:signin -->
 
-Līdza email/password authentication, invite-only account creation, verification, and password recovery. Initial owners are provisioned by the operator. No public signup, OAuth, or second authentication system in this release.
+Līdza email/password authentication, invite-only account creation, verification, and password recovery. The first administrator is created through the operator-token-protected setup flow, or explicitly designated by the operator for an existing deployment. It provisions the initial workspace on publish. No public signup, OAuth, or second authentication system in this release.
 
 ### Who may create an account? <!-- brief:registration -->
 
@@ -97,7 +97,7 @@ Real workspace content comes from members and the configured mail, storage, docu
 
 ### Which mail provider in production? <!-- brief:mail -->
 
-Postfix, available through Debian/Linux distribution packages; Līdza uses its official SMTP transport.
+The deployment administrator chooses SMTP (including Debian Postfix), Mailgun, SendGrid, Postmark or Resend through the setup wizard; Līdza uses its official provider transports. Inbound raw-MIME relay configuration remains separate.
 
 ### Which language model provider? <!-- brief:model -->
 
@@ -164,3 +164,5 @@ On 2026-10-08, the developer explicitly delegated completion of this brief. Prev
 
 
 Developer note: SMIP will be used for chats across two servers and for sending and receiving files between two servers. Its reference protocol and chat/file adapters form a separate implementation track; Matrix is the currently implemented chat integration.
+
+Developer scope addition: first-administrator setup is a multi-step wizard for encrypted credentials and server configuration, mail/storage selection, quotas, permissions and restrictions. Saved drafts can be resumed or restarted, and explicitly published after validation. Published settings activate on server restart; deployment-specific infrastructure and acceptance remain operator responsibilities.

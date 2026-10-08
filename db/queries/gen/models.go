@@ -549,6 +549,18 @@ type ReminderNotice struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type ServerSetup struct {
+	ID                string     `json:"id"`
+	Subject           string     `json:"subject"`
+	WorkspaceID       *string    `json:"workspace_id"`
+	Revision          int32      `json:"revision"`
+	PublishedRevision int32      `json:"published_revision"`
+	Draft             string     `json:"draft"`
+	Published         string     `json:"published"`
+	Step              string     `json:"step"`
+	PublishedAt       *time.Time `json:"published_at"`
+}
+
 type ShareGrant struct {
 	ID          string     `json:"id"`
 	FileID      string     `json:"file_id"`

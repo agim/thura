@@ -1,0 +1,36 @@
+# Resumable server setup
+
+Open `/setup` on a new deployment to create its first server administrator, then sign in and open `/admin/setup`. The wizard is part of the official Līdza admin frame. Workspace owners/admins do not automatically become server administrators.
+
+## Before the first account
+
+The operator installs Thura, initializes its master key, configures Postgres and any optional Valkey service, private persistent disk and HTTPS, and supplies `THURA_SETUP_TOKEN` through sealed credentials or a private environment binding. Use at least 32 unpredictable characters from a cryptographically secure generator. Do not put it in a URL, image, Git, shell history or chat. The setup form accepts this token in a password field over the deployment's HTTPS connection. Keep the server behind operator access until this bootstrap is complete.
+
+A row lock and account-count check permit exactly one successful account creation. The token does not grant access after any account exists. The password uses the official authentication policy and Argon2id hash; the operator token is never persisted in the wizard. Account creation, administrator binding, initial encrypted draft and audit commit together. Sign in after creation; if its response was lost, try the same credentials rather than creating a second account. Remove the setup-token binding afterward.
+
+An existing deployment cannot reopen first-account creation. Its operator explicitly lists an existing account ID or email in `ADMIN_USERS` to adopt the wizard. A workspace role alone is insufficient. Public account registration stays disabled; new members join by invitation.
+
+## Steps
+
+1. **Server and workspace:** operator-selected public HTTPS origin, initial workspace name, operator contact, IANA timezone, backup and retention plan.
+2. **Email:** SMTP (including Debian Postfix), Mailgun, SendGrid, Postmark or Resend; verified sender, region/domain, API key or SMTP host/port/encryption and credentials. An inbound raw-MIME relay needs a separate signing secret and deployment configuration. This outbound selector does not provision a provider's ingress webhooks.
+3. **Storage:** private persistent local directory or S3-compatible endpoint, region, private bucket/prefix and access/secret keys. Pre-create the bucket and give its key only the required bucket/prefix permissions. The framework selects virtual-host requests for AWS and path-style requests for other endpoints; this wizard does not expose the unsupported pointer-valued environment override in Līdza v0.1.89.
+4. **Quotas and access:** retained/reserved Drive bytes per workspace (1 MiB–1 TiB), maximum members plus live pending invitations (1–1000), owner-only versus admin invitations, external/anonymous sharing restrictions, email recipient limit (1–50). Owner/admin/member permissions remain the implemented role model; no arbitrary permission editor is implied. Uploads stay bounded at 10 MiB, and shares at 30 days. Anonymous links default off for wizard-published deployments; existing deployments retain their prior behavior until configured.
+5. **Optional integrations:** Matrix homeserver/application-service credentials, ONLYOFFICE URLs/JWT, LiveKit API/browser endpoints and credentials, or experimental SMIP's encrypted pairing configuration. Leaving URLs empty disables the optional integrations; enabling them requires their related fields. Provider-side service setup, TURN and device acceptance remain necessary.
+6. **Review:** required-field validation, stored secret names and deployment checklist; explicit publish confirmation.
+
+Save a step before leaving it. Returning to any step restores non-secret fields and shows whether each secret is saved. Blank secret input preserves its value; the separate clear checkbox removes it. No secret is rendered into HTML, returned by the bootstrap API or stored in browser persistence. Draft values are not used by running providers. Saving an old revision returns a conflict; reload instead of overwriting another tab's work.
+
+## Encryption and publication
+
+Draft and published configuration are separate AES-256-GCM snapshots in `server_setup`, encrypted with Līdza's master key. The password hash lives in the official auth table, not these snapshots. The single published snapshot avoids partial activation of separately saved provider fields. Business audits contain actions/revisions and account IDs, never configuration bodies or secret values.
+
+Publishing validates required fields, provider prerequisites, HTTPS settings and limits, and commits the snapshot, initial owner workspace/shared mailbox and audit in one transaction. An audit failure leaves all of them unpublished. Repeating the same publication does not duplicate its workspace or audit. Changes to the default sender do not rewrite addresses of existing mailboxes; those are separate workspace resources.
+
+**Restart every app/worker node to activate a published revision.** Startup loads the whole snapshot through Līdza's runtime credential overrides and reconfigures the official packs before app jobs/listeners run. Draft reset does not change the active snapshot. The wizard refuses conflicting process environment overrides when publishing; deployment environment variables retain normal higher precedence at startup. Avoid later adding conflicting overrides. Use the wizard for settings it manages: advanced built-in credential edits to those names can be superseded by its published snapshot at the next startup.
+
+Changing storage credentials for the same location is supported. Changing its backend, directory, bucket, endpoint, region or prefix while app files/mail/upload sessions exist is refused; use a separately planned data migration. Resetting the draft does not erase active credentials, accounts, transfers or files. There is no implicit secret-key rotation, recall or deletion of prior backups.
+
+Publishing config does not deploy a public host, create DNS/buckets, test a provider credential against its service, send a test email, restart processes or migrate storage. Complete verified sending domains/SPF/DKIM/DMARC, inbound relay, DNS/TLS, private persistence, protected master-key backups and a tested restore. Provider-specific acceptance fixtures remain documented separately. The backup plan records operator responsibilities; it does not schedule backups or promise automatic retention. Test delivery and storage on the actual deployment before inviting users.
+
+Postgres credentials, Valkey connectivity, operating-system service configuration and master-key injection are prerequisites to reaching this wizard, not settings it can safely replace while running. Never paste these infrastructure credentials into unrelated wizard fields.

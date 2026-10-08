@@ -1,14 +1,67 @@
 {
-  "/": { "title": "Thura", "description": "Mail, contacts, files, calendars, chat and meetings in your shared workspace.", "noIndex": false },
-  "/about": { "title": "About · Thura", "description": "About Thura, the shared workspace for your team's everyday work.", "noIndex": false },
-  "/workspace": { "title": "Sample workspace · Thura", "description": "Explore Thura with sample data that stays in your browser.", "noIndex": true },
-  "/app": { "title": "Workspace · Thura", "description": "Sign in to your private Thura workspace for mail, files, calendars, chat and meetings.", "noIndex": true },
-  "/contacts": { "title": "Contacts · Thura", "description": "Manage your workspace's shared contacts.", "noIndex": true },
-  "/members": { "title": "Members · Thura", "description": "Manage workspace membership and invitations.", "noIndex": true },
-  "/invite": { "title": "Accept invitation · Thura", "description": "Accept your invitation to a Thura workspace.", "noIndex": true },
-  "/forgot": { "title": "Account recovery · Thura", "description": "Request a password reset for your Thura account.", "noIndex": true },
-  "/reset": { "title": "Reset password · Thura", "description": "Set a new password for your Thura account.", "noIndex": true },
-  "/verify": { "title": "Verify email · Thura", "description": "Verify the email address for your Thura account.", "noIndex": true },
-  "/share": { "title": "Shared file · Thura", "description": "Open a file through an explicit Thura share grant.", "noIndex": true },
-  "/rsvp": { "title": "Calendar invitation · Thura", "description": "Respond to your Thura calendar invitation.", "noIndex": true }
+  "/": {
+    "title": "Thura",
+    "description": "Mail, contacts, files, calendars, chat and meetings in your shared workspace.",
+    "noIndex": false
+  },
+  "/about": {
+    "title": "About \u00b7 Thura",
+    "description": "About Thura, the shared workspace for your team's everyday work.",
+    "noIndex": false
+  },
+  "/workspace": {
+    "title": "Sample workspace \u00b7 Thura",
+    "description": "Explore Thura with sample data that stays in your browser.",
+    "noIndex": true
+  },
+  "/app": {
+    "title": "Workspace \u00b7 Thura",
+    "description": "Sign in to your private Thura workspace for mail, files, calendars, chat and meetings.",
+    "noIndex": true
+  },
+  "/contacts": {
+    "title": "Contacts \u00b7 Thura",
+    "description": "Manage your workspace's shared contacts.",
+    "noIndex": true
+  },
+  "/members": {
+    "title": "Members \u00b7 Thura",
+    "description": "Manage workspace membership and invitations.",
+    "noIndex": true
+  },
+  "/invite": {
+    "title": "Accept invitation \u00b7 Thura",
+    "description": "Accept your invitation to a Thura workspace.",
+    "noIndex": true
+  },
+  "/forgot": {
+    "title": "Account recovery \u00b7 Thura",
+    "description": "Request a password reset for your Thura account.",
+    "noIndex": true
+  },
+  "/reset": {
+    "title": "Reset password \u00b7 Thura",
+    "description": "Set a new password for your Thura account.",
+    "noIndex": true
+  },
+  "/verify": {
+    "title": "Verify email \u00b7 Thura",
+    "description": "Verify the email address for your Thura account.",
+    "noIndex": true
+  },
+  "/share": {
+    "title": "Shared file \u00b7 Thura",
+    "description": "Open a file through an explicit Thura share grant.",
+    "noIndex": true
+  },
+  "/rsvp": {
+    "title": "Calendar invitation \u00b7 Thura",
+    "description": "Respond to your Thura calendar invitation.",
+    "noIndex": true
+  },
+  "/setup": {
+    "title": "Set up Thura",
+    "description": "Private server setup and administration.",
+    "noIndex": true
+  }
 }

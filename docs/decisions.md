@@ -181,3 +181,7 @@ Why: Commit signed packets and jobs together, recheck membership and consent und
 ## 2026-10-08: Cancel SMIP sends only before a durable attempt
 
 Why: Owners/admins need to withdraw an individual queued copy without disabling its whole stream. Share workspace/row locks with dispatch, require zero attempts, retain the original packet and quota, audit atomically, and make retries terminal and idempotent. Attempted packets cannot be recalled and the wire protocol stays unchanged.
+
+## 2026-10-08: Admin page Server setup
+
+Why: The server administrator manages encrypted draft/published snapshots, operator-paired providers and global policy in the existing admin frame. A one-time operator token creates the first account atomically; existing deployments require explicit ADMIN_USERS, and workspace roles grant no server authority. Optimistic revisions prevent stale tabs; publication, initial workspace/mailbox and audit commit together. Restart all nodes activates one snapshot, never individual draft fields. Refuse storage relocation while app objects exist. No secret is rendered, logged, returned or stored in browser persistence.

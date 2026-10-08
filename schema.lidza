@@ -998,3 +998,28 @@ type SmipOutboxList {
 type SmipDispatchJob {
  id uuid
 }
+
+model ServerSetup {
+ id uuid @id @default(uuid())
+ subject string @default("")
+ workspaceId uuid?
+ revision int @default(0)
+ publishedRevision int @default(0)
+ draft string @default("")
+ published string @default("")
+ step string @default("server")
+ publishedAt time?
+}
+
+type SetupStatus {
+ open bool
+ claimed bool
+ published bool
+}
+
+type SetupClaimInput {
+ token string @max(512)
+ email string @email @max(254)
+ name string @min(1) @max(100)
+ password string @min(12) @max(1024)
+}

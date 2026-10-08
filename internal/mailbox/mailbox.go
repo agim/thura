@@ -141,9 +141,19 @@ func Queue(ctx context.Context, workspaceID, mailboxID, itemID string, in schema
 	if err != nil {
 		return schema.MailItem{}, err
 	}
-	if len(to)+len(cc)+len(bcc) == 0 || len(to)+len(cc)+len(bcc) > 50 {
-		return schema.MailItem{}, router.Errorf(422, "provide between one and 50 recipients")
+	var recipientLimits struct {
+		Max int `env:"MAIL_MAX_RECIPIENTS" default:"50"`
 	}
+	if err := env.Load(".", &recipientLimits); err != nil {
+		return schema.MailItem{}, err
+	}
+	if recipientLimits.Max < 1 || recipientLimits.Max > 50 {
+		return schema.MailItem{}, router.Errorf(503, "invalid server recipient limit")
+	}
+	if len(to)+len(cc)+len(bcc) == 0 || len(to)+len(cc)+len(bcc) > recipientLimits.Max {
+		return schema.MailItem{}, router.Errorf(422, "recipient count exceeds the configured email limit")
+	}
+
 	if strings.TrimSpace(i.Subject) == "" {
 		return schema.MailItem{}, router.Errorf(422, "subject is required")
 	}

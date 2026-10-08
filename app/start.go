@@ -2,8 +2,10 @@ package app
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"thura/internal/calendar"
 	"thura/internal/chat"
 	"time"
@@ -18,6 +20,7 @@ import (
 	"thura/internal/platform/objectgc"
 	livekit "thura/internal/providers/livekit"
 	provider "thura/internal/providers/onlyoffice"
+	"thura/internal/setup"
 )
 
 // onStart runs after the packs have started and before the app listens:
@@ -25,6 +28,9 @@ import (
 // cache, lidza.Provide a service the packs do not. main.go is generated
 // once and left alone; this file is the app's.
 func onStart(ctx context.Context, s *lidza.Services) error {
+	if err := setup.Activate(lidza.WithServices(ctx, s), s); err != nil {
+		return err
+	}
 	if err := federation.Configure(s); err != nil {
 		return err
 	}
@@ -66,6 +72,17 @@ func appMiddleware() []middleware.Middleware {
 	if os.Getenv("LIDZA_MODE") == "dev" {
 		return nil
 	}
+	return []middleware.Middleware{func(next http.Handler) http.Handler {
+		var once sync.Once
+		var handler http.Handler
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			once.Do(func() { handler = appHeaders()[0](next) })
+			handler.ServeHTTP(w, r)
+		})
+	}}
+}
+
+func appHeaders() []middleware.Middleware {
 	// FullCalendar creates an empty style element and adds its rules through
 	// CSSOM. Allow only that empty element's hash, keeping other inline styles
 	// blocked and retaining the default script policy.

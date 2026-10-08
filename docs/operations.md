@@ -159,3 +159,7 @@ revision before applying irreversible schema/provider changes.
 ## Opt-in SMIP chat and file transport
 
 SMIP is default-disabled and separate from Matrix conversations. [The SMIP operator guide](protocols/smip-thura.md) covers sealed pairing keys/origins, direct TLS 1.3, consistent identity across worker nodes, transactional workspace consent, durable sending/reconciliation, quotas/retention and explicit Drive import. Keep workers enabled in deployed apps and browser/provider checks; `JOBS_WORKERS=0` is scoped to deterministic full Go verification. Operators choose every deployment origin/domain and must configure both peers; no automatic discovery, SMTP fallback or public deployment is implied.
+
+## Initial server configuration
+
+Use the [resumable setup wizard](server-setup.md) for a new server administrator, provider credentials, quotas and restrictions. Supply a private unpredictable `THURA_SETUP_TOKEN` before first-account creation and remove it afterward. Existing deployments require an explicitly listed `ADMIN_USERS` account. Publishing writes an encrypted configuration snapshot and initial workspace/mailbox atomically; restart every node to activate it. Draft restart preserves active settings. Back up the `server_setup` snapshots with Postgres and protect the master key separately. Ordinary app pushes do not change cloud environment settings.
