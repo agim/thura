@@ -24,3 +24,9 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO mail_item(id,mailbox_id,author_id,folder,from_address,to_address,subject,html_body,status,unread)
 VALUES ('a0000000-0000-4000-8000-000000000011','a0000000-0000-4000-8000-000000000010','','inbox','sender@example.com','mail-e2e@example.com','HTML safety fixture','<p>Safe fixture body</p><script>parent.document.body.dataset.injected="yes"</script><img src="https://tracking.invalid/pixel"><a href="https://tracking.invalid/">Unsafe navigation</a>','received',true)
 ON CONFLICT (id) DO UPDATE SET unread=true;
+
+-- Public synthetic RSVP fixture; no production credentials or data.
+INSERT INTO calendar(id,workspace_id,name,color) VALUES ('a0000000-0000-4000-8000-000000000020','a0000000-0000-4000-8000-000000000001','RSVP browser calendar','#15756b') ON CONFLICT(id) DO NOTHING;
+INSERT INTO calendar_event(id,calendar_id,uid,organizer,title,all_day,starts_at,ends_at,time_zone) VALUES ('a0000000-0000-4000-8000-000000000021','a0000000-0000-4000-8000-000000000020','browser-rsvp@thura.test','owner-e2e@example.com','Browser invitation planning',false,now()+interval '1 day',now()+interval '1 day 1 hour','America/New_York') ON CONFLICT(id) DO UPDATE SET sequence=0,cancelled=false,starts_at=now()+interval '1 day',ends_at=now()+interval '1 day 1 hour';
+INSERT INTO event_attendee(id,event_id,email) VALUES ('a0000000-0000-4000-8000-000000000022','a0000000-0000-4000-8000-000000000021','rsvp-guest@example.com') ON CONFLICT(id) DO UPDATE SET response='needsaction',response_sequence=0;
+INSERT INTO calendar_reply_grant(id,attendee_id,token_hash,sequence,expires_at) VALUES ('a0000000-0000-4000-8000-000000000023','a0000000-0000-4000-8000-000000000022','5b0865f115e4fd7f4d79aa89ac5c615f5d4905bccf3179a7bd4de8813dc3c727',0,now()+interval '30 days') ON CONFLICT(id) DO UPDATE SET expires_at=now()+interval '30 days',sequence=0;

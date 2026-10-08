@@ -153,6 +153,9 @@ func saveAttendees(ctx context.Context, queries *q.Queries, id string, values []
 	}
 	for _, a := range existing {
 		if !seen[a.Email] {
+			if err = queries.DeleteAttendeeGrants(ctx, a.ID); err != nil {
+				return err
+			}
 			if err = queries.DeleteEventAttendee(ctx, q.DeleteEventAttendeeParams{EventID: id, Email: a.Email}); err != nil {
 				return err
 			}

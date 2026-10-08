@@ -132,3 +132,22 @@ func ExportCalendar(ctx context.Context, r *router.Request[router.None]) (schema
 	raw, err := calendar.ExportICS(events, attendees, exceptions, "PUBLISH")
 	return schema.FileContent{Name: c.ID + ".ics", ContentType: "text/calendar; charset=utf-8", Data: base64.StdEncoding.EncodeToString(raw)}, err
 }
+
+func SendCalendarInvitations(ctx context.Context, r *router.Request[schema.CalendarInviteInput]) (schema.CalendarDispatchResult, error) {
+	return calendar.Invite(ctx, r.Param("workspaceId"), r.Param("calendarId"), r.Param("id"), r.Body)
+}
+func OpenCalendarReply(ctx context.Context, r *router.Request[schema.OpenShareInput]) (schema.CalendarReplyView, error) {
+	return calendar.ReplyView(ctx, r.Body.Token)
+}
+func ReplyCalendar(ctx context.Context, r *router.Request[schema.CalendarReplyInput]) (schema.CalendarReplyView, error) {
+	return calendar.Reply(ctx, r.Body)
+}
+func ReplyCalendarICS(ctx context.Context, r *router.Request[schema.CalendarReplyICS]) (schema.CalendarReplyView, error) {
+	return calendar.ReplyICS(ctx, r.Body)
+}
+func GetCalendarReminder(ctx context.Context, r *router.Request[router.None]) (schema.ReminderSetting, error) {
+	return calendar.Reminder(ctx, r.Param("workspaceId"), r.Param("calendarId"), r.Param("id"))
+}
+func SetCalendarReminder(ctx context.Context, r *router.Request[schema.ReminderInput]) (schema.ReminderSetting, error) {
+	return calendar.SetReminder(ctx, r.Param("workspaceId"), r.Param("calendarId"), r.Param("id"), r.Body)
+}

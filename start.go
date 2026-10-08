@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"os"
+	"thura/internal/calendar"
+	"time"
 
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/jobs"
@@ -17,7 +19,8 @@ import (
 // once and left alone; this file is the app's.
 func onStart(ctx context.Context, s *lidza.Services) error {
 	jobs.FromServices(s).Handle(mailbox.DeliveryJob, mailbox.Deliver)
-	return nil
+	jobs.FromServices(s).Handle(calendar.ReminderJob, calendar.Remind, jobs.Concurrency(1))
+	return jobs.FromServices(s).Schedule(calendar.ReminderJob, jobs.Every(time.Minute), nil)
 }
 
 // appMiddleware wraps the whole app, pages and API alike, outermost

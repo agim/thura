@@ -364,3 +364,45 @@ CREATE TABLE event_attendee (
 CREATE INDEX event_attendee_event_id_idx ON event_attendee (event_id);
 CREATE UNIQUE INDEX event_attendee_event_id_email_key ON event_attendee (event_id, email);
 
+CREATE TABLE calendar_reply_grant (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  attendee_id uuid NOT NULL REFERENCES event_attendee(id),
+  token_hash text NOT NULL UNIQUE,
+  sequence integer NOT NULL,
+  instance_key text NOT NULL DEFAULT '',
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX calendar_reply_grant_attendee_id_idx ON calendar_reply_grant (attendee_id);
+
+CREATE TABLE calendar_dispatch (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL REFERENCES calendar_event(id),
+  sequence integer NOT NULL,
+  instance_key text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX calendar_dispatch_event_id_idx ON calendar_dispatch (event_id);
+CREATE UNIQUE INDEX calendar_dispatch_event_id_sequence_instance_key_key ON calendar_dispatch (event_id, sequence, instance_key);
+
+CREATE TABLE calendar_reminder (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL REFERENCES calendar_event(id),
+  subject text NOT NULL,
+  minutes_before integer NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX calendar_reminder_event_id_idx ON calendar_reminder (event_id);
+CREATE UNIQUE INDEX calendar_reminder_event_id_subject_key ON calendar_reminder (event_id, subject);
+
+CREATE TABLE reminder_notice (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL REFERENCES calendar_event(id),
+  subject text NOT NULL,
+  sequence integer NOT NULL,
+  instance_key text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX reminder_notice_event_id_idx ON reminder_notice (event_id);
+CREATE UNIQUE INDEX reminder_notice_event_id_subject_sequence_instance_key_key ON reminder_notice (event_id, subject, sequence, instance_key);
+

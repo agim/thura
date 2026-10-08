@@ -228,6 +228,14 @@ type Calendar struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+type CalendarDispatch struct {
+	ID          string    `json:"id"`
+	EventID     string    `json:"event_id"`
+	Sequence    int32     `json:"sequence"`
+	InstanceKey string    `json:"instance_key"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type CalendarEvent struct {
 	ID          string     `json:"id"`
 	CalendarID  string     `json:"calendar_id"`
@@ -247,6 +255,24 @@ type CalendarEvent struct {
 	Cancelled   bool       `json:"cancelled"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+type CalendarReminder struct {
+	ID            string    `json:"id"`
+	EventID       string    `json:"event_id"`
+	Subject       string    `json:"subject"`
+	MinutesBefore int32     `json:"minutes_before"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+type CalendarReplyGrant struct {
+	ID          string    `json:"id"`
+	AttendeeID  string    `json:"attendee_id"`
+	TokenHash   string    `json:"token_hash"`
+	Sequence    int32     `json:"sequence"`
+	InstanceKey string    `json:"instance_key"`
+	ExpiresAt   time.Time `json:"expires_at"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type Contact struct {
@@ -423,6 +449,15 @@ type OfficeSession struct {
 	LastChecksum  string    `json:"last_checksum"`
 	ExpiresAt     time.Time `json:"expires_at"`
 	CreatedAt     time.Time `json:"created_at"`
+}
+
+type ReminderNotice struct {
+	ID          string    `json:"id"`
+	EventID     string    `json:"event_id"`
+	Subject     string    `json:"subject"`
+	Sequence    int32     `json:"sequence"`
+	InstanceKey string    `json:"instance_key"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type ShareGrant struct {

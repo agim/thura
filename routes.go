@@ -24,6 +24,10 @@ func routes(r *router.Router) {
 	router.Route(r, "POST /api/v1/inbound/{mailboxId}", handlers.ReceiveMail, router.UploadLimit(12<<20))
 	router.Route(r.Group("/api/v1/invitations", auth.Optional()), "POST /api/v1/invitations/accept", handlers.AcceptInvite, auth.Throttle())
 	router.Route(r.Group("/api/v1/shares", auth.Optional()), "POST /api/v1/shares/open", handlers.OpenDriveShare, middleware.RateLimit(middleware.RateLimitOptions{RPS: 1, Burst: 10}))
+	reply := r.Group("/api/v1/calendar-replies", auth.Optional(), middleware.RateLimit(middleware.RateLimitOptions{RPS: 1, Burst: 10}))
+	router.Route(reply, "POST /api/v1/calendar-replies/open", handlers.OpenCalendarReply)
+	router.Route(reply, "POST /api/v1/calendar-replies/respond", handlers.ReplyCalendar)
+	router.Route(reply, "POST /api/v1/calendar-replies/ics", handlers.ReplyCalendarICS)
 	g := r.Group("/api/v1", auth.Require())
 	router.Route(g, "GET /api/v1/workspaces", handlers.ListWorkspaces)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts", handlers.ListContacts)
@@ -70,6 +74,9 @@ func routes(r *router.Router) {
 	router.Route(g, "PATCH /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events/{id}/occurrences", handlers.ChangeCalendarOccurrence)
 	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/import", handlers.ImportCalendar, router.UploadLimit(1<<20))
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/export", handlers.ExportCalendar)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events/{id}/invitations", handlers.SendCalendarInvitations)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events/{id}/reminder", handlers.GetCalendarReminder)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events/{id}/reminder", handlers.SetCalendarReminder)
 }
 
 // hello greets by name. Greeting is defined in schema.lidza.

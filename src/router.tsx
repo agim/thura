@@ -1,3 +1,4 @@
+import { CalendarRSVP } from './pages/RSVP'
 import { SharedFile } from './pages/Share'
 import {
   createRootRoute,
@@ -54,10 +55,11 @@ const inviteRoute = createRoute({ getParentRoute: () => rootRoute, path: '/invit
 const forgotRoute = createRoute({ getParentRoute: () => rootRoute, path: '/forgot', component: Forgot })
 const resetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset', component: Reset })
 const verifyRoute = createRoute({ getParentRoute: () => rootRoute, path: '/verify', component: Verify })
+const rsvpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rsvp', component: CalendarRSVP })
 const shareRoute = createRoute({ getParentRoute: () => rootRoute, path: '/share', component: SharedFile })
 
 const appRoute = createRoute({ getParentRoute: () => rootRoute, path: '/app', component: AppWorkspace })
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute, shareRoute])
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute, shareRoute, rsvpRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).

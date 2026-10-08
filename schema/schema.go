@@ -967,6 +967,99 @@ func (v EventAttendee) Validate() error {
 	return errs.Result()
 }
 
+// CalendarReplyGrant is a row of the calendar_reply_grant table.
+type CalendarReplyGrant struct {
+	ID          string    `json:"id" db:"id"`
+	AttendeeID  string    `json:"attendeeId" db:"attendee_id"`
+	TokenHash   string    `json:"tokenHash" db:"token_hash"`
+	Sequence    int       `json:"sequence" db:"sequence"`
+	InstanceKey string    `json:"instanceKey" db:"instance_key"`
+	ExpiresAt   time.Time `json:"expiresAt" db:"expires_at"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of CalendarReplyGrant from schema.lidza.
+func (v CalendarReplyGrant) Validate() error {
+	var errs validate.Errors
+	if v.AttendeeID == "" {
+		errs.Add("attendeeId", "required", "required")
+	}
+	if v.TokenHash == "" {
+		errs.Add("tokenHash", "required", "required")
+	}
+	if v.InstanceKey == "" {
+		errs.Add("instanceKey", "required", "required")
+	}
+	return errs.Result()
+}
+
+// CalendarDispatch is a row of the calendar_dispatch table.
+type CalendarDispatch struct {
+	ID          string    `json:"id" db:"id"`
+	EventID     string    `json:"eventId" db:"event_id"`
+	Sequence    int       `json:"sequence" db:"sequence"`
+	InstanceKey string    `json:"instanceKey" db:"instance_key"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of CalendarDispatch from schema.lidza.
+func (v CalendarDispatch) Validate() error {
+	var errs validate.Errors
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	if v.InstanceKey == "" {
+		errs.Add("instanceKey", "required", "required")
+	}
+	return errs.Result()
+}
+
+// CalendarReminder is a row of the calendar_reminder table.
+type CalendarReminder struct {
+	ID            string    `json:"id" db:"id"`
+	EventID       string    `json:"eventId" db:"event_id"`
+	Subject       string    `json:"subject" db:"subject"`
+	MinutesBefore int       `json:"minutesBefore" db:"minutes_before"`
+	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of CalendarReminder from schema.lidza.
+func (v CalendarReminder) Validate() error {
+	var errs validate.Errors
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	return errs.Result()
+}
+
+// ReminderNotice is a row of the reminder_notice table.
+type ReminderNotice struct {
+	ID          string    `json:"id" db:"id"`
+	EventID     string    `json:"eventId" db:"event_id"`
+	Subject     string    `json:"subject" db:"subject"`
+	Sequence    int       `json:"sequence" db:"sequence"`
+	InstanceKey string    `json:"instanceKey" db:"instance_key"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of ReminderNotice from schema.lidza.
+func (v ReminderNotice) Validate() error {
+	var errs validate.Errors
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.InstanceKey == "" {
+		errs.Add("instanceKey", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -2116,6 +2209,161 @@ type CalendarImportResult struct {
 
 // Validate applies the rules of CalendarImportResult from schema.lidza.
 func (v CalendarImportResult) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
+// CalendarInviteInput is an API type.
+type CalendarInviteInput struct {
+	Sequence    int     `json:"sequence"`
+	InstanceKey *string `json:"instanceKey"`
+}
+
+// Validate applies the rules of CalendarInviteInput from schema.lidza.
+func (v CalendarInviteInput) Validate() error {
+	var errs validate.Errors
+	if v.Sequence < 0 {
+		errs.Add("sequence", "min", "at least 0")
+	}
+	if v.InstanceKey != nil {
+		x := *v.InstanceKey
+		if len(x) > 100 {
+			errs.Add("instanceKey", "max", "at most 100 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// CalendarDispatchResult is an API type.
+type CalendarDispatchResult struct {
+	Queued   int  `json:"queued"`
+	Captured bool `json:"captured"`
+}
+
+// Validate applies the rules of CalendarDispatchResult from schema.lidza.
+func (v CalendarDispatchResult) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
+// CalendarReplyView is an API type.
+type CalendarReplyView struct {
+	Event       CalendarEvent `json:"event"`
+	Email       string        `json:"email"`
+	InstanceKey string        `json:"instanceKey"`
+	Response    Attendance    `json:"response"`
+	ExpiresAt   time.Time     `json:"expiresAt"`
+}
+
+// Validate applies the rules of CalendarReplyView from schema.lidza.
+func (v CalendarReplyView) Validate() error {
+	var errs validate.Errors
+	if err := v.Event.Validate(); err != nil {
+		errs.Add("event", "nested", err.Error())
+	}
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if v.InstanceKey == "" {
+		errs.Add("instanceKey", "required", "required")
+	}
+	if v.Response == "" {
+		errs.Add("response", "required", "required")
+	}
+	if v.Response != "" && !v.Response.Valid() {
+		errs.Add("response", "enum", "unknown Attendance value")
+	}
+	return errs.Result()
+}
+
+// CalendarReplyInput is an API type.
+type CalendarReplyInput struct {
+	Token       string     `json:"token"`
+	Response    Attendance `json:"response"`
+	InstanceKey *string    `json:"instanceKey"`
+}
+
+// Validate applies the rules of CalendarReplyInput from schema.lidza.
+func (v CalendarReplyInput) Validate() error {
+	var errs validate.Errors
+	if v.Token == "" {
+		errs.Add("token", "required", "required")
+	}
+	if len(v.Token) < 20 {
+		errs.Add("token", "min", "at least 20 character(s)")
+	}
+	if len(v.Token) > 200 {
+		errs.Add("token", "max", "at most 200 character(s)")
+	}
+	if v.Response == "" {
+		errs.Add("response", "required", "required")
+	}
+	if v.Response != "" && !v.Response.Valid() {
+		errs.Add("response", "enum", "unknown Attendance value")
+	}
+	if v.InstanceKey != nil {
+		x := *v.InstanceKey
+		if len(x) > 100 {
+			errs.Add("instanceKey", "max", "at most 100 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// CalendarReplyICS is an API type.
+type CalendarReplyICS struct {
+	Token   string `json:"token"`
+	Content string `json:"content"`
+}
+
+// Validate applies the rules of CalendarReplyICS from schema.lidza.
+func (v CalendarReplyICS) Validate() error {
+	var errs validate.Errors
+	if v.Token == "" {
+		errs.Add("token", "required", "required")
+	}
+	if len(v.Token) < 20 {
+		errs.Add("token", "min", "at least 20 character(s)")
+	}
+	if len(v.Token) > 200 {
+		errs.Add("token", "max", "at most 200 character(s)")
+	}
+	if v.Content == "" {
+		errs.Add("content", "required", "required")
+	}
+	if len(v.Content) > 100000 {
+		errs.Add("content", "max", "at most 100000 character(s)")
+	}
+	return errs.Result()
+}
+
+// ReminderInput is an API type.
+type ReminderInput struct {
+	MinutesBefore *int `json:"minutesBefore"`
+}
+
+// Validate applies the rules of ReminderInput from schema.lidza.
+func (v ReminderInput) Validate() error {
+	var errs validate.Errors
+	if v.MinutesBefore != nil {
+		x := *v.MinutesBefore
+		if x < 1 {
+			errs.Add("minutesBefore", "min", "at least 1")
+		}
+		if x > 10080 {
+			errs.Add("minutesBefore", "max", "at most 10080")
+		}
+	}
+	return errs.Result()
+}
+
+// ReminderSetting is an API type.
+type ReminderSetting struct {
+	MinutesBefore *int `json:"minutesBefore"`
+}
+
+// Validate applies the rules of ReminderSetting from schema.lidza.
+func (v ReminderSetting) Validate() error {
 	var errs validate.Errors
 	return errs.Result()
 }

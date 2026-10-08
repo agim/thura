@@ -592,3 +592,68 @@ type CalendarImportResult {
  imported int
  ignored int
 }
+
+model CalendarReplyGrant {
+ id uuid @id @default(uuid())
+ attendeeId uuid @ref(EventAttendee) @index
+ tokenHash string @unique
+ sequence int
+ instanceKey string @default("")
+ expiresAt time
+ createdAt time @default(now())
+}
+model CalendarDispatch {
+ id uuid @id @default(uuid())
+ eventId uuid @ref(CalendarEvent) @index
+ sequence int
+ instanceKey string @default("")
+ createdAt time @default(now())
+ @@unique(eventId,sequence,instanceKey)
+}
+model CalendarReminder {
+ id uuid @id @default(uuid())
+ eventId uuid @ref(CalendarEvent) @index
+ subject string
+ minutesBefore int
+ createdAt time @default(now())
+ @@unique(eventId,subject)
+}
+model ReminderNotice {
+ id uuid @id @default(uuid())
+ eventId uuid @ref(CalendarEvent) @index
+ subject string
+ sequence int
+ instanceKey string
+ createdAt time @default(now())
+ @@unique(eventId,subject,sequence,instanceKey)
+}
+type CalendarInviteInput {
+ sequence int @min(0)
+ instanceKey string? @max(100)
+}
+type CalendarDispatchResult {
+ queued int
+ captured bool
+}
+type CalendarReplyView {
+ event CalendarEvent
+ email string
+ instanceKey string
+ response Attendance
+ expiresAt time
+}
+type CalendarReplyInput {
+ token string @min(20) @max(200)
+ response Attendance
+ instanceKey string? @max(100)
+}
+type CalendarReplyICS {
+ token string @min(20) @max(200)
+ content string @max(100000)
+}
+type ReminderInput {
+ minutesBefore int? @min(1) @max(10080)
+}
+type ReminderSetting {
+ minutesBefore int?
+}

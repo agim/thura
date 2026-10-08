@@ -64,3 +64,14 @@ Why: Pin DocumentServer 9.0.4 for integration tests and expose DOCX/XLSX editing
 ## 2026-10-08: Bounded timezone-aware calendars and ICS interoperability
 
 Why: Use compatible FullCalendar 6.1.21 standard plugins with Luxon, loaded on demand. Keep all-day dates separate from instants, retain IANA recurrence zones, bound rules/views, skip nonexistent DST occurrences before COUNT, and select first ambiguous occurrences. Use row-locked sequences and explicit exception resets. Import ICS atomically by calendar-scoped UID/sequence, preserving cancellation and Unicode; export VTIMEZONE. Permit only the empty stylesheet's CSP hash for the widget's CSSOM rules, without enabling arbitrary inline styles.
+
+## Calendar RSVP grants and transactional reminders
+
+Event invitations use official mail-pack transactions and a per-version dispatch
+ledger. RSVP grants bind an attendee to one event sequence, hash random 256-bit
+tokens, expire after 30 days, and convey no workspace membership. ICS replies
+must carry the grant and match UID, sequence, and attendee; ordinary incoming
+email headers never authorize replies. Responses currently apply to a series.
+Personal reminders use minute schedules, current membership checks, bounded
+recurrence expansion, and a transactional notice ledger so retries cannot queue
+duplicate notices. A fifteen-minute catch-up window bounds late delivery.
