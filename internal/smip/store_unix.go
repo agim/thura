@@ -81,28 +81,44 @@ func (s *FileInbox) syncDir() error {
 	defer dir.Close()
 	return dir.Sync()
 }
-func (s *FileInbox) get(origin, id string) (Record, bool, error) {
+
+// read/write are shared journal primitives. Callers hold mu throughout.
+func (s *FileInbox) read(name string, max int64) ([]byte, bool, error) {
 	if s.closed {
-		return Record{}, false, errors.New("inbox closed")
+		return nil, false, errors.New("journal closed")
 	}
-	f, err := os.Open(filepath.Join(s.root, recordName(origin, id)))
+	f, err := os.Open(filepath.Join(s.root, name))
 	if errors.Is(err, fs.ErrNotExist) {
-		return Record{}, false, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return Record{}, false, err
+		return nil, false, err
 	}
 	defer f.Close()
 	info, err := f.Stat()
 	if err != nil {
-		return Record{}, false, err
+		return nil, false, err
 	}
-	if !info.Mode().IsRegular() || info.Size() > MaxWire+4096 || info.Mode().Perm()&0077 != 0 {
-		return Record{}, false, errors.New("invalid inbox record")
+	if !info.Mode().IsRegular() || info.Size() > max || info.Mode().Perm()&0077 != 0 {
+		return nil, false, errors.New("invalid private journal record")
 	}
 	b := make([]byte, info.Size())
 	if _, err = f.ReadAt(b, 0); err != nil {
-		return Record{}, false, err
+		return nil, false, err
+	}
+	// Resolve uncertain synchronization before returning a durable record.
+	if err = f.Sync(); err != nil {
+		return nil, false, err
+	}
+	if err = s.syncDir(); err != nil {
+		return nil, false, err
+	}
+	return b, true, nil
+}
+func (s *FileInbox) get(origin, id string) (Record, bool, error) {
+	b, found, err := s.read(recordName(origin, id), MaxWire+4096)
+	if err != nil || !found {
+		return Record{}, found, err
 	}
 	var r Record
 	if err = strictJSON(b, &r); err != nil {
@@ -110,14 +126,6 @@ func (s *FileInbox) get(origin, id string) (Record, bool, error) {
 	}
 	if r.Packet.Envelope.From != origin || r.Packet.Envelope.ID != id || r.Packet.Envelope.Validate() != nil || r.Receipt.Digest != r.Packet.Digest() || r.Receipt.ID != id || r.Receipt.From != r.Packet.Envelope.To || r.Receipt.To != origin {
 		return Record{}, false, errors.New("corrupt inbox record")
-	}
-	// Also synchronize on retries: never turn an earlier uncertain fsync into
-	// a successful acknowledgement without confirming durability.
-	if err = f.Sync(); err != nil {
-		return Record{}, false, err
-	}
-	if err = s.syncDir(); err != nil {
-		return Record{}, false, err
 	}
 	return r, true, nil
 }
@@ -150,28 +158,37 @@ func (s *FileInbox) Put(r Record) (Record, bool, error) {
 	if err != nil {
 		return Record{}, false, err
 	}
+	if err = s.write(recordName(e.From, e.ID), b); err != nil {
+		return Record{}, false, err
+	}
+	return r, true, nil
+}
+func (s *FileInbox) write(name string, b []byte) error {
+	if s.closed {
+		return errors.New("journal closed")
+	}
 	// lidza:ignore L009 atomic fsync/rename protocol journal; production Thura adapters must use database/storage packs
 	f, err := os.CreateTemp(s.root, ".pending-")
 	if err != nil {
-		return Record{}, false, err
+		return err
 	}
 	defer os.Remove(f.Name())
 	if _, err = f.Write(b); err != nil {
 		f.Close()
-		return Record{}, false, err
+		return err
 	}
 	if err = f.Sync(); err != nil {
 		f.Close()
-		return Record{}, false, err
+		return err
 	}
 	if err = f.Close(); err != nil {
-		return Record{}, false, err
+		return err
 	}
-	if err = os.Rename(f.Name(), filepath.Join(s.root, recordName(e.From, e.ID))); err != nil {
-		return Record{}, false, err
+	if err = os.Rename(f.Name(), filepath.Join(s.root, name)); err != nil {
+		return err
 	}
 	if err = s.syncDir(); err != nil {
-		return Record{}, false, err
+		return err
 	}
-	return r, true, nil
+	return nil
 }

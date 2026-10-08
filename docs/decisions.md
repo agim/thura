@@ -166,3 +166,6 @@ Why: Use standard-library bounded image decoders and the official storage/jobs p
 ## 2026-10-08: Retain Matrix history across polling and reconnect
 
 Why: Keep displayed windows by event ID, anchor backward paging to the first window and bridge reconnect gaps through at most 20 provider pages per refresh. Expose remaining gaps for explicit continuation, preserve history through transient failures and hide it on authorization errors. SMIP remains a separate first-release-excluded track.
+## 2026-10-08: SMIP durable sender outbox and uncertain outcomes
+
+Why: Persist the immutable signed packet and attempt marker before HTTP, and record acceptance only after a verified receipt is durably committed. Lost responses and interrupted attempts remain uncertain and retry the original packet, including after expiry for receipt reconciliation. Permanent errors pause for explicit operator resume; an expired packet is definitely unsent only when no attempt was recorded. Share the private Unix reference journal with bounded retention and due pages, retain historical public keys, and leave transactional Thura jobs/storage adapters as a separate integration.
