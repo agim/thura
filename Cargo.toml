@@ -1,7 +1,0 @@
-[workspace]
-members = [
-    "crates/thura_crypto",
-    "crates/thura_media",
-    "crates/thura_ai",
-]
-resolver = "2"

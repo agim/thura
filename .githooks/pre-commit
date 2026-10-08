@@ -1,0 +1,7 @@
+#!/bin/sh
+# Written by lidza new. Runs lidza verify before every commit: generated
+# files current and staged, no test deleted, skipped or stripped of its
+# assertions, lidza check clean, tests passing. Confirm a deliberate test
+# change with LIDZA_ALLOW_TEST_CHANGES=1 git commit; skip once with
+# git commit --no-verify.
+exec lidza verify

@@ -1,0 +1,64 @@
+# CI for thura: lidza verify --strict (generated files current, every
+# check clean, warnings included, Go tests) and the browser suite, against
+# Postgres and Valkey. The CLI is installed at the version go.mod requires.
+# Dependencies: govulncheck on the Go code, npm audit on the runtime
+# packages; .github/dependabot.yml proposes the updates.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+env:
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/thura_test?sslmode=disable
+  AUTH_SECRET: ci-only-secret-never-use-in-production-0123456789
+  MAIL_PROVIDER: outbox
+  LLM_PROVIDER: fake
+  STORAGE_PROVIDER: local
+  STORAGE_DIR: .lidza/ci-storage
+  ADMIN_USERS: admin@example.com
+  REALTIME_BUS_URL: redis://localhost:6379/1
+  CACHE_URL: redis://localhost:6379/0
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      valkey:
+        image: valkey/valkey:8
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: lidza at the version go.mod requires
+        run: |
+          go install github.com/agim/lidza/cmd/lidza@$(go list -m -f '{{.Version}}' github.com/agim/lidza)
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - run: npm ci --no-fund --no-audit
+      - name: npm audit (runtime dependencies, high and critical)
+        run: npm audit --omit=dev --audit-level=high
+      - name: lidza verify --strict
+        run: |
+          git add -A
+          lidza verify --strict
+      - name: govulncheck (known vulnerabilities in code the app calls)
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - name: lidza test --e2e
+        run: lidza test --e2e --install

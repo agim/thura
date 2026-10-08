@@ -1,8 +1,0 @@
-# Thura — Woven Open Source Collaboration Suite
-> Built on top of Lidza Framework (Go control plane + Rust compute core + Astro frontend)
-
-## Monorepo Layout
-- Go Control Plane & AI Router: /pkg (ai, mail, drive, cal, meet)
-- Rust Compute Crates: /crates (thura_crypto, thura_media, thura_ai)
-- Līdza Packs: /packs (pack-ai, pack-mail, pack-drive, pack-calendar, pack-meetings)
-- Astro Frontend: /apps/web

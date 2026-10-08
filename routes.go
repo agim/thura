@@ -1,0 +1,23 @@
+package main
+
+import (
+	"context"
+
+	"github.com/agim/lidza/pkg/router"
+
+	"thura/schema"
+)
+
+// routes registers the app's API. Every route lives under /api; the frontend
+// never defines one. GET /api/v1/health is built in. router.Route gives a
+// handler typed input and output: the client in .lidza/client is generated
+// from these types, so the frontend cannot drift from the API.
+func routes(r *router.Router) {
+	router.Route(r, "GET /api/v1/hello/{name}", hello)
+}
+
+// hello greets by name. Greeting is defined in schema.lidza.
+func hello(ctx context.Context, req *router.Request[router.None]) (schema.Greeting, error) {
+	name := req.Param("name")
+	return schema.Greeting{Name: name, Message: "hello, " + name}, nil
+}
