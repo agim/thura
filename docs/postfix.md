@@ -62,8 +62,8 @@ docker run -d --name thura-postfix --restart unless-stopped --network host \
 `example.org` is illustrative: use the operator's actual hostname and domain
 in the configuration and DNS. The default binds only `127.0.0.1:2525`. To accept
 internet SMTP, set `SMTP_LISTEN=25`, mount the certificate and private key at
-`/run/secrets/smtp-cert.pem` and `/run/secrets/smtp-key.pem`, and use Thura's
-SMTP port 25 locally. This listens on the host's IPv4 interfaces; configure the
+`/run/secrets/smtp-cert.pem` and `/run/secrets/smtp-key.pem`. Keep Thura's
+private submission port 2525. The added MX listener uses the host's IPv4 interfaces; configure the
 firewall deliberately. Only 127.0.0.1 may submit to arbitrary outbound domains.
 Other clients may send only to mapped local recipients. The private inbound
 adapter runs as the dedicated `thura-mail` account.
@@ -80,8 +80,9 @@ relay, rather than a claim of successful internet delivery.
 ## Native Debian-family host
 
 On a **new dedicated MTA instance**, install `postfix python3 ca-certificates`
-through apt, create a system account/group named `thura-mail`, and copy
-`configure.py` and `relay.py` to `/opt/thura-postfix/`. Copy the supplied systemd
+through apt, create a system account/group named `thura-mail`, and install
+`configure.py` and `relay.py` as mode-0644 files in a mode-0755 `/opt/thura-postfix/`
+directory so the pipe account can read them. Copy the supplied systemd
 unit to `/etc/systemd/system/thura-postfix.service`. Create a root-owned mode-0600
 `/etc/thura-postfix/environment` containing operator values for `MAIL_HOSTNAME`,
 `SMTP_LISTEN` and `THURA_RELAY_CONFIG` (the private JSON path). Stop the package's
@@ -104,8 +105,12 @@ mail for Postfix's retry policy. Retry IDs bind the canonical envelope recipient
 and raw bytes; timestamps/signatures are refreshed. Exact repeated bytes for
 one recipient intentionally collapse into one Thura item. New SMTP submissions
 usually add different Received headers and are separate deliveries; matching
-Message-IDs alone are not a deduplication guarantee. Delivery is bounded
-to 12 MiB; Thura applies its additional MIME/body/attachment bounds.
+Message-IDs alone are not a deduplication guarantee. Public inbound SMTP and
+raw ingestion are bounded to 12 MiB; Thura applies its additional MIME/body/
+attachment bounds. Private submission allows 16 MiB of MIME wire data so a
+valid 10 MiB uploaded attachment survives base64 overhead. This is an outbound
+submission allowance, not an increased inbound API limit. Remote recipients
+can impose smaller limits.
 
 Permanent MIME/policy rejection also remains deferred for operator inspection.
 Postfix eventually expires undeliverable messages under its queue lifetime and
@@ -127,9 +132,9 @@ python3 -m unittest discover -s deploy/postfix -p 'test_*.py'
 python3 scripts/postfix-fixture.py --pg-container lidza-dev-postgres
 ```
 
-The fixture owns temporary loopback ports 3002/3003/2525/2526 and its named container,
+The fixture owns temporary loopback ports 3002/3003/2525/2526/2527 and its named container,
 so stop other test fixtures first. It verifies actual SMTP ingress, retry deduplication after a lost acknowledgment, unknown-recipient and open-relay refusal, queued delivery while the
 app is unavailable, queue survival across MTA restart, and official Līdza SMTP
-outbound bytes through Postfix to a local sink. It stops its app/container and
+outbound bytes (including a full 10 MiB attachment) through Postfix to a local sink. It stops its app/container and
 removes only its synthetic mailbox metadata. Private raw objects and disposable
 queue/log evidence remain in ignored test storage. No internet recipient is used.

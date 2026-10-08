@@ -16,6 +16,8 @@ def settings(config, hostname, listen):
         raise ValueError('MAIL_HOSTNAME must be a DNS hostname')
     if not re.fullmatch(r'(?:127\.0\.0\.1:)?[0-9]{1,5}', listen) or not 1 <= int(listen.split(':')[-1]) <= 65535:
         raise ValueError('SMTP_LISTEN must be a port or 127.0.0.1:port')
+    if int(listen.split(':')[-1]) == 2525 and listen != '127.0.0.1:2525':
+        raise ValueError('Port 2525 is reserved for loopback submission')
     url = urllib.parse.urlsplit(config['baseUrl'])
     local = url.hostname == 'localhost'
     try:
@@ -66,8 +68,11 @@ def main():
         'relay_domains': ', '.join(domains),
         'relay_recipient_maps': 'hash:/etc/postfix/relay_recipients',
         'transport_maps': 'hash:/etc/postfix/thura_transport',
+        'recipient_delimiter': '',
         'smtpd_relay_restrictions': 'permit_mynetworks, reject_unauth_destination',
-        'message_size_limit': str(12 * 1024 * 1024),
+        # Base64/MIME overhead must fit when Thura sends a valid 10 MiB file.
+        # Public inbound SMTP overrides this to the existing 12 MiB boundary.
+        'message_size_limit': str(16 * 1024 * 1024),
         'thura_destination_recipient_limit': '1',
         'smtp_tls_security_level': 'may', 'smtpd_tls_security_level': 'may',
         'maillog_file': '/dev/stdout',
@@ -89,14 +94,21 @@ def main():
     # Retain Debian's queue/proxymap/TLS/log services. Replacing the entire
     # master.cf would lose services used implicitly by distribution defaults.
     lines = []
+    skip_continuation = False
     for line in (maps / 'master.cf').read_text().splitlines(keepends=True):
         fields = line.split()
+        if line.startswith((' ', '\t')) and skip_continuation:
+            continue
         if fields and not line.startswith(('#', ' ', '\t')):
+            skip_continuation = False
             if fields[0] == 'thura' or (len(fields) >= 8 and fields[1] == 'inet' and fields[7] == 'smtpd'):
+                skip_continuation = True
                 continue
         lines.append(line)
-    (maps / 'master.cf').write_text(''.join(lines) +
-        f'\n{listen} inet n - n - - smtpd\n'
+    smtp = '127.0.0.1:2525 inet n - n - - smtpd\n  -o message_size_limit=16777216\n'
+    if listen != '127.0.0.1:2525':
+        smtp += f'{listen} inet n - n - - smtpd\n  -o message_size_limit=12582912\n'
+    (maps / 'master.cf').write_text(''.join(lines) + '\n' + smtp +
         'thura unix - n n - - pipe flags=R user=thura-mail '
         f'argv=/usr/bin/python3 {pathlib.Path(__file__).with_name("relay.py")} --config /etc/thura-postfix/private/relay.json --recipient ${{recipient}}\n')
     subprocess.run(['postfix', 'check'], check=True)

@@ -72,17 +72,17 @@ def main():
             while line := self.rfile.readline(4096):
                 command = line.split(b' ', 1)[0].strip().upper()
                 if command in (b'EHLO', b'HELO'):
-                    self.wfile.write(b'250-local fixture\r\n250 SIZE 12582912\r\n')
+                    self.wfile.write(b'250-local fixture\r\n250 SIZE 16777216\r\n')
                 elif command in (b'MAIL', b'RCPT', b'RSET', b'NOOP'):
                     self.wfile.write(b'250 OK\r\n')
                 elif command == b'DATA':
                     self.wfile.write(b'354 End with dot\r\n')
                     body = bytearray()
-                    while chunk := self.rfile.readline(12582913):
+                    while chunk := self.rfile.readline(16777217):
                         if chunk == b'.\r\n':
                             break
                         body += chunk[1:] if chunk.startswith(b'..') else chunk
-                        if len(body) > 12582912:
+                        if len(body) > 16777216:
                             raise RuntimeError('Synthetic sink size limit exceeded')
                     received.append(bytes(body))
                     self.wfile.write(b'250 captured synthetic fixture\r\n')
@@ -154,7 +154,7 @@ def main():
         return process
 
     def smtp(raw, recipient=ADDRESS, source='127.0.0.2'):
-        with smtplib.SMTP('127.0.0.1', 2525, timeout=10, source_address=(source, 0)) as connection:
+        with smtplib.SMTP('127.0.0.1', 2527, timeout=10, source_address=(source, 0)) as connection:
             return connection.sendmail('sender@example.net', [recipient], raw)
 
     def queue():
@@ -173,15 +173,20 @@ def main():
     try:
         command = ['docker', 'run', '-d', '--name', 'thura-postfix-test', '--network', 'host',
                    '-e', 'MAIL_HOSTNAME=mail.tenant.example', '-e', 'POSTFIX_RELAYHOST=[127.0.0.1]:2526',
+                   '-e', 'SMTP_LISTEN=127.0.0.1:2527',
                    '-v', f'{config}:/run/secrets/thura-relay.json:ro',
                    '-v', f'{runroot / "queue"}:/var/spool/postfix', 'thura-postfix:test']
         subprocess.run(command, check=True, capture_output=True)
 
         def ready():
-            with smtplib.SMTP('127.0.0.1', 2525, timeout=2) as connection:
+            with smtplib.SMTP('127.0.0.1', 2527, timeout=2) as connection:
                 return connection.noop()[0] == 250
 
         eventually(ready, 'Postfix SMTP readiness')
+        for port, limit in ((2525, 16 * 1024 * 1024), (2527, 12 * 1024 * 1024)):
+            with smtplib.SMTP('127.0.0.1', port, timeout=5) as connection:
+                connection.ehlo()
+                assert int(connection.esmtp_features['size']) == limit
         app = start_app()
         subject = 'Postfix retry fixture ' + uuid.uuid4().hex
         raw = f'From: sender@example.net\r\nTo: {ADDRESS}\r\nSubject: {subject}\r\nMessage-ID: <{uuid.uuid4().hex}@example.net>\r\n\r\nPrivate local incoming bytes\r\n'.encode()
@@ -193,7 +198,7 @@ def main():
         eventually(lambda: not queue(), 'duplicate queue acknowledgment')
         assert len(forwarded) >= 2 and forwarded[0] == forwarded[1]
         assert len([item for item in api(prefix)['items'] if item['subject'] == subject]) == 1
-        for recipient in ('unknown@tenant.example', 'sink@outside.example'):
+        for recipient in ('unknown@tenant.example', 'inbox+unmapped@tenant.example', 'sink@outside.example'):
             try:
                 smtp(raw, recipient)
                 raise AssertionError('Unknown recipient/open relay was accepted')
@@ -217,6 +222,12 @@ def main():
         # Actual Līdza SMTP provider -> Postfix -> isolated SMTP sink.
         outgoing = 'Official SMTP fixture ' + uuid.uuid4().hex
         draft = api(prefix, {'to': 'sink@outside.example', 'subject': outgoing, 'text': 'Actual official pack SMTP bytes'})
+        attachment = b'Z' * (10 * 1024 * 1024)
+        upload = urllib.request.Request(BASE + prefix + '/' + draft['id'] + '/attachments',
+            data=attachment, method='PUT', headers={'Content-Type': 'application/octet-stream', 'Origin': BASE, 'Sec-Fetch-Site': 'same-origin',
+                'Content-Disposition': 'attachment; filename="boundary.bin"'})
+        with client.open(upload, timeout=30) as response:
+            assert json.load(response)['size'] == len(attachment)
         api(prefix + '/' + draft['id'] + '/send', {})
         def sent():
             item = api(prefix + '/' + draft['id'])['item']
@@ -228,8 +239,11 @@ def main():
         assert message['From'] == ADDRESS
         assert message['To'] == 'sink@outside.example'
         assert 'Actual official pack SMTP bytes' in message.get_body(preferencelist=('plain',)).get_content()
+        parts = list(message.iter_attachments())
+        assert len(parts) == 1 and parts[0].get_filename() == 'boundary.bin'
+        assert parts[0].get_payload(decode=True) == attachment
         version = subprocess.check_output(['docker', 'exec', 'thura-postfix-test', 'postconf', '-h', 'mail_version'], text=True).strip()
-        print(json.dumps({'status': 'ok', 'postfixVersion': version, 'inbound': True, 'deduplicated': True, 'rejectUnknown': True, 'rejectOpenRelay': True, 'deferredRecovery': True, 'mtaRestartRecovery': True, 'officialPackOutbound': True}))
+        print(json.dumps({'status': 'ok', 'postfixVersion': version, 'inbound': True, 'deduplicated': True, 'rejectUnknown': True, 'rejectImplicitPlusAddress': True, 'rejectOpenRelay': True, 'deferredRecovery': True, 'mtaRestartRecovery': True, 'officialPackOutbound': True, 'tenMiBAttachment': True, 'separateWireLimits': True}))
     finally:
         if app:
             stop_app(app)

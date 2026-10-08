@@ -79,7 +79,7 @@ class RelayTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 configure.settings(self.config, 'mail.operator.example', '25')
         self.config['baseUrl'] = 'https://app.example'
-        for invalid in ('25\nmalicious unix', '0', '65536', '0.0.0.0:25'):
+        for invalid in ('25\nmalicious unix', '0', '65536', '0.0.0.0:25', '2525'):
             with self.assertRaises(ValueError):
                 configure.settings(self.config, 'mail.operator.example', invalid)
 
