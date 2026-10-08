@@ -144,3 +144,7 @@ Why: Use mailbox-scoped RFC message headers and bounded cursor pages for convers
 ## 2026-10-08: Importable application factory on Līdza v0.1.89
 
 Why: The framework update requires a clean root and integration tests in tests/. Application wiring and shared page metadata now live in app/, with app.New accepting the frontend filesystem. main embeds the production frontend; integration tests construct the same application without embedding frontend files. Existing tests and assertions are preserved.
+
+## 2026-10-08: Read current drafts and scope browser upload recovery
+
+Why: Navigation snapshots never initialize an editable draft until a fresh authorized server read succeeds. Upload recovery fingerprints bind account, workspace, destination, filename, content type and bytes without storing plaintext metadata. Removed sessions permit an explicit restart; restricted browser storage does not block ordinary uploads.

@@ -1,10 +1,26 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, type DriveFile } from '@lidza/client'
+import { api, ApiError, type DriveFile } from '@lidza/client'
 import { OfficeEditor } from './OfficeEditor'
 import { downloadContent } from '../lib/download'
 
 const CHUNK = 1024 * 1024
+
+async function fingerprint(bytes: BufferSource) {
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(digest), n => n.toString(16).padStart(2, '0')).join('')
+}
+
+function readUpload(key: string) {
+  try { return sessionStorage.getItem(key) } catch { return null }
+}
+function rememberUpload(key: string, id: string | null) {
+  try {
+    if (id) sessionStorage.setItem(key, id)
+    else sessionStorage.removeItem(key)
+  } catch { /* Restricted browser storage must not prevent uploading. */ }
+}
+
 export function LiveDrive({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()
   const list = useQuery({ queryKey: ['drive', workspaceId], queryFn: () => api.listDrive({ workspaceId }), refetchInterval: 5000 })
@@ -24,23 +40,32 @@ export function LiveDrive({ workspaceId }: { workspaceId: string }) {
   const createFolder = useMutation({ mutationFn: () => api.createDriveFolder({ workspaceId }, { name, parentId: folder || undefined }), onSuccess: async () => { setName(''); await refresh() } })
   const upload = useMutation({ mutationFn: async ({ file, replacing }: { file: File; replacing?: DriveFile }) => {
     if (file.size < 1 || file.size > 10 * CHUNK) throw new Error('Choose a file between 1 byte and 10 MB.')
+    const subject = session.data?.user?.subject
+    if (!subject) throw new Error('Sign in before uploading a file.')
     setProgress('Preparing upload…')
-    const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
-    const hash = Array.from(new Uint8Array(digest), n => n.toString(16).padStart(2, '0')).join('')
-    const key = `thura:upload:${workspaceId}:${replacing?.id || folder || 'root'}:${hash}`
-    let id = sessionStorage.getItem(key)
+    const hash = await fingerprint(await file.arrayBuffer())
+    const contentType = file.type || 'application/octet-stream'
+    const identity = [subject, workspaceId, replacing ? ['file', replacing.id] : ['folder', folder], file.name, contentType, hash]
+    const key = `thura:upload:v2:${await fingerprint(new TextEncoder().encode(JSON.stringify(identity)))}`
+    let id = readUpload(key)
     if (!id) {
-      const state = await api.beginDriveUpload({ workspaceId }, { name: file.name, contentType: file.type || 'application/octet-stream', size: file.size, folderId: folder || undefined, fileId: replacing?.id, baseVersion: replacing?.currentVersion || 0 })
-      id = state.session.id; sessionStorage.setItem(key, id)
+      const state = await api.beginDriveUpload({ workspaceId }, { name: file.name, contentType, size: file.size, folderId: folder || undefined, fileId: replacing?.id, baseVersion: replacing?.currentVersion || 0 })
+      id = state.session.id; rememberUpload(key, id)
     }
-    const state = await api.getDriveUpload({ workspaceId, id })
-    if (new Date(state.session.expiresAt).getTime() <= Date.now()) { sessionStorage.removeItem(key); throw new Error('Upload expired. Select the file again to restart.') }
+    const state = await api.getDriveUpload({ workspaceId, id }).catch(error => {
+      if (error instanceof ApiError && (error.status === 404 || error.status === 410)) {
+        rememberUpload(key, null)
+        throw new Error('Upload is no longer available. Select the file again to restart.')
+      }
+      throw error
+    })
+    if (!state.session.completedAt && new Date(state.session.expiresAt).getTime() <= Date.now()) { rememberUpload(key, null); throw new Error('Upload expired. Select the file again to restart.') }
     const count = Math.ceil(file.size / CHUNK)
     for (let number = 0; !state.session.completedAt && number < count; number++) {
       if (!state.chunks.includes(number)) await api.putDriveChunk({ workspaceId, id, number: String(number) }, new File([file.slice(number * CHUNK, (number + 1) * CHUNK)], file.name))
       setProgress(`Uploaded ${number + 1} of ${count} chunks`)
     }
-    const saved = await api.finishDriveUpload({ workspaceId, id }); sessionStorage.removeItem(key); return saved
+    const saved = await api.finishDriveUpload({ workspaceId, id }); rememberUpload(key, null); return saved
   }, onSuccess: async file => { setSelected(file.id); setProgress('Upload complete'); await refresh() } })
   const flags = useMutation({ mutationFn: ({ file, values }: { file: DriveFile; values: { name?: string; folderId?: string; trashed?: boolean } }) => api.updateDriveFile({ workspaceId, id: file.id }, { name: values.name || file.name, folderId: values.folderId !== undefined ? values.folderId || undefined : file.folderId, trashed: values.trashed ?? file.trashed }), onSuccess: refresh })
   const download = useMutation({ mutationFn: (file: DriveFile) => api.downloadDriveFile({ workspaceId, id: file.id }), onSuccess: downloadContent })

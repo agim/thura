@@ -6,6 +6,8 @@ Supported outbound providers are the official pack's SMTP, Mailgun, SendGrid, Po
 
 Folder listings support cursor paging and literal server-side search; defaults are 50 messages, maximum 200 per request. Search is not limited to the first page. Concurrent edits may move rows between pages.
 
+Opening a draft reads its current authorized server state before showing editable fields. Returning from another app or following a Contacts handoff cannot reuse an older body/recipient snapshot. A failed read offers an explicit retry, and a message already queued or sent cannot reopen as an editable draft. Background list and attachment refreshes do not replace active editor input. This does not change the last-write-wins policy for concurrent editors or guarantee an unfinished autosave survives navigation before acknowledgment.
+
 ## Inbound relay contract
 
 Point the trusted SMTP edge or hosted-provider adapter at `POST /api/v1/inbound/{mailboxId}`. The request body is the complete RFC 5322 message (maximum 12 MB). Configure a random secret of at least 32 characters as the mailbox prefix's `MAIL_INBOUND_SECRET`, through sealed credentials. Headers:

@@ -86,3 +86,11 @@ The upgraded app passes Līdza check with no diagnostics and the complete Go sui
 The v0.1.89 production binary builds. All 12 prerendered routes pass one cold sample each in isolated browser processes using the unchanged published v0.1.89 audit runner and default size/CLS budgets. Every measured CLS is zero; Home initial JavaScript is 113,940 bytes and About remains zero. These samples do not establish a timing SLA.
 
 A fresh govulncheck scan reports zero vulnerable symbols called by the application; it also reports three advisories in imported packages and five in required modules whose affected symbols are not called. Līdza doctor confirms the CLI/module version match and development services/tooling are ready.
+
+## Draft and upload recovery completion
+
+Mail always loads the current server draft before mounting an editor, including when returning through a retained Contacts handoff. A failed read hides editable fields and offers an explicit retry; queued/sent messages cannot be edited as stale drafts. Active editor input is preserved during background list/attachment refreshes. Concurrent editors remain last-write-wins, and navigation before autosave acknowledgment still has the documented limits.
+
+Drive resume fingerprints now bind the signed-in account, workspace, destination, filename, content type and bytes without storing plaintext filenames. Identical bytes under different names cannot reuse the wrong upload. Missing/expired pending sessions clear their pointer for an explicit restart, and blocked browser storage does not prevent ordinary uploads. Completed sessions retain idempotent finalization recovery. Previous fingerprint formats are not reused; abandoned pending uploads expire through normal cleanup.
+
+Four new browser checks cover returning to a saved Contacts draft with a failed read/retry, distinct same-byte filenames with interrupted-session recovery and downloaded-byte checks, restarting a missing session, and blocked browser storage. The complete 37-test browser suite passes with one worker. `lidza verify --strict` passes with zero warnings and the complete Go suite (`JOBS_WORKERS=0`); all existing tests and assertions remain unchanged. `lidza build` produces the 41.9 MB production binary at `bin/thura`. Deployment-specific credentials, public mail and physical-device/TURN acceptance remain operator tasks.

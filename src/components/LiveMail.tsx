@@ -78,7 +78,23 @@ function SafeEmail({ html }: { html: string }) {
   return <iframe title="Email body · external content blocked" sandbox="" referrerPolicy="no-referrer" srcDoc={srcDoc} className="safe-email" />
 }
 
-function DraftEditor({ item, workspaceId, mailboxId, saved }: { item: MailItem; workspaceId: string; mailboxId: string; saved: (i: MailItem) => Promise<void> }) {
+type DraftEditorProps = { item: MailItem; workspaceId: string; mailboxId: string; saved: (i: MailItem) => Promise<void> }
+
+function DraftEditor(props: DraftEditorProps) {
+  const { item, workspaceId, mailboxId } = props
+  // List rows and cross-app intents are navigation snapshots. Always read the
+  // current draft before creating a writer; never reset an active editor when
+  // attachment queries or background lists refresh.
+  const draft = useQuery({ queryKey: ['mail-editor', mailboxId, item.id],
+    queryFn: ({ signal }) => api.getMail({ workspaceId, mailboxId, id: item.id }, { signal }),
+    staleTime: 0, retry: false, refetchOnMount: 'always', refetchOnWindowFocus: false, refetchOnReconnect: false })
+  if (draft.isError) return <div><p role="alert">{draft.error.message}</p><button onClick={() => void draft.refetch()}>Retry loading draft</button></div>
+  if (!draft.isFetchedAfterMount || !draft.data) return <p role="status">Loading draft…</p>
+  if (draft.data.item.status !== 'draft') return <p role="status">This message is no longer a draft. Select it from the message list to view its current state.</p>
+  return <LoadedDraftEditor {...props} item={draft.data.item} />
+}
+
+function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorProps) {
   const [input, setInput] = useState<DraftInput>({ to: item.toAddress, cc: item.cc, bcc: item.bcc, subject: item.subject, text: item.textBody, threadId: item.threadId })
   const [schedule, setSchedule] = useState('')
   const [error, setError] = useState('')
