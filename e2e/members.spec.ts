@@ -1,0 +1,37 @@
+import { expect, test } from '@playwright/test'
+
+test('owner can invite and revoke, and cannot remove the last owner', async ({ page }) => {
+  await page.goto('/contacts')
+  await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Contacts', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Members', exact: true }).click()
+  page.once('dialog', dialog => dialog.accept())
+  await page.getByRole('button', { name: 'Remove Test Owner', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('at least one owner')
+  const email = `browser-invite-${Date.now()}@example.com`
+  await page.getByLabel('Invite email', { exact: true }).fill(email)
+  await page.getByRole('button', { name: 'Send invitation', exact: true }).click()
+  await expect(page.getByText('Invitation queued for delivery.')).toBeVisible()
+  const invitation = page.locator('li').filter({ has: page.getByRole('button', { name: `Revoke ${email}`, exact: true }) })
+  await expect(invitation).toContainText('Pending')
+  await page.getByRole('button', { name: `Revoke ${email}`, exact: true }).click()
+  await expect(page.locator('li').filter({ hasText: email })).toContainText('Revoked')
+})
+
+test('invited visitor creates an account and joins the workspace', async ({ page }) => {
+  await page.goto('/invite?token=thura-browser-invitation-fixture-token-82914')
+  await page.getByLabel('Your name', { exact: true }).fill('Invited Browser Member')
+  await page.getByLabel('New password', { exact: true }).fill('meadow waterfall silver lantern 9274')
+  await page.getByRole('button', { name: 'Accept invitation', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('You joined Browser test workspace')
+  await page.getByRole('link', { name: 'Open your workspace' }).click()
+  await page.getByLabel('Email', { exact: true }).fill('invite-browser@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('meadow waterfall silver lantern 9274')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Contacts', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Members', exact: true }).click()
+  await expect(page.getByText('Invited Browser Member · invite-browser@example.com')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Send invitation', exact: true })).toHaveCount(0)
+})

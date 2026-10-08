@@ -12,16 +12,19 @@ import { About } from './pages/About'
 import { RouteError } from './ErrorBoundary'
 import { Workspace } from './pages/Workspace'
 import { Contacts } from './pages/Contacts'
+import { Members } from './pages/Members'
+import { Invite, Forgot, Reset, Verify } from './pages/Account'
 
 function RootLayout() {
   const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' })
   if (workspace) return <main className="workspace-frame"><Outlet /></main>
   return <>
-    <nav className="flex gap-4 border-b border-line px-6 py-3" aria-label="Main navigation">
+    <nav className="flex flex-wrap gap-4 border-b border-line px-6 py-3" aria-label="Main navigation">
       <Link to="/">Home</Link>
       <Link to="/about">About</Link>
       <Link to="/workspace">Workspace</Link>
       <Link to="/contacts">Your contacts</Link>
+      <Link to="/members">Members</Link>
     </nav>
     <main className="mx-auto max-w-3xl px-6 py-6"><Outlet /></main>
   </>
@@ -43,7 +46,12 @@ const aboutRoute = createRoute({ getParentRoute: () => rootRoute, path: '/about'
 
 const workspaceRoute = createRoute({ getParentRoute: () => rootRoute, path: '/workspace', component: Workspace })
 const contactsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/contacts', component: Contacts })
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute])
+const membersRoute = createRoute({ getParentRoute: () => rootRoute, path: '/members', component: Members })
+const inviteRoute = createRoute({ getParentRoute: () => rootRoute, path: '/invite', component: Invite })
+const forgotRoute = createRoute({ getParentRoute: () => rootRoute, path: '/forgot', component: Forgot })
+const resetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset', component: Reset })
+const verifyRoute = createRoute({ getParentRoute: () => rootRoute, path: '/verify', component: Verify })
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).

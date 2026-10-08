@@ -7,6 +7,8 @@ import (
 
 	auth "github.com/agim/lidza/packs/auth"
 	db "github.com/agim/lidza/packs/db"
+	jobs "github.com/agim/lidza/packs/jobs"
+	mail "github.com/agim/lidza/packs/mail"
 )
 
 // packs lists the packs lidza.json enables, started in this order.
@@ -14,5 +16,7 @@ func packs() []lidza.Pack {
 	return []lidza.Pack{
 		db.Pack(),
 		auth.Pack(),
+		jobs.Pack(),
+		mail.Pack(),
 	}
 }

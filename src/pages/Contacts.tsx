@@ -12,7 +12,7 @@ export function Contacts() {
   return session.data.user ? <WorkspaceContacts /> : <SignIn />
 }
 
-function SignIn() {
+export function SignIn() {
   const client = useQueryClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,6 +28,7 @@ function SignIn() {
     <label className="block">Password<input className="block w-full rounded border p-2" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></label>
     {login.isError && <p role="alert">{login.error.message}</p>}
     <button className="rounded bg-brand px-4 py-2 text-white" disabled={login.isPending}>Sign in</button>
+    <p><Link to="/forgot">Forgot your password?</Link></p>
     <p><Link to="/workspace">Explore the sample workspace</Link></p>
   </form>
 }
@@ -39,8 +40,7 @@ function WorkspaceContacts() {
   const logout = useMutation({ mutationFn: () => api.authLogout(), onSuccess: async () => {
     await client.cancelQueries()
     client.setQueryData(['session'], { user: null })
-    client.removeQueries({ queryKey: ['contacts'] })
-    client.removeQueries({ queryKey: ['workspaces'] })
+    client.removeQueries({ predicate: query => query.queryKey[0] !== 'session' })
   } })
   const workspace = workspaces.data?.items.find(w => w.id === selected) ?? workspaces.data?.items[0]
   return <div className="space-y-6">

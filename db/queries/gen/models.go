@@ -5,8 +5,53 @@
 package queries
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"time"
 )
+
+type WorkspaceRole string
+
+const (
+	WorkspaceRoleOwner  WorkspaceRole = "owner"
+	WorkspaceRoleAdmin  WorkspaceRole = "admin"
+	WorkspaceRoleMember WorkspaceRole = "member"
+)
+
+func (e *WorkspaceRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = WorkspaceRole(s)
+	case string:
+		*e = WorkspaceRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for WorkspaceRole: %T", src)
+	}
+	return nil
+}
+
+type NullWorkspaceRole struct {
+	WorkspaceRole WorkspaceRole `json:"workspace_role"`
+	Valid         bool          `json:"valid"` // Valid is true if WorkspaceRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullWorkspaceRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.WorkspaceRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.WorkspaceRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullWorkspaceRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.WorkspaceRole), nil
+}
 
 type AuthAccount struct {
 	Subject     string     `json:"subject"`
@@ -93,6 +138,64 @@ type Contact struct {
 	Phone       string    `json:"phone"`
 	Favorite    bool      `json:"favorite"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type Invitation struct {
+	ID          string        `json:"id"`
+	WorkspaceID string        `json:"workspace_id"`
+	Email       string        `json:"email"`
+	Role        WorkspaceRole `json:"role"`
+	TokenHash   string        `json:"token_hash"`
+	InvitedBy   string        `json:"invited_by"`
+	ExpiresAt   time.Time     `json:"expires_at"`
+	AcceptedAt  *time.Time    `json:"accepted_at"`
+	RevokedAt   *time.Time    `json:"revoked_at"`
+	CreatedAt   time.Time     `json:"created_at"`
+}
+
+type Job struct {
+	ID          string     `json:"id"`
+	Kind        string     `json:"kind"`
+	Payload     []byte     `json:"payload"`
+	State       string     `json:"state"`
+	RunAt       time.Time  `json:"run_at"`
+	Attempts    int32      `json:"attempts"`
+	MaxAttempts int32      `json:"max_attempts"`
+	LockedAt    *time.Time `json:"locked_at"`
+	FinishedAt  *time.Time `json:"finished_at"`
+	LastError   *string    `json:"last_error"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UniqueKey   *string    `json:"unique_key"`
+}
+
+type JobSchedule struct {
+	Kind      string     `json:"kind"`
+	Spec      string     `json:"spec"`
+	NextRunAt time.Time  `json:"next_run_at"`
+	LastRunAt *time.Time `json:"last_run_at"`
+	LastJobID *string    `json:"last_job_id"`
+	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+type MailMessage struct {
+	ID          string     `json:"id"`
+	Recipient   string     `json:"recipient"`
+	FromAddress *string    `json:"from_address"`
+	ReplyTo     *string    `json:"reply_to"`
+	Headers     []byte     `json:"headers"`
+	Cc          []string   `json:"cc"`
+	Bcc         []string   `json:"bcc"`
+	Attachments []byte     `json:"attachments"`
+	Subject     string     `json:"subject"`
+	Text        *string    `json:"text"`
+	HTML        *string    `json:"html"`
+	Template    *string    `json:"template"`
+	Status      string     `json:"status"`
+	ProviderID  *string    `json:"provider_id"`
+	Error       *string    `json:"error"`
+	Attempts    int32      `json:"attempts"`
+	CreatedAt   time.Time  `json:"created_at"`
+	SentAt      *time.Time `json:"sent_at"`
 }
 
 type Workspace struct {

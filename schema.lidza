@@ -50,6 +50,54 @@ type CreateWorkspaceInput {
   ownerEmail string @email @max(254)
 }
 
+enum WorkspaceRole { owner admin member }
+
+model Invitation {
+  id uuid @id @default(uuid())
+  workspaceId uuid @ref(Workspace) @index
+  email string @email @max(254)
+  role WorkspaceRole
+  tokenHash string @unique
+  invitedBy string
+  expiresAt time
+  acceptedAt time?
+  revokedAt time?
+  createdAt time @default(now())
+}
+
+type InviteInput {
+  email string @email @max(254)
+  role WorkspaceRole
+}
+type InviteView {
+  id uuid
+  email string
+  role WorkspaceRole
+  expiresAt time
+  acceptedAt time?
+  revokedAt time?
+}
+type InviteList {
+  items InviteView[]
+}
+type AcceptInviteInput {
+  token string @min(20) @max(200)
+  name string? @max(200)
+  password string? @max(200)
+}
+type MemberView {
+  subject string
+  email string
+  name string
+  role WorkspaceRole
+}
+type MemberList {
+  items MemberView[]
+}
+type RoleInput {
+  role WorkspaceRole
+}
+
 // Types of the auth pack.
 model AuthSession @table("auth_session") {
   id          string @id
@@ -142,4 +190,59 @@ model AuthMember @table("auth_member") {
   createdAt time   @default(now())
   @@unique(subject, scope, role)
   @@index(scope, role)
+}
+
+// Types of the jobs pack.
+// Background jobs (jobs.Queue). uniqueKey is set by jobs.Unique while the
+// job is pending or running and cleared when it finishes; NULLs do not
+// collide, so the unique index holds one live job per kind and key.
+model Job @table("job") {
+  id          uuid   @id @default(uuid())
+  kind        string
+  payload     json
+  state       string @default("pending")
+  runAt       time   @default(now())
+  attempts    int    @default(0)
+  maxAttempts int    @default(5)
+  lockedAt    time?
+  finishedAt  time?
+  lastError   text?
+  createdAt   time   @default(now())
+  uniqueKey   string?
+  @@index(state, runAt)
+  @@unique(kind, uniqueKey)
+}
+
+// Recurring schedules (jobs.Queue.Schedule): one row per scheduled kind
+// with its next due time; the node that moves nextRunAt on enqueues.
+model JobSchedule @table("job_schedule") {
+  kind      string @id
+  spec      string
+  nextRunAt time
+  lastRunAt time?
+  lastJobId uuid?
+  updatedAt time   @default(now())
+}
+
+// Types of the mail pack.
+// Types of the mail pack: the outbox, one row per message sent or queued.
+model MailMessage @table("mail_message") {
+  id         uuid   @id @default(uuid())
+  recipient  string @index
+  fromAddress string?
+  replyTo    string?
+  headers    json?
+  cc         string[]?
+  bcc        string[]?
+  attachments json?
+  subject    string
+  text       text?
+  html       text?
+  template   string?
+  status     string @index
+  providerId string?
+  error      text?
+  attempts   int
+  createdAt  time   @default(now()) @index
+  sentAt     time?
 }

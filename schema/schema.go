@@ -3,9 +3,32 @@
 package schema
 
 import (
+	"encoding/json"
 	"github.com/agim/lidza/pkg/validate"
 	"time"
 )
+
+// WorkspaceRole is the WorkspaceRole enum.
+type WorkspaceRole string
+
+const (
+	WorkspaceRoleOwner  WorkspaceRole = "owner"
+	WorkspaceRoleAdmin  WorkspaceRole = "admin"
+	WorkspaceRoleMember WorkspaceRole = "member"
+)
+
+// WorkspaceRoleValues lists every WorkspaceRole.
+var WorkspaceRoleValues = []WorkspaceRole{WorkspaceRoleOwner, WorkspaceRoleAdmin, WorkspaceRoleMember}
+
+// Valid reports whether v is one of the WorkspaceRole values.
+func (v WorkspaceRole) Valid() bool {
+	for _, x := range WorkspaceRoleValues {
+		if v == x {
+			return true
+		}
+	}
+	return false
+}
 
 // Workspace is a row of the workspace table.
 type Workspace struct {
@@ -76,6 +99,50 @@ func (v Contact) Validate() error {
 	}
 	if len(v.Phone) > 80 {
 		errs.Add("phone", "max", "at most 80 character(s)")
+	}
+	return errs.Result()
+}
+
+// Invitation is a row of the invitation table.
+type Invitation struct {
+	ID          string        `json:"id" db:"id"`
+	WorkspaceID string        `json:"workspaceId" db:"workspace_id"`
+	Email       string        `json:"email" db:"email"`
+	Role        WorkspaceRole `json:"role" db:"role"`
+	TokenHash   string        `json:"tokenHash" db:"token_hash"`
+	InvitedBy   string        `json:"invitedBy" db:"invited_by"`
+	ExpiresAt   time.Time     `json:"expiresAt" db:"expires_at"`
+	AcceptedAt  *time.Time    `json:"acceptedAt" db:"accepted_at"`
+	RevokedAt   *time.Time    `json:"revokedAt" db:"revoked_at"`
+	CreatedAt   time.Time     `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of Invitation from schema.lidza.
+func (v Invitation) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if len(v.Email) > 254 {
+		errs.Add("email", "max", "at most 254 character(s)")
+	}
+	if v.Email != "" && !validate.Email(v.Email) {
+		errs.Add("email", "email", "not an email address")
+	}
+	if v.Role == "" {
+		errs.Add("role", "required", "required")
+	}
+	if v.Role != "" && !v.Role.Valid() {
+		errs.Add("role", "enum", "unknown WorkspaceRole value")
+	}
+	if v.TokenHash == "" {
+		errs.Add("tokenHash", "required", "required")
+	}
+	if v.InvitedBy == "" {
+		errs.Add("invitedBy", "required", "required")
 	}
 	return errs.Result()
 }
@@ -262,6 +329,90 @@ func (v AuthMember) Validate() error {
 	return errs.Result()
 }
 
+// Job is a row of the job table.
+type Job struct {
+	ID          string          `json:"id" db:"id"`
+	Kind        string          `json:"kind" db:"kind"`
+	Payload     json.RawMessage `json:"payload" db:"payload"`
+	State       string          `json:"state" db:"state"`
+	RunAt       time.Time       `json:"runAt" db:"run_at"`
+	Attempts    int             `json:"attempts" db:"attempts"`
+	MaxAttempts int             `json:"maxAttempts" db:"max_attempts"`
+	LockedAt    *time.Time      `json:"lockedAt" db:"locked_at"`
+	FinishedAt  *time.Time      `json:"finishedAt" db:"finished_at"`
+	LastError   *string         `json:"lastError" db:"last_error"`
+	CreatedAt   time.Time       `json:"createdAt" db:"created_at"`
+	UniqueKey   *string         `json:"uniqueKey" db:"unique_key"`
+}
+
+// Validate applies the rules of Job from schema.lidza.
+func (v Job) Validate() error {
+	var errs validate.Errors
+	if v.Kind == "" {
+		errs.Add("kind", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	return errs.Result()
+}
+
+// JobSchedule is a row of the job_schedule table.
+type JobSchedule struct {
+	Kind      string     `json:"kind" db:"kind"`
+	Spec      string     `json:"spec" db:"spec"`
+	NextRunAt time.Time  `json:"nextRunAt" db:"next_run_at"`
+	LastRunAt *time.Time `json:"lastRunAt" db:"last_run_at"`
+	LastJobID *string    `json:"lastJobId" db:"last_job_id"`
+	UpdatedAt time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of JobSchedule from schema.lidza.
+func (v JobSchedule) Validate() error {
+	var errs validate.Errors
+	if v.Spec == "" {
+		errs.Add("spec", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailMessage is a row of the mail_message table.
+type MailMessage struct {
+	ID          string          `json:"id" db:"id"`
+	Recipient   string          `json:"recipient" db:"recipient"`
+	FromAddress *string         `json:"fromAddress" db:"from_address"`
+	ReplyTo     *string         `json:"replyTo" db:"reply_to"`
+	Headers     json.RawMessage `json:"headers" db:"headers"`
+	Cc          []string        `json:"cc" db:"cc"`
+	Bcc         []string        `json:"bcc" db:"bcc"`
+	Attachments json.RawMessage `json:"attachments" db:"attachments"`
+	Subject     string          `json:"subject" db:"subject"`
+	Text        *string         `json:"text" db:"text"`
+	HTML        *string         `json:"html" db:"html"`
+	Template    *string         `json:"template" db:"template"`
+	Status      string          `json:"status" db:"status"`
+	ProviderID  *string         `json:"providerId" db:"provider_id"`
+	Error       *string         `json:"error" db:"error"`
+	Attempts    int             `json:"attempts" db:"attempts"`
+	CreatedAt   time.Time       `json:"createdAt" db:"created_at"`
+	SentAt      *time.Time      `json:"sentAt" db:"sent_at"`
+}
+
+// Validate applies the rules of MailMessage from schema.lidza.
+func (v MailMessage) Validate() error {
+	var errs validate.Errors
+	if v.Recipient == "" {
+		errs.Add("recipient", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -431,6 +582,175 @@ func (v CreateWorkspaceInput) Validate() error {
 	}
 	if v.OwnerEmail != "" && !validate.Email(v.OwnerEmail) {
 		errs.Add("ownerEmail", "email", "not an email address")
+	}
+	return errs.Result()
+}
+
+// InviteInput is an API type.
+type InviteInput struct {
+	Email string        `json:"email"`
+	Role  WorkspaceRole `json:"role"`
+}
+
+// Validate applies the rules of InviteInput from schema.lidza.
+func (v InviteInput) Validate() error {
+	var errs validate.Errors
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if len(v.Email) > 254 {
+		errs.Add("email", "max", "at most 254 character(s)")
+	}
+	if v.Email != "" && !validate.Email(v.Email) {
+		errs.Add("email", "email", "not an email address")
+	}
+	if v.Role == "" {
+		errs.Add("role", "required", "required")
+	}
+	if v.Role != "" && !v.Role.Valid() {
+		errs.Add("role", "enum", "unknown WorkspaceRole value")
+	}
+	return errs.Result()
+}
+
+// InviteView is an API type.
+type InviteView struct {
+	ID         string        `json:"id"`
+	Email      string        `json:"email"`
+	Role       WorkspaceRole `json:"role"`
+	ExpiresAt  time.Time     `json:"expiresAt"`
+	AcceptedAt *time.Time    `json:"acceptedAt"`
+	RevokedAt  *time.Time    `json:"revokedAt"`
+}
+
+// Validate applies the rules of InviteView from schema.lidza.
+func (v InviteView) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if v.Role == "" {
+		errs.Add("role", "required", "required")
+	}
+	if v.Role != "" && !v.Role.Valid() {
+		errs.Add("role", "enum", "unknown WorkspaceRole value")
+	}
+	return errs.Result()
+}
+
+// InviteList is an API type.
+type InviteList struct {
+	Items []InviteView `json:"items"`
+}
+
+// Validate applies the rules of InviteList from schema.lidza.
+func (v InviteList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// AcceptInviteInput is an API type.
+type AcceptInviteInput struct {
+	Token    string  `json:"token"`
+	Name     *string `json:"name"`
+	Password *string `json:"password"`
+}
+
+// Validate applies the rules of AcceptInviteInput from schema.lidza.
+func (v AcceptInviteInput) Validate() error {
+	var errs validate.Errors
+	if v.Token == "" {
+		errs.Add("token", "required", "required")
+	}
+	if len(v.Token) < 20 {
+		errs.Add("token", "min", "at least 20 character(s)")
+	}
+	if len(v.Token) > 200 {
+		errs.Add("token", "max", "at most 200 character(s)")
+	}
+	if v.Name != nil {
+		x := *v.Name
+		if len(x) > 200 {
+			errs.Add("name", "max", "at most 200 character(s)")
+		}
+	}
+	if v.Password != nil {
+		x := *v.Password
+		if len(x) > 200 {
+			errs.Add("password", "max", "at most 200 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// MemberView is an API type.
+type MemberView struct {
+	Subject string        `json:"subject"`
+	Email   string        `json:"email"`
+	Name    string        `json:"name"`
+	Role    WorkspaceRole `json:"role"`
+}
+
+// Validate applies the rules of MemberView from schema.lidza.
+func (v MemberView) Validate() error {
+	var errs validate.Errors
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.Role == "" {
+		errs.Add("role", "required", "required")
+	}
+	if v.Role != "" && !v.Role.Valid() {
+		errs.Add("role", "enum", "unknown WorkspaceRole value")
+	}
+	return errs.Result()
+}
+
+// MemberList is an API type.
+type MemberList struct {
+	Items []MemberView `json:"items"`
+}
+
+// Validate applies the rules of MemberList from schema.lidza.
+func (v MemberList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// RoleInput is an API type.
+type RoleInput struct {
+	Role WorkspaceRole `json:"role"`
+}
+
+// Validate applies the rules of RoleInput from schema.lidza.
+func (v RoleInput) Validate() error {
+	var errs validate.Errors
+	if v.Role == "" {
+		errs.Add("role", "required", "required")
+	}
+	if v.Role != "" && !v.Role.Valid() {
+		errs.Add("role", "enum", "unknown WorkspaceRole value")
 	}
 	return errs.Result()
 }

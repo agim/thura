@@ -15,6 +15,10 @@ Preserve the supplied six-app interactions while making the persistence boundary
 
 Use the published Līdza auth/db packs. The developer chose invite-only workspaces, workspace-owned data, and owner/admin/member roles. Public registration and external providers are disabled; local password accounts are an explicitly provisional implementation choice. Initial account/workspace creation uses operator MCP tools. Contacts are workspace-scoped in SQL and each request checks current membership, so a session cannot retain revoked access. Invitation acceptance, membership management, and production mail will follow in later slices.
 
+## Atomic invitations and serialized role administration
+
+Use random 256-bit invitation tokens and persist only their SHA-256 hashes. Invitation creation and transactional mail delivery jobs commit together; new invited accounts use Līdza password validation/hashing and are inserted with membership and token consumption in one transaction. Existing accounts must authenticate as the invited subject. Workspace-row locking serializes role changes, revocation, and acceptance; last-owner checks cannot race, and acceptance never overwrites an existing role. Owners manage privileged roles; administrators manage ordinary members.
+
 ## 2026-10-08: Who owns the data: Each workspace owns its data; access is limited to its members and ex…
 
 Why: Answered in the brief interview (docs/brief.md): Each workspace owns its data; access is limited to its members and explicit grants. Every query is scoped by it; the most expensive answer to change later.
@@ -24,5 +28,17 @@ Touches: docs/brief.md
 ## 2026-10-08: Pack db added
 
 Why: Persist workspace membership and contacts in Postgres; auth uses the same database.
+
+Touches: lidza.json, packs.go
+
+## 2026-10-08: Pack jobs added
+
+Why: Queue transactional invitation emails and subsequent mailbox deliveries.
+
+Touches: lidza.json, packs.go
+
+## 2026-10-08: Pack mail added
+
+Why: Send invitations and account recovery using the official provider boundary.
 
 Touches: lidza.json, packs.go
