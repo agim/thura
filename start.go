@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/jobs"
 	"github.com/agim/lidza/pkg/middleware"
 	"thura/internal/mailbox"
+	provider "thura/internal/providers/onlyoffice"
 )
 
 // onStart runs after the packs have started and before the app listens:
@@ -22,5 +24,15 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 // first: rate limits, a redirect from www to the bare domain, headers.
 // Middleware for the API only goes on the router (r.Use in routes.go).
 func appMiddleware() []middleware.Middleware {
-	return nil
+	if os.Getenv("LIDZA_MODE") == "dev" {
+		return nil
+	}
+	cfg, err := provider.Load()
+	if err != nil {
+		return nil
+	}
+	policy := middleware.AddCSP(middleware.DefaultCSP, "script-src", cfg.ServerURL)
+	policy = middleware.AddCSP(policy, "frame-src", "'self'", cfg.ServerURL)
+	policy = middleware.AddCSP(policy, "connect-src", cfg.ServerURL)
+	return []middleware.Middleware{middleware.SecureHeaders(middleware.SecureHeadersOptions{CSP: policy})}
 }

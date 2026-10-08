@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type DriveFile } from '@lidza/client'
+import { OfficeEditor } from './OfficeEditor'
 import { downloadContent } from './LiveMail'
 
 const CHUNK = 1024 * 1024
 export function LiveDrive({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()
-  const list = useQuery({ queryKey: ['drive', workspaceId], queryFn: () => api.listDrive({ workspaceId }) })
+  const list = useQuery({ queryKey: ['drive', workspaceId], queryFn: () => api.listDrive({ workspaceId }), refetchInterval: 5000 })
   const [folder, setFolder] = useState('')
   const [trash, setTrash] = useState(false)
   const [search, setSearch] = useState('')
@@ -41,7 +42,7 @@ export function LiveDrive({ workspaceId }: { workspaceId: string }) {
   const failure = list.error ?? upload.error ?? createFolder.error ?? flags.error ?? download.error
   const files = list.data?.files.filter(f => f.trashed === trash && (trash || (f.folderId || '') === folder) && f.name.toLowerCase().includes(search.toLowerCase())) ?? []
   function submit(e: FormEvent) { e.preventDefault(); createFolder.mutate() }
-  return <div className="ws-page"><div className="ws-page-head"><h2>Drive</h2><span className="ws-muted">Private workspace files · 10 MB per upload</span></div>
+  return <div className="ws-page live-drive"><div className="ws-page-head"><h2>Drive</h2><span className="ws-muted">Private workspace files · 10 MB per upload</span></div>
     {failure && <p role="alert">{failure.message}</p>}
     <div className="row"><button onClick={() => { setTrash(false); setFolder(''); setSelected('') }}>All files</button><button onClick={() => { setTrash(true); setSelected('') }}>Trash</button><label>Search files<input value={search} onChange={e => setSearch(e.target.value)} /></label></div>
     {!trash && <><label>Upload file<input type="file" disabled={upload.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate({ file }); e.target.value = '' }} /></label><form className="row" onSubmit={submit}><label>New folder<input required maxLength={200} value={name} onChange={e => setName(e.target.value)} /></label><button disabled={createFolder.isPending}>Create folder</button></form>
@@ -50,7 +51,7 @@ export function LiveDrive({ workspaceId }: { workspaceId: string }) {
     {list.isPending && <p role="status">Loading files…</p>}
     <div className="drive-grid">{files.map(f => <article key={f.id} className="drive-card"><h3><button onClick={() => setSelected(f.id)}>{f.name}</button></h3><p>{Math.ceil(f.size / 1024)} KB · version {f.currentVersion}</p><div className="row">{!trash && <button onClick={() => download.mutate(f)}>Download {f.name}</button>}<button disabled={flags.isPending} onClick={() => flags.mutate({ file: f, values: { trashed: !f.trashed } })}>{trash ? 'Restore' : 'Move to trash'} {f.name}</button></div></article>)}</div>
     {list.data && files.length === 0 && <p>No files in this view.</p>}
-    {current && <section className="drive-detail"><h3>{current.name}</h3>{!current.trashed && <><label>Move to folder<select value={current.folderId || ''} onChange={e => flags.mutate({ file: current, values: { folderId: e.target.value } })}><option value="">Root</option>{list.data?.folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>Upload new version<input type="file" disabled={upload.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate({ file, replacing: current }); e.target.value = '' }} /></label><FileHistory key={`${current.id}:${current.currentVersion}`} workspaceId={workspaceId} file={current} /><FileSharing key={current.id} workspaceId={workspaceId} file={current} /></>}</section>}
+    {current && <section className="drive-detail"><h3>{current.name}</h3>{!current.trashed && <><label>Move to folder<select value={current.folderId || ''} onChange={e => flags.mutate({ file: current, values: { folderId: e.target.value } })}><option value="">Root</option>{list.data?.folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>Upload new version<input type="file" disabled={upload.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate({ file, replacing: current }); e.target.value = '' }} /></label>{/\.(docx|xlsx)$/i.test(current.name) && <OfficeEditor key={current.id} workspaceId={workspaceId} fileId={current.id} />}<FileHistory key={`${current.id}:${current.currentVersion}`} workspaceId={workspaceId} file={current} /><FileSharing key={current.id} workspaceId={workspaceId} file={current} /></>}</section>}
     <p className="ws-muted">Uploads can resume for 24 hours in this browser tab. Select the same file after an interruption. Files in trash cannot be downloaded through share links.</p>
   </div>
 }

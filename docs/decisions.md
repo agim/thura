@@ -56,3 +56,7 @@ Why: Resolve each mailbox’s sealed credential prefix inside a custom delivery 
 ## 2026-10-08: Private versioned Drive with resumable uploads and gateway shares
 
 Why: Use 1 MB chunks and 24-hour sessions scoped to the initiating member, with a 10 MB file limit. Verify chunk/file SHA-256, serialize finalization, preserve immutable versions and reject stale replacements. Share tokens are random and hashed; downloads recheck expiry, revocation and trash through the app, optionally matching an authenticated recipient. No public object URLs or executable previews are issued.
+
+## 2026-10-08: Optional ONLYOFFICE connector with signed and versioned saves
+
+Why: Pin DocumentServer 9.0.4 for integration tests and expose DOCX/XLSX editing as a separately configured service. Sign editor configs and short-lived immutable source tickets, check current workspace membership at source/callback access, constrain saved-file downloads to the configured origin without redirects, and serialize callback saves with optimistic version checks and checksum-based idempotency. Community edition is AGPL-3.0; no fidelity or production-readiness claim follows from the connector alone.

@@ -319,6 +319,18 @@ type Mailbox struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+type OfficeSession struct {
+	ID            string    `json:"id"`
+	FileID        string    `json:"file_id"`
+	Subject       string    `json:"subject"`
+	SourceVersion int32     `json:"source_version"`
+	BaseVersion   int32     `json:"base_version"`
+	DocumentKey   string    `json:"document_key"`
+	LastChecksum  string    `json:"last_checksum"`
+	ExpiresAt     time.Time `json:"expires_at"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
 type ShareGrant struct {
 	ID          string     `json:"id"`
 	FileID      string     `json:"file_id"`

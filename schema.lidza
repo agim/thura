@@ -452,3 +452,28 @@ type ShareCreated {
 type OpenShareInput {
  token string @min(20) @max(200)
 }
+
+model OfficeSession {
+ id uuid @id @default(uuid())
+ fileId uuid @ref(DriveFile) @index
+ subject string
+ sourceVersion int
+ baseVersion int
+ documentKey string
+ lastChecksum string @default("")
+ expiresAt time
+ createdAt time @default(now())
+}
+type OfficeConfig {
+ scriptUrl string
+ config json
+}
+type OfficeCallback {
+ key string
+ status int
+ url string?
+ token string?
+}
+type OfficeResult {
+ error int
+}

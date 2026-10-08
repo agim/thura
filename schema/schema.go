@@ -763,6 +763,37 @@ func (v ShareGrant) Validate() error {
 	return errs.Result()
 }
 
+// OfficeSession is a row of the office_session table.
+type OfficeSession struct {
+	ID            string    `json:"id" db:"id"`
+	FileID        string    `json:"fileId" db:"file_id"`
+	Subject       string    `json:"subject" db:"subject"`
+	SourceVersion int       `json:"sourceVersion" db:"source_version"`
+	BaseVersion   int       `json:"baseVersion" db:"base_version"`
+	DocumentKey   string    `json:"documentKey" db:"document_key"`
+	LastChecksum  string    `json:"lastChecksum" db:"last_checksum"`
+	ExpiresAt     time.Time `json:"expiresAt" db:"expires_at"`
+	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of OfficeSession from schema.lidza.
+func (v OfficeSession) Validate() error {
+	var errs validate.Errors
+	if v.FileID == "" {
+		errs.Add("fileId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.DocumentKey == "" {
+		errs.Add("documentKey", "required", "required")
+	}
+	if v.LastChecksum == "" {
+		errs.Add("lastChecksum", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -1585,5 +1616,48 @@ func (v OpenShareInput) Validate() error {
 	if len(v.Token) > 200 {
 		errs.Add("token", "max", "at most 200 character(s)")
 	}
+	return errs.Result()
+}
+
+// OfficeConfig is an API type.
+type OfficeConfig struct {
+	ScriptURL string          `json:"scriptUrl"`
+	Config    json.RawMessage `json:"config"`
+}
+
+// Validate applies the rules of OfficeConfig from schema.lidza.
+func (v OfficeConfig) Validate() error {
+	var errs validate.Errors
+	if v.ScriptURL == "" {
+		errs.Add("scriptUrl", "required", "required")
+	}
+	return errs.Result()
+}
+
+// OfficeCallback is an API type.
+type OfficeCallback struct {
+	Key    string  `json:"key"`
+	Status int     `json:"status"`
+	URL    *string `json:"url"`
+	Token  *string `json:"token"`
+}
+
+// Validate applies the rules of OfficeCallback from schema.lidza.
+func (v OfficeCallback) Validate() error {
+	var errs validate.Errors
+	if v.Key == "" {
+		errs.Add("key", "required", "required")
+	}
+	return errs.Result()
+}
+
+// OfficeResult is an API type.
+type OfficeResult struct {
+	Error int `json:"error"`
+}
+
+// Validate applies the rules of OfficeResult from schema.lidza.
+func (v OfficeResult) Validate() error {
+	var errs validate.Errors
 	return errs.Result()
 }

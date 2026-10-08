@@ -7,6 +7,7 @@ import (
 	"github.com/agim/lidza/pkg/middleware"
 	"github.com/agim/lidza/pkg/router"
 	"thura/handlers"
+	"thura/internal/office"
 
 	"thura/schema"
 )
@@ -16,6 +17,8 @@ import (
 // handler typed input and output: the client in .lidza/client is generated
 // from these types, so the frontend cannot drift from the API.
 func routes(r *router.Router) {
+	r.HandleFunc("GET /api/v1/office/source", office.Source)
+	r.HandleFunc("POST /api/v1/office/callback/{id}", office.Callback)
 	auth.Mount(r, auth.Options{NoRegister: true, Providers: []auth.Provider{}, Title: "Thura"})
 	router.Route(r, "GET /api/v1/hello/{name}", hello)
 	router.Route(r, "POST /api/v1/inbound/{mailboxId}", handlers.ReceiveMail, router.UploadLimit(12<<20))
@@ -55,6 +58,7 @@ func routes(r *router.Router) {
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares", handlers.CreateDriveShare)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares", handlers.ListDriveShares)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares/{shareId}", handlers.RevokeDriveShare)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/office", handlers.OpenOfficeDocument)
 }
 
 // hello greets by name. Greeting is defined in schema.lidza.

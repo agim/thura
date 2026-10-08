@@ -34,6 +34,17 @@
 #orbit-mail-vibrant .safe-email { width: 100%; min-height: 300px; border: 0; background: white; }
 @media(max-width:600px) { #orbit-workspace .ws-brand { flex-wrap: wrap; } #orbit-workspace .mailbox-picker select { min-width: 0; max-width: 75%; } }
 #orbit-workspace .drive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1rem 0}
-#orbit-workspace .drive-card,#orbit-workspace .drive-detail{border:1px solid var(--ws-border);border-radius:12px;padding:1rem;overflow-wrap:anywhere}
+#orbit-workspace .drive-card,#orbit-workspace .drive-detail{border:1px solid var(--line);border-radius:12px;padding:1rem;overflow-wrap:anywhere}
 #orbit-workspace .drive-detail label{display:block;margin:.75rem 0}
 #orbit-workspace .drive-detail input,#orbit-workspace .drive-detail select{display:block;max-width:100%}
+
+#orbit-workspace .live-drive h2{font-size:24px;font-weight:700}
+#orbit-workspace .live-drive h3{font-size:18px;font-weight:600;margin-bottom:8px}
+#orbit-workspace .live-drive h4{font-size:16px;font-weight:600;margin:16px 0 8px}
+#orbit-workspace .live-drive label{display:flex;flex-direction:column;gap:5px;margin:10px 0}
+#orbit-workspace .live-drive input,#orbit-workspace .live-drive select{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px;max-width:100%;min-width:0}
+#orbit-workspace .live-drive .row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+#orbit-workspace .live-drive button{border:1px solid var(--line);background:var(--paper);margin:3px 0}
+#orbit-workspace .live-drive .drive-card{background:var(--paper)}
+#orbit-workspace .live-drive .drive-detail{margin-top:20px}
+#orbit-workspace .office-editor{margin:20px 0}

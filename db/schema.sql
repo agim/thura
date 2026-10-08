@@ -292,3 +292,16 @@ CREATE TABLE share_grant (
 );
 CREATE INDEX share_grant_file_id_idx ON share_grant (file_id);
 
+CREATE TABLE office_session (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  file_id uuid NOT NULL REFERENCES drive_file(id),
+  subject text NOT NULL,
+  source_version integer NOT NULL,
+  base_version integer NOT NULL,
+  document_key text NOT NULL,
+  last_checksum text NOT NULL DEFAULT '',
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX office_session_file_id_idx ON office_session (file_id);
+
