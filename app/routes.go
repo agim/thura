@@ -37,6 +37,7 @@ func routes(r *router.Router) {
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/smip/outbox", handlers.QueueSmipMessage)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/smip/outbox", handlers.ListSmipOutbox)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/smip/outbox/{id}/resume", handlers.ResumeSmipMessage)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/smip/outbox/{id}/cancel", handlers.CancelSmipMessage)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/smip/bindings", handlers.ListSmipBindings)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/smip/bindings", handlers.CreateSmipBinding)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/smip/bindings/{id}", handlers.DisableSmipBinding)

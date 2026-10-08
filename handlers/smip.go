@@ -32,3 +32,7 @@ func ListSmipOutbox(ctx context.Context, r *router.Request[router.None]) (schema
 func ResumeSmipMessage(ctx context.Context, r *router.Request[router.None]) (schema.SmipOutbound, error) {
 	return federation.Resume(ctx, r.Param("workspaceId"), r.Param("id"))
 }
+
+func CancelSmipMessage(ctx context.Context, r *router.Request[router.None]) (schema.SmipOutbound, error) {
+	return federation.Cancel(ctx, r.Param("workspaceId"), r.Param("id"))
+}

@@ -177,3 +177,7 @@ Why: Freeze operator-paired server keys separately from transactional owner/admi
 ## 2026-10-08: SMIP app outbox, durable dispatch and immutable Drive snapshots
 
 Why: Commit signed packets and jobs together, recheck membership and consent under the workspace lock before authorizing each attempt, persist uncertainty before HTTP, and record acceptance only with a verified durable receipt. Freeze explicit peer origins and historical key trust; use unique attempt tokens, bounded reconciliation/backoff and an attempt budget. File sends retain verified immutable snapshots after source edits/trash. The browser retries lost queue responses with the same transaction ID and distinguishes queueing from transport acceptance, reading and import.
+
+## 2026-10-08: Cancel SMIP sends only before a durable attempt
+
+Why: Owners/admins need to withdraw an individual queued copy without disabling its whole stream. Share workspace/row locks with dispatch, require zero attempts, retain the original packet and quota, audit atomically, and make retries terminal and idempotent. Attempted packets cannot be recalled and the wire protocol stays unchanged.

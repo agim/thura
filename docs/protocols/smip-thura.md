@@ -45,11 +45,12 @@ All local operations use Līdza authentication and generated client methods:
 | `DELETE /bindings/{id}` | Current owner/admin; disable new admissions, audited in transaction. |
 | `POST /outbox` | Current member; queue chat or a verified immutable Drive snapshot and its job atomically. |
 | `GET /outbox?cursor=…` | Current member; bounded delivery metadata without signed payloads or keys. |
+| `POST /outbox/{id}/cancel` | Current owner/admin; idempotently cancel a pending/blocked packet before any network attempt, audited atomically. |
 | `POST /outbox/{id}/resume` | Current owner/admin; resume a blocked original packet within the retry budget. |
 | `GET /inbox?cursor=…` | Current member; bounded text/metadata without file payloads. |
 | `POST /inbox/{id}/import` | Current member; explicit Drive import with optional local `folderId`. |
 
-The Chat panel appears only for enabled deployments. Owners/admins manage bindings there; members review content and import files. The screen labels the feature experimental and distinguishes queued, uncertain, blocked, accepted and expired sends from incoming acceptance and Drive import. Sending controls appear only for enabled bindings with an operator-configured outgoing endpoint.
+The Chat panel appears only for enabled deployments. Owners/admins manage bindings there; members review content and import files. The screen labels the feature experimental and distinguishes queued, cancelled, uncertain, blocked, accepted and expired sends from incoming acceptance and Drive import. Sending controls appear only for enabled bindings with an operator-configured outgoing endpoint.
 
 ## Durable app sending
 
@@ -66,3 +67,9 @@ Worker and reconciliation job kinds are scoped to the logical origin domain; dis
 The retained outbox has its own 1,000-record / 64 MiB decoded-content limit per workspace, including accepted packets. It stores packet/receipt bytes and public verification keys, never private keys; no automatic archive/deletion policy exists. Backups include the database queue and receipts. Key rotation must retain unrevoked historical origin and peer receipt keys needed for reconciliation. Resume keeps the original authorization actor, ID, payload, signature and attempt history. It does not restore removed membership or withdrawn consent.
 
 The browser retains a failed queue request ID while retrying unchanged input, clears it after a confirmed queue response, and displays server delivery states. Accepted means a verified durable transport receipt; reading and remote Drive import remain unconfirmed. The paired-server contract remains experimental, server-readable and default-disabled. It does not provide ordered conversations, reply/group semantics, malware scanning, public discovery, E2EE, Matrix bridging or SMTP fallback.
+
+## Cancelling an unattempted send
+
+Owners/admins can cancel an individual pending or blocked send only while its durable attempt count is zero. Cancellation and dispatch take the same workspace/row locks: a successful cancellation guarantees this outbox never attempted that packet; if dispatch has already committed an attempt, cancellation returns 409. In-flight, uncertain, accepted and previously attempted blocked sends cannot be recalled. The UI offers cancellation only for eligible sends and always relies on the server to resolve races.
+
+Cancellation is a local terminal state, not a new wire event or remote recall command. The audit event and state commit together; an audit failure rolls both back. A repeated cancellation returns the same record without another audit event, and retrying the original queue request cannot resurrect it. Existing jobs safely do nothing and reconciliation excludes cancelled packets. The signed packet, original transaction ID and retained quota accounting remain intact; cancellation does not delete transfer history or reclaim retention capacity. Current workspace authority is required even for retries.

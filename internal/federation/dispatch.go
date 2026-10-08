@@ -190,21 +190,11 @@ func Reconcile(ctx context.Context, _ json.RawMessage) error {
 	return nil
 }
 func Resume(ctx context.Context, w, id string) (schema.SmipOutbound, error) {
-	tx, queries, err := lockAccess(ctx, w, true)
+	tx, queries, row, err := lockManagedOutbound(ctx, w, id)
 	if err != nil {
 		return schema.SmipOutbound{}, err
 	}
 	defer tx.Rollback(ctx)
-	if !workspace.ValidID(id) {
-		return schema.SmipOutbound{}, router.Errorf(404, "outbound packet not found")
-	}
-	row, err := queries.LockSmipOutbound(ctx, q.LockSmipOutboundParams{WorkspaceID: w, ID: id})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return schema.SmipOutbound{}, router.Errorf(404, "outbound packet not found")
-	}
-	if err != nil {
-		return schema.SmipOutbound{}, err
-	}
 	if row.State != smip.Blocked {
 		return schema.SmipOutbound{}, router.Errorf(409, "only blocked packets can be resumed")
 	}
@@ -242,6 +232,26 @@ func lockOutbound(ctx context.Context, w, id string) (pgx.Tx, *q.Queries, q.Smip
 		return nil, nil, q.SmipOutbox{}, errors.Join(err, tx.Rollback(ctx))
 	}
 	row, err := queries.LockSmipOutbound(ctx, q.LockSmipOutboundParams{WorkspaceID: w, ID: id})
+	if err != nil {
+		return nil, nil, q.SmipOutbox{}, errors.Join(err, tx.Rollback(ctx))
+	}
+	return tx, queries, row, nil
+}
+
+// lockManagedOutbound rechecks current management authority under the same
+// workspace lock used by dispatch, then locks the workspace-scoped record.
+func lockManagedOutbound(ctx context.Context, w, id string) (pgx.Tx, *q.Queries, q.SmipOutbox, error) {
+	tx, queries, err := lockAccess(ctx, w, true)
+	if err != nil {
+		return nil, nil, q.SmipOutbox{}, err
+	}
+	if !workspace.ValidID(id) {
+		return nil, nil, q.SmipOutbox{}, errors.Join(router.Errorf(404, "outbound packet not found"), tx.Rollback(ctx))
+	}
+	row, err := queries.LockSmipOutbound(ctx, q.LockSmipOutboundParams{WorkspaceID: w, ID: id})
+	if errors.Is(err, pgx.ErrNoRows) {
+		err = router.Errorf(404, "outbound packet not found")
+	}
 	if err != nil {
 		return nil, nil, q.SmipOutbox{}, errors.Join(err, tx.Rollback(ctx))
 	}

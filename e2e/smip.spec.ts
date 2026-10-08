@@ -92,3 +92,30 @@ test('SMIP send retries keep the same intent and distinguish queued from accepte
   accepted = true
   await expect(review.getByText('Verified transport receipt; reading/import not confirmed', { exact: false })).toBeVisible({ timeout: 10000 })
 })
+
+test('SMIP cancellation recovers failed responses and never offers recall after an attempt', async ({ page }) => {
+  let cancelled = false
+  let cancelCalls = 0
+  const attemptedID = '44444444-4444-4444-8444-444444444444'
+  await page.route('**/smip/bindings', route => route.fulfill({ json: { configured: true, items: [] } }))
+  await page.route('**/smip/inbox?**', route => route.fulfill({ json: { items: [], nextCursor: '' } }))
+  const entry = (id: string, body: string, state: string, attempts: number) => ({ id, bindingId: bindingID, kind: 'chat', body, name: '', size: body.length, state, reason: state === 'cancelled' ? 'cancelled_unsent' : '', attempts, lastStatus: 0, nextAttempt: at, createdAt: at, updatedAt: at })
+  await page.route('**/smip/outbox?**', route => route.fulfill({ json: { items: [entry(transferID, 'Withdraw this copy', cancelled ? 'cancelled' : 'pending', 0), entry(attemptedID, 'Possible remote copy', 'blocked', 1)], nextCursor: '' } }))
+  await page.route('**/smip/outbox/*/cancel', route => {
+    cancelCalls++
+    expect(route.request().method()).toBe('POST')
+    expect(route.request().url()).toContain(`/outbox/${transferID}/cancel`)
+    cancelled = true // Server committed, but the first response was lost.
+    return route.fulfill(cancelCalls === 1 ? { status: 500, json: { error: 'Cancellation response lost' } } : { json: entry(transferID, 'Withdraw this copy', 'cancelled', 0) })
+  })
+  await openChat(page)
+  const review = page.getByRole('region', { name: 'SMIP review' })
+  await expect(review.getByRole('button', { name: `Cancel ${attemptedID}`, exact: true })).toHaveCount(0)
+  await review.getByRole('button', { name: `Cancel ${transferID}`, exact: true }).click()
+  await expect(review.getByRole('alert')).toContainText('Cancellation response lost')
+  await review.getByRole('button', { name: `Cancel ${transferID}`, exact: true }).click()
+  await expect(review.getByText('Withdraw this copy · cancelled · Cancelled before any attempt', { exact: true })).toBeVisible()
+  await expect(review.getByRole('button', { name: `Cancel ${transferID}`, exact: true })).toHaveCount(0)
+  await expect(review.getByRole('button', { name: `Resume ${transferID}`, exact: true })).toHaveCount(0)
+  expect(cancelCalls).toBe(2)
+})
