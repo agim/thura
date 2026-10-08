@@ -148,3 +148,7 @@ Why: The framework update requires a clean root and integration tests in tests/.
 ## 2026-10-08: Read current drafts and scope browser upload recovery
 
 Why: Navigation snapshots never initialize an editable draft until a fresh authorized server read succeeds. Upload recovery fingerprints bind account, workspace, destination, filename, content type and bytes without storing plaintext metadata. Removed sessions permit an explicit restart; restricted browser storage does not block ordinary uploads.
+
+## 2026-10-08: SMIP/0.1 chat and file transport reference
+
+Why: Implement the developer-specified two-server chat/file protocol in isolated internal/smip and docs/protocols files while app completion proceeds separately. Use standard Ed25519 and TLS 1.3, explicitly paired keys/recipient policies, fixed canonical signing bytes, atomic durable receipts and immutable retry IDs. The Unix reference journal deliberately uses a private single-writer persistent filesystem for atomic rename/fsync tests; eventual Thura adapters must use database/storage packs. The first reference is server-readable and not mounted in Thura; payload encryption, public discovery and application adapters need separate versioned work. Map Matrix, SMTP, calendar, file and media boundaries rather than silently weakening their semantics.

@@ -1,0 +1,34 @@
+{
+  "envelopeSigningBytes": "U01JUC1FTlZFTE9QRQpbInNtaXAvMC4xIiwiaW50ZXJvcC1maWxlIiwiYS5leGFtcGxlIiwiYi5leGFtcGxlIiwiYWxpY2VAYS5leGFtcGxlIiwiYm9iQGIuZXhhbXBsZSIsImNvbnZlcnNhdGlvbi0xIiwiZmlsZSIsMTgwMDAwMDAwMCwxODAwMDAzNjAwLCIzNDc1MGY5OGJkNTlmY2ZjOTQ2ZGE0NWFhYWJlOTMzYmUxNTRhNGI1MDk0ZTFjNGFiZjQyODY2NTA1ZjNjOTdlIiwiY3NPcGMzVnR3Nmt1WW1sdSIsIkFQOEhBd0FKIl0",
+  "packet": {
+    "envelope": {
+      "version": "smip/0.1",
+      "id": "interop-file",
+      "from": "a.example",
+      "to": "b.example",
+      "sender": "alice@a.example",
+      "recipient": "bob@b.example",
+      "stream": "conversation-1",
+      "kind": "file",
+      "created": 1800000000,
+      "expires": 1800003600,
+      "keyId": "34750f98bd59fcfc946da45aaabe933be154a4b5094e1c4abf42866505f3c97e",
+      "name": "csOpc3Vtw6kuYmlu",
+      "payload": "AP8HAwAJ"
+    },
+    "signature": "xjEm6XrgtA2zYPh0GvDQJ6s8oKBcC4P-UOn7MXaRmKNaOc1RTWfs0RLTxFPWtCIH-qVtar4xkQ5KPEReGW9OAQ"
+  },
+  "receipt": {
+    "version": "smip/0.1",
+    "id": "interop-file",
+    "from": "b.example",
+    "to": "a.example",
+    "digest": "fa0660812253e76f33f90377e174f0db1356c81092076dea609625c5dfb85d64",
+    "accepted": 1800000001,
+    "keyId": "6a3803d5f059902a1c6dafbc9ba4729212f7caac08634cc3ae76b27529f03827",
+    "signature": "1xkNFn25hDMBs4-zwAnHU_4D4XAqF3rlk27Jm9yQegWhA_F6GVYqn5CeNd0j4JhgyFybifnbc3xMGUyeWctZBg"
+  },
+  "receiptSigningBytes": "U01JUC1SRUNFSVBUClsic21pcC8wLjEiLCJpbnRlcm9wLWZpbGUiLCJiLmV4YW1wbGUiLCJhLmV4YW1wbGUiLCJmYTA2NjA4MTIyNTNlNzZmMzNmOTAzNzdlMTc0ZjBkYjEzNTZjODEwOTIwNzZkZWE2MDk2MjVjNWRmYjg1ZDY0IiwxODAwMDAwMDAxLCI2YTM4MDNkNWYwNTk5MDJhMWM2ZGFmYmM5YmE0NzI5MjEyZjdjYWFjMDg2MzRjYzNhZTc2YjI3NTI5ZjAzODI3Il0",
+  "receiverPublic": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+  "senderPublic": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w"
+}

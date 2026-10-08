@@ -75,7 +75,7 @@ The developer delegated completion of docs/brief.md. The release now includes li
 
 Calendar meeting links persist separately from physical locations, enforce workspace membership and event sequence, reject ended meetings, and appear in exported/invitation ICS files. Creating/linking a meeting does not send invitations or auto-join media. Each operator configures the services and chooses the public host/domain.
 
-SMIP is intended for chats across two servers and for sending/receiving files between two servers, as specified by the developer. Its protocol and adapters are future work; Matrix is the implemented chat transport. Recording/transcription and the other deferred features in the brief are outside this first release.
+SMIP is intended for chats across two servers and for sending/receiving files between two servers, as specified by the developer. An experimental [SMIP/0.1 transport reference](protocols/smip-v0.1.md) now implements two-server signed chat/file packets and durable receipts, with race-tested Unix storage and independent Node interoperability vectors. It is not mounted in Thura; application adapters, public discovery and payload encryption remain separate work. [Protocol interoperability](protocols/interoperability.md) defines the related transport boundaries. Matrix is the implemented app chat transport. Recording/transcription and the other deferred features in the brief are outside this first release.
 
 ## Līdza update and release validation
 

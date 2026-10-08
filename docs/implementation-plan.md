@@ -176,7 +176,7 @@ Gate: restore a workspace into a clean instance, recover from provider downtime 
 
 ## SMIP protocol track
 
-The developer specified that SMIP will be used for chat across two servers and for sending/receiving files between two servers. The future integration boundary therefore includes Chat and Drive/file transfer as well as the historical mail-transport research. SMIP is a proposed protocol, not an existing implemented capability or verified security guarantee. Keep its initial reference implementation and specification independently versioned. Thura can later consume it through explicit chat/file adapters and any separately selected mail adapter.
+The developer specified that SMIP will be used for chat across two servers and for sending/receiving files between two servers. The future integration boundary therefore includes Chat and Drive/file transfer as well as the historical mail-transport research. The independently versioned [SMIP/0.1 reference](protocols/smip-v0.1.md) now covers server-readable signed chat/file envelopes, durable receipts, retries and key lifecycle, with two-server tests and cross-language vectors. It is experimental and not an enabled app capability or a verified E2EE guarantee. [Interoperability boundaries](protocols/interoperability.md) keep related protocols explicit. Thura can later consume it through explicit chat/file adapters and any separately selected mail adapter.
 
 Correct the transcript's early claims before using them as requirements:
 
