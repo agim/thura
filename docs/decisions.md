@@ -136,3 +136,11 @@ Replace the latest-200/first-500 API truncation with ordered cursor pages and li
 Recipient fields query the existing workspace-scoped Contacts API after a short pause, returning at most ten matches. Explicit keyboard-focusable buttons insert only the address into the unfinished last comma-separated recipient. Manual entry remains available when the directory is unavailable. No Contacts page module or new dependency is loaded.
 
 Creating a forward locks its source message, checks that it belongs to the authorized target mailbox, and copies attachment metadata in the draft transaction. New attachment IDs reference the same immutable private objects, preserving bytes without a second storage write. Replies do not copy attachments. The existing ten-file/10 MiB combined limit applies to forwards; rejection rolls back draft creation. Any future Mail purge must check all attachment object references before deleting source objects. `forwardId` is a create-only field and is rejected on draft updates.
+
+## 2026-10-08: Mailbox threading and cross-app handoffs
+
+Why: Use mailbox-scoped RFC message headers and bounded cursor pages for conversations; normalize reply recipients server-side and keep forwarded objects immutable. Calendar meeting references preserve physical locations and use event sequence checks. Cross-app intents require explicit user actions; browser storage holds only app/theme preferences. SMIP chat and file transport is a separate protocol track, as specified by the developer.
+
+## 2026-10-08: Importable application factory on Līdza v0.1.89
+
+Why: The framework update requires a clean root and integration tests in tests/. Application wiring and shared page metadata now live in app/, with app.New accepting the frontend filesystem. main embeds the production frontend; integration tests construct the same application without embedding frontend files. Existing tests and assertions are preserved.

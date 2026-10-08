@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"bytes"
@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"thura/app"
 	"thura/internal/meet"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -61,7 +62,7 @@ func TestMeetingScopedTokensWebhooksAndRevocation(t *testing.T) {
 	t.Setenv("LIVEKIT_PUBLIC_URL", "ws://localhost:7880")
 	t.Setenv("LIVEKIT_API_KEY", key)
 	t.Setenv("LIVEKIT_API_SECRET", secret)
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	pool := db.From(ctx)
 	suffix := time.Now().UnixNano()

@@ -4,27 +4,30 @@ import { api, type MailItem, type MailFolder, type DraftInput } from '@lidza/cli
 import { downloadContent } from '../lib/download'
 import { RecipientInput } from './RecipientInput'
 import { DraftAutosave } from '../lib/draft-autosave'
+import { X } from 'lucide-react'
 import DOMPurify from 'dompurify'
+import { MailOrganization, MailSignature, MailConversation } from './MailTools'
 
-export function LiveMail({ workspaceId }: { workspaceId: string }) {
+export function LiveMail({ workspaceId, initialDraft }: { workspaceId: string; initialDraft?: MailItem }) {
   const boxes = useQuery({ queryKey: ['mailboxes', workspaceId], queryFn: () => api.listMailboxes({ workspaceId }) })
-  const [chosen, setChosen] = useState('')
+  const [chosen, setChosen] = useState(initialDraft?.mailboxId ?? '')
   const box = boxes.data?.items.find(b => b.id === chosen) ?? boxes.data?.items[0]
   if (boxes.isPending) return <p role="status">Loading mailboxes…</p>
   if (boxes.isError) return <p role="alert">{boxes.error.message}</p>
   if (!box) return <div className="ws-page"><h2>Mail</h2><p>Your workspace has no mailbox yet. An operator must assign its sending address and provider.</p></div>
-  return <div><label className="mailbox-picker">Mailbox<select value={box.id} onChange={e => setChosen(e.target.value)}>{boxes.data?.items.map(b => <option value={b.id} key={b.id}>{b.name} · {b.address}</option>)}</select></label><MailView key={box.id} workspaceId={workspaceId} mailboxId={box.id} /></div>
+  return <div><label className="mailbox-picker">Mailbox<select value={box.id} onChange={e => setChosen(e.target.value)}>{boxes.data?.items.map(b => <option value={b.id} key={b.id}>{b.name} · {b.address}</option>)}</select></label><MailView key={box.id} workspaceId={workspaceId} mailboxId={box.id} signature={box.signature} initialDraft={initialDraft?.mailboxId === box.id ? initialDraft : undefined} /></div>
 }
 
-function MailView({ workspaceId, mailboxId }: { workspaceId: string; mailboxId: string }) {
+function MailView({ workspaceId, mailboxId, signature, initialDraft }: { workspaceId: string; mailboxId: string; signature: string; initialDraft?: MailItem }) {
   const client = useQueryClient()
-  const [folder, setFolder] = useState<MailFolder>('inbox')
+  const [folder, setFolder] = useState<MailFolder>(initialDraft ? 'drafts' : 'inbox')
   const [query, setQuery] = useState('')
-  const [selected, setSelected] = useState('')
-  const [editing, setEditing] = useState<MailItem | null>(null)
+  const [labelId, setLabelId] = useState('')
+  const [selected, setSelected] = useState(initialDraft?.id ?? '')
+  const [editing, setEditing] = useState<MailItem | null>(initialDraft ?? null)
   const [notice, setNotice] = useState('')
   const [readerError, setReaderError] = useState('')
-  const list = useInfiniteQuery({ queryKey: ['mail', mailboxId, folder, query], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listMail({ workspaceId, mailboxId }, { query: { folder, search: query, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined, refetchInterval: 5000 })
+  const list = useInfiniteQuery({ queryKey: ['mail', mailboxId, folder, query, labelId], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listMail({ workspaceId, mailboxId }, { query: { folder, labelId, search: query, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined, refetchInterval: 5000 })
   const detail = useQuery({ queryKey: ['mail-detail', selected], queryFn: () => api.getMail({ workspaceId, mailboxId, id: selected }), enabled: !!selected })
   const refresh = async () => { await client.invalidateQueries({ queryKey: ['mail', mailboxId] }); await client.invalidateQueries({ queryKey: ['mail-detail', selected] }) }
   const compose = useMutation({ mutationFn: () => api.createMailDraft({ workspaceId, mailboxId }, {}), onSuccess: async i => { setEditing(i); setSelected(i.id); setFolder('drafts'); await refresh() } })
@@ -37,14 +40,14 @@ function MailView({ workspaceId, mailboxId }: { workspaceId: string; mailboxId: 
   async function reply(all = false, forward = false) {
     if (!current) return
     try {
-      const i = await api.createMailDraft({ workspaceId, mailboxId }, { forwardId: forward ? current.id : undefined, to: forward ? '' : current.folder === 'sent' ? current.toAddress : current.fromAddress, cc: all ? current.cc : '', subject: `${forward ? 'Fwd' : 'Re'}: ${current.subject}`, text: `\n\nOn ${new Date(current.createdAt).toLocaleString()}, ${current.fromAddress} wrote:\n${current.textBody}`, threadId: current.threadId || current.id })
+      const i = await api.createMailDraft({ workspaceId, mailboxId }, forward ? { forwardId: current.id, to: '' } : { replyId: current.id, replyAll: all })
       setEditing(i); setSelected(i.id); setFolder('drafts'); await refresh()
     } catch (e) { setReaderError(String(e)) }
   }
   return <div id="orbit-mail-vibrant">
     {(failure || readerError) && <p role="alert" className="inlinepanel">{failure?.message || readerError}</p>}
     <div className="layout">
-      <aside className="folders"><button className="mainaction" disabled={compose.isPending} onClick={() => compose.mutate()}>Compose</button>{(['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as MailFolder[]).map(f => <button className={folder === f ? 'on' : ''} key={f} onClick={() => { setFolder(f); setSelected(''); setEditing(null) }}>{f[0].toUpperCase() + f.slice(1)}</button>)}</aside>
+      <aside className="folders"><button className="mainaction" disabled={compose.isPending} onClick={() => compose.mutate()}>Compose</button>{(['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as MailFolder[]).map(f => <button className={folder === f ? 'on' : ''} key={f} onClick={() => { setFolder(f); setSelected(''); setEditing(null) }}>{f[0].toUpperCase() + f.slice(1)}</button>)}<MailOrganization scope={{ workspaceId, mailboxId }} selected={selected} filter={labelId} onFilter={setLabelId} /><MailSignature scope={{ workspaceId, mailboxId }} signature={signature} /></aside>
       <section className="list" aria-label="Messages"><div className="listhead"><h2>{folder[0].toUpperCase() + folder.slice(1)}</h2><label className="search">Search mail<input value={query} onChange={e => setQuery(e.target.value)} /></label></div>
         {list.isPending && <p role="status" className="empty">Loading messages…</p>}
         {list.data && visible.length === 0 && <p className="empty">No messages in this view.</p>}
@@ -55,7 +58,7 @@ function MailView({ workspaceId, mailboxId }: { workspaceId: string; mailboxId: 
       <section className="reader" aria-label="Reading pane">
         {editing ? <DraftEditor key={editing.id} item={editing} workspaceId={workspaceId} mailboxId={mailboxId} saved={async i => { setEditing(i.status === 'draft' ? i : null); setNotice(i.status === 'queued' ? 'Queued · undo is available until the scheduled send time.' : 'Draft saved.'); await refresh() }} /> : current ? <>
           <div className="toolbar"><button disabled={flags.isPending} onClick={() => flags.mutate({ id: current.id, values: { starred: !current.starred } })}>{current.starred ? 'Unstar' : 'Star'}</button><button disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'archive' } })}>Archive</button><button disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'trash' } })}>Trash</button>{current.folder === 'trash' && <button onClick={() => flags.mutate({ id: current.id, values: { folder: current.status === 'draft' ? 'drafts' : current.status === 'received' ? 'inbox' : 'sent' } })}>Restore</button>}</div>
-          <h3 className="title">{current.subject || '(No subject)'}</h3><p className="small quiet">From {current.fromAddress} · To {current.toAddress}</p>
+          <MailConversation key={current.id} scope={{ workspaceId, mailboxId }} item={current} onSelect={i => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null) }} /><h3 className="title">{current.subject || '(No subject)'}</h3><p className="small quiet">From {current.fromAddress} · To {current.toAddress}</p>
           <p className="small quiet">{current.status === 'captured' ? 'Captured by the development provider. This message was not delivered.' : current.status}</p>
           {current.status === 'queued' && <button disabled={undo.isPending} onClick={() => undo.mutate(current.id)}>Undo send</button>}
           {current.textBody ? <div className="message">{current.textBody}</div> : <SafeEmail html={current.htmlBody} />}
@@ -88,8 +91,9 @@ function DraftEditor({ item, workspaceId, mailboxId, saved }: { item: MailItem; 
   const save = useMutation({ mutationFn: () => autosave.flush() })
   const send = useMutation({ mutationFn: async () => { const i = await save.mutateAsync(); return api.sendMail({ workspaceId, mailboxId, id: i.id }, { sendAt: schedule ? new Date(schedule).toISOString() : undefined }) }, onSuccess: saved })
   const upload = useMutation({ mutationFn: (file: File) => api.uploadMailAttachment({ workspaceId, mailboxId, id: item.id }, file), onSuccess: () => client.invalidateQueries({ queryKey: ['mail-detail', item.id] }) })
-  const busy = save.isPending || send.isPending || upload.isPending
-  const failure = save.error ?? send.error ?? upload.error
+  const removeAttachment = useMutation({ mutationFn: (attachmentId: string) => api.removeMailAttachment({ workspaceId, mailboxId, id: item.id, attachmentId }), onSuccess: () => client.invalidateQueries({ queryKey: ['mail-detail', item.id] }) })
+  const busy = save.isPending || send.isPending || upload.isPending || removeAttachment.isPending
+  const failure = save.error ?? send.error ?? upload.error ?? removeAttachment.error
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (autosave.dirty) { event.preventDefault(); event.returnValue = '' } }
     window.addEventListener('beforeunload', warn)
@@ -107,7 +111,7 @@ function DraftEditor({ item, workspaceId, mailboxId, saved }: { item: MailItem; 
     <label>Subject<input disabled={send.isPending} value={input.subject ?? ''} onChange={e => change('subject', e.target.value)} /></label>
     <label>Message<textarea disabled={send.isPending} aria-label="Message" value={input.text ?? ''} onChange={e => change('text', e.target.value)} /></label>
     <label>Attachments<input type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
-    <ul>{detail.data?.attachments.map(a => <li key={a.id}>{a.name}</li>)}</ul>
+    <ul>{detail.data?.attachments.map(a => <li key={a.id}>{a.name} <button type="button" aria-label={`Remove ${a.name}`} disabled={busy} onClick={() => removeAttachment.mutate(a.id)}><X size={14} aria-hidden="true" /></button></li>)}</ul>
     <label>Schedule send<input type="datetime-local" value={schedule} onChange={e => setSchedule(e.target.value)} /></label>
     {(failure || error) && <p role="alert">{failure?.message || error}</p>}
     <div className="row"><button type="button" disabled={busy} onClick={() => save.mutate()}>Save draft</button><button className="mainaction" disabled={busy}>Send</button></div>

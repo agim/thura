@@ -51,3 +51,6 @@ UPDATE calendar_event SET sequence=$2,cancelled=$3 WHERE id=$1 RETURNING *;
 SELECT a.* FROM event_attendee a JOIN calendar_event e ON e.id=a.event_id WHERE e.calendar_id=$1 ORDER BY a.email;
 -- name: ListCalendarExceptions :many
 SELECT x.* FROM event_exception x JOIN calendar_event e ON e.id=x.event_id WHERE e.calendar_id=$1 ORDER BY x.instance_key;
+
+-- name: BindCalendarMeeting :one
+UPDATE calendar_event SET meeting_id=$2, sequence=sequence+1, updated_at=now() WHERE id=$1 RETURNING *;

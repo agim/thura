@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"bytes"
@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"thura/app"
 	"thura/internal/mailbox"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -57,7 +58,7 @@ func TestPersistentMailAndConnectorRouting(t *testing.T) {
 		t.Setenv(prefix+"MAIL_BASE_URL", config[0])
 		t.Setenv(prefix+"MAIL_API_KEY", config[1])
 	}
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("mail-owner-%d@example.com", time.Now().UnixNano())
 	pw := "copper meadow waterfall lantern 9134"
@@ -149,7 +150,7 @@ func TestPersistentMailAndConnectorRouting(t *testing.T) {
 
 func TestSignedInboundMIME(t *testing.T) {
 	t.Setenv("MAIL_INBOUND_SECRET", "fixture-inbound-secret-with-at-least-32-characters")
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("inbound-owner-%d@example.com", time.Now().UnixNano())
 	pw := "copper waterfall mountain lamp 8624"
@@ -216,6 +217,16 @@ func TestSignedInboundMIME(t *testing.T) {
 	repeat := send(stamp, sign(stamp, raw), raw, 200)
 	if repeat.ID != item.ID || item.Subject != "Hello Thura" || !strings.Contains(item.TextBody, "Hello Thura") || item.RawKey == "" {
 		t.Fatal("MIME decoding or duplicate handling failed")
+	}
+
+	if item.MessageID != "<fixture@example.com>" || item.ThreadID != "<fixture@example.com>" {
+		t.Fatal("inbound message lost stable thread root")
+	}
+	delivery = "fixture-inbound-reply"
+	replyRaw := []byte("From: sender@example.com\r\nTo: inbox@example.com\r\nCc: other@example.com\r\nSubject: Re: Hello Thura\r\nMessage-ID: <reply@example.com>\r\nIn-Reply-To: <fixture@example.com>\r\nReferences: <fixture@example.com>\r\nContent-Type: text/plain\r\n\r\nReply body\r\n")
+	inboundReply := send(stamp, sign(stamp, replyRaw), replyRaw, 200)
+	if inboundReply.ThreadID != item.ThreadID || inboundReply.InReplyTo != item.MessageID || inboundReply.Cc != "other@example.com" {
+		t.Fatal("inbound reply lost parent thread, headers or Cc")
 	}
 	var count int
 	if err = db.From(ctx).QueryRow(ctx, "SELECT count(*) FROM mail_attachment WHERE item_id=$1", item.ID).Scan(&count); err != nil || count != 1 {

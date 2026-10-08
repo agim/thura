@@ -21,7 +21,7 @@ is validated on the server and callable from the client by name.
    }
    ```
 
-2. Register the handler in `routes.go`:
+2. Register the handler in `app/routes.go`:
 
    ```go
    router.Route(r, "POST /api/v1/things", createThing)
@@ -79,5 +79,5 @@ is validated on the server and callable from the client by name.
    loop or aborting the signal closes the request. The Dart client
    returns a `Stream`.
 
-5. Add a test in `routes_test.go` (see "Write a test") and run
+5. Add a test in `tests/routes_test.go` (see "Write a test") and run
    `lidza check`, then `lidza test`.

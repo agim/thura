@@ -202,6 +202,7 @@ type Mailbox struct {
 	Name         string    `json:"name" db:"name"`
 	Address      string    `json:"address" db:"address"`
 	ConfigPrefix string    `json:"configPrefix" db:"config_prefix"`
+	Signature    string    `json:"signature" db:"signature"`
 	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
 }
 
@@ -232,32 +233,38 @@ func (v Mailbox) Validate() error {
 	if len(v.ConfigPrefix) > 100 {
 		errs.Add("configPrefix", "max", "at most 100 character(s)")
 	}
+	if v.Signature == "" {
+		errs.Add("signature", "required", "required")
+	}
 	return errs.Result()
 }
 
 // MailItem is a row of the mail_item table.
 type MailItem struct {
-	ID          string     `json:"id" db:"id"`
-	MailboxID   string     `json:"mailboxId" db:"mailbox_id"`
-	AuthorID    string     `json:"authorId" db:"author_id"`
-	Folder      MailFolder `json:"folder" db:"folder"`
-	FromAddress string     `json:"fromAddress" db:"from_address"`
-	ToAddress   string     `json:"toAddress" db:"to_address"`
-	Cc          string     `json:"cc" db:"cc"`
-	Bcc         string     `json:"bcc" db:"bcc"`
-	Subject     string     `json:"subject" db:"subject"`
-	TextBody    string     `json:"textBody" db:"text_body"`
-	HTMLBody    string     `json:"htmlBody" db:"html_body"`
-	Status      string     `json:"status" db:"status"`
-	Starred     bool       `json:"starred" db:"starred"`
-	Unread      bool       `json:"unread" db:"unread"`
-	ProviderID  string     `json:"providerId" db:"provider_id"`
-	RawKey      string     `json:"rawKey" db:"raw_key"`
-	ExternalID  *string    `json:"externalId" db:"external_id"`
-	ThreadID    string     `json:"threadId" db:"thread_id"`
-	SendAt      *time.Time `json:"sendAt" db:"send_at"`
-	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time  `json:"updatedAt" db:"updated_at"`
+	ID               string     `json:"id" db:"id"`
+	MailboxID        string     `json:"mailboxId" db:"mailbox_id"`
+	AuthorID         string     `json:"authorId" db:"author_id"`
+	Folder           MailFolder `json:"folder" db:"folder"`
+	FromAddress      string     `json:"fromAddress" db:"from_address"`
+	ToAddress        string     `json:"toAddress" db:"to_address"`
+	Cc               string     `json:"cc" db:"cc"`
+	Bcc              string     `json:"bcc" db:"bcc"`
+	Subject          string     `json:"subject" db:"subject"`
+	TextBody         string     `json:"textBody" db:"text_body"`
+	HTMLBody         string     `json:"htmlBody" db:"html_body"`
+	Status           string     `json:"status" db:"status"`
+	Starred          bool       `json:"starred" db:"starred"`
+	Unread           bool       `json:"unread" db:"unread"`
+	ProviderID       string     `json:"providerId" db:"provider_id"`
+	RawKey           string     `json:"rawKey" db:"raw_key"`
+	ExternalID       *string    `json:"externalId" db:"external_id"`
+	ThreadID         string     `json:"threadId" db:"thread_id"`
+	MessageID        string     `json:"messageId" db:"message_id"`
+	InReplyTo        string     `json:"inReplyTo" db:"in_reply_to"`
+	ReferencesHeader string     `json:"referencesHeader" db:"references_header"`
+	SendAt           *time.Time `json:"sendAt" db:"send_at"`
+	CreatedAt        time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt        time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 // Validate applies the rules of MailItem from schema.lidza.
@@ -307,6 +314,15 @@ func (v MailItem) Validate() error {
 	}
 	if v.ThreadID == "" {
 		errs.Add("threadId", "required", "required")
+	}
+	if v.MessageID == "" {
+		errs.Add("messageId", "required", "required")
+	}
+	if v.InReplyTo == "" {
+		errs.Add("inReplyTo", "required", "required")
+	}
+	if v.ReferencesHeader == "" {
+		errs.Add("referencesHeader", "required", "required")
 	}
 	return errs.Result()
 }
@@ -850,6 +866,7 @@ func (v Calendar) Validate() error {
 
 // CalendarEvent is a row of the calendar_event table.
 type CalendarEvent struct {
+	MeetingID   *string    `json:"meetingId" db:"meeting_id"`
 	ID          string     `json:"id" db:"id"`
 	CalendarID  string     `json:"calendarId" db:"calendar_id"`
 	Uid         string     `json:"uid" db:"uid"`
@@ -1190,6 +1207,50 @@ func (v MeetingWebhook) Validate() error {
 	}
 	if v.Checksum == "" {
 		errs.Add("checksum", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailLabel is a row of the mail_label table.
+type MailLabel struct {
+	ID        string `json:"id" db:"id"`
+	MailboxID string `json:"mailboxId" db:"mailbox_id"`
+	Name      string `json:"name" db:"name"`
+}
+
+// Validate applies the rules of MailLabel from schema.lidza.
+func (v MailLabel) Validate() error {
+	var errs validate.Errors
+	if v.MailboxID == "" {
+		errs.Add("mailboxId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 40 {
+		errs.Add("name", "max", "at most 40 character(s)")
+	}
+	return errs.Result()
+}
+
+// MailTag is a row of the mail_tag table.
+type MailTag struct {
+	ID      string `json:"id" db:"id"`
+	ItemID  string `json:"itemId" db:"item_id"`
+	LabelID string `json:"labelId" db:"label_id"`
+}
+
+// Validate applies the rules of MailTag from schema.lidza.
+func (v MailTag) Validate() error {
+	var errs validate.Errors
+	if v.ItemID == "" {
+		errs.Add("itemId", "required", "required")
+	}
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
 	}
 	return errs.Result()
 }
@@ -1605,6 +1666,7 @@ func (v AttachmentView) Validate() error {
 type MailDetail struct {
 	Item        MailItem         `json:"item"`
 	Attachments []AttachmentView `json:"attachments"`
+	Labels      []MailLabel      `json:"labels"`
 }
 
 // Validate applies the rules of MailDetail from schema.lidza.
@@ -1619,12 +1681,20 @@ func (v MailDetail) Validate() error {
 			break
 		}
 	}
+	for _, x := range v.Labels {
+		if err := x.Validate(); err != nil {
+			errs.Add("labels", "nested", err.Error())
+			break
+		}
+	}
 	return errs.Result()
 }
 
 // DraftInput is an API type.
 type DraftInput struct {
 	ForwardID *string `json:"forwardId"`
+	ReplyID   *string `json:"replyId"`
+	ReplyAll  *bool   `json:"replyAll"`
 	To        *string `json:"to"`
 	Cc        *string `json:"cc"`
 	Bcc       *string `json:"bcc"`
@@ -2802,5 +2872,89 @@ type DriveQuota struct {
 // Validate applies the rules of DriveQuota from schema.lidza.
 func (v DriveQuota) Validate() error {
 	var errs validate.Errors
+	return errs.Result()
+}
+
+// MailLabelList is an API type.
+type MailLabelList struct {
+	Items []MailLabel `json:"items"`
+}
+
+// Validate applies the rules of MailLabelList from schema.lidza.
+func (v MailLabelList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// MailLabelInput is an API type.
+type MailLabelInput struct {
+	Name string `json:"name"`
+}
+
+// Validate applies the rules of MailLabelInput from schema.lidza.
+func (v MailLabelInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 40 {
+		errs.Add("name", "max", "at most 40 character(s)")
+	}
+	return errs.Result()
+}
+
+// MailLabelChange is an API type.
+type MailLabelChange struct {
+	LabelID string `json:"labelId"`
+	Applied bool   `json:"applied"`
+}
+
+// Validate applies the rules of MailLabelChange from schema.lidza.
+func (v MailLabelChange) Validate() error {
+	var errs validate.Errors
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailSignatureInput is an API type.
+type MailSignatureInput struct {
+	Signature *string `json:"signature"`
+}
+
+// Validate applies the rules of MailSignatureInput from schema.lidza.
+func (v MailSignatureInput) Validate() error {
+	var errs validate.Errors
+	if v.Signature != nil {
+		x := *v.Signature
+		if len(x) > 5000 {
+			errs.Add("signature", "max", "at most 5000 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// BindMeetingInput is an API type.
+type BindMeetingInput struct {
+	MeetingID string `json:"meetingId"`
+	Sequence  int    `json:"sequence"`
+}
+
+// Validate applies the rules of BindMeetingInput from schema.lidza.
+func (v BindMeetingInput) Validate() error {
+	var errs validate.Errors
+	if v.MeetingID == "" {
+		errs.Add("meetingId", "required", "required")
+	}
 	return errs.Result()
 }

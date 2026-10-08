@@ -1,4 +1,4 @@
-// Līdza v0.1.88's published audit, with a fresh browser process per route.
+// Līdza's published audit, with a fresh browser process per route.
 // Prepare .lidza/audit-{performance,common}.mjs with `lidza audit performance`.
 // Run against a built app: BASE_URL=http://127.0.0.1:3002 node scripts/audit-performance-isolated.mjs
 import { spawn } from 'node:child_process'

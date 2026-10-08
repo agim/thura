@@ -1,10 +1,11 @@
-package main
+package tests
 
 import (
 	"fmt"
 	"net/url"
 	"strings"
 	"testing"
+	"thura/app"
 	"time"
 
 	"github.com/agim/lidza/packs/auth"
@@ -17,7 +18,7 @@ import (
 
 func TestDirectoryAndMailPagingSearchIsolation(t *testing.T) {
 	t.Setenv("JOBS_WORKERS", "0")
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	password := "lilac copper meadow lantern 7829"
 	var spaces []schema.Workspace

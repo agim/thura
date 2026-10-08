@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"thura/app"
 	"time"
 
 	"github.com/agim/lidza/packs/auth"
@@ -21,7 +22,7 @@ import (
 func TestInvitationLifecycleAndRoles(t *testing.T) {
 	t.Setenv("AUTH_LOGIN_BURST", "100")
 	t.Setenv("AUTH_SIGNIN_BURST", "100")
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	password := "bamboo waterfall blue lantern 8512"
 	ownerEmail := fmt.Sprintf("inviter-%d@example.com", time.Now().UnixNano())
@@ -155,7 +156,7 @@ func TestInvitationLifecycleAndRoles(t *testing.T) {
 }
 
 func TestConcurrentLastOwnerRemoval(t *testing.T) {
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	password := "silver mountain waterfall lantern 8294"
 	ownerEmail := fmt.Sprintf("race-owner-%d@example.com", time.Now().UnixNano())
@@ -219,7 +220,7 @@ func TestConcurrentLastOwnerRemoval(t *testing.T) {
 
 func TestConcurrentInviteAcceptance(t *testing.T) {
 	t.Setenv("AUTH_LOGIN_BURST", "100")
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	password := "sunrise meadow bamboo lantern 3581"
 	ownerEmail := fmt.Sprintf("replay-owner-%d@example.com", time.Now().UnixNano())

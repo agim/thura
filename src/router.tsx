@@ -10,7 +10,7 @@ import {
 } from '@tanstack/react-router'
 import { RouteError } from './ErrorBoundary'
 import { useEffect } from 'react'
-import pageMetadata from './page-metadata.json'
+import pageMetadata from '../app/page-metadata.json'
 
 function PageHead() {
   const path = useRouterState({ select: state => state.location.pathname })

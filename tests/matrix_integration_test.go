@@ -1,6 +1,6 @@
 //go:build matrixintegration
 
-package main
+package tests
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"net/url"
 	"testing"
+	"thura/app"
 	provider "thura/internal/providers/matrix"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -23,7 +24,7 @@ func TestMatrixRealFederationAndBan(t *testing.T) {
 	t.Setenv("MATRIX_SERVER_URL", "http://127.0.0.1:8108")
 	t.Setenv("MATRIX_SERVER_NAME", "matrix-a.thura.test:8448")
 	t.Setenv("MATRIX_AS_TOKEN", "thura-matrix-a-application-service-fixture-token-99184")
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	cfgA, err := provider.Load()
 	if err != nil {

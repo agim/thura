@@ -237,6 +237,7 @@ type CalendarDispatch struct {
 }
 
 type CalendarEvent struct {
+	MeetingID   *string    `json:"meeting_id"`
 	ID          string     `json:"id"`
 	CalendarID  string     `json:"calendar_id"`
 	Uid         string     `json:"uid"`
@@ -404,27 +405,36 @@ type MailAttachment struct {
 }
 
 type MailItem struct {
-	ID          string     `json:"id"`
-	MailboxID   string     `json:"mailbox_id"`
-	AuthorID    string     `json:"author_id"`
-	Folder      MailFolder `json:"folder"`
-	FromAddress string     `json:"from_address"`
-	ToAddress   string     `json:"to_address"`
-	Cc          string     `json:"cc"`
-	Bcc         string     `json:"bcc"`
-	Subject     string     `json:"subject"`
-	TextBody    string     `json:"text_body"`
-	HTMLBody    string     `json:"html_body"`
-	Status      string     `json:"status"`
-	Starred     bool       `json:"starred"`
-	Unread      bool       `json:"unread"`
-	ProviderID  string     `json:"provider_id"`
-	RawKey      string     `json:"raw_key"`
-	ExternalID  *string    `json:"external_id"`
-	ThreadID    string     `json:"thread_id"`
-	SendAt      *time.Time `json:"send_at"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID               string     `json:"id"`
+	MailboxID        string     `json:"mailbox_id"`
+	AuthorID         string     `json:"author_id"`
+	Folder           MailFolder `json:"folder"`
+	FromAddress      string     `json:"from_address"`
+	ToAddress        string     `json:"to_address"`
+	Cc               string     `json:"cc"`
+	Bcc              string     `json:"bcc"`
+	Subject          string     `json:"subject"`
+	TextBody         string     `json:"text_body"`
+	HTMLBody         string     `json:"html_body"`
+	Status           string     `json:"status"`
+	Starred          bool       `json:"starred"`
+	Unread           bool       `json:"unread"`
+	ProviderID       string     `json:"provider_id"`
+	RawKey           string     `json:"raw_key"`
+	ExternalID       *string    `json:"external_id"`
+	ThreadID         string     `json:"thread_id"`
+	MessageID        string     `json:"message_id"`
+	InReplyTo        string     `json:"in_reply_to"`
+	ReferencesHeader string     `json:"references_header"`
+	SendAt           *time.Time `json:"send_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+type MailLabel struct {
+	ID        string `json:"id"`
+	MailboxID string `json:"mailbox_id"`
+	Name      string `json:"name"`
 }
 
 type MailMessage struct {
@@ -448,12 +458,19 @@ type MailMessage struct {
 	SentAt      *time.Time `json:"sent_at"`
 }
 
+type MailTag struct {
+	ID      string `json:"id"`
+	ItemID  string `json:"item_id"`
+	LabelID string `json:"label_id"`
+}
+
 type Mailbox struct {
 	ID           string    `json:"id"`
 	WorkspaceID  string    `json:"workspace_id"`
 	Name         string    `json:"name"`
 	Address      string    `json:"address"`
 	ConfigPrefix string    `json:"config_prefix"`
+	Signature    string    `json:"signature"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

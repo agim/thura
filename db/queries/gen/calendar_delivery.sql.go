@@ -194,13 +194,14 @@ func (q *Queries) GetCalendarReplyGrant(ctx context.Context, tokenHash string) (
 }
 
 const getReplyEvent = `-- name: GetReplyEvent :one
-SELECT e.id, e.calendar_id, e.uid, e.organizer, e.title, e.description, e.location, e.all_day, e.start_date, e.end_date, e.starts_at, e.ends_at, e.time_zone, e.rrule, e.sequence, e.cancelled, e.created_at, e.updated_at FROM calendar_event e JOIN event_attendee a ON a.event_id=e.id WHERE a.id=$1
+SELECT e.meeting_id, e.id, e.calendar_id, e.uid, e.organizer, e.title, e.description, e.location, e.all_day, e.start_date, e.end_date, e.starts_at, e.ends_at, e.time_zone, e.rrule, e.sequence, e.cancelled, e.created_at, e.updated_at FROM calendar_event e JOIN event_attendee a ON a.event_id=e.id WHERE a.id=$1
 `
 
 func (q *Queries) GetReplyEvent(ctx context.Context, id string) (CalendarEvent, error) {
 	row := q.db.QueryRow(ctx, getReplyEvent, id)
 	var i CalendarEvent
 	err := row.Scan(
+		&i.MeetingID,
 		&i.ID,
 		&i.CalendarID,
 		&i.Uid,

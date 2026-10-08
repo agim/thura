@@ -1,28 +1,36 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, type ChatRoom, type ChatMessage } from '@lidza/client'
+import { api, type ChatRoom, type ChatMessage, type Contact } from '@lidza/client'
 import { downloadContent } from '../lib/download'
 import { userError } from '../lib/errors'
-export function LiveChat({ workspaceId }: { workspaceId: string }) {
+export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string; contact?: Contact; onMeet?: (name: string) => void }) {
   const client = useQueryClient()
   const rooms = useQuery({ queryKey: ['chat-rooms', workspaceId], queryFn: () => api.listChatRooms({ workspaceId }) })
   const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.listMembers({ workspaceId }) })
   const session = useQuery({ queryKey: ['session'], queryFn: () => api.authSession() })
   const [selected, setSelected] = useState('')
-  const [name, setName] = useState('')
+  const [name, setName] = useState(contact?.name || '')
+  const [contactNotice, setContactNotice] = useState('')
   const [recipient, setRecipient] = useState('')
   const [requestId, setRequestId] = useState('')
+  useEffect(() => {
+    if (!contact || !members.data || !session.data?.user) return
+    const member = members.data.items.find(m => m.email.toLowerCase() === contact.email.toLowerCase() && m.subject !== session.data.user!.subject)
+    setRecipient(member?.subject || '')
+    setContactNotice(member ? `Prepare a private conversation with ${contact.name}.` : 'This contact is not another workspace member. Choose a member for a private conversation; external users require an administrator-managed channel invitation.')
+  }, [contact, members.data, session.data])
   const create = useMutation({ mutationFn: (id: string) => api.createChatRoom({ workspaceId }, { name, participant: recipient || undefined, requestId: id }), onSuccess: async r => { setSelected(r.id); setName(''); setRequestId(''); await client.invalidateQueries({ queryKey: ['chat-rooms', workspaceId] }) } })
   const room = rooms.data?.items.find(r => r.id === selected) ?? rooms.data?.items[0]
   return <section className="ws-page"><h2>Chat</h2><p>Matrix channels and private conversations. Rooms are server-readable; this version does not enable end-to-end encryption.</p>
     {rooms.data && !rooms.data.configured && <p role="status">Matrix chat is not configured. An operator must connect a homeserver before creating a room.</p>}
-    <form className="row" onSubmit={e => { e.preventDefault(); const id = requestId || crypto.randomUUID(); setRequestId(id); create.mutate(id) }}><label>Room name<input required maxLength={200} value={name} onChange={e => { setName(e.target.value); setRequestId('') }} /></label><label>Conversation<select value={recipient} onChange={e => { setRecipient(e.target.value); setRequestId('') }}><option value="">Shared workspace channel</option>{members.data?.items.filter(m => m.subject !== session.data?.user?.subject).map(m => <option key={m.subject} value={m.subject}>{m.name || m.email}</option>)}</select></label><button disabled={create.isPending || !rooms.data?.configured}>Create room</button></form>
+    {contactNotice && <p role="status">{contactNotice}</p>}
+    <form className="row" onSubmit={e => { e.preventDefault(); const id = requestId || crypto.randomUUID(); setRequestId(id); create.mutate(id) }}><label>Room name<input required maxLength={200} value={name} onChange={e => { setName(e.target.value); setRequestId('') }} /></label><label>Conversation<select aria-label="Conversation" value={recipient} onChange={e => { setRecipient(e.target.value); setRequestId('') }}><option value="">Shared workspace channel</option>{members.data?.items.filter(m => m.subject !== session.data?.user?.subject).map(m => <option key={m.subject} value={m.subject}>{m.name || m.email}</option>)}</select></label><button disabled={create.isPending || !rooms.data?.configured}>Create room</button></form>
     <label>Chat room<select aria-label="Chat room" value={room?.id || ''} onChange={e => setSelected(e.target.value)}><option value="" disabled>Select a room</option>{rooms.data?.items.map(r => <option key={r.id} value={r.id}>{r.name}{r.direct ? ' · Private' : ''}</option>)}</select></label>
     {(rooms.error || members.error || create.error) && <p role="alert">{userError(rooms.error || members.error || create.error)}</p>}
-    {room && rooms.data?.configured && <ChatConversation key={room.id} room={room} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} />}
+    {room && rooms.data?.configured && <ChatConversation onMeet={onMeet} key={room.id} room={room} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} />}
   </section>
 }
-function ChatConversation({ room, manager }: { room: ChatRoom; manager: boolean }) {
+function ChatConversation({ room, manager, onMeet }: { room: ChatRoom; manager: boolean; onMeet?: (name: string) => void }) {
   const [body, setBody] = useState('')
   const [transactionId, setTransactionId] = useState('')
   const [replyTo, setReplyTo] = useState('')
@@ -43,7 +51,7 @@ function ChatConversation({ room, manager }: { room: ChatRoom; manager: boolean 
   const receipt = useMutation({ mutationFn: (eventId: string) => api.markChatRead(params, { eventId }) })
   const all = [...new Map([...older, ...(timeline.data?.items || [])].map(m => [m.id, m])).values()].sort((a, b) => a.timestamp - b.timestamp)
   const latest = timeline.data?.items[0]
-  return <section><h3>{room.name}</h3>{timeline.isError && <p role="alert">Connection interrupted: {userError(timeline.error)}. Retrying automatically.</p>}
+  return <section><h3>{room.name}</h3>{onMeet && <button onClick={() => onMeet(room.name)}>Prepare meeting for this conversation</button>}{timeline.isError && <p role="alert">Connection interrupted: {userError(timeline.error)}. Retrying automatically.</p>}
     <button disabled={backfill.isPending || cursor === '' || (!cursor && !timeline.data?.next)} onClick={() => backfill.mutate()}>Load older messages</button>
     <ol className="chat-messages" aria-label="Messages">{all.map(m => <li key={m.id}><strong>{m.sender}</strong> <time dateTime={new Date(m.timestamp).toISOString()}>{new Date(m.timestamp).toLocaleString('en-US', { timeZone: 'America/New_York' })}</time>{m.replyTo && <p>Reply to: {all.find(r => r.id === m.replyTo)?.body || m.replyTo}</p>}<p className="chat-body">{m.body}</p>{m.file && <button disabled={download.isPending} onClick={() => download.mutate(m.id)}>Download {m.file.name}</button>}<button onClick={() => { setReplyTo(m.id); setTransactionId('') }}>Reply</button></li>)}</ol>
     {latest && <button disabled={receipt.isPending} onClick={() => receipt.mutate(latest.id)}>Mark conversation read</button>}

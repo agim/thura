@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"bytes"
@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"thura/app"
 	q "thura/db/queries/gen"
 	"thura/internal/drive"
 	provider "thura/internal/providers/onlyoffice"
@@ -34,7 +35,7 @@ func TestOfficeSignedCallbacksVersionConflictAndRevocation(t *testing.T) {
 	t.Setenv("OFFICE_SERVER_URL", documents.URL)
 	t.Setenv("OFFICE_APP_URL", "http://app.example")
 	t.Setenv("OFFICE_JWT_SECRET", secret)
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("office-%d@example.com", time.Now().UnixNano())
 	pw := "forest waterfall copper lantern 7193"

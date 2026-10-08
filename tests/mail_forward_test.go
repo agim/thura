@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"thura/app"
 	"time"
 
 	"github.com/agim/lidza/packs/auth"
@@ -18,7 +19,7 @@ import (
 
 func TestForwardAttachmentsAreAtomicAndMailboxScoped(t *testing.T) {
 	t.Setenv("JOBS_WORKERS", "0")
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("forward-%d@example.com", time.Now().UnixNano())
 	password := "river forest lantern copper 4938"
@@ -91,6 +92,19 @@ func TestForwardAttachmentsAreAtomicAndMailboxScoped(t *testing.T) {
 		t.Fatal("forwarded bytes changed")
 	}
 	request("GET", paths[0]+"/"+forwarded.ID+"/attachments/"+source.Attachments[0].ID, nil, nil, 404)
+	request("DELETE", paths[0]+"/"+forwarded.ID+"/attachments/"+source.Attachments[0].ID, nil, nil, 404)
+	request("DELETE", paths[0]+"/"+forwarded.ID+"/attachments/"+detail.Attachments[0].ID, nil, nil, 204)
+	request("GET", paths[0]+"/"+original.ID+"/attachments/"+source.Attachments[0].ID, nil, &download, 200)
+	decoded, err = base64.StdEncoding.DecodeString(download.Data)
+	if err != nil || !bytes.Equal(decoded, data) {
+		t.Fatal("removing forward attachment damaged original stored bytes")
+	}
+	var removed schema.MailDetail
+	request("GET", paths[0]+"/"+forwarded.ID, nil, &removed, 200)
+	if len(removed.Attachments) != 0 {
+		t.Fatal("attachment removal did not persist")
+	}
+
 	request("PUT", paths[0]+"/"+forwarded.ID, schema.DraftInput{ForwardID: &original.ID}, nil, 422)
 	request("POST", paths[1], schema.DraftInput{ForwardID: &original.ID}, nil, 404)
 	missing := "00000000-0000-4000-8000-000000000099"

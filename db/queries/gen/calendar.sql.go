@@ -24,14 +24,51 @@ func (q *Queries) AddEventAttendee(ctx context.Context, arg AddEventAttendeePara
 	return err
 }
 
+const bindCalendarMeeting = `-- name: BindCalendarMeeting :one
+UPDATE calendar_event SET meeting_id=$2, sequence=sequence+1, updated_at=now() WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+`
+
+type BindCalendarMeetingParams struct {
+	ID        string  `json:"id"`
+	MeetingID *string `json:"meeting_id"`
+}
+
+func (q *Queries) BindCalendarMeeting(ctx context.Context, arg BindCalendarMeetingParams) (CalendarEvent, error) {
+	row := q.db.QueryRow(ctx, bindCalendarMeeting, arg.ID, arg.MeetingID)
+	var i CalendarEvent
+	err := row.Scan(
+		&i.MeetingID,
+		&i.ID,
+		&i.CalendarID,
+		&i.Uid,
+		&i.Organizer,
+		&i.Title,
+		&i.Description,
+		&i.Location,
+		&i.AllDay,
+		&i.StartDate,
+		&i.EndDate,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.TimeZone,
+		&i.Rrule,
+		&i.Sequence,
+		&i.Cancelled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const bumpEventSequence = `-- name: BumpEventSequence :one
-UPDATE calendar_event SET sequence=sequence+1,updated_at=now() WHERE id=$1 RETURNING id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET sequence=sequence+1,updated_at=now() WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 func (q *Queries) BumpEventSequence(ctx context.Context, id string) (CalendarEvent, error) {
 	row := q.db.QueryRow(ctx, bumpEventSequence, id)
 	var i CalendarEvent
 	err := row.Scan(
+		&i.MeetingID,
 		&i.ID,
 		&i.CalendarID,
 		&i.Uid,
@@ -66,13 +103,14 @@ func (q *Queries) CalendarAccountEmail(ctx context.Context, subject string) (str
 }
 
 const cancelCalendarEvent = `-- name: CancelCalendarEvent :one
-UPDATE calendar_event SET cancelled=true,sequence=sequence+1,updated_at=now() WHERE id=$1 RETURNING id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET cancelled=true,sequence=sequence+1,updated_at=now() WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 func (q *Queries) CancelCalendarEvent(ctx context.Context, id string) (CalendarEvent, error) {
 	row := q.db.QueryRow(ctx, cancelCalendarEvent, id)
 	var i CalendarEvent
 	err := row.Scan(
+		&i.MeetingID,
 		&i.ID,
 		&i.CalendarID,
 		&i.Uid,
@@ -158,7 +196,7 @@ func (q *Queries) CreateCalendar(ctx context.Context, arg CreateCalendarParams) 
 
 const createCalendarEvent = `-- name: CreateCalendarEvent :one
 INSERT INTO calendar_event(calendar_id,uid,organizer,title,description,location,all_day,start_date,end_date,starts_at,ends_at,time_zone,rrule)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 type CreateCalendarEventParams struct {
@@ -195,6 +233,7 @@ func (q *Queries) CreateCalendarEvent(ctx context.Context, arg CreateCalendarEve
 	)
 	var i CalendarEvent
 	err := row.Scan(
+		&i.MeetingID,
 		&i.ID,
 		&i.CalendarID,
 		&i.Uid,
@@ -232,7 +271,7 @@ func (q *Queries) DeleteEventAttendee(ctx context.Context, arg DeleteEventAttend
 }
 
 const findCalendarEventUID = `-- name: FindCalendarEventUID :one
-SELECT id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND uid=$2
+SELECT meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND uid=$2
 `
 
 type FindCalendarEventUIDParams struct {
@@ -244,6 +283,7 @@ func (q *Queries) FindCalendarEventUID(ctx context.Context, arg FindCalendarEven
 	row := q.db.QueryRow(ctx, findCalendarEventUID, arg.CalendarID, arg.Uid)
 	var i CalendarEvent
 	err := row.Scan(
+		&i.MeetingID,
 		&i.ID,
 		&i.CalendarID,
 		&i.Uid,
@@ -291,7 +331,7 @@ func (q *Queries) GetCalendar(ctx context.Context, arg GetCalendarParams) (Calen
 }
 
 const getCalendarEvent = `-- name: GetCalendarEvent :one
-SELECT id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND id=$2
+SELECT meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND id=$2
 `
 
 type GetCalendarEventParams struct {
@@ -303,6 +343,7 @@ func (q *Queries) GetCalendarEvent(ctx context.Context, arg GetCalendarEventPara
 	row := q.db.QueryRow(ctx, getCalendarEvent, arg.CalendarID, arg.ID)
 	var i CalendarEvent
 	err := row.Scan(
+		&i.MeetingID,
 		&i.ID,
 		&i.CalendarID,
 		&i.Uid,
@@ -326,7 +367,7 @@ func (q *Queries) GetCalendarEvent(ctx context.Context, arg GetCalendarEventPara
 }
 
 const importCalendarEvent = `-- name: ImportCalendarEvent :one
-UPDATE calendar_event SET organizer=$3,title=$4,description=$5,location=$6,all_day=$7,start_date=$8,end_date=$9,starts_at=$10,ends_at=$11,time_zone=$12,rrule=$13,sequence=$14,cancelled=$15,updated_at=now() WHERE calendar_id=$1 AND id=$2 RETURNING id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET organizer=$3,title=$4,description=$5,location=$6,all_day=$7,start_date=$8,end_date=$9,starts_at=$10,ends_at=$11,time_zone=$12,rrule=$13,sequence=$14,cancelled=$15,updated_at=now() WHERE calendar_id=$1 AND id=$2 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 type ImportCalendarEventParams struct {
@@ -367,6 +408,7 @@ func (q *Queries) ImportCalendarEvent(ctx context.Context, arg ImportCalendarEve
 	)
 	var i CalendarEvent
 	err := row.Scan(
+		&i.MeetingID,
 		&i.ID,
 		&i.CalendarID,
 		&i.Uid,
@@ -420,7 +462,7 @@ func (q *Queries) ListCalendarAttendees(ctx context.Context, calendarID string) 
 }
 
 const listCalendarEvents = `-- name: ListCalendarEvents :many
-SELECT id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 ORDER BY created_at DESC LIMIT 1000
+SELECT meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 ORDER BY created_at DESC LIMIT 1000
 `
 
 func (q *Queries) ListCalendarEvents(ctx context.Context, calendarID string) ([]CalendarEvent, error) {
@@ -433,6 +475,7 @@ func (q *Queries) ListCalendarEvents(ctx context.Context, calendarID string) ([]
 	for rows.Next() {
 		var i CalendarEvent
 		if err := rows.Scan(
+			&i.MeetingID,
 			&i.ID,
 			&i.CalendarID,
 			&i.Uid,
@@ -597,7 +640,7 @@ func (q *Queries) ListEventExceptions(ctx context.Context, eventID string) ([]Ev
 }
 
 const lockCalendarEvent = `-- name: LockCalendarEvent :one
-SELECT id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND id=$2 FOR UPDATE
+SELECT meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND id=$2 FOR UPDATE
 `
 
 type LockCalendarEventParams struct {
@@ -609,6 +652,7 @@ func (q *Queries) LockCalendarEvent(ctx context.Context, arg LockCalendarEventPa
 	row := q.db.QueryRow(ctx, lockCalendarEvent, arg.CalendarID, arg.ID)
 	var i CalendarEvent
 	err := row.Scan(
+		&i.MeetingID,
 		&i.ID,
 		&i.CalendarID,
 		&i.Uid,
@@ -703,7 +747,7 @@ func (q *Queries) SaveEventException(ctx context.Context, arg SaveEventException
 }
 
 const setImportedEventSequence = `-- name: SetImportedEventSequence :one
-UPDATE calendar_event SET sequence=$2,cancelled=$3 WHERE id=$1 RETURNING id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET sequence=$2,cancelled=$3 WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 type SetImportedEventSequenceParams struct {
@@ -716,6 +760,7 @@ func (q *Queries) SetImportedEventSequence(ctx context.Context, arg SetImportedE
 	row := q.db.QueryRow(ctx, setImportedEventSequence, arg.ID, arg.Sequence, arg.Cancelled)
 	var i CalendarEvent
 	err := row.Scan(
+		&i.MeetingID,
 		&i.ID,
 		&i.CalendarID,
 		&i.Uid,
@@ -740,7 +785,7 @@ func (q *Queries) SetImportedEventSequence(ctx context.Context, arg SetImportedE
 
 const updateCalendarEvent = `-- name: UpdateCalendarEvent :one
 UPDATE calendar_event SET title=$3,description=$4,location=$5,all_day=$6,start_date=$7,end_date=$8,starts_at=$9,ends_at=$10,time_zone=$11,rrule=$12,sequence=sequence+1,updated_at=now()
-WHERE calendar_id=$1 AND id=$2 RETURNING id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+WHERE calendar_id=$1 AND id=$2 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 type UpdateCalendarEventParams struct {
@@ -775,6 +820,7 @@ func (q *Queries) UpdateCalendarEvent(ctx context.Context, arg UpdateCalendarEve
 	)
 	var i CalendarEvent
 	err := row.Scan(
+		&i.MeetingID,
 		&i.ID,
 		&i.CalendarID,
 		&i.Uid,

@@ -45,6 +45,7 @@ CREATE TABLE mailbox (
   name varchar(120) NOT NULL,
   address varchar(254) NOT NULL,
   config_prefix varchar(100) NOT NULL,
+  signature text NOT NULL DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX mailbox_workspace_id_idx ON mailbox (workspace_id);
@@ -68,6 +69,9 @@ CREATE TABLE mail_item (
   raw_key text NOT NULL DEFAULT '',
   external_id text,
   thread_id text NOT NULL DEFAULT '',
+  message_id text NOT NULL DEFAULT '',
+  in_reply_to text NOT NULL DEFAULT '',
+  references_header text NOT NULL DEFAULT '',
   send_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -319,7 +323,20 @@ CREATE TABLE calendar (
 );
 CREATE INDEX calendar_workspace_id_idx ON calendar (workspace_id);
 
+CREATE TABLE meeting (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  request_id uuid NOT NULL,
+  name varchar(200) NOT NULL,
+  created_by text NOT NULL,
+  ended_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX meeting_workspace_id_idx ON meeting (workspace_id);
+CREATE UNIQUE INDEX meeting_workspace_id_request_id_key ON meeting (workspace_id, request_id);
+
 CREATE TABLE calendar_event (
+  meeting_id uuid REFERENCES meeting(id),
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   calendar_id uuid NOT NULL REFERENCES calendar(id),
   uid text NOT NULL,
@@ -430,18 +447,6 @@ CREATE TABLE chat_participant (
 CREATE INDEX chat_participant_room_id_idx ON chat_participant (room_id);
 CREATE UNIQUE INDEX chat_participant_room_id_subject_key ON chat_participant (room_id, subject);
 
-CREATE TABLE meeting (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspace(id),
-  request_id uuid NOT NULL,
-  name varchar(200) NOT NULL,
-  created_by text NOT NULL,
-  ended_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX meeting_workspace_id_idx ON meeting (workspace_id);
-CREATE UNIQUE INDEX meeting_workspace_id_request_id_key ON meeting (workspace_id, request_id);
-
 CREATE TABLE meeting_participant (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   meeting_id uuid NOT NULL REFERENCES meeting(id),
@@ -460,4 +465,21 @@ CREATE TABLE meeting_webhook (
   checksum text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE mail_label (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  mailbox_id uuid NOT NULL REFERENCES mailbox(id),
+  name varchar(40) NOT NULL
+);
+CREATE INDEX mail_label_mailbox_id_idx ON mail_label (mailbox_id);
+CREATE UNIQUE INDEX mail_label_mailbox_id_name_key ON mail_label (mailbox_id, name);
+
+CREATE TABLE mail_tag (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  item_id uuid NOT NULL REFERENCES mail_item(id),
+  label_id uuid NOT NULL REFERENCES mail_label(id)
+);
+CREATE INDEX mail_tag_item_id_idx ON mail_tag (item_id);
+CREATE INDEX mail_tag_label_id_idx ON mail_tag (label_id);
+CREATE UNIQUE INDEX mail_tag_item_id_label_id_key ON mail_tag (item_id, label_id);
 

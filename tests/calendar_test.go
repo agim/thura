@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"bytes"
@@ -11,13 +11,14 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"thura/app"
 	"thura/internal/workspace"
 	"thura/schema"
 	"time"
 )
 
 func TestCalendarPrivacyConcurrentVersionsAndICSImport(t *testing.T) {
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	suffix := time.Now().UnixNano()
 	email := fmt.Sprintf("calendar-%d@example.com", suffix)

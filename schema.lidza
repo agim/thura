@@ -107,6 +107,7 @@ model Mailbox {
   name string @max(120)
   address string @email @max(254)
   configPrefix string @max(100)
+  signature text @default("")
   createdAt time @default(now())
 }
 model MailItem {
@@ -128,6 +129,9 @@ model MailItem {
   rawKey string @default("")
   externalId string?
   threadId string @default("")
+  messageId string @default("")
+  inReplyTo string @default("")
+  referencesHeader string @default("")
   sendAt time?
   createdAt time @default(now())
   updatedAt time @default(now())
@@ -158,9 +162,12 @@ type AttachmentView {
 type MailDetail {
   item MailItem
   attachments AttachmentView[]
+  labels MailLabel[]
 }
 type DraftInput {
   forwardId uuid?
+  replyId uuid?
+  replyAll bool?
   to string? @max(2000)
   cc string? @max(2000)
   bcc string? @max(2000)
@@ -490,6 +497,7 @@ model Calendar {
  createdAt time @default(now())
 }
 model CalendarEvent {
+ meetingId uuid? @ref(Meeting)
  id uuid @id @default(uuid())
  calendarId uuid @ref(Calendar) @index
  uid string
@@ -769,4 +777,35 @@ type DriveQuota {
  retained int
  reserved int
  limit int
+}
+
+model MailLabel {
+ id uuid @id @default(uuid())
+ mailboxId uuid @ref(Mailbox) @index
+ name string @min(1) @max(40)
+ @@unique(mailboxId,name)
+}
+model MailTag {
+ id uuid @id @default(uuid())
+ itemId uuid @ref(MailItem) @index
+ labelId uuid @ref(MailLabel) @index
+ @@unique(itemId,labelId)
+}
+type MailLabelList {
+ items MailLabel[]
+}
+type MailLabelInput {
+ name string @min(1) @max(40)
+}
+type MailLabelChange {
+ labelId uuid
+ applied bool
+}
+type MailSignatureInput {
+ signature string? @max(5000)
+}
+
+type BindMeetingInput {
+ meetingId uuid
+ sequence int
 }

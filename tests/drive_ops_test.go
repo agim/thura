@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"thura/app"
 	"time"
 
 	"github.com/agim/lidza/packs/auth"
@@ -23,7 +24,7 @@ import (
 func TestDriveQuotaReservationPurgeAndCleanup(t *testing.T) {
 	t.Setenv("DRIVE_QUOTA_BYTES", "1048576")
 	t.Setenv("STORAGE_DIR", t.TempDir())
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("drive-ops-%d@example.com", time.Now().UnixNano())
 	pw := "maple meadow waterfall lantern 7593"

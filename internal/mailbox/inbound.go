@@ -31,8 +31,8 @@ type ParsedAttachment struct {
 	Data                         []byte
 }
 type ParsedMail struct {
-	From, To, Subject, Text, HTML, Thread string
-	Attachments                           []ParsedAttachment
+	From, To, Cc, Subject, Text, HTML, Thread, MessageID, InReplyTo, References string
+	Attachments                                                                 []ParsedAttachment
 }
 
 func Parse(raw []byte) (ParsedMail, error) {
@@ -45,9 +45,14 @@ func Parse(raw []byte) (ParsedMail, error) {
 	if err != nil {
 		return ParsedMail{}, err
 	}
-	out := ParsedMail{From: m.Header.Get("From"), To: m.Header.Get("To"), Subject: subject, Thread: m.Header.Get("In-Reply-To")}
+	out := ParsedMail{From: m.Header.Get("From"), To: m.Header.Get("To"), Cc: m.Header.Get("Cc"), Subject: subject,
+		MessageID: firstMessageID(m.Header.Get("Message-ID")), InReplyTo: firstMessageID(m.Header.Get("In-Reply-To")), References: cleanReferences(m.Header.Get("References"))}
+	out.Thread = firstMessageID(out.References)
 	if out.Thread == "" {
-		out.Thread = m.Header.Get("Message-ID")
+		out.Thread = out.InReplyTo
+	}
+	if out.Thread == "" {
+		out.Thread = out.MessageID
 	}
 	parts := 0
 	var walk func(map[string][]string, io.Reader, int) error
@@ -203,12 +208,21 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return queries.MailItem{}, err
 	}
+	if parsed.InReplyTo != "" {
+		parent, parentErr := tq.FindMailThreadParent(ctx, queries.FindMailThreadParentParams{MailboxID: m.ID, MessageID: parsed.InReplyTo})
+		if parentErr == nil && parent.ThreadID != "" {
+			parsed.Thread = parent.ThreadID
+		}
+		if parentErr != nil && !errors.Is(parentErr, pgx.ErrNoRows) {
+			return queries.MailItem{}, parentErr
+		}
+	}
 	digest := sha256.Sum256(raw)
 	rawKey := "mail/" + m.ID + "/raw/" + hex.EncodeToString(digest[:]) + ".eml"
 	if _, err = storage.From(ctx).Put(ctx, rawKey, bytes.NewReader(raw), storage.PutOptions{ContentType: "message/rfc822"}); err != nil {
 		return queries.MailItem{}, err
 	}
-	item, err := tq.InsertInboundMail(ctx, queries.InsertInboundMailParams{MailboxID: m.ID, FromAddress: parsed.From, ToAddress: parsed.To, Subject: parsed.Subject, TextBody: parsed.Text, HTMLBody: parsed.HTML, RawKey: rawKey, ExternalID: &deliveryID, ThreadID: parsed.Thread})
+	item, err := tq.InsertInboundMail(ctx, queries.InsertInboundMailParams{MailboxID: m.ID, FromAddress: parsed.From, ToAddress: parsed.To, Cc: parsed.Cc, Subject: parsed.Subject, TextBody: parsed.Text, HTMLBody: parsed.HTML, RawKey: rawKey, ExternalID: &deliveryID, ThreadID: parsed.Thread, MessageID: parsed.MessageID, InReplyTo: parsed.InReplyTo, ReferencesHeader: parsed.References})
 	if err != nil {
 		return queries.MailItem{}, err
 	}

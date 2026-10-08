@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"crypto/sha256"
@@ -9,6 +9,7 @@ import (
 	"github.com/agim/lidza/pkg/lidzatest"
 	"strings"
 	"testing"
+	"thura/app"
 	"thura/internal/calendar"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestCalendarInvitationsRepliesAndReminderDeduplication(t *testing.T) {
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	pool := db.From(ctx)
 	suffix := time.Now().UnixNano()

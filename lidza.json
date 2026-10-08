@@ -14,5 +14,6 @@
     "lidza/storage"
   ],
   "sdk": {},
-  "deploy": {}
+  "deploy": {},
+  "appDir": "app"
 }

@@ -45,8 +45,22 @@ func (q *Queries) AddMailAttachment(ctx context.Context, arg AddMailAttachmentPa
 	return i, err
 }
 
+const addMailTag = `-- name: AddMailTag :exec
+INSERT INTO mail_tag(item_id,label_id) VALUES($1,$2) ON CONFLICT(item_id,label_id) DO NOTHING
+`
+
+type AddMailTagParams struct {
+	ItemID  string `json:"item_id"`
+	LabelID string `json:"label_id"`
+}
+
+func (q *Queries) AddMailTag(ctx context.Context, arg AddMailTagParams) error {
+	_, err := q.db.Exec(ctx, addMailTag, arg.ItemID, arg.LabelID)
+	return err
+}
+
 const cancelMailItem = `-- name: CancelMailItem :one
-UPDATE mail_item SET status='draft',send_at=NULL,updated_at=now() WHERE id=$1 AND status='queued' RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at
+UPDATE mail_item SET status='draft',send_at=NULL,updated_at=now() WHERE id=$1 AND status='queued' RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at
 `
 
 func (q *Queries) CancelMailItem(ctx context.Context, id string) (MailItem, error) {
@@ -71,6 +85,9 @@ func (q *Queries) CancelMailItem(ctx context.Context, id string) (MailItem, erro
 		&i.RawKey,
 		&i.ExternalID,
 		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -80,7 +97,7 @@ func (q *Queries) CancelMailItem(ctx context.Context, id string) (MailItem, erro
 
 const createDraft = `-- name: CreateDraft :one
 INSERT INTO mail_item(mailbox_id,author_id,folder,from_address,to_address,cc,bcc,subject,text_body,html_body,thread_id)
-VALUES($1,$2,'drafts',$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at
+VALUES($1,$2,'drafts',$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at
 `
 
 type CreateDraftParams struct {
@@ -129,6 +146,9 @@ func (q *Queries) CreateDraft(ctx context.Context, arg CreateDraftParams) (MailI
 		&i.RawKey,
 		&i.ExternalID,
 		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -137,7 +157,7 @@ func (q *Queries) CreateDraft(ctx context.Context, arg CreateDraftParams) (MailI
 }
 
 const createMailbox = `-- name: CreateMailbox :one
-INSERT INTO mailbox(workspace_id,name,address,config_prefix) VALUES($1,$2,$3,$4) RETURNING id, workspace_id, name, address, config_prefix, created_at
+INSERT INTO mailbox(workspace_id,name,address,config_prefix) VALUES($1,$2,$3,$4) RETURNING id, workspace_id, name, address, config_prefix, signature, created_at
 `
 
 type CreateMailboxParams struct {
@@ -161,13 +181,70 @@ func (q *Queries) CreateMailbox(ctx context.Context, arg CreateMailboxParams) (M
 		&i.Name,
 		&i.Address,
 		&i.ConfigPrefix,
+		&i.Signature,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
+const createMailboxLabel = `-- name: CreateMailboxLabel :one
+INSERT INTO mail_label(mailbox_id,name) VALUES($1,$2) RETURNING id, mailbox_id, name
+`
+
+type CreateMailboxLabelParams struct {
+	MailboxID string `json:"mailbox_id"`
+	Name      string `json:"name"`
+}
+
+func (q *Queries) CreateMailboxLabel(ctx context.Context, arg CreateMailboxLabelParams) (MailLabel, error) {
+	row := q.db.QueryRow(ctx, createMailboxLabel, arg.MailboxID, arg.Name)
+	var i MailLabel
+	err := row.Scan(&i.ID, &i.MailboxID, &i.Name)
+	return i, err
+}
+
+const deleteLabelTags = `-- name: DeleteLabelTags :exec
+DELETE FROM mail_tag WHERE label_id=$1
+`
+
+func (q *Queries) DeleteLabelTags(ctx context.Context, labelID string) error {
+	_, err := q.db.Exec(ctx, deleteLabelTags, labelID)
+	return err
+}
+
+const deleteMailAttachment = `-- name: DeleteMailAttachment :execrows
+DELETE FROM mail_attachment WHERE id=$1 AND item_id=$2
+`
+
+type DeleteMailAttachmentParams struct {
+	ID     string `json:"id"`
+	ItemID string `json:"item_id"`
+}
+
+func (q *Queries) DeleteMailAttachment(ctx context.Context, arg DeleteMailAttachmentParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteMailAttachment, arg.ID, arg.ItemID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteMailboxLabel = `-- name: DeleteMailboxLabel :exec
+DELETE FROM mail_label WHERE id=$1 AND mailbox_id=$2
+`
+
+type DeleteMailboxLabelParams struct {
+	ID        string `json:"id"`
+	MailboxID string `json:"mailbox_id"`
+}
+
+func (q *Queries) DeleteMailboxLabel(ctx context.Context, arg DeleteMailboxLabelParams) error {
+	_, err := q.db.Exec(ctx, deleteMailboxLabel, arg.ID, arg.MailboxID)
+	return err
+}
+
 const findInboundMail = `-- name: FindInboundMail :one
-SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at FROM mail_item WHERE mailbox_id=$1 AND external_id=$2
+SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at FROM mail_item WHERE mailbox_id=$1 AND external_id=$2
 `
 
 type FindInboundMailParams struct {
@@ -197,6 +274,50 @@ func (q *Queries) FindInboundMail(ctx context.Context, arg FindInboundMailParams
 		&i.RawKey,
 		&i.ExternalID,
 		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
+		&i.SendAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const findMailThreadParent = `-- name: FindMailThreadParent :one
+SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at FROM mail_item WHERE mailbox_id=$1 AND (message_id=$2 OR provider_id=$2) ORDER BY created_at DESC,id DESC LIMIT 1
+`
+
+type FindMailThreadParentParams struct {
+	MailboxID string `json:"mailbox_id"`
+	MessageID string `json:"message_id"`
+}
+
+func (q *Queries) FindMailThreadParent(ctx context.Context, arg FindMailThreadParentParams) (MailItem, error) {
+	row := q.db.QueryRow(ctx, findMailThreadParent, arg.MailboxID, arg.MessageID)
+	var i MailItem
+	err := row.Scan(
+		&i.ID,
+		&i.MailboxID,
+		&i.AuthorID,
+		&i.Folder,
+		&i.FromAddress,
+		&i.ToAddress,
+		&i.Cc,
+		&i.Bcc,
+		&i.Subject,
+		&i.TextBody,
+		&i.HTMLBody,
+		&i.Status,
+		&i.Starred,
+		&i.Unread,
+		&i.ProviderID,
+		&i.RawKey,
+		&i.ExternalID,
+		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -224,7 +345,7 @@ func (q *Queries) GetMailAttachment(ctx context.Context, id string) (MailAttachm
 }
 
 const getMailItem = `-- name: GetMailItem :one
-SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at FROM mail_item WHERE id=$1
+SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at FROM mail_item WHERE id=$1
 `
 
 func (q *Queries) GetMailItem(ctx context.Context, id string) (MailItem, error) {
@@ -249,6 +370,9 @@ func (q *Queries) GetMailItem(ctx context.Context, id string) (MailItem, error) 
 		&i.RawKey,
 		&i.ExternalID,
 		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -257,7 +381,7 @@ func (q *Queries) GetMailItem(ctx context.Context, id string) (MailItem, error) 
 }
 
 const getMailbox = `-- name: GetMailbox :one
-SELECT id, workspace_id, name, address, config_prefix, created_at FROM mailbox WHERE id=$1
+SELECT id, workspace_id, name, address, config_prefix, signature, created_at FROM mailbox WHERE id=$1
 `
 
 func (q *Queries) GetMailbox(ctx context.Context, id string) (Mailbox, error) {
@@ -269,27 +393,48 @@ func (q *Queries) GetMailbox(ctx context.Context, id string) (Mailbox, error) {
 		&i.Name,
 		&i.Address,
 		&i.ConfigPrefix,
+		&i.Signature,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
+const getMailboxLabel = `-- name: GetMailboxLabel :one
+SELECT id, mailbox_id, name FROM mail_label WHERE id=$1 AND mailbox_id=$2
+`
+
+type GetMailboxLabelParams struct {
+	ID        string `json:"id"`
+	MailboxID string `json:"mailbox_id"`
+}
+
+func (q *Queries) GetMailboxLabel(ctx context.Context, arg GetMailboxLabelParams) (MailLabel, error) {
+	row := q.db.QueryRow(ctx, getMailboxLabel, arg.ID, arg.MailboxID)
+	var i MailLabel
+	err := row.Scan(&i.ID, &i.MailboxID, &i.Name)
+	return i, err
+}
+
 const insertInboundMail = `-- name: InsertInboundMail :one
-INSERT INTO mail_item(mailbox_id,author_id,folder,from_address,to_address,subject,text_body,html_body,status,unread,raw_key,external_id,thread_id)
-VALUES($1,'','inbox',$2,$3,$4,$5,$6,'received',true,$7,$8,$9)
-ON CONFLICT (mailbox_id,external_id) DO UPDATE SET external_id=EXCLUDED.external_id RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at
+INSERT INTO mail_item(mailbox_id,author_id,folder,from_address,to_address,cc,subject,text_body,html_body,status,unread,raw_key,external_id,thread_id,message_id,in_reply_to,references_header)
+VALUES($1,'','inbox',$2,$3,$4,$5,$6,$7,'received',true,$8,$9,$10,$11,$12,$13)
+ON CONFLICT (mailbox_id,external_id) DO UPDATE SET external_id=EXCLUDED.external_id RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at
 `
 
 type InsertInboundMailParams struct {
-	MailboxID   string  `json:"mailbox_id"`
-	FromAddress string  `json:"from_address"`
-	ToAddress   string  `json:"to_address"`
-	Subject     string  `json:"subject"`
-	TextBody    string  `json:"text_body"`
-	HTMLBody    string  `json:"html_body"`
-	RawKey      string  `json:"raw_key"`
-	ExternalID  *string `json:"external_id"`
-	ThreadID    string  `json:"thread_id"`
+	MailboxID        string  `json:"mailbox_id"`
+	FromAddress      string  `json:"from_address"`
+	ToAddress        string  `json:"to_address"`
+	Cc               string  `json:"cc"`
+	Subject          string  `json:"subject"`
+	TextBody         string  `json:"text_body"`
+	HTMLBody         string  `json:"html_body"`
+	RawKey           string  `json:"raw_key"`
+	ExternalID       *string `json:"external_id"`
+	ThreadID         string  `json:"thread_id"`
+	MessageID        string  `json:"message_id"`
+	InReplyTo        string  `json:"in_reply_to"`
+	ReferencesHeader string  `json:"references_header"`
 }
 
 func (q *Queries) InsertInboundMail(ctx context.Context, arg InsertInboundMailParams) (MailItem, error) {
@@ -297,12 +442,16 @@ func (q *Queries) InsertInboundMail(ctx context.Context, arg InsertInboundMailPa
 		arg.MailboxID,
 		arg.FromAddress,
 		arg.ToAddress,
+		arg.Cc,
 		arg.Subject,
 		arg.TextBody,
 		arg.HTMLBody,
 		arg.RawKey,
 		arg.ExternalID,
 		arg.ThreadID,
+		arg.MessageID,
+		arg.InReplyTo,
+		arg.ReferencesHeader,
 	)
 	var i MailItem
 	err := row.Scan(
@@ -324,11 +473,38 @@ func (q *Queries) InsertInboundMail(ctx context.Context, arg InsertInboundMailPa
 		&i.RawKey,
 		&i.ExternalID,
 		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listItemLabels = `-- name: ListItemLabels :many
+SELECT l.id, l.mailbox_id, l.name FROM mail_label l JOIN mail_tag t ON t.label_id=l.id WHERE t.item_id=$1 ORDER BY l.name,l.id
+`
+
+func (q *Queries) ListItemLabels(ctx context.Context, itemID string) ([]MailLabel, error) {
+	rows, err := q.db.Query(ctx, listItemLabels, itemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MailLabel
+	for rows.Next() {
+		var i MailLabel
+		if err := rows.Scan(&i.ID, &i.MailboxID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listMailAttachments = `-- name: ListMailAttachments :many
@@ -364,7 +540,7 @@ func (q *Queries) ListMailAttachments(ctx context.Context, itemID string) ([]Mai
 }
 
 const listMailItems = `-- name: ListMailItems :many
-SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at FROM mail_item WHERE mailbox_id=$1 AND folder=$2 ORDER BY updated_at DESC,id LIMIT 200
+SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at FROM mail_item WHERE mailbox_id=$1 AND folder=$2 ORDER BY updated_at DESC,id LIMIT 200
 `
 
 type ListMailItemsParams struct {
@@ -400,6 +576,9 @@ func (q *Queries) ListMailItems(ctx context.Context, arg ListMailItemsParams) ([
 			&i.RawKey,
 			&i.ExternalID,
 			&i.ThreadID,
+			&i.MessageID,
+			&i.InReplyTo,
+			&i.ReferencesHeader,
 			&i.SendAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -415,16 +594,18 @@ func (q *Queries) ListMailItems(ctx context.Context, arg ListMailItemsParams) ([
 }
 
 const listMailItemsPage = `-- name: ListMailItemsPage :many
-SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at FROM mail_item
+SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at FROM mail_item
 WHERE mailbox_id=$1 AND folder=$2
-AND ($3::text='' OR strpos(lower(from_address || ' ' || to_address || ' ' || subject || ' ' || text_body), lower($3)) > 0)
-AND ($4::timestamptz IS NULL OR (updated_at,id) < ($4::timestamptz,$5::uuid))
-ORDER BY updated_at DESC,id DESC LIMIT $6
+AND ($3::uuid IS NULL OR EXISTS (SELECT 1 FROM mail_tag t WHERE t.item_id=mail_item.id AND t.label_id=$3::uuid))
+AND ($4::text='' OR strpos(lower(from_address || ' ' || to_address || ' ' || subject || ' ' || text_body), lower($4)) > 0)
+AND ($5::timestamptz IS NULL OR (updated_at,id) < ($5::timestamptz,$6::uuid))
+ORDER BY updated_at DESC,id DESC LIMIT $7
 `
 
 type ListMailItemsPageParams struct {
 	MailboxID  string     `json:"mailbox_id"`
 	Folder     MailFolder `json:"folder"`
+	LabelID    *string    `json:"label_id"`
 	Search     string     `json:"search"`
 	BeforeTime *time.Time `json:"before_time"`
 	BeforeID   string     `json:"before_id"`
@@ -435,6 +616,7 @@ func (q *Queries) ListMailItemsPage(ctx context.Context, arg ListMailItemsPagePa
 	rows, err := q.db.Query(ctx, listMailItemsPage,
 		arg.MailboxID,
 		arg.Folder,
+		arg.LabelID,
 		arg.Search,
 		arg.BeforeTime,
 		arg.BeforeID,
@@ -466,6 +648,9 @@ func (q *Queries) ListMailItemsPage(ctx context.Context, arg ListMailItemsPagePa
 			&i.RawKey,
 			&i.ExternalID,
 			&i.ThreadID,
+			&i.MessageID,
+			&i.InReplyTo,
+			&i.ReferencesHeader,
 			&i.SendAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -480,8 +665,99 @@ func (q *Queries) ListMailItemsPage(ctx context.Context, arg ListMailItemsPagePa
 	return items, nil
 }
 
+const listMailThreadPage = `-- name: ListMailThreadPage :many
+SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at FROM mail_item WHERE mailbox_id=$1 AND (id=$2 OR (thread_id<>'' AND thread_id=$3))
+AND ($4::timestamptz IS NULL OR (updated_at,id)<($4::timestamptz,$5::uuid))
+ORDER BY updated_at DESC,id DESC LIMIT $6
+`
+
+type ListMailThreadPageParams struct {
+	MailboxID  string     `json:"mailbox_id"`
+	ItemID     string     `json:"item_id"`
+	ThreadID   string     `json:"thread_id"`
+	BeforeTime *time.Time `json:"before_time"`
+	BeforeID   string     `json:"before_id"`
+	PageLimit  int32      `json:"page_limit"`
+}
+
+func (q *Queries) ListMailThreadPage(ctx context.Context, arg ListMailThreadPageParams) ([]MailItem, error) {
+	rows, err := q.db.Query(ctx, listMailThreadPage,
+		arg.MailboxID,
+		arg.ItemID,
+		arg.ThreadID,
+		arg.BeforeTime,
+		arg.BeforeID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MailItem
+	for rows.Next() {
+		var i MailItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.MailboxID,
+			&i.AuthorID,
+			&i.Folder,
+			&i.FromAddress,
+			&i.ToAddress,
+			&i.Cc,
+			&i.Bcc,
+			&i.Subject,
+			&i.TextBody,
+			&i.HTMLBody,
+			&i.Status,
+			&i.Starred,
+			&i.Unread,
+			&i.ProviderID,
+			&i.RawKey,
+			&i.ExternalID,
+			&i.ThreadID,
+			&i.MessageID,
+			&i.InReplyTo,
+			&i.ReferencesHeader,
+			&i.SendAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMailboxLabels = `-- name: ListMailboxLabels :many
+SELECT id, mailbox_id, name FROM mail_label WHERE mailbox_id=$1 ORDER BY name,id
+`
+
+func (q *Queries) ListMailboxLabels(ctx context.Context, mailboxID string) ([]MailLabel, error) {
+	rows, err := q.db.Query(ctx, listMailboxLabels, mailboxID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MailLabel
+	for rows.Next() {
+		var i MailLabel
+		if err := rows.Scan(&i.ID, &i.MailboxID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMailboxes = `-- name: ListMailboxes :many
-SELECT id, workspace_id, name, address, config_prefix, created_at FROM mailbox WHERE workspace_id=$1 ORDER BY name,id
+SELECT id, workspace_id, name, address, config_prefix, signature, created_at FROM mailbox WHERE workspace_id=$1 ORDER BY name,id
 `
 
 func (q *Queries) ListMailboxes(ctx context.Context, workspaceID string) ([]Mailbox, error) {
@@ -499,6 +775,7 @@ func (q *Queries) ListMailboxes(ctx context.Context, workspaceID string) ([]Mail
 			&i.Name,
 			&i.Address,
 			&i.ConfigPrefix,
+			&i.Signature,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -512,7 +789,7 @@ func (q *Queries) ListMailboxes(ctx context.Context, workspaceID string) ([]Mail
 }
 
 const lockMailItem = `-- name: LockMailItem :one
-SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at FROM mail_item WHERE id=$1 FOR UPDATE
+SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at FROM mail_item WHERE id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockMailItem(ctx context.Context, id string) (MailItem, error) {
@@ -537,6 +814,9 @@ func (q *Queries) LockMailItem(ctx context.Context, id string) (MailItem, error)
 		&i.RawKey,
 		&i.ExternalID,
 		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -545,7 +825,7 @@ func (q *Queries) LockMailItem(ctx context.Context, id string) (MailItem, error)
 }
 
 const lockMailbox = `-- name: LockMailbox :one
-SELECT id, workspace_id, name, address, config_prefix, created_at FROM mailbox WHERE id=$1 FOR UPDATE
+SELECT id, workspace_id, name, address, config_prefix, signature, created_at FROM mailbox WHERE id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockMailbox(ctx context.Context, id string) (Mailbox, error) {
@@ -557,13 +837,14 @@ func (q *Queries) LockMailbox(ctx context.Context, id string) (Mailbox, error) {
 		&i.Name,
 		&i.Address,
 		&i.ConfigPrefix,
+		&i.Signature,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const queueMailItem = `-- name: QueueMailItem :one
-UPDATE mail_item SET status='queued',send_at=$2,updated_at=now() WHERE id=$1 AND status='draft' RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at
+UPDATE mail_item SET status='queued',send_at=$2,updated_at=now() WHERE id=$1 AND status='draft' RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at
 `
 
 type QueueMailItemParams struct {
@@ -593,11 +874,28 @@ func (q *Queries) QueueMailItem(ctx context.Context, arg QueueMailItemParams) (M
 		&i.RawKey,
 		&i.ExternalID,
 		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const removeMailTag = `-- name: RemoveMailTag :exec
+DELETE FROM mail_tag WHERE item_id=$1 AND label_id=$2
+`
+
+type RemoveMailTagParams struct {
+	ItemID  string `json:"item_id"`
+	LabelID string `json:"label_id"`
+}
+
+func (q *Queries) RemoveMailTag(ctx context.Context, arg RemoveMailTagParams) error {
+	_, err := q.db.Exec(ctx, removeMailTag, arg.ItemID, arg.LabelID)
+	return err
 }
 
 const setMailOutcome = `-- name: SetMailOutcome :exec
@@ -621,9 +919,57 @@ func (q *Queries) SetMailOutcome(ctx context.Context, arg SetMailOutcomeParams) 
 	return err
 }
 
+const setMailThreadHeaders = `-- name: SetMailThreadHeaders :one
+UPDATE mail_item SET in_reply_to=$2,references_header=$3,thread_id=$4 WHERE id=$1 RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at
+`
+
+type SetMailThreadHeadersParams struct {
+	ID               string `json:"id"`
+	InReplyTo        string `json:"in_reply_to"`
+	ReferencesHeader string `json:"references_header"`
+	ThreadID         string `json:"thread_id"`
+}
+
+func (q *Queries) SetMailThreadHeaders(ctx context.Context, arg SetMailThreadHeadersParams) (MailItem, error) {
+	row := q.db.QueryRow(ctx, setMailThreadHeaders,
+		arg.ID,
+		arg.InReplyTo,
+		arg.ReferencesHeader,
+		arg.ThreadID,
+	)
+	var i MailItem
+	err := row.Scan(
+		&i.ID,
+		&i.MailboxID,
+		&i.AuthorID,
+		&i.Folder,
+		&i.FromAddress,
+		&i.ToAddress,
+		&i.Cc,
+		&i.Bcc,
+		&i.Subject,
+		&i.TextBody,
+		&i.HTMLBody,
+		&i.Status,
+		&i.Starred,
+		&i.Unread,
+		&i.ProviderID,
+		&i.RawKey,
+		&i.ExternalID,
+		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
+		&i.SendAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateDraft = `-- name: UpdateDraft :one
 UPDATE mail_item SET to_address=$2,cc=$3,bcc=$4,subject=$5,text_body=$6,html_body=$7,thread_id=$8,updated_at=now()
-WHERE id=$1 AND status='draft' RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at
+WHERE id=$1 AND status='draft' RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at
 `
 
 type UpdateDraftParams struct {
@@ -668,6 +1014,9 @@ func (q *Queries) UpdateDraft(ctx context.Context, arg UpdateDraftParams) (MailI
 		&i.RawKey,
 		&i.ExternalID,
 		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -677,7 +1026,7 @@ func (q *Queries) UpdateDraft(ctx context.Context, arg UpdateDraftParams) (MailI
 
 const updateMailFlags = `-- name: UpdateMailFlags :one
 UPDATE mail_item SET folder=coalesce($2,folder),starred=coalesce($3,starred),unread=coalesce($4,unread),updated_at=now()
-WHERE id=$1 RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at
+WHERE id=$1 RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at
 `
 
 type UpdateMailFlagsParams struct {
@@ -714,9 +1063,36 @@ func (q *Queries) UpdateMailFlags(ctx context.Context, arg UpdateMailFlagsParams
 		&i.RawKey,
 		&i.ExternalID,
 		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateMailboxSignature = `-- name: UpdateMailboxSignature :one
+UPDATE mailbox SET signature=$2 WHERE id=$1 RETURNING id, workspace_id, name, address, config_prefix, signature, created_at
+`
+
+type UpdateMailboxSignatureParams struct {
+	ID        string `json:"id"`
+	Signature string `json:"signature"`
+}
+
+func (q *Queries) UpdateMailboxSignature(ctx context.Context, arg UpdateMailboxSignatureParams) (Mailbox, error) {
+	row := q.db.QueryRow(ctx, updateMailboxSignature, arg.ID, arg.Signature)
+	var i Mailbox
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Address,
+		&i.ConfigPrefix,
+		&i.Signature,
+		&i.CreatedAt,
 	)
 	return i, err
 }

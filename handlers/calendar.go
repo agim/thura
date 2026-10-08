@@ -129,7 +129,7 @@ func ExportCalendar(ctx context.Context, r *router.Request[router.None]) (schema
 	if err != nil {
 		return schema.FileContent{}, err
 	}
-	raw, err := calendar.ExportICS(events, attendees, exceptions, "PUBLISH")
+	raw, err := calendar.ExportWorkspaceICS(ctx, c.WorkspaceID, events, attendees, exceptions, "PUBLISH")
 	return schema.FileContent{Name: c.ID + ".ics", ContentType: "text/calendar; charset=utf-8", Data: base64.StdEncoding.EncodeToString(raw)}, err
 }
 
@@ -150,4 +150,8 @@ func GetCalendarReminder(ctx context.Context, r *router.Request[router.None]) (s
 }
 func SetCalendarReminder(ctx context.Context, r *router.Request[schema.ReminderInput]) (schema.ReminderSetting, error) {
 	return calendar.SetReminder(ctx, r.Param("workspaceId"), r.Param("calendarId"), r.Param("id"), r.Body)
+}
+
+func BindCalendarMeeting(ctx context.Context, r *router.Request[schema.BindMeetingInput]) (schema.EventDetail, error) {
+	return calendar.BindMeeting(ctx, r.Param("workspaceId"), r.Param("calendarId"), r.Param("id"), r.Body)
 }

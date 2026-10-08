@@ -74,10 +74,10 @@ func Text(s *string) string {
 	return *s
 }
 func ViewMailbox(m queries.Mailbox) schema.Mailbox {
-	return schema.Mailbox{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, CreatedAt: m.CreatedAt}
+	return schema.Mailbox{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Signature: m.Signature, CreatedAt: m.CreatedAt}
 }
 func View(i queries.MailItem) schema.MailItem {
-	return schema.MailItem{ID: i.ID, MailboxID: i.MailboxID, AuthorID: i.AuthorID, Folder: schema.MailFolder(i.Folder), FromAddress: i.FromAddress, ToAddress: i.ToAddress, Cc: i.Cc, Bcc: i.Bcc, Subject: i.Subject, TextBody: i.TextBody, HTMLBody: i.HTMLBody, Status: i.Status, Starred: i.Starred, Unread: i.Unread, ProviderID: i.ProviderID, RawKey: i.RawKey, ExternalID: i.ExternalID, ThreadID: i.ThreadID, SendAt: i.SendAt, CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt}
+	return schema.MailItem{ID: i.ID, MailboxID: i.MailboxID, AuthorID: i.AuthorID, Folder: schema.MailFolder(i.Folder), FromAddress: i.FromAddress, ToAddress: i.ToAddress, Cc: i.Cc, Bcc: i.Bcc, Subject: i.Subject, TextBody: i.TextBody, HTMLBody: i.HTMLBody, Status: i.Status, Starred: i.Starred, Unread: i.Unread, ProviderID: i.ProviderID, RawKey: i.RawKey, ExternalID: i.ExternalID, ThreadID: i.ThreadID, MessageID: i.MessageID, InReplyTo: i.InReplyTo, ReferencesHeader: i.ReferencesHeader, SendAt: i.SendAt, CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt}
 }
 func Attachment(a queries.MailAttachment) schema.AttachmentView {
 	return schema.AttachmentView{ID: a.ID, Name: a.Name, ContentType: a.ContentType, Size: int(a.Size)}
@@ -232,6 +232,13 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 		return err
 	}
 	msg := mail.Message{To: i.ToAddress, Cc: cc, Bcc: bcc, From: m.Address, Subject: i.Subject, Text: i.TextBody, HTML: i.HTMLBody}
+	msg.Headers = map[string]string{}
+	if i.InReplyTo != "" {
+		msg.Headers["In-Reply-To"] = i.InReplyTo
+	}
+	if i.ReferencesHeader != "" {
+		msg.Headers["References"] = i.ReferencesHeader
+	}
 	var total int64
 	for _, a := range attachments {
 		r, _, err := storage.From(ctx).Get(ctx, a.ObjectKey)

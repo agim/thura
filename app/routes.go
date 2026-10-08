@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -57,7 +57,14 @@ func routes(r *router.Router) {
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/invitations", handlers.ListInvites)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/invitations", handlers.InviteMember)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/invitations/{id}", handlers.RevokeInvite)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events/{id}/meeting", handlers.BindCalendarMeeting)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes", handlers.ListMailboxes)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/labels", handlers.ListMailLabels)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/labels", handlers.CreateMailLabel)
+	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/labels/{labelId}", handlers.DeleteMailLabel)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/signature", handlers.UpdateMailSignature)
+	router.Route(g, "PATCH /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/labels", handlers.ChangeMailLabel)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/thread", handlers.ListMailThread)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages", handlers.ListMail)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages", handlers.CreateMailDraft)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}", handlers.GetMail)
@@ -67,6 +74,7 @@ func routes(r *router.Router) {
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/undo", handlers.UndoMail)
 	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/attachments", handlers.UploadMailAttachment, router.UploadLimit(10<<20))
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/attachments/{attachmentId}", handlers.DownloadMailAttachment)
+	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/messages/{id}/attachments/{attachmentId}", handlers.RemoveMailAttachment)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive", handlers.ListDrive)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/quota", handlers.DriveQuota)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/drive/files/{id}", handlers.PurgeDriveFile)

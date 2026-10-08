@@ -74,12 +74,15 @@ func Invite(ctx context.Context, w, c, id string, in schema.CalendarInviteInput)
 		method = "CANCEL"
 		subject = "Cancelled: " + e.Title
 	}
-	content, err := ExportICS([]q.CalendarEvent{e}, map[string][]q.EventAttendee{id: attendees}, map[string][]q.EventException{id: exceptions}, method)
+	content, err := ExportWorkspaceICS(ctx, w, []q.CalendarEvent{e}, map[string][]q.EventAttendee{id: attendees}, map[string][]q.EventException{id: exceptions}, method)
 	if err != nil {
 		return out, err
 	}
 	for _, a := range attendees {
 		text := "Calendar event: " + e.Title + "\nOrganizer: " + e.Organizer + "\n\nOpen the attached calendar file."
+		if e.MeetingID != nil {
+			text += "\n\nMeeting: " + mail.From(ctx).Link("/app?workspace="+w+"&meeting="+*e.MeetingID) + "\nOnly current workspace members can join."
+		}
 		if !e.Cancelled {
 			bytes := make([]byte, 32)
 			if _, err = rand.Read(bytes); err != nil {

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, type Calendar, type EventDetail, type EventInput, type EventInstance } from '@lidza/client'
+import { api, type Calendar, type EventDetail, type EventInput, type EventInstance, type CalendarEvent } from '@lidza/client'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -11,21 +11,21 @@ import { DateTime } from 'luxon'
 import { downloadContent } from '../lib/download'
 import { userError } from '../lib/errors'
 
-export function LiveCalendar({ workspaceId }: { workspaceId: string }) {
+export function LiveCalendar({ workspaceId, onMeet }: { workspaceId: string; onMeet?: (event: CalendarEvent) => void }) {
   const client = useQueryClient()
   const calendars = useQuery({ queryKey: ['calendars', workspaceId], queryFn: () => api.listCalendars({ workspaceId }) })
   const [selected, setSelected] = useState('')
   const [name, setName] = useState('')
   const [personal, setPersonal] = useState(false)
-  const [zone, setZone] = useState('America/New_York')
+  const [zone, setZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
   const calendar = selected ? calendars.data?.items.find(c => c.id === selected) : calendars.data?.items[0]
   const create = useMutation({ mutationFn: () => api.createCalendar({ workspaceId }, { name, color: '#15756b', personal }), onSuccess: async c => { setSelected(c.id); setName(''); await client.invalidateQueries({ queryKey: ['calendars', workspaceId] }) } })
   return <div className="ws-page live-calendar"><h2>Calendar</h2><div className="row"><label>Calendar<select aria-label="Calendar" value={calendar?.id || ''} onChange={e => setSelected(e.target.value)}><option value="" disabled>Select a calendar</option>{calendars.data?.items.map(c => <option key={c.id} value={c.id}>{c.name} · {c.ownerSubject ? 'Personal' : 'Shared'}</option>)}</select></label><label>View timezone<input value={zone} onChange={e => setZone(e.target.value)} /></label></div><form className="row" onSubmit={e => { e.preventDefault(); create.mutate() }}><label>New calendar name<input required maxLength={200} value={name} onChange={e => setName(e.target.value)} /></label><label className="checkbox"><input type="checkbox" checked={personal} onChange={e => setPersonal(e.target.checked)} />Personal (only you can access it)</label><button disabled={create.isPending}>Create calendar</button></form>
     {(calendars.error || create.error) && <p role="alert">{userError(calendars.error || create.error)}</p>}
-    {calendar ? <CalendarView key={calendar.id} calendar={calendar} zone={zone} /> : <p>Create a shared or personal calendar to add events.</p>}
+    {calendar ? <CalendarView key={calendar.id} calendar={calendar} zone={zone} onMeet={onMeet} /> : <p>Create a shared or personal calendar to add events.</p>}
   </div>
 }
-function CalendarView({ calendar, zone }: { calendar: Calendar; zone: string }) {
+function CalendarView({ calendar, zone, onMeet }: { calendar: Calendar; zone: string; onMeet?: (event: CalendarEvent) => void }) {
   const client = useQueryClient()
   const workspaceId = calendar.workspaceId, calendarId = calendar.id
   const [range, setRange] = useState<{ from: string; to: string } | null>(null)
@@ -47,6 +47,7 @@ function CalendarView({ calendar, zone }: { calendar: Calendar; zone: string }) 
     {notice && <p role="status">{notice}</p>}
     <FullCalendar key={compact ? 'compact' : 'wide'} plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin, luxonPlugin]} initialView={compact ? 'listWeek' : 'dayGridMonth'} timeZone={zone} height="auto" headerToolbar={{ left: 'prev,next today', center: 'title', right: compact ? 'listWeek,dayGridMonth' : 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }} datesSet={args => setRange(previous => previous?.from === args.startStr && previous.to === args.endStr ? previous : { from: args.startStr, to: args.endStr })} events={(instances.isError ? [] : instances.data?.items ?? []).map(i => ({ id: `${i.eventId}:${i.instanceKey}`, title: i.title, start: i.start, end: i.end, allDay: i.allDay, color: i.color, extendedProps: { eventId: i.eventId, instanceKey: i.instanceKey } }))} dateClick={args => { setDate(args.dateStr.slice(0, 10)); setCreating(true); setChosen(null) }} eventClick={args => { setCreating(false); setChosen({ id: String(args.event.extendedProps.eventId), instanceKey: String(args.event.extendedProps.instanceKey) }) }} />
     {creating && <EventForm key={`new:${date}`} workspaceId={workspaceId} calendarId={calendarId} zone={zone} date={date} saved={async () => { setCreating(false); setNotice('Event saved. Invitations have not been sent.'); await refresh() }} />}
+    {chosen && detail.data && !detail.isError && onMeet && !detail.data.event.cancelled && <button type="button" onClick={() => onMeet(detail.data!.event)}>{detail.data.event.meetingId ? 'Open event meeting' : 'Prepare meeting for this event'}</button>}
     {chosen && detail.data && !detail.isError && <CalendarDelivery workspaceId={workspaceId} calendarId={calendarId} detail={detail.data} />}
     {chosen && detail.data && !detail.isError && <EventForm key={`${detail.data.event.id}:${detail.data.event.sequence}:${chosen.instanceKey}`} workspaceId={workspaceId} calendarId={calendarId} zone={detail.data.event.timeZone} initial={detail.data} occurrence={occurrence} saved={async () => { setChosen(null); setNotice('Event updated. Invitations have not been sent.'); await refresh() }} />}
     <p className="ws-muted">Shared calendars belong to this workspace. Personal calendars are visible only to their creator. Recurrence is limited to 1,000 occurrences within ten years; views span at most 93 days.</p>

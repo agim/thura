@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"github.com/agim/lidza/pkg/lidzatest"
 	"net/http"
 	"testing"
+	"thura/app"
 	"thura/internal/drive"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestDriveResumeVersionsAndShareRevocation(t *testing.T) {
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("drive-%d@example.com", time.Now().UnixNano())
 	pw := "maple meadow waterfall lantern 7593"

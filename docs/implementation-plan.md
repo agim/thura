@@ -1,12 +1,12 @@
 # Thura implementation plan
 
-Status: proposed roadmap for review. This document plans implementation; it does not approve dependencies, change the product brief, or start implementation.
+Status: implementation roadmap with historical planning detail. The developer authorized implementation and delegated completion of [brief.md](brief.md); the brief now defines the first release. See [implementation-status.md](implementation-status.md) for delivered behavior and deployment acceptance limits.
 
 Implementation has since started at the user's request. See [implementation-status.md](implementation-status.md) for the delivered six-app first version, operations and remaining deployment gates. The descriptions below preserve the planning baseline.
 
 ## Basis and current state
 
-Thura is a Go and React application created with published Līdza v0.1.88. Its current baseline is commit 637ff65c99b4a4d558c89679fb4216ed260224c5 in agim/thura. The starter has a greeting API and two frontend routes; Mail, Contacts, Drive, Calendar, Chat, Meet, federation, and SMIP are not implemented.
+Thura is a Go and React application created with published Līdza v0.1.88. Its initial planning baseline was commit 637ff65c99b4a4d558c89679fb4216ed260224c5 in agim/thura. At that baseline the starter had a greeting API and two routes. The six live apps and Matrix federation have since been implemented; SMIP remains a separate protocol track.
 
 Inputs reviewed:
 
@@ -22,7 +22,7 @@ The prototype was subsequently supplied as `Orbit_Workspace_React (1).zip`. Its 
 
 ## Recommended scope
 
-Build the workspace as a usable product in stages. Make Mail and Contacts real first, then add Drive and office editing, Calendar, federated Chat, and Meet. Develop SMIP as a separate protocol track with an integration boundary in the mail subsystem.
+Build the workspace as a usable product in stages. Make Mail and Contacts real first, then add Drive and office editing, Calendar, federated Chat, and Meet. Develop SMIP as a separate protocol track with integration boundaries for cross-server chat and file transfer, alongside the historical mail research.
 
 Use these constraints throughout:
 
@@ -176,7 +176,7 @@ Gate: restore a workspace into a clean instance, recover from provider downtime 
 
 ## SMIP protocol track
 
-SMIP is a proposed protocol, not an existing implemented capability or verified security guarantee. Keep its initial reference implementation and specification independently versioned. Thura can expose its status and later consume it through a mail transport adapter.
+The developer specified that SMIP will be used for chat across two servers and for sending/receiving files between two servers. The future integration boundary therefore includes Chat and Drive/file transfer as well as the historical mail-transport research. SMIP is a proposed protocol, not an existing implemented capability or verified security guarantee. Keep its initial reference implementation and specification independently versioned. Thura can later consume it through explicit chat/file adapters and any separately selected mail adapter.
 
 Correct the transcript's early claims before using them as requirements:
 
@@ -224,4 +224,4 @@ Resolve these through the brief, in small batches. Historical source text does n
 | SMIP priority and reputation policy | Separate experimental track; no public ranking in the first release | Protocol trust, cryptography, and complaint governance remain unresolved. |
 | Delivery agreements | Confirm commit/push policy, feature test bar, and reporting in the brief | The prior scaffold push does not establish an ongoing release policy. |
 
-Recommended next implementation task: conduct the first brief batch, recover/audit the prototype if available, and implement the workspace/account foundation. Then build one Mail + Contacts vertical slice with a real persistence boundary, capture transport tests, and a clearly separate live-provider acceptance check.
+The kickoff decisions above are retained as historical planning context. The supplied prototype has been audited, the brief completed under developer delegation, and the six live core workflows implemented. Deployment operators complete the host/domain-specific gates documented in operations.md; SMIP and transcription remain later tracks.

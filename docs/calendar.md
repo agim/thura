@@ -43,3 +43,7 @@ The job catches up reminders at most 15 minutes late; a longer outage can
 miss reminders. Removing a subscription prevents future queuing but cannot
 recall mail already handed to the delivery worker. Monitor job failures and
 mail capture/provider status in the official admin pages.
+
+## Meetings
+
+From a saved event, prepare a Meet room or open its existing meeting. Creating/linking a room explicitly binds it to that event, preserves any physical location, and increments the event sequence once. Linking checks the current workspace, event access/version, cancellation and meeting state; repeated binding to the same room is idempotent. A saved link is included in ICS exports and invitations. Links require current workspace membership and grant no guest access. Invitations remain a separate explicit action, and opening Meet does not automatically join camera/microphone media.

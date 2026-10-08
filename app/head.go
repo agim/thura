@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	_ "embed"
@@ -11,7 +11,7 @@ import (
 // Public route descriptions are shared with the browser. They never include
 // account, workspace, file, invitation or token contents.
 //
-//go:embed src/page-metadata.json
+//go:embed page-metadata.json
 var pageMetadataJSON string
 
 type pageMetadata struct {

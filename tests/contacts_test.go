@@ -1,9 +1,10 @@
-package main
+package tests
 
 import (
 	"fmt"
 	"net/http"
 	"testing"
+	"thura/app"
 	"time"
 
 	"github.com/agim/lidza/packs/auth"
@@ -14,7 +15,7 @@ import (
 )
 
 func TestContactsWorkspaceIsolation(t *testing.T) {
-	srv := lidzatest.Start(t, app())
+	srv := lidzatest.Start(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("owner-%d@example.com", time.Now().UnixNano())
 	password := "maple lantern violet lake 7842"

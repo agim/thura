@@ -24,7 +24,7 @@ func View(c q.Calendar) schema.Calendar {
 	return schema.Calendar{ID: c.ID, WorkspaceID: c.WorkspaceID, Name: c.Name, Color: c.Color, OwnerSubject: c.OwnerSubject, CreatedAt: c.CreatedAt}
 }
 func ViewEvent(e q.CalendarEvent) schema.CalendarEvent {
-	return schema.CalendarEvent{ID: e.ID, CalendarID: e.CalendarID, Uid: e.Uid, Organizer: e.Organizer, Title: e.Title, Description: e.Description, Location: e.Location, AllDay: e.AllDay, StartDate: e.StartDate, EndDate: e.EndDate, StartsAt: e.StartsAt, EndsAt: e.EndsAt, TimeZone: e.TimeZone, Rrule: e.Rrule, Sequence: int(e.Sequence), Cancelled: e.Cancelled, CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt}
+	return schema.CalendarEvent{MeetingID: e.MeetingID, ID: e.ID, CalendarID: e.CalendarID, Uid: e.Uid, Organizer: e.Organizer, Title: e.Title, Description: e.Description, Location: e.Location, AllDay: e.AllDay, StartDate: e.StartDate, EndDate: e.EndDate, StartsAt: e.StartsAt, EndsAt: e.EndsAt, TimeZone: e.TimeZone, Rrule: e.Rrule, Sequence: int(e.Sequence), Cancelled: e.Cancelled, CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt}
 }
 func ViewAttendee(a q.EventAttendee) schema.EventAttendee {
 	return schema.EventAttendee{ID: a.ID, EventID: a.EventID, Email: a.Email, Response: schema.Attendance(a.Response), ResponseSequence: int(a.ResponseSequence)}

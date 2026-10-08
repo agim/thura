@@ -478,7 +478,7 @@ func timeZoneICS(name string) string {
 	write("END:VTIMEZONE")
 	return b.String()
 }
-func eventICS(e q.CalendarEvent, attendees []q.EventAttendee, exceptions []q.EventException) (string, error) {
+func eventICS(e q.CalendarEvent, attendees []q.EventAttendee, exceptions []q.EventException, meetingURL string) (string, error) {
 	var b strings.Builder
 	write := func(s string) { b.WriteString(fold(s)) }
 	start, end, err := timing(eventInput(e))
@@ -492,6 +492,9 @@ func eventICS(e q.CalendarEvent, attendees []q.EventAttendee, exceptions []q.Eve
 	write("SUMMARY:" + escape(e.Title))
 	write("DESCRIPTION:" + escape(e.Description))
 	write("LOCATION:" + escape(e.Location))
+	if meetingURL != "" {
+		write("URL:" + meetingURL)
+	}
 	write("ORGANIZER:mailto:" + e.Organizer)
 	if e.AllDay {
 		write("DTSTART;VALUE=DATE:" + start.Format("20060102"))
@@ -571,7 +574,7 @@ func eventICS(e q.CalendarEvent, attendees []q.EventAttendee, exceptions []q.Eve
 				replacement.EndsAt = ex.EndsAt
 			}
 		}
-		component, componentErr := eventICS(replacement, attendees, nil)
+		component, componentErr := eventICS(replacement, attendees, nil, meetingURL)
 		if componentErr != nil {
 			return "", componentErr
 		}
@@ -584,7 +587,7 @@ func eventICS(e q.CalendarEvent, attendees []q.EventAttendee, exceptions []q.Eve
 	}
 	return b.String(), nil
 }
-func ExportICS(events []q.CalendarEvent, attendees map[string][]q.EventAttendee, exceptions map[string][]q.EventException, method string) ([]byte, error) {
+func ExportICS(events []q.CalendarEvent, attendees map[string][]q.EventAttendee, exceptions map[string][]q.EventException, method string, meetingLinks ...map[string]string) ([]byte, error) {
 	var b strings.Builder
 	b.WriteString("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Thura//Calendar 1.0//EN\r\nCALSCALE:GREGORIAN\r\n")
 	if method != "" {
@@ -596,7 +599,11 @@ func ExportICS(events []q.CalendarEvent, attendees map[string][]q.EventAttendee,
 			zones[e.TimeZone] = true
 			b.WriteString(timeZoneICS(e.TimeZone))
 		}
-		component, err := eventICS(e, attendees[e.ID], exceptions[e.ID])
+		meetingURL := ""
+		if len(meetingLinks) > 0 {
+			meetingURL = meetingLinks[0][e.ID]
+		}
+		component, err := eventICS(e, attendees[e.ID], exceptions[e.ID], meetingURL)
 		if err != nil {
 			return nil, err
 		}

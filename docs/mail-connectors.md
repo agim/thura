@@ -24,3 +24,11 @@ Storage and database transactions are separate: an interrupted inbound transacti
 Recipient suggestions search the shared workspace Contacts directory by name/email after two typed characters. Select a suggestion by clicking or tabbing to its button and pressing Enter; earlier comma-separated recipients are retained. Suggestions are optional and manual entry remains available.
 
 Forward creates a new draft with the source's private attachments, within the same mailbox. Replies omit attachments. Forwarded files receive separate metadata IDs and retain references to immutable stored bytes. The existing attachment limits and current membership checks still apply. Future retention/purge jobs must check every attachment reference before deleting a stored object; deleting or trashing a source must not invalidate a forward.
+
+## Organization and conversations
+
+Current members share mailbox labels (at most 50 per mailbox, 40 UTF-8 bytes per name) and a mailbox signature (up to 5,000 UTF-8 bytes; empty clears it). Label creation is serialized, case-insensitive duplicates are refused, assignment is idempotent, and filtering is combined with the current folder/search. Deleting a label removes assignments without deleting mail. Signatures apply to newly created drafts/replies; existing drafts retain their saved body.
+
+Replies derive recipients server-side from the authorized source message, exclude the mailbox's address, deduplicate visible recipients and omit Bcc. Reply-all also includes original visible recipients. Replies preserve normalized In-Reply-To/References headers; forward starts a new conversation and retains attachments. Received Message-ID and parent references are stored and correlated within the same mailbox. Conversation pages have the same bounded limits as folder listings; custom or missing sender headers can prevent correlation. A provider owns the outgoing Message-ID, and matching depends on its returned message identifier. This is header-based threading, not subject-only merging.
+
+Draft attachment removal checks current membership, draft status and attachment ownership, and removes the reference only. Immutable bytes remain available to other drafts/forwards; future mail-object retention must respect all references.

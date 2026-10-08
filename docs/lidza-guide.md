@@ -19,15 +19,17 @@ app is always at one address: http://127.0.0.1:3000.
 ```
 thura/
 ├── main.go          entrypoint: lidza.Run(...). Do not edit.
-├── start.go         onStart: register job handlers, provide services; appMiddleware: middleware around the whole app (rate limits, redirects). The app's hooks.
-├── routes.go        API handlers. Add routes here (or in packages it calls).
+├── app/            importable application factory and wiring
+├── tests/          integration tests importing app.New
+├── app/start.go         onStart: register job handlers, provide services; appMiddleware: middleware around the whole app (rate limits, redirects). The app's hooks.
+├── app/routes.go        API handlers. Add routes here (or in packages it calls).
 ├── handlers/        HTTP and job handlers; resource generation writes here
 ├── internal/        app-owned business logic, provider clients and infrastructure
 ├── schema.lidza     data shapes: models (tables), types (API shapes), enums
 ├── schema/          generated Go structs with Validate(). Do not edit.
 ├── db/              generated schema.sql, migrations/, schema.lock.json; queries/*.sql with the db pack
-├── packs.go         generated from lidza.json "packs". Do not edit.
-├── tools.go         the app's MCP tools (lidza.ToolFunc), served by lidza mcp and /mcp
+├── app/packs.go         generated from lidza.json "packs". Do not edit.
+├── app/tools.go         the app's MCP tools (lidza.ToolFunc), served by lidza mcp and /mcp
 ├── packs/<name>/    a pack: pack.lidza.json, rust/ crate, generated pack.go and <name>.wasm
 ├── lidza.json       project config: name, frontend template, dev server, dist, appDir
 ├── go.mod           module thura, requires github.com/agim/lidza
@@ -47,9 +49,22 @@ thura/
 
 ### The app in its own package (`appDir`)
 
-At the root, the app is package `main`, which Go cannot import: its tests
-live next to `routes.go`. To keep them in their own directory, move the
-app into an importable package and name it in `lidza.json`:
+New apps set `"appDir": "app"`: `app/app.go` exports `New(dist fs.FS)`;
+`main.go` keeps the frontend embed and calls `lidza.Run(app.New(...))`.
+Wiring (`start.go`, `routes.go`, `packs.go`, `tools.go`) lives in `app/`.
+Integration tests in `tests/` import `thura/app` and call `app.New(nil)`;
+unit tests stay beside their non-root package. The htmx template embeds
+`app/views/` and `app/static/`; its tests also live in `tests/`.
+
+Root files are limited to the entrypoint, schema/configuration, dependency
+manifests, deployment/tool configuration and shared guidance. L020 is an
+error for root tests, extra Go files and unexpected files, including ignored
+or untracked files: keep docs in `docs/`, scripts in `scripts/`, fixtures
+in `testdata/`, and scratch/build output in `.lidza/` or `bin/`.
+Never hide tests from discovery or weaken assertions to satisfy the layout.
+
+An older app with root wiring needs an importable package because Go cannot
+import package `main`. Preserve its tests and behavior during the move:
 
 1. Move `start.go`, `routes.go`, `tools.go` and the other files of the
    root package except `main.go` into `app/`, with `package app`. The
@@ -76,7 +91,7 @@ app into an importable package and name it in `lidza.json`:
 | `lidza gen` | `schema.lidza` to `schema/schema.go`, `db/schema.sql`, a migration in `db/migrations` when models changed; handlers to `.lidza/openapi.json` and the client in `.lidza/client`. `lidza dev` runs it on every change. |
 | `lidza context` | writes `.lidza/context.json`: routes, handler signatures, Rust exports. |
 | `lidza mcp` | MCP server on stdio; see "Agent interface". |
-| `lidza gen resource <Model> [--public \| --shared]` | queries, `Create/Update/<Model>List` types, `handlers/<table>.go` with list, get, create, patch, delete under `/api/v1/<plural>` (the list with search, filters, a date range, sorting and pages through `list.Read`: recipe "Add a paginated, filterable list"), registered in `routes.go` (in `appDir` when set) behind `auth.Require()`. An owned model (`ownerId`, or a field with `@ref(User)`) is scoped to the signed-in user. `--public` marks the model `@public`: open routes, no owner. `--shared` marks it `@shared`: behind sign-in, rows not scoped. Needs the `db` and `auth` packs (`auth` not with `--public`). |
+| `lidza gen resource <Model> [--public \| --shared]` | queries, `Create/Update/<Model>List` types, `handlers/<table>.go` with list, get, create, patch, delete under `/api/v1/<plural>` (the list with search, filters, a date range, sorting and pages through `list.Read`: recipe "Add a paginated, filterable list"), registered in `app/routes.go` (in `appDir` when set) behind `auth.Require()`. An owned model (`ownerId`, or a field with `@ref(User)`) is scoped to the signed-in user. `--public` marks the model `@public`: open routes, no owner. `--shared` marks it `@shared`: behind sign-in, rows not scoped. Needs the `db` and `auth` packs (`auth` not with `--public`). |
 | `lidza update [--migrate]` | brings the app's branch and the framework up to date together: a branch behind its upstream is pulled first when that is a clean fast-forward (nothing uncommitted, no local commits the upstream lacks), otherwise the update stops and says what to run (`--no-pull` stops instead of pulling); then the CLI and this app's framework module move to the newest release (never back to an older one; `--to <commit>` takes a release not tagged yet), it regenerates, refreshes the deployment files, then runs `lidza install`. It stops when the files it rewrites have uncommitted changes (`git stash push` sets them aside); `--commit` commits the update when done. In a team, one person makes the update and merges it; the others `git pull`, then `lidza update --cli-only`. |
 | `lidza gen deploy [--force]` | the `Dockerfile`, `.dockerignore` and `deploy/thura.service` from the current templates; a file the app changed is kept and named unless `--force`. |
 | `lidza pack add <name>` | enables an official pack: `db`, `auth`, `jobs`, `mail`, `llm`, `storage`, `cache`, `i18n`, `realtime`, `analytics`, `geo`, `media`. |
@@ -89,7 +104,7 @@ app into an importable package and name it in `lidza.json`:
 | `lidza install [--packs db,auth,mail] [--agent claude]` | on an existing app: enables the packs (db added when one needs it), writes `.env` from `.env.example` with a random `AUTH_SECRET` and the app's database, writes `.env.test`, generates, creates and migrates the dev and test databases, installs `node_modules`, installs the agent CLI when asked, makes the first commit. On a clone or after a pull it adds to `.env` what packs enabled since need and applies new migrations; one that drops data (`-- review: data loss`) waits for `--migrate`. `lidza new --packs ...` runs it for a new app; `lidza setup` is its former name. Rerunning is safe. |
 | `lidza ship [--domains a.example.com] [--email ops@example.com] [--no-e2e]` | before a deploy: `lidza verify`, the browser suite against the built binary, the production build, `deploy/production.env`; stops at the first failure. Then it names the settings the enabled packs need in production that neither the credentials nor `deploy.env` hold, or hold with a development-only value (`CACHE_URL`, `APP_URL`, `LLM_PROVIDER=fake`). The app's production settings that are not secrets (`MAIL_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_PREFIX`) go in `lidza.json` under `deploy.env`, which ship writes into `deploy/production.env` on every run; a name that looks like a secret there is refused. |
 | `lidza verify [--json] [--no-test] [--allow-test-changes]` | before a commit: regenerates and requires the generated files to be staged, refuses staged changes that weaken the tests, runs the checks, runs the Go tests. The pre-commit hook in `.githooks/` runs it (`git commit --no-verify` skips once; `lidza verify --install-hook` sets it up again). The test guard compares the staged changes with `HEAD` and names each file and line that deletes a test file (`*_test.go`, `*.spec.ts`, `*.test.ts(x)`), adds `t.Skip`, `t.Skipf`, `t.SkipNow`, `test.skip`, `it.skip`, `describe.skip`, `.only` or `.fixme`, or removes more assertions (`t.Error`, `t.Fatal`, `expect(`, `assert.`) from a file than it adds, or swaps an assertion's matcher for a looser one (`toBe` to `toBeTruthy`, `assert.Equal` to `assert.NotNil`). An assertion whose expected text changes and nothing else (a copy update: `'Security'` to `'Sign-in security'`) passes, and the verify report lists each one, old and new, for the developer to see. A deliberate change is confirmed with `LIDZA_ALLOW_TEST_CHANGES=1 git commit ...` (or `lidza verify --allow-test-changes`); one skip with a stated reason passes with a `// lidza:allow-skip <reason>` comment on its line or the line above. A test is never weakened to make it pass: if it is wrong, the agent says so and the developer confirms. |
-| `lidza gen llms [--force]` | writes a starting `llms.txt` (llmstxt.org) for visiting agents: the app's name as the H1, a summary to write, a link per page the last build prerendered by its title. It goes in `public/` (`static/` in the htmx template) and is served at `/llms.txt` as text. It is public content: what an agent needs to use the site, never the guides, handlers, routes or configuration. Without it `/llms.txt` is a 404. |
+| `lidza gen llms [--force]` | writes a starting `llms.txt` (llmstxt.org) for visiting agents: the app's name as the H1, a summary to write, a link per page the last build prerendered by its title. It goes in `public/` (`app/static/` in the htmx template) and is served at `/llms.txt` as text. It is public content: what an agent needs to use the site, never the guides, handlers, routes or configuration. Without it `/llms.txt` is a 404. |
 | `lidza audit layout [--viewport 1440x900,390x844] [--theme light,dark] [--routes /a,/b] [--max-scroll -1] [--stability 6s [--trigger JS] [--allow SELECTORS]] [--base-url URL] [--storage-state FILE \| --login FILE] [--json]` | builds and starts the app on the test database (as `lidza test --e2e`), visits every page the build prerenders plus `--routes`, signed in as a throwaway user when the auth pack runs, at each viewport and theme, and reports what scrolls: sideways is a fault (the elements past the edge are named), down is a fault past `--max-scroll` pixels (`-1`, the default, only reports it; an app whose design says no page scrolls sets `0`). Containers that scroll on their own (a wide table in its wrapper) are listed with their sizes, never a fault. `--stability 6s` scrolls them, runs `--trigger` (a refresh call) or waits, and faults one a re-render reset or that lost the focus inside it; a log that follows its tail on purpose is named in `--allow` or carries `data-audit-follow`. `--base-url` audits an app already running (any Go app with Playwright in `node_modules`), signed in with `--storage-state` (a Playwright storage state) or `--login` (a module whose default export, `async (page, baseURL)`, signs in). A hash route is a same-document navigation, without an HTTP status. Exits non-zero on a fault. The same checks for specs: `expectNoSidewaysScroll(page)` and `expectFitsViewport(page)` from `e2e/layout.ts`. |
 | `lidza audit performance [--samples 3] [--budget lcp=2500,js=300kb] [--routes /a] [--base-url URL] [--json]` | builds and starts the app and loads every prerendered page plus `--routes` cold on a throttled phone (Lighthouse's mobile settings), `--samples` times, reporting the median FCP, LCP, CLS and TBT, the bytes downloaded by kind and the JavaScript that does not run on load. A page over a budget is a fault: sizes and layout shift by default (`cls=0.1`, `js=300kb`, `css=100kb`, `images=1000kb`, `total=1600kb`), timings only when set (`--budget fcp=1800,lcp=2500,tbt=200`, in ms), since they vary between machines; the advice is not: uncompressed text, assets cached briefly, images larger than drawn ("Add a responsive image") or without a size, a lazy LCP image, a missing title, `lang`, viewport or description, and an `llms.txt` served as HTML. Gate on timings with more `--samples`, and set budgets for the app's own pages. A hydrating page's TBT falls to zero as a static page ("Add a page"). |
 | `lidza doctor` | toolchain, services, `node_modules`, pack builds, e2e browser; each missing item with its fix. |
@@ -131,7 +146,7 @@ Its prompts are the recipes of this guide (`add-api-route`,
 invoked as `$add-api-route` in Codex and `/add-api-route` in Gemini);
 `lidza gen` rewrites them from this file.
 
-The app adds its own tools in `tools.go` with
+The app adds its own tools in `app/tools.go` with
 `lidza.ToolFunc("name", "what it does", func(ctx, In) (Out, error))`;
 they appear as `app_name` in `lidza mcp` (running inside the app, with
 its packs) and, when the binary runs with `LIDZA_MCP_TOKEN`, at `/mcp`
@@ -145,7 +160,7 @@ are also at /llms.txt and /llms-full.txt until the app serves its own
 there (a product's llms.txt for crawlers), which then wins.
 
 The lists are live: a pack added to `lidza.json`, a recipe recorded in
-the guide or a tool added to `tools.go` appears in this server's tools
+the guide or a tool added to `app/tools.go` appears in this server's tools
 and prompts within seconds, and at once after `lidza_pack_add` and
 `lidza_recipe_add`; no restart. Only a newer CLI binary (`lidza update`)
 needs the server reconnected (`/mcp` in Claude Code), and every command
@@ -155,7 +170,7 @@ result says so while that is the case.
 
 1. Go owns `/api`. The frontend never defines an API route and never proxies
    one; it calls `/api/...` on the same origin.
-2. Add an API route in `routes.go` with `router.Route(r, "GET /api/v1/things/{id}", handler)`
+2. Add an API route in `app/routes.go` with `router.Route(r, "GET /api/v1/things/{id}", handler)`
    where `handler` is `func(ctx context.Context, req *router.Request[In]) (Out, error)`.
    `In` is the JSON body type (`router.None` without one) and `Out` the reply
    (`router.None` for 204). Put the shapes in `schema.lidza` so they get
@@ -247,7 +262,7 @@ the rest.
 
 ## Tests
 
-`routes_test.go` shows the shape: `srv := lidzatest.Start(t, app())`
+`tests/routes_test.go` shows the shape: `srv := lidzatest.Start(t, app.New(nil))`
 boots the app with its packs (`.env.test`, `LIDZA_MODE=test`) and
 `srv.JSON(t, method, path, body, &out, lidzatest.Bearer(token))` calls it.
 Run `lidza test`.
@@ -255,7 +270,7 @@ Run `lidza test`.
 Time and outbound HTTP are testable when handlers use `lidza.Now(ctx)`
 instead of `time.Now()` and `lidza.HTTPClient(ctx)` instead of
 `http.DefaultClient`: `srv.Clock.Set(t)` freezes time, and
-`lidzatest.Start(t, app(), lidzatest.WithRecorder("name"))` replays
+`lidzatest.Start(t, app.New(nil), lidzatest.WithRecorder("name"))` replays
 `testdata/http/name.json`, recorded once with `LIDZA_RECORD=1 lidza test`.
 
 Layout in the browser suite: `e2e/layout.ts` has `expectNoSidewaysScroll(page)`
@@ -340,7 +355,7 @@ is validated on the server and callable from the client by name.
    }
    ```
 
-2. Register the handler in `routes.go`:
+2. Register the handler in `app/routes.go`:
 
    ```go
    router.Route(r, "POST /api/v1/things", createThing)
@@ -398,7 +413,7 @@ is validated on the server and callable from the client by name.
    loop or aborting the signal closes the request. The Dart client
    returns a `Stream`.
 
-5. Add a test in `routes_test.go` (see "Write a test") and run
+5. Add a test in `tests/routes_test.go` (see "Write a test") and run
    `lidza check`, then `lidza test`.
 
 ### Add a resource
@@ -432,7 +447,7 @@ backed by Postgres. Needs the `db` and `auth` packs (`lidza pack add db`,
    `model: "Post"`): it writes `db/queries/post.sql`, the
    `CreatePost`, `UpdatePost` and `PostList` types in `schema.lidza`,
    `handlers/post.go` with the routes under `/api/v1/posts`, and in
-   `routes.go` a group behind `auth.Require()` with the routes on it:
+   `app/routes.go` a group behind `auth.Require()` with the routes on it:
 
    ```go
    posts := r.Group("/api/v1/posts", auth.Require())
@@ -465,7 +480,7 @@ OIDC issuer) when configured. The app writes no login handler and no
 OAuth flow.
 
 1. `lidza pack add auth` (MCP: `lidza_pack_add`; needs `db`, and `mail`
-   for the verification and reset links). In `routes.go`:
+   for the verification and reset links). In `app/routes.go`:
    `auth.Mount(r, auth.Options{Title: "thura"})`. `lidza gen` then
    writes the client: `api.authRegister`, `authLogin`, `authLogout`,
    `authSession`, `authMe`, `authVerify`, `authForgot`, `authReset`,
@@ -720,7 +735,7 @@ SSR sidecar.
    sidecar renders and, under `lidza dev`, the dev server's. Setting
    `document.title` in the browser on navigation stays the client's job;
    the server's head is for the first load and for crawlers.
-6. Test it in `routes_test.go`: call `head` with
+6. Test it beside the package that defines `head` (outside the root): call `head` with
    `httptest.NewRequest("GET", "/products/"+id,
    nil).WithContext(srv.Context())` (`srv` from `lidzatest.Start`) and
    check `Title`, `Canonical` and the 404 `Status`. `lidza check`, then
@@ -782,7 +797,7 @@ pressure. Read "Rust: when and how" first; it is not for speed.
 Let an agent call a function of this app, with its packs, from
 `lidza mcp` (as `app_<name>`) and from the running binary at `/mcp`.
 
-1. In `tools.go` add to the list returned by `tools()`:
+1. In `app/tools.go` add to the list returned by `tools()`:
 
    ```go
    lidza.ToolFunc("count_posts", "Number of posts.", func(ctx context.Context, _ struct{}) (int, error) {
@@ -886,7 +901,7 @@ mail pack, never through a vendor SDK.
    returns the newest message to that address whose subject contains the
    text, waiting for one a job sends; `Outbox(ctx, 5)` lists them newest
    first. Both have `Status`, `Text` and `HTML`; read the link out of the
-   text. The snippet `auth-handlers` and `routes_test.go` in the
+   text. The snippet `auth-handlers` and `tests/routes_test.go` in the
    reference app show both sides. For `SendTx`, also assert that rolling
    back leaves neither the app write, the outbox row nor the delivery job.
 5. `lidza check`, then `lidza test`. In dev, `lidza_mail` (MCP) shows the
@@ -913,7 +928,7 @@ the handler later with retries, on this node or another. Recurring work
    finish, then cancels its context and puts it back to pending for the
    next node or the restart. Stop when `ctx` is done and make a rerun
    harmless (upserts, a done marker per item).
-4. Register it in `start.go`:
+4. Register it in `app/start.go`:
 
    ```go
    jobs.FromServices(s).Handle("notify.task", handlers.NotifyTask)
@@ -937,7 +952,7 @@ the handler later with retries, on this node or another. Recurring work
    `jobs.Existed(&found)` says whether it was already there. Once the
    job is done or failed, the key queues new work again.
 6. Work on a timetable (a weekly digest, a sync every 15 minutes) is a
-   schedule in `start.go`, not a job that enqueues its next run:
+   schedule in `app/start.go`, not a job that enqueues its next run:
 
    ```go
    q := jobs.FromServices(s)
@@ -1070,7 +1085,7 @@ app's tools. The llm pack speaks the providers; the app never does.
    `llm.From(srv.Context()).Fake().ReplyJSON(schema.NoteTags{Tags:
    []string{"go"}})` scripts the next reply and `Fake().Calls()` shows
    the prompt the handler sent. Assert on both. The snippet
-   `llm-handler` and `routes_test.go` in the reference app show it. The
+   `llm-handler` and `tests/routes_test.go` in the reference app show it. The
    fake embeds too, the same vector for the same text. `.env.test` has
    `LLM_PROVIDER=fake` and `EMBED_PROVIDER=fake` (setup writes them,
    `lidza update` adds them), so a provider set in `.env` never reaches
@@ -1120,7 +1135,7 @@ pack, with the app deciding who may read them.
 4. Test with the local provider: `.env.test` sets `STORAGE_PROVIDER=local`
    and a `STORAGE_DIR`; upload through the API, read it back, delete the
    row and check `Stat` returns `storage.ErrNotFound`. The snippet
-   `storage-handler` and `routes_test.go` in the reference app show it.
+   `storage-handler` and `tests/routes_test.go` in the reference app show it.
 5. `lidza check`, then `lidza test`.
 
 ### Receive a webhook
@@ -1137,7 +1152,7 @@ verified.
    production). Without the setting every delivery is refused with 503
    and the log names it; an endpoint never runs unverified. A value
    saved from the admin pages applies within a minute.
-2. Register the endpoint in `routes.go`, on `r` and not in a group
+2. Register the endpoint in `app/routes.go`, on `r` and not in a group
    behind `auth.Require()` (the provider has no session):
 
    ```go
@@ -1194,12 +1209,12 @@ verified.
    production refuses (503) unless `webhook.WithStore` names a store.
    The provider may still send two events about the same object, out
    of order: write with upserts keyed by the object's id.
-5. Test it in `routes_test.go`, signing as the provider does:
+5. Test it in `tests/routes_test.go`, signing as the provider does:
 
    ```go
    func TestPaymentWebhook(t *testing.T) {
    	t.Setenv("PAYMENTS_WEBHOOK_SECRET", "whsec_test")
-   	srv := lidzatest.Start(t, app())
+       srv := lidzatest.Start(t, app.New(nil))
    	body := `{"id":"evt_1","type":"checkout.session.completed","data":{"object":{"id":"cs_1","client_reference_id":"42"}}}`
    	sig := webhook.StripeSignature("whsec_test", srv.Clock.Now(), []byte(body))
    	res := srv.JSON(t, "POST", "/api/v1/webhooks/payments", json.RawMessage(body), nil, lidzatest.Header("Stripe-Signature", sig))
@@ -1249,7 +1264,7 @@ the browser.
    `repo admin:repo_hook` (repositories, private ones included, and
    their webhooks); `AUTH_CONNECT_GITHUB_SCOPES` asks for others. A
    grant missing a scope is refused and withdrawn.
-2. Other providers go in the options, in `routes.go`:
+2. Other providers go in the options, in `app/routes.go`:
 
    ```go
    auth.Mount(r, auth.Options{Connectors: []auth.Connector{
@@ -1480,7 +1495,7 @@ without writing a page.
 
 1. `lidza pack add auth` if the app has no accounts yet; the pages are
    behind `auth.Require()`.
-2. In `routes.go`: `admin.Mount(r, admin.Options{Title: "thura"})`
+2. In `app/routes.go`: `admin.Mount(r, admin.Options{Title: "thura"})`
    (import `github.com/agim/lidza/packs/admin`). Once `admin/` holds a
    file (the theme of step 5, a page template), embed it so the binary
    carries it and needs no `admin/` folder beside it: `//go:embed admin`
@@ -1507,7 +1522,7 @@ without writing a page.
    file is read from `Options.Templates` (embedded, step 2), else from
    `admin/` on disk.
 6. Test it: an admin gets 200 on `/admin/`, another user 403, a visitor
-   401; the reference app's `routes_test.go` shows it.
+   401; the reference app's `tests/routes_test.go` shows it.
 7. `lidza check`, then `lidza test`.
 
 ### Extend the admin pages
@@ -1549,7 +1564,7 @@ instead of a separate admin screen.
    `badge`, `btn`), the functions `icon`, `since`, `num`, `bytes`,
    `dict`, and `{{template "admin-empty" (dict "Icon" "inbox"
    "Title" "..." "Text" "...")}}` for an empty list. Embed it so it
-   ships in the binary: `//go:embed admin` in `routes.go` and
+   ships in the binary: `//go:embed admin` in `app/routes.go` and
    `Templates: lidza.Sub(adminFiles, "admin")` (the folder, so the
    theme ships too). No inline `<script>` or
    `style=`: the pages hold under a strict Content-Security-Policy; a
@@ -1584,11 +1599,11 @@ is verified, how a report is built) is a recipe.
 Cover a handler with a Go test that boots the app, or a page with a
 browser test.
 
-1. Handler: in `routes_test.go` (or `handlers/<name>_test.go`):
+1. Handler: in `tests/<name>_test.go` (`package tests`, importing `thura/app`) or a unit test beside its non-root package:
 
    ```go
    func TestCreateThing(t *testing.T) {
-   	srv := lidzatest.Start(t, app())
+       srv := lidzatest.Start(t, app.New(nil))
    	var out schema.Thing
    	res := srv.JSON(t, "POST", "/api/v1/things", schema.CreateThing{Title: "x"}, &out)
    	if res.StatusCode != http.StatusCreated || out.Title != "x" {
@@ -1618,8 +1633,10 @@ contracts and keep the same instructions available to every agent.
 1. Read the brief, decisions and layout in this guide. With `appDir`, keep
    the application factory, routes, startup, tools and embedded assets there;
    `main.go` stays the entrypoint. Keep HTTP and job handlers in `handlers/`,
-   where `lidza gen resource` writes them. Integration tests live in `tests/`
-   when the app has an importable factory; unit tests stay beside their package.
+   where `lidza gen resource` writes them. Integration tests live in `tests/` and use the importable factory; unit tests
+   stay beside their non-root package. Root tests and stray files fail L020.
+   Keep docs in `docs/`, scripts in `scripts/`, fixtures in `testdata/`, and
+   scratch/build output in `.lidza/` or `bin/`.
 2. Put business behavior in `internal/<feature>/` (for example
    `internal/orders/`), vendor clients in `internal/providers/<vendor>/` and
    shared infrastructure in `internal/platform/<name>/`. Create packages as
@@ -1668,7 +1685,7 @@ Keep the route and each workspace application independently loadable.
 
 1. Follow "Add a page", but use `lazyRouteComponent(() => import('./pages/Things'), 'Things')` instead of importing the page eagerly.
 2. Set the route's `staticData.module` to `src/pages/Things.tsx`. Prerendering uses the Vite manifest to preload that page and its static dependencies, without fetching other pages or application tabs. Keep `static: true` for pages that need no browser runtime.
-3. Add generic title, description and `noIndex` entries to `src/page-metadata.json`; Go serves the same metadata that React maintains after navigation. Never put account, workspace or grant contents in metadata.
+3. Add generic title, description and `noIndex` entries to `app/page-metadata.json`; Go serves the same metadata that React maintains after navigation. Never put account, workspace or grant contents in metadata.
 4. Keep sign-in and shared utilities independent of application tabs. Use React lazy/Suspense for tabs. Manual vendor chunk groups must not recursively capture shared React/router dependencies.
 5. Run `lidza check`, the browser suite and a production cold-load audit. `e2e/page-loading.spec.ts` checks the sign-in/tab boundary and route metadata. If the published audit runner stalls across contexts, `scripts/audit-performance-isolated.mjs` runs that unchanged runner in a fresh browser process for every prerendered route and enforces the same default budgets; its report is in `.lidza/`.
 
@@ -1799,7 +1816,7 @@ Official Go packs, configured from `.env` (see `.env.example` after
   email, 0)` makes the token the app mails, `ConsumeToken` redeems it
   once; `RevokeAll` after a reset. Working code: the snippets `routes`
   and `auth-handlers`.
-- `jobs`: register handlers in `start.go` (`onStart`) with
+- `jobs`: register handlers in `app/start.go` (`onStart`) with
   `jobs.FromServices(s).Handle("kind", fn)`; enqueue with
   `jobs.From(ctx).Enqueue(ctx, "kind", payload, jobs.RunAt(t))`, or
   `EnqueueTx(ctx, tx, ...)` inside a transaction; recurring work with
@@ -1914,7 +1931,7 @@ the `lidza_client` Dart package there with the same operations as
 
 ## Admin pages
 
-`admin.Mount(r, admin.Options{Title: "thura"})` in `routes.go` serves
+`admin.Mount(r, admin.Options{Title: "thura"})` in `app/routes.go` serves
 `/admin` for the app's first account (the first user ever to sign in is
 an admin; `Options.NoFirstUserAdmin` turns that off) and for the users
 `ADMIN_USERS` names (ids or emails, comma separated, in `.env` or added

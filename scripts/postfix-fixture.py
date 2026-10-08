@@ -242,8 +242,19 @@ def main():
         parts = list(message.iter_attachments())
         assert len(parts) == 1 and parts[0].get_filename() == 'boundary.bin'
         assert parts[0].get_payload(decode=True) == attachment
+
+        # Reply correlation must survive the official pack and actual SMTP wire.
+        reply = api(prefix, {'replyId': inbound['id']})
+        assert reply['threadId'] == inbound['threadId']
+        api(prefix + '/' + reply['id'] + '/send', {})
+        eventually(lambda: api(prefix + '/' + reply['id'])['item']['status'] == 'sent', 'SMTP reply acceptance', 90)
+        reply_message = eventually(lambda: next((message for body in received
+            if (message := BytesParser(policy=policy.default).parsebytes(body))['Subject'] == reply['subject']), None), 'SMTP reply headers')
+        assert reply_message['In-Reply-To'] == inbound['messageId']
+        assert inbound['messageId'] in str(reply_message['References'])
+        assert reply_message['To'].addresses[0].addr_spec == 'sender@example.net'
         version = subprocess.check_output(['docker', 'exec', 'thura-postfix-test', 'postconf', '-h', 'mail_version'], text=True).strip()
-        print(json.dumps({'status': 'ok', 'postfixVersion': version, 'inbound': True, 'deduplicated': True, 'rejectUnknown': True, 'rejectImplicitPlusAddress': True, 'rejectOpenRelay': True, 'deferredRecovery': True, 'mtaRestartRecovery': True, 'officialPackOutbound': True, 'tenMiBAttachment': True, 'separateWireLimits': True}))
+        print(json.dumps({'status': 'ok', 'postfixVersion': version, 'inbound': True, 'deduplicated': True, 'rejectUnknown': True, 'rejectImplicitPlusAddress': True, 'rejectOpenRelay': True, 'deferredRecovery': True, 'mtaRestartRecovery': True, 'officialPackOutbound': True, 'tenMiBAttachment': True, 'separateWireLimits': True, 'replyHeaders': True}))
     finally:
         if app:
             stop_app(app)
