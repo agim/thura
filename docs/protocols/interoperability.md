@@ -1,6 +1,6 @@
 # Thura protocol boundaries
 
-SMIP work is isolated from app-completion work. [SMIP/0.1](smip-v0.1.md) is the new experimental chat/file reference. Existing protocols retain their documented guarantees; adapters must explicitly translate identities, permissions, identifiers and acknowledgement states. This map supplies the starting scope for “other protocols.”
+SMIP work is isolated from app-completion work. [SMIP/0.1](smip-v0.1.md) is the experimental chat/file transport, now with an opt-in Thura receive/review and Drive-import adapter. Existing protocols retain their documented guarantees; adapters must explicitly translate identities, permissions, identifiers and acknowledgement states. This map supplies the starting scope for “other protocols.”
 
 | Protocol | Current role | SMIP relationship / next contract |
 | --- | --- | --- |

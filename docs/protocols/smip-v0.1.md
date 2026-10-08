@@ -1,6 +1,6 @@
 # SMIP/0.1: server chat and file transport
 
-Status: experimental reference profile, implemented in [internal/smip](../../internal/smip). This profile is independently identified as `smip/0.1`; incompatible changes require a new version and endpoint. It is not mounted in Thura, enabled as a Chat/Drive provider, or an SMTP replacement. The developer's requirement is chat and sending/receiving files between two servers. This document turns that requirement into a testable first transport; the uploaded transcript is research, not a binding specification.
+Status: experimental reference profile, implemented in [internal/smip](../../internal/smip). This profile is independently identified as `smip/0.1`; incompatible changes require a new version and endpoint. Thura now has an opt-in receive/review adapter and explicit Drive import; Matrix remains its conversation provider. SMIP is not an SMTP replacement. The developer's requirement is chat and sending/receiving files between two servers. This document turns that requirement into a testable first transport; the uploaded transcript is research, not a binding specification.
 
 ## Guarantees and trust
 
@@ -24,7 +24,7 @@ The reference uses standard [Ed25519 (RFC 8032)](https://www.rfc-editor.org/rfc/
 
 ## Wire envelope
 
-`POST /smip/v0.1/messages`, with `Content-Type: application/json`, over TLS 1.3. No redirects, transparent relay, query options or alternate transport negotiation.
+`POST /smip/v0.1/messages` for the standalone reference, or the explicitly paired application-hosted endpoint `POST /api/v1/smip/v0.1/messages`, with `Content-Type: application/json`, over TLS 1.3. No redirects, transparent relay, query options or alternate transport negotiation. `NewClient` selects the standalone endpoint; `NewApplicationClient` selects the API-hosted endpoint. Pair the endpoint profile explicitly; clients never probe or fall back between them. Signing bytes and receipt semantics are identical.
 
 ```json
 {"envelope":{"version":"smip/0.1","id":"opaque-unique-id","from":"a.example","to":"b.example","sender":"alice@a.example","recipient":"bob@b.example","stream":"conversation-1","kind":"chat","created":1800000000,"expires":1800003600,"keyId":"<64 lowercase hex characters>","name":"","payload":"aGVsbG8"},"signature":"<unpadded base64url Ed25519 signature>"}
@@ -115,4 +115,4 @@ node scripts/smip-vectors.mjs
 
 Tests exercise two independently configured TLS servers, bidirectional chat/binary files, exact 16 MiB file transfer, malformed/oversize packets, recipient/stream denial, tampering and key revocation, key rotation/historical receipts, conflicting IDs, concurrent storage, lost acknowledgements, restart/process death, unavailable/corrupt storage, backpressure, TLS/redirect policy and forged acknowledgements. Outbox tests additionally cover persist-before-send ordering, concurrent enqueue, process exit, lost acknowledgements after expiry, local receipt commit failure, retryable and permanent HTTP errors, forged receipts, explicit resume, cancellation, unsent expiry and local origin-key revocation. The Node verifier independently reconstructs canonical bytes and verifies both signatures and payload bytes using Node crypto.
 
-Thura integration is a separate change: a sealed operator capability, database/storage adapters and durable sender jobs, current-member authorization before signing, recipient/stream mapping, transactional `(origin,id)` import, safe plain-text rendering, file size/quota/checksum/scanning checks through the storage pack, explicit moderation, and user-visible pending/accepted/imported/read states. It must neither trust a remote workspace ID nor grant membership from a peer signature. Import-time membership checks remain necessary even after transport acceptance. Existing Matrix remains the operational chat provider until that adapter passes its own acceptance suite.
+Thura's opt-in receive/review adapter is described in [the operator guide](smip-thura.md). It stores verified packets/receipts in Postgres, rechecks administrator-created peer/stream/sender/recipient bindings under the workspace lock, and lists safe text/metadata through member-authorized APIs. Explicit file import rechecks current membership, destination, quota and signed content before writing immutable bytes through the storage pack. Matrix remains the conversation provider. App sending/jobs, public discovery, malware scanning, ordered/reply events and human read states are separate work; transport acceptance does not claim them.

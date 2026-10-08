@@ -559,6 +559,40 @@ type ShareGrant struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
+type SmipBinding struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	Peer        string    `json:"peer"`
+	Stream      string    `json:"stream"`
+	Sender      string    `json:"sender"`
+	Recipient   string    `json:"recipient"`
+	Enabled     bool      `json:"enabled"`
+	CreatedBy   string    `json:"created_by"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type SmipInbox struct {
+	ID             string     `json:"id"`
+	WorkspaceID    string     `json:"workspace_id"`
+	BindingID      string     `json:"binding_id"`
+	Origin         string     `json:"origin"`
+	MessageID      string     `json:"message_id"`
+	Digest         string     `json:"digest"`
+	Record         string     `json:"record"`
+	OriginKey      string     `json:"origin_key"`
+	ReceiptKey     string     `json:"receipt_key"`
+	Sender         string     `json:"sender"`
+	Recipient      string     `json:"recipient"`
+	Stream         string     `json:"stream"`
+	Body           string     `json:"body"`
+	Name           string     `json:"name"`
+	Kind           string     `json:"kind"`
+	Size           int32      `json:"size"`
+	ImportedFileID *string    `json:"imported_file_id"`
+	ImportedAt     *time.Time `json:"imported_at"`
+	AcceptedAt     time.Time  `json:"accepted_at"`
+}
+
 type UploadChunk struct {
 	ID        string `json:"id"`
 	SessionID string `json:"session_id"`

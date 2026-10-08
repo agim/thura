@@ -12,6 +12,7 @@ import (
 	"github.com/agim/lidza/packs/jobs"
 	"github.com/agim/lidza/pkg/middleware"
 	"thura/internal/drive"
+	"thura/internal/federation"
 	"thura/internal/mailbox"
 	"thura/internal/meet"
 	"thura/internal/platform/objectgc"
@@ -24,6 +25,9 @@ import (
 // cache, lidza.Provide a service the packs do not. main.go is generated
 // once and left alone; this file is the app's.
 func onStart(ctx context.Context, s *lidza.Services) error {
+	if err := federation.Configure(s); err != nil {
+		return err
+	}
 	jobs.FromServices(s).Handle(mailbox.DeliveryJob, mailbox.Deliver)
 	jobs.FromServices(s).Handle(calendar.ReminderJob, calendar.Remind, jobs.Concurrency(1))
 	if err := jobs.FromServices(s).Schedule(calendar.ReminderJob, jobs.Every(time.Minute), nil); err != nil {

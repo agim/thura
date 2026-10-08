@@ -41,3 +41,4 @@ through git: `lidza note add "..."` (MCP `lidza_note_add`). Record them here,
 never in an agent's local memory.
 
 - 2026-10-08: SMIP will be used for chats across two servers and for sending and receiving files between two servers. This is the intended cross-server chat/file transport; the current Matrix connector remains the implemented integration until SMIP is implemented and validated.
+- 2026-10-08: The opt-in SMIP receive/review adapter uses /api/v1/smip/v0.1/messages, operator-paired keys, transactional workspace bindings and explicit Drive import. Matrix remains the conversation provider; SMIP app sending is the next separate integration step.

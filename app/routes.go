@@ -7,6 +7,7 @@ import (
 	"github.com/agim/lidza/pkg/middleware"
 	"github.com/agim/lidza/pkg/router"
 	"thura/handlers"
+	"thura/internal/federation"
 	"thura/internal/meet"
 	"thura/internal/office"
 
@@ -18,6 +19,8 @@ import (
 // handler typed input and output: the client in .lidza/client is generated
 // from these types, so the frontend cannot drift from the API.
 func routes(r *router.Router) {
+	// Versioned peer wire endpoint; all application routes stay under /api.
+	r.HandleFunc("POST /api/v1/smip/v0.1/messages", federation.Receive)
 	r.HandleFunc("POST /api/v1/meet/webhook", meet.Webhook)
 	r.HandleFunc("GET /api/v1/office/source", office.Source)
 	r.HandleFunc("POST /api/v1/office/callback/{id}", office.Callback)
@@ -31,6 +34,11 @@ func routes(r *router.Router) {
 	router.Route(reply, "POST /api/v1/calendar-replies/respond", handlers.ReplyCalendar)
 	router.Route(reply, "POST /api/v1/calendar-replies/ics", handlers.ReplyCalendarICS)
 	g := r.Group("/api/v1", auth.Require())
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/smip/bindings", handlers.ListSmipBindings)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/smip/bindings", handlers.CreateSmipBinding)
+	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/smip/bindings/{id}", handlers.DisableSmipBinding)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/smip/inbox", handlers.ListSmipInbox)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/smip/inbox/{id}/import", handlers.ImportSmipFile)
 	router.Route(g, "GET /api/v1/workspaces", handlers.ListWorkspaces)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/audit", handlers.ListWorkspaceAudit)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/meet", handlers.ListMeetings)

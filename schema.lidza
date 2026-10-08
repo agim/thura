@@ -872,3 +872,74 @@ model AuditEvent @table("audit_event") {
   @@index(actor, at)
   @@index(scope, at)
 }
+
+// Opt-in SMIP receive/review boundary; never grants remote workspace membership.
+model SmipBinding {
+  id uuid @id
+  workspaceId uuid @ref(Workspace) @index
+  peer string
+  stream string
+  sender string
+  recipient string
+  enabled bool @default(true)
+  createdBy string
+  createdAt time @default(now())
+  @@unique(peer, stream, recipient)
+}
+model SmipInbox {
+  id uuid @id @default(uuid())
+  workspaceId uuid @ref(Workspace) @index
+  bindingId uuid @ref(SmipBinding)
+  origin string
+  messageId string
+  digest string
+  record text
+  originKey text
+  receiptKey text
+  sender string @default("")
+  recipient string @default("")
+  stream string @default("")
+  body text @default("")
+  name string @default("")
+  kind string
+  size int
+  importedFileId uuid?
+  importedAt time?
+  acceptedAt time
+  @@unique(origin, messageId)
+}
+type SmipBindingInput {
+  requestId uuid
+  peer string @min(1) @max(253)
+  stream string @min(1) @max(128)
+  sender string @min(1) @max(382)
+  recipient string @min(1) @max(382)
+}
+type SmipBindingList {
+  items SmipBinding[]
+  configured bool
+}
+type SmipInboxItem {
+  id uuid
+  bindingId uuid
+  origin string
+  messageId string
+  sender string
+  recipient string
+  stream string
+  kind string
+  body string
+  name string
+  size int
+  digest string
+  acceptedAt time
+  importedFileId uuid?
+  importedAt time?
+}
+type SmipInboxList {
+  items SmipInboxItem[]
+  nextCursor string
+}
+type SmipImportInput {
+  folderId uuid?
+}

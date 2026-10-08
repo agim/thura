@@ -1332,6 +1332,114 @@ func (v AuditEvent) Validate() error {
 	return errs.Result()
 }
 
+// SmipBinding is a row of the smip_binding table.
+type SmipBinding struct {
+	ID          string    `json:"id" db:"id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	Peer        string    `json:"peer" db:"peer"`
+	Stream      string    `json:"stream" db:"stream"`
+	Sender      string    `json:"sender" db:"sender"`
+	Recipient   string    `json:"recipient" db:"recipient"`
+	Enabled     bool      `json:"enabled" db:"enabled"`
+	CreatedBy   string    `json:"createdBy" db:"created_by"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of SmipBinding from schema.lidza.
+func (v SmipBinding) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Peer == "" {
+		errs.Add("peer", "required", "required")
+	}
+	if v.Stream == "" {
+		errs.Add("stream", "required", "required")
+	}
+	if v.Sender == "" {
+		errs.Add("sender", "required", "required")
+	}
+	if v.Recipient == "" {
+		errs.Add("recipient", "required", "required")
+	}
+	if v.CreatedBy == "" {
+		errs.Add("createdBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipInbox is a row of the smip_inbox table.
+type SmipInbox struct {
+	ID             string     `json:"id" db:"id"`
+	WorkspaceID    string     `json:"workspaceId" db:"workspace_id"`
+	BindingID      string     `json:"bindingId" db:"binding_id"`
+	Origin         string     `json:"origin" db:"origin"`
+	MessageID      string     `json:"messageId" db:"message_id"`
+	Digest         string     `json:"digest" db:"digest"`
+	Record         string     `json:"record" db:"record"`
+	OriginKey      string     `json:"originKey" db:"origin_key"`
+	ReceiptKey     string     `json:"receiptKey" db:"receipt_key"`
+	Sender         string     `json:"sender" db:"sender"`
+	Recipient      string     `json:"recipient" db:"recipient"`
+	Stream         string     `json:"stream" db:"stream"`
+	Body           string     `json:"body" db:"body"`
+	Name           string     `json:"name" db:"name"`
+	Kind           string     `json:"kind" db:"kind"`
+	Size           int        `json:"size" db:"size"`
+	ImportedFileID *string    `json:"importedFileId" db:"imported_file_id"`
+	ImportedAt     *time.Time `json:"importedAt" db:"imported_at"`
+	AcceptedAt     time.Time  `json:"acceptedAt" db:"accepted_at"`
+}
+
+// Validate applies the rules of SmipInbox from schema.lidza.
+func (v SmipInbox) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.BindingID == "" {
+		errs.Add("bindingId", "required", "required")
+	}
+	if v.Origin == "" {
+		errs.Add("origin", "required", "required")
+	}
+	if v.MessageID == "" {
+		errs.Add("messageId", "required", "required")
+	}
+	if v.Digest == "" {
+		errs.Add("digest", "required", "required")
+	}
+	if v.Record == "" {
+		errs.Add("record", "required", "required")
+	}
+	if v.OriginKey == "" {
+		errs.Add("originKey", "required", "required")
+	}
+	if v.ReceiptKey == "" {
+		errs.Add("receiptKey", "required", "required")
+	}
+	if v.Sender == "" {
+		errs.Add("sender", "required", "required")
+	}
+	if v.Recipient == "" {
+		errs.Add("recipient", "required", "required")
+	}
+	if v.Stream == "" {
+		errs.Add("stream", "required", "required")
+	}
+	if v.Body == "" {
+		errs.Add("body", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.Kind == "" {
+		errs.Add("kind", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -3148,5 +3256,167 @@ func (v BindMeetingInput) Validate() error {
 	if v.MeetingID == "" {
 		errs.Add("meetingId", "required", "required")
 	}
+	return errs.Result()
+}
+
+// SmipBindingInput is an API type.
+type SmipBindingInput struct {
+	RequestID string `json:"requestId"`
+	Peer      string `json:"peer"`
+	Stream    string `json:"stream"`
+	Sender    string `json:"sender"`
+	Recipient string `json:"recipient"`
+}
+
+// Validate applies the rules of SmipBindingInput from schema.lidza.
+func (v SmipBindingInput) Validate() error {
+	var errs validate.Errors
+	if v.RequestID == "" {
+		errs.Add("requestId", "required", "required")
+	}
+	if v.Peer == "" {
+		errs.Add("peer", "required", "required")
+	}
+	if len(v.Peer) < 1 {
+		errs.Add("peer", "min", "at least 1 character(s)")
+	}
+	if len(v.Peer) > 253 {
+		errs.Add("peer", "max", "at most 253 character(s)")
+	}
+	if v.Stream == "" {
+		errs.Add("stream", "required", "required")
+	}
+	if len(v.Stream) < 1 {
+		errs.Add("stream", "min", "at least 1 character(s)")
+	}
+	if len(v.Stream) > 128 {
+		errs.Add("stream", "max", "at most 128 character(s)")
+	}
+	if v.Sender == "" {
+		errs.Add("sender", "required", "required")
+	}
+	if len(v.Sender) < 1 {
+		errs.Add("sender", "min", "at least 1 character(s)")
+	}
+	if len(v.Sender) > 382 {
+		errs.Add("sender", "max", "at most 382 character(s)")
+	}
+	if v.Recipient == "" {
+		errs.Add("recipient", "required", "required")
+	}
+	if len(v.Recipient) < 1 {
+		errs.Add("recipient", "min", "at least 1 character(s)")
+	}
+	if len(v.Recipient) > 382 {
+		errs.Add("recipient", "max", "at most 382 character(s)")
+	}
+	return errs.Result()
+}
+
+// SmipBindingList is an API type.
+type SmipBindingList struct {
+	Items      []SmipBinding `json:"items"`
+	Configured bool          `json:"configured"`
+}
+
+// Validate applies the rules of SmipBindingList from schema.lidza.
+func (v SmipBindingList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// SmipInboxItem is an API type.
+type SmipInboxItem struct {
+	ID             string     `json:"id"`
+	BindingID      string     `json:"bindingId"`
+	Origin         string     `json:"origin"`
+	MessageID      string     `json:"messageId"`
+	Sender         string     `json:"sender"`
+	Recipient      string     `json:"recipient"`
+	Stream         string     `json:"stream"`
+	Kind           string     `json:"kind"`
+	Body           string     `json:"body"`
+	Name           string     `json:"name"`
+	Size           int        `json:"size"`
+	Digest         string     `json:"digest"`
+	AcceptedAt     time.Time  `json:"acceptedAt"`
+	ImportedFileID *string    `json:"importedFileId"`
+	ImportedAt     *time.Time `json:"importedAt"`
+}
+
+// Validate applies the rules of SmipInboxItem from schema.lidza.
+func (v SmipInboxItem) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.BindingID == "" {
+		errs.Add("bindingId", "required", "required")
+	}
+	if v.Origin == "" {
+		errs.Add("origin", "required", "required")
+	}
+	if v.MessageID == "" {
+		errs.Add("messageId", "required", "required")
+	}
+	if v.Sender == "" {
+		errs.Add("sender", "required", "required")
+	}
+	if v.Recipient == "" {
+		errs.Add("recipient", "required", "required")
+	}
+	if v.Stream == "" {
+		errs.Add("stream", "required", "required")
+	}
+	if v.Kind == "" {
+		errs.Add("kind", "required", "required")
+	}
+	if v.Body == "" {
+		errs.Add("body", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.Digest == "" {
+		errs.Add("digest", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipInboxList is an API type.
+type SmipInboxList struct {
+	Items      []SmipInboxItem `json:"items"`
+	NextCursor string          `json:"nextCursor"`
+}
+
+// Validate applies the rules of SmipInboxList from schema.lidza.
+func (v SmipInboxList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	if v.NextCursor == "" {
+		errs.Add("nextCursor", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipImportInput is an API type.
+type SmipImportInput struct {
+	FolderID *string `json:"folderId"`
+}
+
+// Validate applies the rules of SmipImportInput from schema.lidza.
+func (v SmipImportInput) Validate() error {
+	var errs validate.Errors
 	return errs.Result()
 }

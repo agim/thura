@@ -513,3 +513,41 @@ CREATE INDEX audit_event_at_id_idx ON audit_event (at, id);
 CREATE INDEX audit_event_actor_at_idx ON audit_event (actor, at);
 CREATE INDEX audit_event_scope_at_idx ON audit_event (scope, at);
 
+CREATE TABLE smip_binding (
+  id uuid PRIMARY KEY,
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  peer text NOT NULL,
+  stream text NOT NULL,
+  sender text NOT NULL,
+  recipient text NOT NULL,
+  enabled boolean NOT NULL DEFAULT true,
+  created_by text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX smip_binding_workspace_id_idx ON smip_binding (workspace_id);
+CREATE UNIQUE INDEX smip_binding_peer_stream_recipient_key ON smip_binding (peer, stream, recipient);
+
+CREATE TABLE smip_inbox (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  binding_id uuid NOT NULL REFERENCES smip_binding(id),
+  origin text NOT NULL,
+  message_id text NOT NULL,
+  digest text NOT NULL,
+  record text NOT NULL,
+  origin_key text NOT NULL,
+  receipt_key text NOT NULL,
+  sender text NOT NULL DEFAULT '',
+  recipient text NOT NULL DEFAULT '',
+  stream text NOT NULL DEFAULT '',
+  body text NOT NULL DEFAULT '',
+  name text NOT NULL DEFAULT '',
+  kind text NOT NULL,
+  size integer NOT NULL,
+  imported_file_id uuid,
+  imported_at timestamptz,
+  accepted_at timestamptz NOT NULL
+);
+CREATE INDEX smip_inbox_workspace_id_idx ON smip_inbox (workspace_id);
+CREATE UNIQUE INDEX smip_inbox_origin_message_id_key ON smip_inbox (origin, message_id);
+

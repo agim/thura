@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError, type ChatRoom, type ChatMessage, type Contact } from '@lidza/client'
 import { downloadContent } from '../lib/download'
 import { userError } from '../lib/errors'
+const SmipReview = lazy(() => import('./SmipReview').then(module => ({ default: module.SmipReview })))
 export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string; contact?: Contact; onMeet?: (name: string) => void }) {
   const client = useQueryClient()
   const rooms = useQuery({ queryKey: ['chat-rooms', workspaceId], queryFn: () => api.listChatRooms({ workspaceId }) })
@@ -28,6 +29,7 @@ export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string
     <label>Chat room<select aria-label="Chat room" value={room?.id || ''} onChange={e => setSelected(e.target.value)}><option value="" disabled>Select a room</option>{rooms.data?.items.map(r => <option key={r.id} value={r.id}>{r.name}{r.direct ? ' · Private' : ''}</option>)}</select></label>
     {(rooms.error || members.error || create.error) && <p role="alert">{userError(rooms.error || members.error || create.error)}</p>}
     {room && rooms.data?.configured && <ChatConversation onMeet={onMeet} key={room.id} room={room} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} />}
+    <Suspense fallback={null}><SmipReview key={workspaceId} workspaceId={workspaceId} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} /></Suspense>
   </section>
 }
 function ChatConversation({ room, manager, onMeet }: { room: ChatRoom; manager: boolean; onMeet?: (name: string) => void }) {

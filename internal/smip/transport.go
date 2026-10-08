@@ -17,6 +17,9 @@ import (
 
 const MessagePath = "/smip/v0.1/messages"
 
+// ApplicationMessagePath is the explicitly selected API-hosted profile endpoint.
+const ApplicationMessagePath = "/api/v1/smip/v0.1/messages"
+
 type SigningKey struct {
 	Private             ed25519.PrivateKey
 	NotBefore, NotAfter int64
@@ -100,7 +103,7 @@ func writeReceipt(w http.ResponseWriter, r Receipt, status int) {
 	}
 }
 func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if req.URL.Path != MessagePath || req.URL.RawQuery != "" {
+	if (req.URL.Path != MessagePath && req.URL.Path != ApplicationMessagePath) || req.URL.RawQuery != "" {
 		http.NotFound(w, req)
 		return
 	}
@@ -187,6 +190,10 @@ func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	record, created, err := r.inbox.Put(Record{p, receiptFor(p, signer.Private, now)})
+	if errors.Is(err, ErrAdmissionDenied) {
+		http.Error(w, "recipient or stream denied", http.StatusForbidden)
+		return
+	}
 	if errors.Is(err, ErrConflict) {
 		http.Error(w, "message ID conflict", http.StatusConflict)
 		return
@@ -219,6 +226,15 @@ type Client struct {
 // NewClient uses only an operator-configured HTTPS endpoint and pinned peer
 // keys. It never discovers keys from an untrusted message or follows redirects.
 func NewClient(endpoint, destination string, keys map[string]Key, tlsConfig *tls.Config) (*Client, error) {
+	return newClient(endpoint, destination, keys, tlsConfig, MessagePath)
+}
+
+// NewApplicationClient selects the API-hosted endpoint during explicit pairing.
+// It never probes or falls back to the standalone endpoint.
+func NewApplicationClient(endpoint, destination string, keys map[string]Key, tlsConfig *tls.Config) (*Client, error) {
+	return newClient(endpoint, destination, keys, tlsConfig, ApplicationMessagePath)
+}
+func newClient(endpoint, destination string, keys map[string]Key, tlsConfig *tls.Config, messagePath string) (*Client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") || !validDomain(destination) {
 		return nil, errors.New("explicit HTTPS origin and destination required")
@@ -240,7 +256,7 @@ func NewClient(endpoint, destination string, keys map[string]Key, tlsConfig *tls
 	if config.MaxVersion != 0 && config.MaxVersion < config.MinVersion {
 		return nil, errors.New("TLS 1.3 required")
 	}
-	u.Path = MessagePath
+	u.Path = messagePath
 	transport := &http.Transport{Proxy: http.ProxyFromEnvironment, TLSClientConfig: config, ResponseHeaderTimeout: 10 * time.Second}
 	client := &http.Client{Transport: transport, Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	return &Client{endpoint: u.String(), destination: destination, keys: trusted, http: client}, nil
