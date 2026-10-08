@@ -1459,3 +1459,7 @@
     border: 0;
   }
 }
+
+.chat-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-messages { max-height: 32rem; overflow: auto; padding-inline-start: 1.5rem; }
+.chat-messages li { margin-block: 1rem; }

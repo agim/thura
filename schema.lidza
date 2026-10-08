@@ -657,3 +657,66 @@ type ReminderInput {
 type ReminderSetting {
  minutesBefore int?
 }
+
+model ChatRoom {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace) @index
+ matrixRoomId string @unique
+ requestId uuid
+ name string @max(200)
+ direct bool @default(false)
+ createdBy string
+ createdAt time @default(now())
+ @@unique(workspaceId,requestId)
+}
+model ChatParticipant {
+ id uuid @id @default(uuid())
+ roomId uuid @ref(ChatRoom) @index
+ subject string
+ createdAt time @default(now())
+ @@unique(roomId,subject)
+}
+type ChatRoomInput {
+ name string @min(1) @max(200)
+ requestId uuid
+ participant string? @max(200)
+}
+type ChatRoomList {
+ items ChatRoom[]
+ configured bool
+}
+type ChatSendInput {
+ transactionId uuid
+ body string @min(1) @max(10000)
+ replyTo string? @max(300)
+}
+type ChatMessage {
+ id string
+ sender string
+ body string
+ timestamp int
+ file ChatMessageFile?
+ replyTo string?
+}
+type ChatTimeline {
+ items ChatMessage[]
+ next string?
+}
+type ChatEventResult {
+ eventId string
+}
+type ChatRemoteInput {
+ userId string @min(4) @max(254)
+}
+type ChatReceiptInput {
+ eventId string @min(1) @max(300)
+}
+
+type ChatFileInput {
+ transactionId uuid
+ fileId uuid
+}
+type ChatMessageFile {
+ name string
+ size int
+}

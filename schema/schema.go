@@ -1060,6 +1060,62 @@ func (v ReminderNotice) Validate() error {
 	return errs.Result()
 }
 
+// ChatRoom is a row of the chat_room table.
+type ChatRoom struct {
+	ID           string    `json:"id" db:"id"`
+	WorkspaceID  string    `json:"workspaceId" db:"workspace_id"`
+	MatrixRoomID string    `json:"matrixRoomId" db:"matrix_room_id"`
+	RequestID    string    `json:"requestId" db:"request_id"`
+	Name         string    `json:"name" db:"name"`
+	Direct       bool      `json:"direct" db:"direct"`
+	CreatedBy    string    `json:"createdBy" db:"created_by"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of ChatRoom from schema.lidza.
+func (v ChatRoom) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.MatrixRoomID == "" {
+		errs.Add("matrixRoomId", "required", "required")
+	}
+	if v.RequestID == "" {
+		errs.Add("requestId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.CreatedBy == "" {
+		errs.Add("createdBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// ChatParticipant is a row of the chat_participant table.
+type ChatParticipant struct {
+	ID        string    `json:"id" db:"id"`
+	RoomID    string    `json:"roomId" db:"room_id"`
+	Subject   string    `json:"subject" db:"subject"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of ChatParticipant from schema.lidza.
+func (v ChatParticipant) Validate() error {
+	var errs validate.Errors
+	if v.RoomID == "" {
+		errs.Add("roomId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -2365,5 +2421,221 @@ type ReminderSetting struct {
 // Validate applies the rules of ReminderSetting from schema.lidza.
 func (v ReminderSetting) Validate() error {
 	var errs validate.Errors
+	return errs.Result()
+}
+
+// ChatRoomInput is an API type.
+type ChatRoomInput struct {
+	Name        string  `json:"name"`
+	RequestID   string  `json:"requestId"`
+	Participant *string `json:"participant"`
+}
+
+// Validate applies the rules of ChatRoomInput from schema.lidza.
+func (v ChatRoomInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.RequestID == "" {
+		errs.Add("requestId", "required", "required")
+	}
+	if v.Participant != nil {
+		x := *v.Participant
+		if len(x) > 200 {
+			errs.Add("participant", "max", "at most 200 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// ChatRoomList is an API type.
+type ChatRoomList struct {
+	Items      []ChatRoom `json:"items"`
+	Configured bool       `json:"configured"`
+}
+
+// Validate applies the rules of ChatRoomList from schema.lidza.
+func (v ChatRoomList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// ChatSendInput is an API type.
+type ChatSendInput struct {
+	TransactionID string  `json:"transactionId"`
+	Body          string  `json:"body"`
+	ReplyTo       *string `json:"replyTo"`
+}
+
+// Validate applies the rules of ChatSendInput from schema.lidza.
+func (v ChatSendInput) Validate() error {
+	var errs validate.Errors
+	if v.TransactionID == "" {
+		errs.Add("transactionId", "required", "required")
+	}
+	if v.Body == "" {
+		errs.Add("body", "required", "required")
+	}
+	if len(v.Body) < 1 {
+		errs.Add("body", "min", "at least 1 character(s)")
+	}
+	if len(v.Body) > 10000 {
+		errs.Add("body", "max", "at most 10000 character(s)")
+	}
+	if v.ReplyTo != nil {
+		x := *v.ReplyTo
+		if len(x) > 300 {
+			errs.Add("replyTo", "max", "at most 300 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// ChatMessage is an API type.
+type ChatMessage struct {
+	ID        string           `json:"id"`
+	Sender    string           `json:"sender"`
+	Body      string           `json:"body"`
+	Timestamp int              `json:"timestamp"`
+	File      *ChatMessageFile `json:"file"`
+	ReplyTo   *string          `json:"replyTo"`
+}
+
+// Validate applies the rules of ChatMessage from schema.lidza.
+func (v ChatMessage) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.Sender == "" {
+		errs.Add("sender", "required", "required")
+	}
+	if v.Body == "" {
+		errs.Add("body", "required", "required")
+	}
+	if v.File != nil {
+		x := *v.File
+		if err := x.Validate(); err != nil {
+			errs.Add("file", "nested", err.Error())
+		}
+	}
+	return errs.Result()
+}
+
+// ChatTimeline is an API type.
+type ChatTimeline struct {
+	Items []ChatMessage `json:"items"`
+	Next  *string       `json:"next"`
+}
+
+// Validate applies the rules of ChatTimeline from schema.lidza.
+func (v ChatTimeline) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// ChatEventResult is an API type.
+type ChatEventResult struct {
+	EventID string `json:"eventId"`
+}
+
+// Validate applies the rules of ChatEventResult from schema.lidza.
+func (v ChatEventResult) Validate() error {
+	var errs validate.Errors
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// ChatRemoteInput is an API type.
+type ChatRemoteInput struct {
+	UserID string `json:"userId"`
+}
+
+// Validate applies the rules of ChatRemoteInput from schema.lidza.
+func (v ChatRemoteInput) Validate() error {
+	var errs validate.Errors
+	if v.UserID == "" {
+		errs.Add("userId", "required", "required")
+	}
+	if len(v.UserID) < 4 {
+		errs.Add("userId", "min", "at least 4 character(s)")
+	}
+	if len(v.UserID) > 254 {
+		errs.Add("userId", "max", "at most 254 character(s)")
+	}
+	return errs.Result()
+}
+
+// ChatReceiptInput is an API type.
+type ChatReceiptInput struct {
+	EventID string `json:"eventId"`
+}
+
+// Validate applies the rules of ChatReceiptInput from schema.lidza.
+func (v ChatReceiptInput) Validate() error {
+	var errs validate.Errors
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	if len(v.EventID) < 1 {
+		errs.Add("eventId", "min", "at least 1 character(s)")
+	}
+	if len(v.EventID) > 300 {
+		errs.Add("eventId", "max", "at most 300 character(s)")
+	}
+	return errs.Result()
+}
+
+// ChatFileInput is an API type.
+type ChatFileInput struct {
+	TransactionID string `json:"transactionId"`
+	FileID        string `json:"fileId"`
+}
+
+// Validate applies the rules of ChatFileInput from schema.lidza.
+func (v ChatFileInput) Validate() error {
+	var errs validate.Errors
+	if v.TransactionID == "" {
+		errs.Add("transactionId", "required", "required")
+	}
+	if v.FileID == "" {
+		errs.Add("fileId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// ChatMessageFile is an API type.
+type ChatMessageFile struct {
+	Name string `json:"name"`
+	Size int    `json:"size"`
+}
+
+// Validate applies the rules of ChatMessageFile from schema.lidza.
+func (v ChatMessageFile) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
 	return errs.Result()
 }

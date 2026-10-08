@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"thura/internal/calendar"
+	"thura/internal/chat"
 	"time"
 
 	"github.com/agim/lidza"
@@ -20,7 +21,11 @@ import (
 func onStart(ctx context.Context, s *lidza.Services) error {
 	jobs.FromServices(s).Handle(mailbox.DeliveryJob, mailbox.Deliver)
 	jobs.FromServices(s).Handle(calendar.ReminderJob, calendar.Remind, jobs.Concurrency(1))
-	return jobs.FromServices(s).Schedule(calendar.ReminderJob, jobs.Every(time.Minute), nil)
+	if err := jobs.FromServices(s).Schedule(calendar.ReminderJob, jobs.Every(time.Minute), nil); err != nil {
+		return err
+	}
+	jobs.FromServices(s).Handle(chat.ReconcileJob, chat.Reconcile, jobs.Concurrency(1))
+	return jobs.FromServices(s).Schedule(chat.ReconcileJob, jobs.Every(time.Minute), nil)
 }
 
 // appMiddleware wraps the whole app, pages and API alike, outermost

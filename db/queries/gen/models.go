@@ -275,6 +275,24 @@ type CalendarReplyGrant struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type ChatParticipant struct {
+	ID        string    `json:"id"`
+	RoomID    string    `json:"room_id"`
+	Subject   string    `json:"subject"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type ChatRoom struct {
+	ID           string    `json:"id"`
+	WorkspaceID  string    `json:"workspace_id"`
+	MatrixRoomID string    `json:"matrix_room_id"`
+	RequestID    string    `json:"request_id"`
+	Name         string    `json:"name"`
+	Direct       bool      `json:"direct"`
+	CreatedBy    string    `json:"created_by"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
 type Contact struct {
 	ID          string    `json:"id"`
 	WorkspaceID string    `json:"workspace_id"`

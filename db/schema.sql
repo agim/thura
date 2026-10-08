@@ -406,3 +406,25 @@ CREATE TABLE reminder_notice (
 CREATE INDEX reminder_notice_event_id_idx ON reminder_notice (event_id);
 CREATE UNIQUE INDEX reminder_notice_event_id_subject_sequence_instance_key_key ON reminder_notice (event_id, subject, sequence, instance_key);
 
+CREATE TABLE chat_room (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  matrix_room_id text NOT NULL UNIQUE,
+  request_id uuid NOT NULL,
+  name varchar(200) NOT NULL,
+  direct boolean NOT NULL DEFAULT false,
+  created_by text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX chat_room_workspace_id_idx ON chat_room (workspace_id);
+CREATE UNIQUE INDEX chat_room_workspace_id_request_id_key ON chat_room (workspace_id, request_id);
+
+CREATE TABLE chat_participant (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id uuid NOT NULL REFERENCES chat_room(id),
+  subject text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX chat_participant_room_id_idx ON chat_participant (room_id);
+CREATE UNIQUE INDEX chat_participant_room_id_subject_key ON chat_participant (room_id, subject);
+

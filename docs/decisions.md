@@ -75,3 +75,16 @@ email headers never authorize replies. Responses currently apply to a series.
 Personal reminders use minute schedules, current membership checks, bounded
 recurrence expansion, and a transactional notice ledger so retries cannot queue
 duplicate notices. A fifteen-minute catch-up window bounds late delivery.
+
+## Matrix through the current-membership API boundary
+
+Use an outbound-only Matrix application service and virtual account identities.
+Thura's Go API holds the application-service token and checks current workspace
+and private-room grants on every operation; no Matrix credential is issued to
+the browser. This initial protocol client replaces the research's browser SDK
+recommendation because direct Matrix tokens would require a separate revocation
+and device lifecycle. Rooms are explicitly server-readable. Federation grants
+apply to a shared channel, with admin-controlled invitations/bans and joined
+history. A dedicated two-domain Synapse v1.139.0 test proves bidirectional
+messages, authorized file bytes, transaction-id deduplication, and remote bans.
+Encrypted-room/device recovery work remains a separate design decision.
