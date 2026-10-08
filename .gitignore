@@ -1,0 +1,9 @@
+/target/
+/dist/
+/bin/
+node_modules/
+.env
+.env.local
+*.pem
+.vscode/
+.idea/
