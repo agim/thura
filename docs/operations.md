@@ -155,3 +155,7 @@ re-run the suites, and exercise restore with the new schema. Upgrade each
 optional service independently through its documented migration path and
 compatibility tests. Preserve a recoverable snapshot and the matching app
 revision before applying irreversible schema/provider changes.
+
+## Opt-in SMIP chat and file transport
+
+SMIP is default-disabled and separate from Matrix conversations. [The SMIP operator guide](protocols/smip-thura.md) covers sealed pairing keys/origins, direct TLS 1.3, consistent identity across worker nodes, transactional workspace consent, durable sending/reconciliation, quotas/retention and explicit Drive import. Keep workers enabled in deployed apps and browser/provider checks; `JOBS_WORKERS=0` is scoped to deterministic full Go verification. Operators choose every deployment origin/domain and must configure both peers; no automatic discovery, SMTP fallback or public deployment is implied.

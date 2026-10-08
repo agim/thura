@@ -173,3 +173,7 @@ Why: Persist the immutable signed packet and attempt marker before HTTP, and rec
 ## 2026-10-08: SMIP workspace consent and explicit immutable file import
 
 Why: Freeze operator-paired server keys separately from transactional owner/admin bindings. Persist verified packets and receipts in Postgres before acknowledgement, never grant membership from a signature, and bound retained inbox records/bytes. Review only text and metadata; require a current member to explicitly import signed file bytes through Drive quota, immutable storage and audit transactions. Keep a dedicated API-hosted wire endpoint and explicit client profile, direct TLS 1.3, default-disabled capability and unchanged Matrix conversations.
+
+## 2026-10-08: SMIP app outbox, durable dispatch and immutable Drive snapshots
+
+Why: Commit signed packets and jobs together, recheck membership and consent under the workspace lock before authorizing each attempt, persist uncertainty before HTTP, and record acceptance only with a verified durable receipt. Freeze explicit peer origins and historical key trust; use unique attempt tokens, bounded reconciliation/backoff and an attempt budget. File sends retain verified immutable snapshots after source edits/trash. The browser retries lost queue responses with the same transaction ID and distinguishes queueing from transport acceptance, reading and import.

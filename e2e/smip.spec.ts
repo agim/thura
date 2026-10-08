@@ -59,3 +59,36 @@ test('SMIP hides retained review content after authorization failure', async ({ 
   await review.getByRole('button', { name: 'Retry SMIP inbox' }).click()
   await expect(review.getByText('Private accepted content', { exact: true })).toBeVisible()
 })
+
+test('SMIP send retries keep the same intent and distinguish queued from accepted', async ({ page }) => {
+  let queued = false
+  let accepted = false
+  const requests: { transactionId: string; bindingId: string; body: string }[] = []
+  await page.route('**/smip/bindings', route => route.fulfill({ json: { configured: true, sendablePeers: ['peer.example'], items: [{ id: bindingID, workspaceId: route.request().url().split('/workspaces/')[1].split('/')[0], peer: 'peer.example', stream: 'team-chat', sender: 'team@peer.example', recipient: 'team@local.example', enabled: true, createdBy: 'owner', createdAt: at }] } }))
+  await page.route('**/smip/inbox?**', route => route.fulfill({ json: { items: [], nextCursor: '' } }))
+  const entry = () => ({ id: requests[0]?.transactionId, bindingId: bindingID, kind: 'chat', body: 'A signed chat', name: '', size: 13, state: accepted ? 'accepted' : 'pending', reason: accepted ? 'verified_receipt' : '', attempts: accepted ? 1 : 0, lastStatus: 0, nextAttempt: at, createdAt: at, updatedAt: at })
+  await page.route('**/smip/outbox**', async route => {
+    if (route.request().method() === 'POST') {
+      requests.push(route.request().postDataJSON())
+      if (requests.length === 1) return route.fulfill({ status: 500, json: { error: 'Queue response lost' } })
+      queued = true
+      return route.fulfill({ json: entry() })
+    }
+    await route.fulfill({ json: { items: queued ? [entry()] : [], nextCursor: '' } })
+  })
+  await openChat(page)
+  const review = page.getByRole('region', { name: 'SMIP review' })
+  await review.getByLabel('SMIP destination').selectOption(bindingID)
+  await review.getByLabel('SMIP message').fill('A signed chat')
+  await review.getByRole('button', { name: 'Queue SMIP send' }).click()
+  await expect(review.getByRole('alert')).toContainText('Queue response lost')
+  await expect(review.getByLabel('SMIP message')).toHaveValue('A signed chat')
+  await review.getByRole('button', { name: 'Queue SMIP send' }).click()
+  await expect(review.getByText('A signed chat · pending · Queued', { exact: true })).toBeVisible()
+  expect(requests).toHaveLength(2)
+  expect(requests[1]).toEqual(requests[0])
+  await expect(review.getByLabel('SMIP message')).toHaveValue('')
+  await expect(review.getByText('Verified transport receipt; reading/import not confirmed', { exact: false })).toHaveCount(0)
+  accepted = true
+  await expect(review.getByText('Verified transport receipt; reading/import not confirmed', { exact: false })).toBeVisible({ timeout: 10000 })
+})

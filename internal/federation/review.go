@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/agim/lidza"
@@ -27,11 +28,15 @@ func bindingView(r q.SmipBinding) schema.SmipBinding {
 	return schema.SmipBinding{ID: r.ID, WorkspaceID: r.WorkspaceID, Peer: r.Peer, Stream: r.Stream, Sender: r.Sender, Recipient: r.Recipient, Enabled: r.Enabled, CreatedBy: r.CreatedBy, CreatedAt: r.CreatedAt}
 }
 func ListBindings(ctx context.Context, w string) (schema.SmipBindingList, error) {
-	out := schema.SmipBindingList{Items: []schema.SmipBinding{}}
+	out := schema.SmipBindingList{Items: []schema.SmipBinding{}, SendablePeers: []string{}}
 	if err := workspace.RequireMember(ctx, w); err != nil {
 		return out, err
 	}
 	out.Configured = From(ctx).domain != ""
+	for peer := range From(ctx).origins {
+		out.SendablePeers = append(out.SendablePeers, peer)
+	}
+	sort.Strings(out.SendablePeers)
 	rows, err := q.New(db.From(ctx)).ListSmipBindings(ctx, w)
 	if err != nil {
 		return out, err

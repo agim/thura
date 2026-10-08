@@ -9,12 +9,14 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -77,7 +79,7 @@ func newSmipApp(t *testing.T, domain, peer string) *smipApp {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		for _, sql := range []string{"DELETE FROM smip_inbox WHERE workspace_id=$1", "DELETE FROM smip_binding WHERE workspace_id=$1", "DELETE FROM file_version WHERE file_id IN (SELECT id FROM drive_file WHERE workspace_id=$1)", "DELETE FROM drive_file WHERE workspace_id=$1", "DELETE FROM drive_folder WHERE workspace_id=$1", "DELETE FROM audit_event WHERE scope=$1", "DELETE FROM auth_member WHERE scope=$1", "DELETE FROM workspace WHERE id=$1"} {
+		for _, sql := range []string{"DELETE FROM job WHERE kind LIKE 'thura.smip.dispatch%' AND payload->>'id' IN (SELECT id::text FROM smip_outbox WHERE workspace_id=$1)", "DELETE FROM smip_outbox WHERE workspace_id=$1", "DELETE FROM smip_inbox WHERE workspace_id=$1", "DELETE FROM smip_binding WHERE workspace_id=$1", "DELETE FROM file_version WHERE file_id IN (SELECT id FROM drive_file WHERE workspace_id=$1)", "DELETE FROM upload_chunk WHERE session_id IN (SELECT id FROM upload_session WHERE workspace_id=$1)", "DELETE FROM upload_session WHERE workspace_id=$1", "DELETE FROM drive_file WHERE workspace_id=$1", "DELETE FROM drive_folder WHERE workspace_id=$1", "DELETE FROM audit_event WHERE scope=$1", "DELETE FROM auth_member WHERE scope=$1", "DELETE FROM workspace WHERE id=$1"} {
 			if _, err := db.From(ctx).Exec(ctx, sql, w.ID); err != nil {
 				t.Error(err)
 			}
@@ -446,5 +448,391 @@ func TestSmipMetadataPagingAndRetainedByteQuota(t *testing.T) {
 	}
 	if bytes.Contains(raw, []byte(`"payload"`)) || bytes.Contains(raw, []byte(`"record"`)) || len(raw) > 1<<20 {
 		t.Fatal("review materialized retained file payloads")
+	}
+}
+
+func smipSendingGateway(t *testing.T, sender, receiver *smipApp, target *httptest.Server) {
+	t.Helper()
+	certificate := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: target.Certificate().Raw})
+	ca := filepath.Join(t.TempDir(), "public-ca.pem")
+	if err := os.WriteFile(ca, certificate, 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := sender.config
+	cfg.Origins = map[string]string{receiver.config.Domain: target.URL}
+	cfg.CAFile = ca
+	gateway, err := federation.NewGateway(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Reconstruct frozen startup configuration before any sender request; this
+	// models a restart and never permits caller-supplied keys/endpoints.
+	lidza.Provide(sender.server.Services, gateway)
+}
+func smipDispatch(t *testing.T, f *smipApp, id string) {
+	t.Helper()
+	raw, err := json.Marshal(schema.SmipDispatchJob{ID: id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = federation.Dispatch(f.server.Context(), raw); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSmipAppSenderLostReceiptImmutableRetryAndRevocation(t *testing.T) {
+	a := newSmipApp(t, "outbox-sender.example", "outbox-receiver.example")
+	b := newSmipApp(t, "outbox-receiver.example", "outbox-sender.example")
+	stream := uuid.NewString()
+	binding := a.binding(t, b.config.Domain, stream)
+	b.binding(t, a.config.Domain, stream)
+	var contacts atomic.Int32
+	lost := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		contacts.Add(1)
+		var state string
+		var attempts int
+		if err := db.From(a.server.Context()).QueryRow(a.server.Context(), "SELECT state,attempts FROM smip_outbox WHERE workspace_id=$1 ORDER BY created_at LIMIT 1", a.workspace.ID).Scan(&state, &attempts); err != nil || state != smip.Uncertain || attempts != int(contacts.Load()) {
+			t.Error("network preceded durable attempt", err)
+		}
+		if contacts.Load() == 1 {
+			capture := httptest.NewRecorder()
+			b.server.Config.Handler.ServeHTTP(capture, req)
+			if capture.Code != 201 {
+				t.Errorf("remote admission got %d", capture.Code)
+			}
+			conn, _, err := w.(http.Hijacker).Hijack()
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			conn.Close()
+			return
+		}
+		b.server.Config.Handler.ServeHTTP(w, req)
+	}))
+	lost.TLS = &tls.Config{MinVersion: tls.VersionTLS13}
+	lost.Config.ReadHeaderTimeout = 5 * time.Second
+	lost.Config.ReadTimeout = 30 * time.Second
+	lost.Config.WriteTimeout = 30 * time.Second
+	lost.StartTLS()
+	t.Cleanup(lost.Close)
+	smipSendingGateway(t, a, b, lost)
+	in := schema.SmipSendInput{TransactionID: uuid.NewString(), BindingID: binding.ID, Body: smipText("durable signed chat")}
+	var queued, again schema.SmipOutbound
+	a.request(t, "POST", a.base()+"/outbox", in, &queued, 200)
+	a.request(t, "POST", a.base()+"/outbox", in, &again, 200)
+	if queued.ID != again.ID || queued.State != smip.Pending || queued.Attempts != 0 || contacts.Load() != 0 {
+		t.Fatal("queue retry contacted peer or duplicated packet")
+	}
+	in.Body = smipText("different")
+	a.request(t, "POST", a.base()+"/outbox", in, nil, 409)
+	in.Body = smipText("durable signed chat")
+	var original string
+	if err := db.From(a.server.Context()).QueryRow(a.server.Context(), "SELECT packet FROM smip_outbox WHERE id=$1", queued.ID).Scan(&original); err != nil {
+		t.Fatal(err)
+	}
+	smipDispatch(t, a, queued.ID)
+	var outbound schema.SmipOutboxList
+	a.request(t, "GET", a.base()+"/outbox", nil, &outbound, 200)
+	if len(outbound.Items) != 1 || outbound.Items[0].State != smip.Uncertain || outbound.Items[0].Attempts != 1 {
+		t.Fatal("lost receipt claimed successful delivery")
+	}
+	smipDispatch(t, a, queued.ID)
+	if contacts.Load() != 1 {
+		t.Fatal("sender ignored retry delay")
+	}
+	// Recover after expiry without creating another packet or ID.
+	a.server.Clock.Advance(8 * 24 * time.Hour)
+	smipDispatch(t, a, queued.ID)
+	a.request(t, "GET", a.base()+"/outbox", nil, &outbound, 200)
+	if outbound.Items[0].State != smip.Accepted || outbound.Items[0].Attempts != 2 {
+		t.Fatal("expired uncertain attempt did not reconcile")
+	}
+	var after string
+	if err := db.From(a.server.Context()).QueryRow(a.server.Context(), "SELECT packet FROM smip_outbox WHERE id=$1", queued.ID).Scan(&after); err != nil || after != original {
+		t.Fatal("retry changed signed bytes", err)
+	}
+	var inbox schema.SmipInboxList
+	b.request(t, "GET", b.base()+"/inbox", nil, &inbox, 200)
+	if len(inbox.Items) != 1 || inbox.Items[0].Body != *in.Body {
+		t.Fatal("sender duplicated/lost remote chat")
+	}
+	// A separate queued intent is stopped before HTTP when membership is removed.
+	a.login(t, a.member)
+	in.TransactionID = uuid.NewString()
+	a.request(t, "POST", a.base()+"/outbox", in, &queued, 200)
+	if _, err := db.From(a.server.Context()).Exec(a.server.Context(), "DELETE FROM auth_member WHERE subject=$1 AND scope=$2", a.member.Subject, a.workspace.ID); err != nil {
+		t.Fatal(err)
+	}
+	smipDispatch(t, a, queued.ID)
+	a.request(t, "GET", a.base()+"/outbox", nil, nil, 404)
+	a.login(t, a.owner)
+	a.request(t, "GET", a.base()+"/outbox", nil, &outbound, 200)
+	found := false
+	for _, entry := range outbound.Items {
+		if entry.ID == queued.ID {
+			found = true
+			if entry.State != smip.Blocked || entry.Reason != "membership_revoked" || entry.Attempts != 0 {
+				t.Fatal("revoked sender was attempted")
+			}
+		}
+	}
+	if !found || contacts.Load() != 2 {
+		t.Fatal("membership revocation permitted network")
+	}
+}
+
+func smipUpload(t *testing.T, f *smipApp, data []byte) schema.DriveFile {
+	t.Helper()
+	var upload schema.UploadState
+	base := "/api/v1/workspaces/" + f.workspace.ID + "/drive"
+	f.request(t, "POST", base+"/uploads", schema.UploadInput{Name: "copied.bin", ContentType: "application/octet-stream", Size: len(data)}, &upload, 200)
+	request, err := http.NewRequest("PUT", f.server.URL+base+"/uploads/"+upload.Session.ID+"/chunks/0", bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Content-Type", "application/octet-stream")
+	request.Header.Set("Sec-Fetch-Site", "same-origin")
+	response, err := f.server.Client().Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != 204 {
+		t.Fatalf("source upload got %d", response.StatusCode)
+	}
+	var file schema.DriveFile
+	f.request(t, "POST", base+"/uploads/"+upload.Session.ID+"/finish", map[string]string{}, &file, 200)
+	return file
+}
+func TestSmipAppFileSendingPermanentFailureResumeAndConcurrentDispatch(t *testing.T) {
+	a := newSmipApp(t, "copy-sender.example", "copy-receiver.example")
+	b := newSmipApp(t, "copy-receiver.example", "copy-sender.example")
+	stream := uuid.NewString()
+	binding := a.binding(t, b.config.Domain, stream)
+	b.binding(t, a.config.Domain, stream)
+	var denied atomic.Bool
+	denied.Store(true)
+	var contacts atomic.Int32
+	target := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		contacts.Add(1)
+		if denied.Load() {
+			http.Error(w, "refused", http.StatusForbidden)
+			return
+		}
+		b.server.Config.Handler.ServeHTTP(w, r)
+	}))
+	target.TLS = &tls.Config{MinVersion: tls.VersionTLS13}
+	target.Config.ReadHeaderTimeout = 5 * time.Second
+	target.Config.ReadTimeout = 30 * time.Second
+	target.Config.WriteTimeout = 30 * time.Second
+	target.StartTLS()
+	t.Cleanup(target.Close)
+	smipSendingGateway(t, a, b, target)
+	data := bytes.Repeat([]byte{0, 255, 32, 127, 14, 9}, 1000)
+	file := smipUpload(t, a, data)
+	var queued schema.SmipOutbound
+	in := schema.SmipSendInput{TransactionID: uuid.NewString(), BindingID: binding.ID, FileID: &file.ID}
+	a.request(t, "POST", a.base()+"/outbox", in, &queued, 200)
+	a.request(t, "PATCH", "/api/v1/workspaces/"+a.workspace.ID+"/drive/files/"+file.ID, schema.DriveFlags{Trashed: true}, nil, 200)
+	if queued.Kind != "file" || queued.Size != len(data) || queued.Name != file.Name {
+		t.Fatal("queued copy lost source metadata")
+	}
+	smipDispatch(t, a, queued.ID)
+	var list schema.SmipOutboxList
+	a.request(t, "GET", a.base()+"/outbox", nil, &list, 200)
+	if len(list.Items) != 1 || list.Items[0].State != smip.Blocked || list.Items[0].LastStatus != 403 || list.Items[0].Attempts != 1 {
+		t.Fatal("permanent response did not pause sender")
+	}
+	smipDispatch(t, a, queued.ID)
+	if contacts.Load() != 1 {
+		t.Fatal("blocked sender retried automatically")
+	}
+	a.login(t, a.member)
+	a.request(t, "POST", a.base()+"/outbox/"+queued.ID+"/resume", map[string]string{}, nil, 403)
+	a.login(t, a.owner)
+	denied.Store(false)
+	var resumed schema.SmipOutbound
+	a.request(t, "POST", a.base()+"/outbox/"+queued.ID+"/resume", map[string]string{}, &resumed, 200)
+	if resumed.ID != queued.ID || resumed.State != smip.Uncertain || resumed.Attempts != 1 {
+		t.Fatal("operator resume changed original intent/history")
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() { defer wg.Done(); smipDispatch(t, a, queued.ID) }()
+	}
+	wg.Wait()
+	if contacts.Load() != 2 {
+		t.Fatal("concurrent workers sent duplicate attempts")
+	}
+	a.request(t, "GET", a.base()+"/outbox", nil, &list, 200)
+	if list.Items[0].State != smip.Accepted || list.Items[0].Attempts != 2 {
+		t.Fatal("resumed file was not accepted")
+	}
+	a.request(t, "POST", a.base()+"/outbox/"+queued.ID+"/resume", map[string]string{}, nil, 409)
+	var inbox schema.SmipInboxList
+	b.request(t, "GET", b.base()+"/inbox", nil, &inbox, 200)
+	if len(inbox.Items) != 1 || inbox.Items[0].ImportedAt != nil || inbox.Items[0].Size != len(data) {
+		t.Fatal("file send silently imported/lost accepted transfer")
+	}
+	var imported schema.DriveFile
+	b.request(t, "POST", b.base()+"/inbox/"+inbox.Items[0].ID+"/import", schema.SmipImportInput{}, &imported, 200)
+	var content schema.FileContent
+	b.request(t, "GET", "/api/v1/workspaces/"+b.workspace.ID+"/drive/files/"+imported.ID+"/content", nil, &content, 200)
+	copied, err := base64.StdEncoding.DecodeString(content.Data)
+	if err != nil || !bytes.Equal(copied, data) {
+		t.Fatal("file sending/import changed binary bytes", err)
+	}
+	// Binding withdrawal stops another queued copy before any HTTP attempt.
+	a.request(t, "PATCH", "/api/v1/workspaces/"+a.workspace.ID+"/drive/files/"+file.ID, schema.DriveFlags{Trashed: false}, nil, 200)
+	in.TransactionID = uuid.NewString()
+	a.request(t, "POST", a.base()+"/outbox", in, &queued, 200)
+	a.request(t, "DELETE", a.base()+"/bindings/"+binding.ID, nil, nil, 204)
+	smipDispatch(t, a, queued.ID)
+	a.request(t, "GET", a.base()+"/outbox", nil, &list, 200)
+	found := false
+	for _, entry := range list.Items {
+		if entry.ID == queued.ID {
+			found = true
+			if entry.State != smip.Blocked || entry.Reason != "binding_disabled" || entry.Attempts != 0 {
+				t.Fatal("withdrawn binding permitted send")
+			}
+		}
+	}
+	if !found || contacts.Load() != 2 {
+		t.Fatal("withdrawn consent contacted peer")
+	}
+}
+
+func smipText(s string) *string { return &s }
+
+func TestSmipAppWorkerDeliversCommittedIntent(t *testing.T) {
+	t.Setenv("JOBS_WORKERS", "1")
+	b := newSmipApp(t, "worker-receiver.example", "worker-sender.example")
+	a := newSmipApp(t, "worker-sender.example", "worker-receiver.example")
+	stream := uuid.NewString()
+	binding := a.binding(t, b.config.Domain, stream)
+	b.binding(t, a.config.Domain, stream)
+	smipSendingGateway(t, a, b, smipTLS(t, b))
+	smipSendingGateway(t, b, a, smipTLS(t, a))
+	var queued schema.SmipOutbound
+	a.request(t, "POST", a.base()+"/outbox", schema.SmipSendInput{TransactionID: uuid.NewString(), BindingID: binding.ID, Body: smipText("actual durable worker")}, &queued, 200)
+	deadline := time.After(10 * time.Second)
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		var state string
+		if err := db.From(a.server.Context()).QueryRow(a.server.Context(), "SELECT state FROM smip_outbox WHERE id=$1", queued.ID).Scan(&state); err != nil {
+			t.Fatal(err)
+		}
+		if state == smip.Accepted {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("worker did not accept committed packet; state=%s", state)
+		case <-ticker.C:
+		}
+	}
+	var remote schema.SmipInboxList
+	b.request(t, "GET", b.base()+"/inbox", nil, &remote, 200)
+	if len(remote.Items) != 1 || remote.Items[0].Body != "actual durable worker" {
+		t.Fatal("registered worker did not deliver exact chat")
+	}
+	var reverse schema.SmipBindingList
+	b.request(t, "GET", b.base()+"/bindings", nil, &reverse, 200)
+	b.request(t, "POST", b.base()+"/outbox", schema.SmipSendInput{TransactionID: uuid.NewString(), BindingID: reverse.Items[0].ID, Body: smipText("reverse durable worker")}, &queued, 200)
+	reverseDeadline := time.After(10 * time.Second)
+	for {
+		var state string
+		if err := db.From(b.server.Context()).QueryRow(b.server.Context(), "SELECT state FROM smip_outbox WHERE id=$1", queued.ID).Scan(&state); err != nil {
+			t.Fatal(err)
+		}
+		if state == smip.Accepted {
+			break
+		}
+		select {
+		case <-reverseDeadline:
+			t.Fatalf("reverse worker did not accept committed packet; state=%s", state)
+		case <-ticker.C:
+		}
+	}
+	a.request(t, "GET", a.base()+"/inbox", nil, &remote, 200)
+	if len(remote.Items) != 1 || remote.Items[0].Body != "reverse durable worker" {
+		t.Fatal("reverse worker did not deliver exact chat")
+	}
+}
+
+func TestSmipAppReceiptCommitFailureAndUnsentExpiry(t *testing.T) {
+	a := newSmipApp(t, "commit-sender.example", "commit-receiver.example")
+	b := newSmipApp(t, "commit-receiver.example", "commit-sender.example")
+	stream := uuid.NewString()
+	binding := a.binding(t, b.config.Domain, stream)
+	b.binding(t, a.config.Domain, stream)
+	target := smipTLS(t, b)
+	smipSendingGateway(t, a, b, target)
+	var queued schema.SmipOutbound
+	a.request(t, "POST", a.base()+"/outbox", schema.SmipSendInput{TransactionID: uuid.NewString(), BindingID: binding.ID, Body: smipText("commit recovery")}, &queued, 200)
+	ctx := a.server.Context()
+	pool := db.From(ctx)
+	constraint := fmt.Sprintf("smip_receipt_fixture_%d", time.Now().UnixNano())
+	if _, err := pool.Exec(ctx, fmt.Sprintf("ALTER TABLE smip_outbox ADD CONSTRAINT %s CHECK(state<>'accepted' OR workspace_id<>'%s')", constraint, a.workspace.ID)); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := pool.Exec(ctx, "ALTER TABLE smip_outbox DROP CONSTRAINT IF EXISTS "+constraint); err != nil {
+			t.Error(err)
+		}
+	})
+	raw, err := json.Marshal(schema.SmipDispatchJob{ID: queued.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = federation.Dispatch(ctx, raw); err == nil {
+		t.Fatal("failed local acceptance commit reported success")
+	}
+	var local schema.SmipOutboxList
+	a.request(t, "GET", a.base()+"/outbox", nil, &local, 200)
+	if local.Items[0].State != smip.Uncertain || local.Items[0].Attempts != 1 {
+		t.Fatal("local acceptance failure lost uncertain marker")
+	}
+	var remote schema.SmipInboxList
+	b.request(t, "GET", b.base()+"/inbox", nil, &remote, 200)
+	if len(remote.Items) != 1 {
+		t.Fatal("peer never durably accepted first attempt")
+	}
+	if _, err = pool.Exec(ctx, "ALTER TABLE smip_outbox DROP CONSTRAINT "+constraint); err != nil {
+		t.Fatal(err)
+	}
+	a.server.Clock.Advance(61 * time.Second)
+	smipDispatch(t, a, queued.ID)
+	a.request(t, "GET", a.base()+"/outbox", nil, &local, 200)
+	if local.Items[0].State != smip.Accepted || local.Items[0].Attempts != 2 {
+		t.Fatal("local receipt commit did not recover")
+	}
+	b.request(t, "GET", b.base()+"/inbox", nil, &remote, 200)
+	if len(remote.Items) != 1 {
+		t.Fatal("receipt recovery duplicated remote delivery")
+	}
+	a.request(t, "POST", a.base()+"/outbox", schema.SmipSendInput{TransactionID: uuid.NewString(), BindingID: binding.ID, Body: smipText("never attempted")}, &queued, 200)
+	a.server.Clock.Advance(8 * 24 * time.Hour)
+	smipDispatch(t, a, queued.ID)
+	a.request(t, "GET", a.base()+"/outbox", nil, &local, 200)
+	found := false
+	for _, entry := range local.Items {
+		if entry.ID == queued.ID {
+			found = true
+			if entry.State != smip.Expired || entry.Attempts != 0 {
+				t.Fatal("unsent expiry was attempted")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expired intent lost")
+	}
+	b.request(t, "GET", b.base()+"/inbox", nil, &remote, 200)
+	if len(remote.Items) != 1 {
+		t.Fatal("expired unsent intent reached peer")
 	}
 }

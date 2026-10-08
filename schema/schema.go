@@ -1440,6 +1440,80 @@ func (v SmipInbox) Validate() error {
 	return errs.Result()
 }
 
+// SmipOutbox is a row of the smip_outbox table.
+type SmipOutbox struct {
+	ID           string    `json:"id" db:"id"`
+	Origin       string    `json:"origin" db:"origin"`
+	WorkspaceID  string    `json:"workspaceId" db:"workspace_id"`
+	BindingID    string    `json:"bindingId" db:"binding_id"`
+	Subject      string    `json:"subject" db:"subject"`
+	Packet       string    `json:"packet" db:"packet"`
+	OriginKey    string    `json:"originKey" db:"origin_key"`
+	Receipt      string    `json:"receipt" db:"receipt"`
+	ReceiptKey   string    `json:"receiptKey" db:"receipt_key"`
+	Kind         string    `json:"kind" db:"kind"`
+	Body         string    `json:"body" db:"body"`
+	Name         string    `json:"name" db:"name"`
+	Size         int       `json:"size" db:"size"`
+	SourceFileID *string   `json:"sourceFileId" db:"source_file_id"`
+	State        string    `json:"state" db:"state"`
+	Reason       string    `json:"reason" db:"reason"`
+	Attempts     int       `json:"attempts" db:"attempts"`
+	AttemptID    string    `json:"attemptId" db:"attempt_id"`
+	LastStatus   int       `json:"lastStatus" db:"last_status"`
+	NextAttempt  time.Time `json:"nextAttempt" db:"next_attempt"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of SmipOutbox from schema.lidza.
+func (v SmipOutbox) Validate() error {
+	var errs validate.Errors
+	if v.Origin == "" {
+		errs.Add("origin", "required", "required")
+	}
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.BindingID == "" {
+		errs.Add("bindingId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Packet == "" {
+		errs.Add("packet", "required", "required")
+	}
+	if v.OriginKey == "" {
+		errs.Add("originKey", "required", "required")
+	}
+	if v.Receipt == "" {
+		errs.Add("receipt", "required", "required")
+	}
+	if v.ReceiptKey == "" {
+		errs.Add("receiptKey", "required", "required")
+	}
+	if v.Kind == "" {
+		errs.Add("kind", "required", "required")
+	}
+	if v.Body == "" {
+		errs.Add("body", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
+	}
+	if v.AttemptID == "" {
+		errs.Add("attemptId", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -3315,8 +3389,9 @@ func (v SmipBindingInput) Validate() error {
 
 // SmipBindingList is an API type.
 type SmipBindingList struct {
-	Items      []SmipBinding `json:"items"`
-	Configured bool          `json:"configured"`
+	Items         []SmipBinding `json:"items"`
+	SendablePeers []string      `json:"sendablePeers"`
+	Configured    bool          `json:"configured"`
 }
 
 // Validate applies the rules of SmipBindingList from schema.lidza.
@@ -3418,5 +3493,111 @@ type SmipImportInput struct {
 // Validate applies the rules of SmipImportInput from schema.lidza.
 func (v SmipImportInput) Validate() error {
 	var errs validate.Errors
+	return errs.Result()
+}
+
+// SmipSendInput is an API type.
+type SmipSendInput struct {
+	TransactionID string  `json:"transactionId"`
+	BindingID     string  `json:"bindingId"`
+	Body          *string `json:"body"`
+	FileID        *string `json:"fileId"`
+}
+
+// Validate applies the rules of SmipSendInput from schema.lidza.
+func (v SmipSendInput) Validate() error {
+	var errs validate.Errors
+	if v.TransactionID == "" {
+		errs.Add("transactionId", "required", "required")
+	}
+	if v.BindingID == "" {
+		errs.Add("bindingId", "required", "required")
+	}
+	if v.Body != nil {
+		x := *v.Body
+		if len(x) > 65536 {
+			errs.Add("body", "max", "at most 65536 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// SmipOutbound is an API type.
+type SmipOutbound struct {
+	ID           string    `json:"id"`
+	BindingID    string    `json:"bindingId"`
+	Kind         string    `json:"kind"`
+	Body         string    `json:"body"`
+	Name         string    `json:"name"`
+	Size         int       `json:"size"`
+	SourceFileID *string   `json:"sourceFileId"`
+	State        string    `json:"state"`
+	Reason       string    `json:"reason"`
+	Attempts     int       `json:"attempts"`
+	LastStatus   int       `json:"lastStatus"`
+	NextAttempt  time.Time `json:"nextAttempt"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
+}
+
+// Validate applies the rules of SmipOutbound from schema.lidza.
+func (v SmipOutbound) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.BindingID == "" {
+		errs.Add("bindingId", "required", "required")
+	}
+	if v.Kind == "" {
+		errs.Add("kind", "required", "required")
+	}
+	if v.Body == "" {
+		errs.Add("body", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipOutboxList is an API type.
+type SmipOutboxList struct {
+	Items      []SmipOutbound `json:"items"`
+	NextCursor string         `json:"nextCursor"`
+}
+
+// Validate applies the rules of SmipOutboxList from schema.lidza.
+func (v SmipOutboxList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	if v.NextCursor == "" {
+		errs.Add("nextCursor", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipDispatchJob is an API type.
+type SmipDispatchJob struct {
+	ID string `json:"id"`
+}
+
+// Validate applies the rules of SmipDispatchJob from schema.lidza.
+func (v SmipDispatchJob) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
 	return errs.Result()
 }

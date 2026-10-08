@@ -551,3 +551,29 @@ CREATE TABLE smip_inbox (
 CREATE INDEX smip_inbox_workspace_id_idx ON smip_inbox (workspace_id);
 CREATE UNIQUE INDEX smip_inbox_origin_message_id_key ON smip_inbox (origin, message_id);
 
+CREATE TABLE smip_outbox (
+  id uuid PRIMARY KEY,
+  origin text NOT NULL DEFAULT '',
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  binding_id uuid NOT NULL REFERENCES smip_binding(id),
+  subject text NOT NULL,
+  packet text NOT NULL,
+  origin_key text NOT NULL,
+  receipt text NOT NULL DEFAULT '',
+  receipt_key text NOT NULL DEFAULT '',
+  kind text NOT NULL,
+  body text NOT NULL,
+  name text NOT NULL,
+  size integer NOT NULL,
+  source_file_id uuid,
+  state text NOT NULL DEFAULT 'pending',
+  reason text NOT NULL DEFAULT '',
+  attempts integer NOT NULL DEFAULT 0,
+  attempt_id text NOT NULL DEFAULT '',
+  last_status integer NOT NULL DEFAULT 0,
+  next_attempt timestamptz NOT NULL,
+  created_at timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL
+);
+CREATE INDEX smip_outbox_workspace_id_idx ON smip_outbox (workspace_id);
+

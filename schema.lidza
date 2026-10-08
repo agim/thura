@@ -917,6 +917,7 @@ type SmipBindingInput {
 }
 type SmipBindingList {
   items SmipBinding[]
+  sendablePeers string[]
   configured bool
 }
 type SmipInboxItem {
@@ -942,4 +943,58 @@ type SmipInboxList {
 }
 type SmipImportInput {
   folderId uuid?
+}
+
+model SmipOutbox {
+ id uuid @id
+ origin string @default("")
+ workspaceId uuid @ref(Workspace) @index
+ bindingId uuid @ref(SmipBinding)
+ subject string
+ packet text
+ originKey text
+ receipt text @default("")
+ receiptKey text @default("")
+ kind string
+ body text
+ name string
+ size int
+ sourceFileId uuid?
+ state string @default("pending")
+ reason string @default("")
+ attempts int @default(0)
+ attemptId string @default("")
+ lastStatus int @default(0)
+ nextAttempt time
+ createdAt time
+ updatedAt time
+}
+type SmipSendInput {
+ transactionId uuid
+ bindingId uuid
+ body string? @max(65536)
+ fileId uuid?
+}
+type SmipOutbound {
+ id uuid
+ bindingId uuid
+ kind string
+ body string
+ name string
+ size int
+ sourceFileId uuid?
+ state string
+ reason string
+ attempts int
+ lastStatus int
+ nextAttempt time
+ createdAt time
+ updatedAt time
+}
+type SmipOutboxList {
+ items SmipOutbound[]
+ nextCursor string
+}
+type SmipDispatchJob {
+ id uuid
 }

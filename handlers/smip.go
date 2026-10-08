@@ -22,3 +22,13 @@ func ListSmipInbox(ctx context.Context, r *router.Request[router.None]) (schema.
 func ImportSmipFile(ctx context.Context, r *router.Request[schema.SmipImportInput]) (schema.DriveFile, error) {
 	return federation.ImportFile(ctx, r.Param("workspaceId"), r.Param("id"), r.Body)
 }
+
+func QueueSmipMessage(ctx context.Context, r *router.Request[schema.SmipSendInput]) (schema.SmipOutbound, error) {
+	return federation.Queue(ctx, r.Param("workspaceId"), r.Body)
+}
+func ListSmipOutbox(ctx context.Context, r *router.Request[router.None]) (schema.SmipOutboxList, error) {
+	return federation.ListOutbox(ctx, r.Param("workspaceId"), r.Query("cursor"))
+}
+func ResumeSmipMessage(ctx context.Context, r *router.Request[router.None]) (schema.SmipOutbound, error) {
+	return federation.Resume(ctx, r.Param("workspaceId"), r.Param("id"))
+}

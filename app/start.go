@@ -28,6 +28,14 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 	if err := federation.Configure(s); err != nil {
 		return err
 	}
+	gateway := federation.From(lidza.WithServices(ctx, s))
+	if gateway.Enabled() {
+		jobs.FromServices(s).Handle(gateway.DispatchKind(), federation.Dispatch, jobs.Concurrency(2))
+		jobs.FromServices(s).Handle(gateway.ReconcileKind(), federation.Reconcile, jobs.Concurrency(1))
+		if err := jobs.FromServices(s).Schedule(gateway.ReconcileKind(), jobs.Every(time.Minute), nil); err != nil {
+			return err
+		}
+	}
 	jobs.FromServices(s).Handle(mailbox.DeliveryJob, mailbox.Deliver)
 	jobs.FromServices(s).Handle(calendar.ReminderJob, calendar.Remind, jobs.Concurrency(1))
 	if err := jobs.FromServices(s).Schedule(calendar.ReminderJob, jobs.Every(time.Minute), nil); err != nil {

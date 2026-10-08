@@ -116,6 +116,70 @@ func (q *Queries) AddSmipBinding(ctx context.Context, arg AddSmipBindingParams) 
 	return i, err
 }
 
+const addSmipOutbound = `-- name: AddSmipOutbound :one
+INSERT INTO smip_outbox(id,workspace_id,binding_id,subject,packet,origin_key,kind,body,name,size,source_file_id,next_attempt,created_at,updated_at,origin) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12,$12,$13) RETURNING id, origin, workspace_id, binding_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at
+`
+
+type AddSmipOutboundParams struct {
+	ID           string    `json:"id"`
+	WorkspaceID  string    `json:"workspace_id"`
+	BindingID    string    `json:"binding_id"`
+	Subject      string    `json:"subject"`
+	Packet       string    `json:"packet"`
+	OriginKey    string    `json:"origin_key"`
+	Kind         string    `json:"kind"`
+	Body         string    `json:"body"`
+	Name         string    `json:"name"`
+	Size         int32     `json:"size"`
+	SourceFileID *string   `json:"source_file_id"`
+	NextAttempt  time.Time `json:"next_attempt"`
+	Origin       string    `json:"origin"`
+}
+
+func (q *Queries) AddSmipOutbound(ctx context.Context, arg AddSmipOutboundParams) (SmipOutbox, error) {
+	row := q.db.QueryRow(ctx, addSmipOutbound,
+		arg.ID,
+		arg.WorkspaceID,
+		arg.BindingID,
+		arg.Subject,
+		arg.Packet,
+		arg.OriginKey,
+		arg.Kind,
+		arg.Body,
+		arg.Name,
+		arg.Size,
+		arg.SourceFileID,
+		arg.NextAttempt,
+		arg.Origin,
+	)
+	var i SmipOutbox
+	err := row.Scan(
+		&i.ID,
+		&i.Origin,
+		&i.WorkspaceID,
+		&i.BindingID,
+		&i.Subject,
+		&i.Packet,
+		&i.OriginKey,
+		&i.Receipt,
+		&i.ReceiptKey,
+		&i.Kind,
+		&i.Body,
+		&i.Name,
+		&i.Size,
+		&i.SourceFileID,
+		&i.State,
+		&i.Reason,
+		&i.Attempts,
+		&i.AttemptID,
+		&i.LastStatus,
+		&i.NextAttempt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const countSmipBindings = `-- name: CountSmipBindings :one
 SELECT COUNT(*) FROM smip_binding WHERE workspace_id=$1
 `
@@ -141,6 +205,35 @@ func (q *Queries) DisableSmipBinding(ctx context.Context, arg DisableSmipBinding
 	return err
 }
 
+const dueSmipOutbound = `-- name: DueSmipOutbound :many
+SELECT id FROM smip_outbox WHERE origin=$1 AND state IN ('pending','uncertain') AND next_attempt<=$2 ORDER BY next_attempt,id LIMIT 50
+`
+
+type DueSmipOutboundParams struct {
+	Origin      string    `json:"origin"`
+	NextAttempt time.Time `json:"next_attempt"`
+}
+
+func (q *Queries) DueSmipOutbound(ctx context.Context, arg DueSmipOutboundParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, dueSmipOutbound, arg.Origin, arg.NextAttempt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findSmipBinding = `-- name: FindSmipBinding :one
 SELECT id, workspace_id, peer, stream, sender, recipient, enabled, created_by, created_at FROM smip_binding WHERE peer=$1 AND stream=$2 AND recipient=$3
 `
@@ -164,6 +257,40 @@ func (q *Queries) FindSmipBinding(ctx context.Context, arg FindSmipBindingParams
 		&i.Enabled,
 		&i.CreatedBy,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const findSmipOutbound = `-- name: FindSmipOutbound :one
+SELECT id, origin, workspace_id, binding_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at FROM smip_outbox WHERE id=$1
+`
+
+func (q *Queries) FindSmipOutbound(ctx context.Context, id string) (SmipOutbox, error) {
+	row := q.db.QueryRow(ctx, findSmipOutbound, id)
+	var i SmipOutbox
+	err := row.Scan(
+		&i.ID,
+		&i.Origin,
+		&i.WorkspaceID,
+		&i.BindingID,
+		&i.Subject,
+		&i.Packet,
+		&i.OriginKey,
+		&i.Receipt,
+		&i.ReceiptKey,
+		&i.Kind,
+		&i.Body,
+		&i.Name,
+		&i.Size,
+		&i.SourceFileID,
+		&i.State,
+		&i.Reason,
+		&i.Attempts,
+		&i.AttemptID,
+		&i.LastStatus,
+		&i.NextAttempt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -262,6 +389,45 @@ func (q *Queries) GetSmipInbox(ctx context.Context, arg GetSmipInboxParams) (Smi
 		&i.ImportedFileID,
 		&i.ImportedAt,
 		&i.AcceptedAt,
+	)
+	return i, err
+}
+
+const getSmipOutbound = `-- name: GetSmipOutbound :one
+SELECT id, origin, workspace_id, binding_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at FROM smip_outbox WHERE workspace_id=$1 AND id=$2
+`
+
+type GetSmipOutboundParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	ID          string `json:"id"`
+}
+
+func (q *Queries) GetSmipOutbound(ctx context.Context, arg GetSmipOutboundParams) (SmipOutbox, error) {
+	row := q.db.QueryRow(ctx, getSmipOutbound, arg.WorkspaceID, arg.ID)
+	var i SmipOutbox
+	err := row.Scan(
+		&i.ID,
+		&i.Origin,
+		&i.WorkspaceID,
+		&i.BindingID,
+		&i.Subject,
+		&i.Packet,
+		&i.OriginKey,
+		&i.Receipt,
+		&i.ReceiptKey,
+		&i.Kind,
+		&i.Body,
+		&i.Name,
+		&i.Size,
+		&i.SourceFileID,
+		&i.State,
+		&i.Reason,
+		&i.Attempts,
+		&i.AttemptID,
+		&i.LastStatus,
+		&i.NextAttempt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -384,6 +550,67 @@ func (q *Queries) ListSmipInbox(ctx context.Context, arg ListSmipInboxParams) ([
 	return items, nil
 }
 
+const listSmipOutbox = `-- name: ListSmipOutbox :many
+SELECT id,binding_id,kind,body,name,size,source_file_id,state,reason,attempts,last_status,next_attempt,created_at,updated_at FROM smip_outbox WHERE workspace_id=$1 AND id::text > $2 ORDER BY id LIMIT 51
+`
+
+type ListSmipOutboxParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	ID          string `json:"id"`
+}
+
+type ListSmipOutboxRow struct {
+	ID           string    `json:"id"`
+	BindingID    string    `json:"binding_id"`
+	Kind         string    `json:"kind"`
+	Body         string    `json:"body"`
+	Name         string    `json:"name"`
+	Size         int32     `json:"size"`
+	SourceFileID *string   `json:"source_file_id"`
+	State        string    `json:"state"`
+	Reason       string    `json:"reason"`
+	Attempts     int32     `json:"attempts"`
+	LastStatus   int32     `json:"last_status"`
+	NextAttempt  time.Time `json:"next_attempt"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+func (q *Queries) ListSmipOutbox(ctx context.Context, arg ListSmipOutboxParams) ([]ListSmipOutboxRow, error) {
+	rows, err := q.db.Query(ctx, listSmipOutbox, arg.WorkspaceID, arg.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSmipOutboxRow
+	for rows.Next() {
+		var i ListSmipOutboxRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BindingID,
+			&i.Kind,
+			&i.Body,
+			&i.Name,
+			&i.Size,
+			&i.SourceFileID,
+			&i.State,
+			&i.Reason,
+			&i.Attempts,
+			&i.LastStatus,
+			&i.NextAttempt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockSmipInbox = `-- name: LockSmipInbox :one
 SELECT id, workspace_id, binding_id, origin, message_id, digest, record, origin_key, receipt_key, sender, recipient, stream, body, name, kind, size, imported_file_id, imported_at, accepted_at FROM smip_inbox WHERE workspace_id=$1 AND id=$2 FOR UPDATE
 `
@@ -420,6 +647,45 @@ func (q *Queries) LockSmipInbox(ctx context.Context, arg LockSmipInboxParams) (S
 	return i, err
 }
 
+const lockSmipOutbound = `-- name: LockSmipOutbound :one
+SELECT id, origin, workspace_id, binding_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at FROM smip_outbox WHERE workspace_id=$1 AND id=$2 FOR UPDATE
+`
+
+type LockSmipOutboundParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	ID          string `json:"id"`
+}
+
+func (q *Queries) LockSmipOutbound(ctx context.Context, arg LockSmipOutboundParams) (SmipOutbox, error) {
+	row := q.db.QueryRow(ctx, lockSmipOutbound, arg.WorkspaceID, arg.ID)
+	var i SmipOutbox
+	err := row.Scan(
+		&i.ID,
+		&i.Origin,
+		&i.WorkspaceID,
+		&i.BindingID,
+		&i.Subject,
+		&i.Packet,
+		&i.OriginKey,
+		&i.Receipt,
+		&i.ReceiptKey,
+		&i.Kind,
+		&i.Body,
+		&i.Name,
+		&i.Size,
+		&i.SourceFileID,
+		&i.State,
+		&i.Reason,
+		&i.Attempts,
+		&i.AttemptID,
+		&i.LastStatus,
+		&i.NextAttempt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const smipInboxUsage = `-- name: SmipInboxUsage :one
 SELECT COUNT(*) AS records,COALESCE(SUM(size),0)::bigint AS bytes FROM smip_inbox WHERE workspace_id=$1
 `
@@ -434,4 +700,55 @@ func (q *Queries) SmipInboxUsage(ctx context.Context, workspaceID string) (SmipI
 	var i SmipInboxUsageRow
 	err := row.Scan(&i.Records, &i.Bytes)
 	return i, err
+}
+
+const smipOutboxUsage = `-- name: SmipOutboxUsage :one
+SELECT COUNT(*) AS records,COALESCE(SUM(size),0)::bigint AS bytes FROM smip_outbox WHERE workspace_id=$1
+`
+
+type SmipOutboxUsageRow struct {
+	Records int64 `json:"records"`
+	Bytes   int64 `json:"bytes"`
+}
+
+func (q *Queries) SmipOutboxUsage(ctx context.Context, workspaceID string) (SmipOutboxUsageRow, error) {
+	row := q.db.QueryRow(ctx, smipOutboxUsage, workspaceID)
+	var i SmipOutboxUsageRow
+	err := row.Scan(&i.Records, &i.Bytes)
+	return i, err
+}
+
+const updateSmipOutbound = `-- name: UpdateSmipOutbound :exec
+UPDATE smip_outbox SET state=$3,reason=$4,attempts=$5,attempt_id=$6,last_status=$7,next_attempt=$8,receipt=$9,receipt_key=$10,updated_at=$11 WHERE workspace_id=$1 AND id=$2
+`
+
+type UpdateSmipOutboundParams struct {
+	WorkspaceID string    `json:"workspace_id"`
+	ID          string    `json:"id"`
+	State       string    `json:"state"`
+	Reason      string    `json:"reason"`
+	Attempts    int32     `json:"attempts"`
+	AttemptID   string    `json:"attempt_id"`
+	LastStatus  int32     `json:"last_status"`
+	NextAttempt time.Time `json:"next_attempt"`
+	Receipt     string    `json:"receipt"`
+	ReceiptKey  string    `json:"receipt_key"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func (q *Queries) UpdateSmipOutbound(ctx context.Context, arg UpdateSmipOutboundParams) error {
+	_, err := q.db.Exec(ctx, updateSmipOutbound,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.State,
+		arg.Reason,
+		arg.Attempts,
+		arg.AttemptID,
+		arg.LastStatus,
+		arg.NextAttempt,
+		arg.Receipt,
+		arg.ReceiptKey,
+		arg.UpdatedAt,
+	)
+	return err
 }

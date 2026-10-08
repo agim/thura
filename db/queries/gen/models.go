@@ -593,6 +593,31 @@ type SmipInbox struct {
 	AcceptedAt     time.Time  `json:"accepted_at"`
 }
 
+type SmipOutbox struct {
+	ID           string    `json:"id"`
+	Origin       string    `json:"origin"`
+	WorkspaceID  string    `json:"workspace_id"`
+	BindingID    string    `json:"binding_id"`
+	Subject      string    `json:"subject"`
+	Packet       string    `json:"packet"`
+	OriginKey    string    `json:"origin_key"`
+	Receipt      string    `json:"receipt"`
+	ReceiptKey   string    `json:"receipt_key"`
+	Kind         string    `json:"kind"`
+	Body         string    `json:"body"`
+	Name         string    `json:"name"`
+	Size         int32     `json:"size"`
+	SourceFileID *string   `json:"source_file_id"`
+	State        string    `json:"state"`
+	Reason       string    `json:"reason"`
+	Attempts     int32     `json:"attempts"`
+	AttemptID    string    `json:"attempt_id"`
+	LastStatus   int32     `json:"last_status"`
+	NextAttempt  time.Time `json:"next_attempt"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 type UploadChunk struct {
 	ID        string `json:"id"`
 	SessionID string `json:"session_id"`
