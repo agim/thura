@@ -59,6 +59,17 @@ func routes(r *router.Router) {
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares", handlers.ListDriveShares)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares/{shareId}", handlers.RevokeDriveShare)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/office", handlers.OpenOfficeDocument)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars", handlers.ListCalendars)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/calendars", handlers.CreateCalendar)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events", handlers.ListCalendarEvents)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/instances", handlers.CalendarInstances)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events", handlers.CreateCalendarEvent)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events/{id}", handlers.GetCalendarEvent)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events/{id}", handlers.UpdateCalendarEvent)
+	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events/{id}", handlers.CancelCalendarEvent)
+	router.Route(g, "PATCH /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events/{id}/occurrences", handlers.ChangeCalendarOccurrence)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/import", handlers.ImportCalendar, router.UploadLimit(1<<20))
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/export", handlers.ExportCalendar)
 }
 
 // hello greets by name. Greeting is defined in schema.lidza.

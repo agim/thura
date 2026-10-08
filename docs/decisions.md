@@ -60,3 +60,7 @@ Why: Use 1 MB chunks and 24-hour sessions scoped to the initiating member, with 
 ## 2026-10-08: Optional ONLYOFFICE connector with signed and versioned saves
 
 Why: Pin DocumentServer 9.0.4 for integration tests and expose DOCX/XLSX editing as a separately configured service. Sign editor configs and short-lived immutable source tickets, check current workspace membership at source/callback access, constrain saved-file downloads to the configured origin without redirects, and serialize callback saves with optimistic version checks and checksum-based idempotency. Community edition is AGPL-3.0; no fidelity or production-readiness claim follows from the connector alone.
+
+## 2026-10-08: Bounded timezone-aware calendars and ICS interoperability
+
+Why: Use compatible FullCalendar 6.1.21 standard plugins with Luxon, loaded on demand. Keep all-day dates separate from instants, retain IANA recurrence zones, bound rules/views, skip nonexistent DST occurrences before COUNT, and select first ambiguous occurrences. Use row-locked sequences and explicit exception resets. Import ICS atomically by calendar-scoped UID/sequence, preserving cancellation and Unicode; export VTIMEZONE. Permit only the empty stylesheet's CSP hash for the widget's CSSOM rules, without enabling arbitrary inline styles.

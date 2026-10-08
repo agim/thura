@@ -5,7 +5,7 @@ binary. `docs/lidza-guide.md` is the guide, `docs/decisions.md` says why
 the app is built the way it is.
 
 The first implementation integrates the supplied six-app prototype at
-`/workspace` and provides persistent shared Mail, Contacts, and Drive at `/app`.
+`/workspace` and provides persistent shared Mail, Contacts, Drive, and Calendar at `/app`.
 See [implementation status](docs/implementation-status.md) for account
 provisioning, validation, and the remaining features.
 

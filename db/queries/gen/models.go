@@ -10,6 +10,50 @@ import (
 	"time"
 )
 
+type Attendance string
+
+const (
+	AttendanceNeedsaction Attendance = "needsaction"
+	AttendanceAccepted    Attendance = "accepted"
+	AttendanceTentative   Attendance = "tentative"
+	AttendanceDeclined    Attendance = "declined"
+)
+
+func (e *Attendance) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Attendance(s)
+	case string:
+		*e = Attendance(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Attendance: %T", src)
+	}
+	return nil
+}
+
+type NullAttendance struct {
+	Attendance Attendance `json:"attendance"`
+	Valid      bool       `json:"valid"` // Valid is true if Attendance is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAttendance) Scan(value interface{}) error {
+	if value == nil {
+		ns.Attendance, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Attendance.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAttendance) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Attendance), nil
+}
+
 type MailFolder string
 
 const (
@@ -175,6 +219,36 @@ type AuthUser struct {
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
+type Calendar struct {
+	ID           string    `json:"id"`
+	WorkspaceID  string    `json:"workspace_id"`
+	Name         string    `json:"name"`
+	Color        string    `json:"color"`
+	OwnerSubject *string   `json:"owner_subject"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+type CalendarEvent struct {
+	ID          string     `json:"id"`
+	CalendarID  string     `json:"calendar_id"`
+	Uid         string     `json:"uid"`
+	Organizer   string     `json:"organizer"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Location    string     `json:"location"`
+	AllDay      bool       `json:"all_day"`
+	StartDate   string     `json:"start_date"`
+	EndDate     string     `json:"end_date"`
+	StartsAt    *time.Time `json:"starts_at"`
+	EndsAt      *time.Time `json:"ends_at"`
+	TimeZone    string     `json:"time_zone"`
+	Rrule       string     `json:"rrule"`
+	Sequence    int32      `json:"sequence"`
+	Cancelled   bool       `json:"cancelled"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
 type Contact struct {
 	ID          string    `json:"id"`
 	WorkspaceID string    `json:"workspace_id"`
@@ -205,6 +279,26 @@ type DriveFolder struct {
 	ParentID    *string   `json:"parent_id"`
 	Name        string    `json:"name"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type EventAttendee struct {
+	ID               string     `json:"id"`
+	EventID          string     `json:"event_id"`
+	Email            string     `json:"email"`
+	Response         Attendance `json:"response"`
+	ResponseSequence int32      `json:"response_sequence"`
+}
+
+type EventException struct {
+	ID          string     `json:"id"`
+	EventID     string     `json:"event_id"`
+	InstanceKey string     `json:"instance_key"`
+	Cancelled   bool       `json:"cancelled"`
+	Title       *string    `json:"title"`
+	StartsAt    *time.Time `json:"starts_at"`
+	EndsAt      *time.Time `json:"ends_at"`
+	StartDate   *string    `json:"start_date"`
+	EndDate     *string    `json:"end_date"`
 }
 
 type FileVersion struct {

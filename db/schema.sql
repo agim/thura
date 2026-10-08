@@ -5,6 +5,8 @@ CREATE TYPE workspace_role AS ENUM ('owner', 'admin', 'member');
 
 CREATE TYPE mail_folder AS ENUM ('inbox', 'drafts', 'sent', 'archive', 'trash', 'spam');
 
+CREATE TYPE attendance AS ENUM ('needsaction', 'accepted', 'tentative', 'declined');
+
 CREATE TABLE workspace (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name varchar(120) NOT NULL,
@@ -304,4 +306,61 @@ CREATE TABLE office_session (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX office_session_file_id_idx ON office_session (file_id);
+
+CREATE TABLE calendar (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  name varchar(200) NOT NULL,
+  color text NOT NULL,
+  owner_subject text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX calendar_workspace_id_idx ON calendar (workspace_id);
+
+CREATE TABLE calendar_event (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  calendar_id uuid NOT NULL REFERENCES calendar(id),
+  uid text NOT NULL,
+  organizer text NOT NULL,
+  title varchar(500) NOT NULL,
+  description text NOT NULL DEFAULT '',
+  location text NOT NULL DEFAULT '',
+  all_day boolean NOT NULL,
+  start_date text NOT NULL DEFAULT '',
+  end_date text NOT NULL DEFAULT '',
+  starts_at timestamptz,
+  ends_at timestamptz,
+  time_zone text NOT NULL,
+  rrule text NOT NULL DEFAULT '',
+  sequence integer NOT NULL DEFAULT 0,
+  cancelled boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX calendar_event_calendar_id_idx ON calendar_event (calendar_id);
+CREATE UNIQUE INDEX calendar_event_calendar_id_uid_key ON calendar_event (calendar_id, uid);
+
+CREATE TABLE event_exception (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL REFERENCES calendar_event(id),
+  instance_key text NOT NULL,
+  cancelled boolean NOT NULL,
+  title text,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  start_date text,
+  end_date text
+);
+CREATE INDEX event_exception_event_id_idx ON event_exception (event_id);
+CREATE UNIQUE INDEX event_exception_event_id_instance_key_key ON event_exception (event_id, instance_key);
+
+CREATE TABLE event_attendee (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL REFERENCES calendar_event(id),
+  email text NOT NULL,
+  response attendance NOT NULL DEFAULT 'needsaction',
+  response_sequence integer NOT NULL DEFAULT 0
+);
+CREATE INDEX event_attendee_event_id_idx ON event_attendee (event_id);
+CREATE UNIQUE INDEX event_attendee_event_id_email_key ON event_attendee (event_id, email);
 

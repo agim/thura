@@ -477,3 +477,118 @@ type OfficeCallback {
 type OfficeResult {
  error int
 }
+
+model Calendar {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace) @index
+ name string @min(1) @max(200)
+ color string
+ ownerSubject string?
+ createdAt time @default(now())
+}
+model CalendarEvent {
+ id uuid @id @default(uuid())
+ calendarId uuid @ref(Calendar) @index
+ uid string
+ organizer string
+ title string @min(1) @max(500)
+ description text @default("")
+ location string @default("")
+ allDay bool
+ startDate string @default("")
+ endDate string @default("")
+ startsAt time?
+ endsAt time?
+ timeZone string
+ rrule string @default("")
+ sequence int @default(0)
+ cancelled bool @default(false)
+ createdAt time @default(now())
+ updatedAt time @default(now())
+ @@unique(calendarId,uid)
+}
+model EventException {
+ id uuid @id @default(uuid())
+ eventId uuid @ref(CalendarEvent) @index
+ instanceKey string
+ cancelled bool
+ title string?
+ startsAt time?
+ endsAt time?
+ startDate string?
+ endDate string?
+ @@unique(eventId,instanceKey)
+}
+enum Attendance { needsaction accepted tentative declined }
+model EventAttendee {
+ id uuid @id @default(uuid())
+ eventId uuid @ref(CalendarEvent) @index
+ email string @email
+ response Attendance @default(needsaction)
+ responseSequence int @default(0)
+ @@unique(eventId,email)
+}
+type CalendarList {
+ items Calendar[]
+}
+type CalendarInput {
+ name string @min(1) @max(200)
+ color string @max(7)
+ personal bool
+}
+type EventInput {
+ resetExceptions bool
+ title string @min(1) @max(500)
+ description string? @max(20000)
+ location string? @max(1000)
+ allDay bool
+ startDate string?
+ endDate string?
+ startsAt time?
+ endsAt time?
+ timeZone string @min(1) @max(100)
+ rrule string? @max(500)
+ sequence int @min(0)
+ attendees string[]
+}
+type EventDetail {
+ event CalendarEvent
+ attendees EventAttendee[]
+ exceptions EventException[]
+}
+type CalendarEvents {
+ items EventDetail[]
+}
+type EventInstance {
+ eventId uuid
+ calendarId uuid
+ instanceKey string
+ title string
+ location string
+ allDay bool
+ start string
+ end string
+ color string
+ sequence int
+}
+type CalendarInstances {
+ items EventInstance[]
+}
+type ExceptionInput {
+ instanceKey string @min(1) @max(100)
+ sequence int @min(0)
+ cancelled bool
+ title string? @min(1) @max(500)
+ startsAt time?
+ endsAt time?
+ startDate string?
+ endDate string?
+}
+type AttendanceInput {
+ response Attendance
+ sequence int @min(0)
+}
+type CalendarImportResult {
+ imported int
+ ignored int
+}

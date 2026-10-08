@@ -27,12 +27,14 @@ func appMiddleware() []middleware.Middleware {
 	if os.Getenv("LIDZA_MODE") == "dev" {
 		return nil
 	}
-	cfg, err := provider.Load()
-	if err != nil {
-		return nil
+	// FullCalendar creates an empty style element and adds its rules through
+	// CSSOM. Allow only that empty element's hash, keeping other inline styles
+	// blocked and retaining the default script policy.
+	policy := middleware.AddCSP(middleware.DefaultCSP, "style-src", "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='")
+	if cfg, err := provider.Load(); err == nil {
+		policy = middleware.AddCSP(policy, "script-src", cfg.ServerURL)
+		policy = middleware.AddCSP(policy, "frame-src", "'self'", cfg.ServerURL)
+		policy = middleware.AddCSP(policy, "connect-src", cfg.ServerURL)
 	}
-	policy := middleware.AddCSP(middleware.DefaultCSP, "script-src", cfg.ServerURL)
-	policy = middleware.AddCSP(policy, "frame-src", "'self'", cfg.ServerURL)
-	policy = middleware.AddCSP(policy, "connect-src", cfg.ServerURL)
 	return []middleware.Middleware{middleware.SecureHeaders(middleware.SecureHeadersOptions{CSP: policy})}
 }

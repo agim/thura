@@ -55,6 +55,29 @@ func (v MailFolder) Valid() bool {
 	return false
 }
 
+// Attendance is the Attendance enum.
+type Attendance string
+
+const (
+	AttendanceNeedsaction Attendance = "needsaction"
+	AttendanceAccepted    Attendance = "accepted"
+	AttendanceTentative   Attendance = "tentative"
+	AttendanceDeclined    Attendance = "declined"
+)
+
+// AttendanceValues lists every Attendance.
+var AttendanceValues = []Attendance{AttendanceNeedsaction, AttendanceAccepted, AttendanceTentative, AttendanceDeclined}
+
+// Valid reports whether v is one of the Attendance values.
+func (v Attendance) Valid() bool {
+	for _, x := range AttendanceValues {
+		if v == x {
+			return true
+		}
+	}
+	return false
+}
+
 // Workspace is a row of the workspace table.
 type Workspace struct {
 	ID        string    `json:"id" db:"id"`
@@ -790,6 +813,156 @@ func (v OfficeSession) Validate() error {
 	}
 	if v.LastChecksum == "" {
 		errs.Add("lastChecksum", "required", "required")
+	}
+	return errs.Result()
+}
+
+// Calendar is a row of the calendar table.
+type Calendar struct {
+	ID           string    `json:"id" db:"id"`
+	WorkspaceID  string    `json:"workspaceId" db:"workspace_id"`
+	Name         string    `json:"name" db:"name"`
+	Color        string    `json:"color" db:"color"`
+	OwnerSubject *string   `json:"ownerSubject" db:"owner_subject"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of Calendar from schema.lidza.
+func (v Calendar) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.Color == "" {
+		errs.Add("color", "required", "required")
+	}
+	return errs.Result()
+}
+
+// CalendarEvent is a row of the calendar_event table.
+type CalendarEvent struct {
+	ID          string     `json:"id" db:"id"`
+	CalendarID  string     `json:"calendarId" db:"calendar_id"`
+	Uid         string     `json:"uid" db:"uid"`
+	Organizer   string     `json:"organizer" db:"organizer"`
+	Title       string     `json:"title" db:"title"`
+	Description string     `json:"description" db:"description"`
+	Location    string     `json:"location" db:"location"`
+	AllDay      bool       `json:"allDay" db:"all_day"`
+	StartDate   string     `json:"startDate" db:"start_date"`
+	EndDate     string     `json:"endDate" db:"end_date"`
+	StartsAt    *time.Time `json:"startsAt" db:"starts_at"`
+	EndsAt      *time.Time `json:"endsAt" db:"ends_at"`
+	TimeZone    string     `json:"timeZone" db:"time_zone"`
+	Rrule       string     `json:"rrule" db:"rrule"`
+	Sequence    int        `json:"sequence" db:"sequence"`
+	Cancelled   bool       `json:"cancelled" db:"cancelled"`
+	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of CalendarEvent from schema.lidza.
+func (v CalendarEvent) Validate() error {
+	var errs validate.Errors
+	if v.CalendarID == "" {
+		errs.Add("calendarId", "required", "required")
+	}
+	if v.Uid == "" {
+		errs.Add("uid", "required", "required")
+	}
+	if v.Organizer == "" {
+		errs.Add("organizer", "required", "required")
+	}
+	if v.Title == "" {
+		errs.Add("title", "required", "required")
+	}
+	if len(v.Title) < 1 {
+		errs.Add("title", "min", "at least 1 character(s)")
+	}
+	if len(v.Title) > 500 {
+		errs.Add("title", "max", "at most 500 character(s)")
+	}
+	if v.Description == "" {
+		errs.Add("description", "required", "required")
+	}
+	if v.Location == "" {
+		errs.Add("location", "required", "required")
+	}
+	if v.StartDate == "" {
+		errs.Add("startDate", "required", "required")
+	}
+	if v.EndDate == "" {
+		errs.Add("endDate", "required", "required")
+	}
+	if v.TimeZone == "" {
+		errs.Add("timeZone", "required", "required")
+	}
+	if v.Rrule == "" {
+		errs.Add("rrule", "required", "required")
+	}
+	return errs.Result()
+}
+
+// EventException is a row of the event_exception table.
+type EventException struct {
+	ID          string     `json:"id" db:"id"`
+	EventID     string     `json:"eventId" db:"event_id"`
+	InstanceKey string     `json:"instanceKey" db:"instance_key"`
+	Cancelled   bool       `json:"cancelled" db:"cancelled"`
+	Title       *string    `json:"title" db:"title"`
+	StartsAt    *time.Time `json:"startsAt" db:"starts_at"`
+	EndsAt      *time.Time `json:"endsAt" db:"ends_at"`
+	StartDate   *string    `json:"startDate" db:"start_date"`
+	EndDate     *string    `json:"endDate" db:"end_date"`
+}
+
+// Validate applies the rules of EventException from schema.lidza.
+func (v EventException) Validate() error {
+	var errs validate.Errors
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	if v.InstanceKey == "" {
+		errs.Add("instanceKey", "required", "required")
+	}
+	return errs.Result()
+}
+
+// EventAttendee is a row of the event_attendee table.
+type EventAttendee struct {
+	ID               string     `json:"id" db:"id"`
+	EventID          string     `json:"eventId" db:"event_id"`
+	Email            string     `json:"email" db:"email"`
+	Response         Attendance `json:"response" db:"response"`
+	ResponseSequence int        `json:"responseSequence" db:"response_sequence"`
+}
+
+// Validate applies the rules of EventAttendee from schema.lidza.
+func (v EventAttendee) Validate() error {
+	var errs validate.Errors
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if v.Email != "" && !validate.Email(v.Email) {
+		errs.Add("email", "email", "not an email address")
+	}
+	if v.Response == "" {
+		errs.Add("response", "required", "required")
+	}
+	if v.Response != "" && !v.Response.Valid() {
+		errs.Add("response", "enum", "unknown Attendance value")
 	}
 	return errs.Result()
 }
@@ -1658,6 +1831,291 @@ type OfficeResult struct {
 
 // Validate applies the rules of OfficeResult from schema.lidza.
 func (v OfficeResult) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
+// CalendarList is an API type.
+type CalendarList struct {
+	Items []Calendar `json:"items"`
+}
+
+// Validate applies the rules of CalendarList from schema.lidza.
+func (v CalendarList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// CalendarInput is an API type.
+type CalendarInput struct {
+	Name     string `json:"name"`
+	Color    string `json:"color"`
+	Personal bool   `json:"personal"`
+}
+
+// Validate applies the rules of CalendarInput from schema.lidza.
+func (v CalendarInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.Color == "" {
+		errs.Add("color", "required", "required")
+	}
+	if len(v.Color) > 7 {
+		errs.Add("color", "max", "at most 7 character(s)")
+	}
+	return errs.Result()
+}
+
+// EventInput is an API type.
+type EventInput struct {
+	ResetExceptions bool       `json:"resetExceptions"`
+	Title           string     `json:"title"`
+	Description     *string    `json:"description"`
+	Location        *string    `json:"location"`
+	AllDay          bool       `json:"allDay"`
+	StartDate       *string    `json:"startDate"`
+	EndDate         *string    `json:"endDate"`
+	StartsAt        *time.Time `json:"startsAt"`
+	EndsAt          *time.Time `json:"endsAt"`
+	TimeZone        string     `json:"timeZone"`
+	Rrule           *string    `json:"rrule"`
+	Sequence        int        `json:"sequence"`
+	Attendees       []string   `json:"attendees"`
+}
+
+// Validate applies the rules of EventInput from schema.lidza.
+func (v EventInput) Validate() error {
+	var errs validate.Errors
+	if v.Title == "" {
+		errs.Add("title", "required", "required")
+	}
+	if len(v.Title) < 1 {
+		errs.Add("title", "min", "at least 1 character(s)")
+	}
+	if len(v.Title) > 500 {
+		errs.Add("title", "max", "at most 500 character(s)")
+	}
+	if v.Description != nil {
+		x := *v.Description
+		if len(x) > 20000 {
+			errs.Add("description", "max", "at most 20000 character(s)")
+		}
+	}
+	if v.Location != nil {
+		x := *v.Location
+		if len(x) > 1000 {
+			errs.Add("location", "max", "at most 1000 character(s)")
+		}
+	}
+	if v.TimeZone == "" {
+		errs.Add("timeZone", "required", "required")
+	}
+	if len(v.TimeZone) < 1 {
+		errs.Add("timeZone", "min", "at least 1 character(s)")
+	}
+	if len(v.TimeZone) > 100 {
+		errs.Add("timeZone", "max", "at most 100 character(s)")
+	}
+	if v.Rrule != nil {
+		x := *v.Rrule
+		if len(x) > 500 {
+			errs.Add("rrule", "max", "at most 500 character(s)")
+		}
+	}
+	if v.Sequence < 0 {
+		errs.Add("sequence", "min", "at least 0")
+	}
+	return errs.Result()
+}
+
+// EventDetail is an API type.
+type EventDetail struct {
+	Event      CalendarEvent    `json:"event"`
+	Attendees  []EventAttendee  `json:"attendees"`
+	Exceptions []EventException `json:"exceptions"`
+}
+
+// Validate applies the rules of EventDetail from schema.lidza.
+func (v EventDetail) Validate() error {
+	var errs validate.Errors
+	if err := v.Event.Validate(); err != nil {
+		errs.Add("event", "nested", err.Error())
+	}
+	for _, x := range v.Attendees {
+		if err := x.Validate(); err != nil {
+			errs.Add("attendees", "nested", err.Error())
+			break
+		}
+	}
+	for _, x := range v.Exceptions {
+		if err := x.Validate(); err != nil {
+			errs.Add("exceptions", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// CalendarEvents is an API type.
+type CalendarEvents struct {
+	Items []EventDetail `json:"items"`
+}
+
+// Validate applies the rules of CalendarEvents from schema.lidza.
+func (v CalendarEvents) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// EventInstance is an API type.
+type EventInstance struct {
+	EventID     string `json:"eventId"`
+	CalendarID  string `json:"calendarId"`
+	InstanceKey string `json:"instanceKey"`
+	Title       string `json:"title"`
+	Location    string `json:"location"`
+	AllDay      bool   `json:"allDay"`
+	Start       string `json:"start"`
+	End         string `json:"end"`
+	Color       string `json:"color"`
+	Sequence    int    `json:"sequence"`
+}
+
+// Validate applies the rules of EventInstance from schema.lidza.
+func (v EventInstance) Validate() error {
+	var errs validate.Errors
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	if v.CalendarID == "" {
+		errs.Add("calendarId", "required", "required")
+	}
+	if v.InstanceKey == "" {
+		errs.Add("instanceKey", "required", "required")
+	}
+	if v.Title == "" {
+		errs.Add("title", "required", "required")
+	}
+	if v.Location == "" {
+		errs.Add("location", "required", "required")
+	}
+	if v.Start == "" {
+		errs.Add("start", "required", "required")
+	}
+	if v.End == "" {
+		errs.Add("end", "required", "required")
+	}
+	if v.Color == "" {
+		errs.Add("color", "required", "required")
+	}
+	return errs.Result()
+}
+
+// CalendarInstances is an API type.
+type CalendarInstances struct {
+	Items []EventInstance `json:"items"`
+}
+
+// Validate applies the rules of CalendarInstances from schema.lidza.
+func (v CalendarInstances) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// ExceptionInput is an API type.
+type ExceptionInput struct {
+	InstanceKey string     `json:"instanceKey"`
+	Sequence    int        `json:"sequence"`
+	Cancelled   bool       `json:"cancelled"`
+	Title       *string    `json:"title"`
+	StartsAt    *time.Time `json:"startsAt"`
+	EndsAt      *time.Time `json:"endsAt"`
+	StartDate   *string    `json:"startDate"`
+	EndDate     *string    `json:"endDate"`
+}
+
+// Validate applies the rules of ExceptionInput from schema.lidza.
+func (v ExceptionInput) Validate() error {
+	var errs validate.Errors
+	if v.InstanceKey == "" {
+		errs.Add("instanceKey", "required", "required")
+	}
+	if len(v.InstanceKey) < 1 {
+		errs.Add("instanceKey", "min", "at least 1 character(s)")
+	}
+	if len(v.InstanceKey) > 100 {
+		errs.Add("instanceKey", "max", "at most 100 character(s)")
+	}
+	if v.Sequence < 0 {
+		errs.Add("sequence", "min", "at least 0")
+	}
+	if v.Title != nil {
+		x := *v.Title
+		if len(x) < 1 {
+			errs.Add("title", "min", "at least 1 character(s)")
+		}
+		if len(x) > 500 {
+			errs.Add("title", "max", "at most 500 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// AttendanceInput is an API type.
+type AttendanceInput struct {
+	Response Attendance `json:"response"`
+	Sequence int        `json:"sequence"`
+}
+
+// Validate applies the rules of AttendanceInput from schema.lidza.
+func (v AttendanceInput) Validate() error {
+	var errs validate.Errors
+	if v.Response == "" {
+		errs.Add("response", "required", "required")
+	}
+	if v.Response != "" && !v.Response.Valid() {
+		errs.Add("response", "enum", "unknown Attendance value")
+	}
+	if v.Sequence < 0 {
+		errs.Add("sequence", "min", "at least 0")
+	}
+	return errs.Result()
+}
+
+// CalendarImportResult is an API type.
+type CalendarImportResult struct {
+	Imported int `json:"imported"`
+	Ignored  int `json:"ignored"`
+}
+
+// Validate applies the rules of CalendarImportResult from schema.lidza.
+func (v CalendarImportResult) Validate() error {
 	var errs validate.Errors
 	return errs.Result()
 }

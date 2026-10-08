@@ -48,3 +48,13 @@
 #orbit-workspace .live-drive .drive-card{background:var(--paper)}
 #orbit-workspace .live-drive .drive-detail{margin-top:20px}
 #orbit-workspace .office-editor{margin:20px 0}
+#orbit-workspace .live-calendar h2{font-size:24px;font-weight:700}
+#orbit-workspace .live-calendar h3{font-size:18px;font-weight:600;margin:12px 0}
+#orbit-workspace .live-calendar .row{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:12px 0}
+#orbit-workspace .live-calendar label{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+#orbit-workspace .live-calendar input,#orbit-workspace .live-calendar select,#orbit-workspace .live-calendar textarea{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px;max-width:100%;min-width:0}
+#orbit-workspace .live-calendar .checkbox{flex-direction:row;align-items:center}
+#orbit-workspace .live-calendar .calendar-editor{border:1px solid var(--line);padding:20px;border-radius:12px;margin:20px 0;background:var(--paper)}
+#orbit-workspace .live-calendar .fc{--fc-border-color:var(--line);--fc-page-bg-color:var(--paper);--fc-neutral-bg-color:var(--canvas);--fc-list-event-hover-bg-color:var(--canvas);--fc-today-bg-color:var(--tealsoft);--fc-button-bg-color:var(--teal);--fc-button-border-color:var(--teal);--fc-button-hover-bg-color:var(--ink);--fc-button-active-bg-color:var(--ink);margin:20px 0}
+#orbit-workspace .live-calendar .fc-button{background:var(--teal);color:var(--paper)}
+@media(max-width:700px){#orbit-workspace .live-calendar .fc-toolbar{flex-wrap:wrap;gap:12px}#orbit-workspace .live-calendar .fc-toolbar-title{font-size:18px}}
