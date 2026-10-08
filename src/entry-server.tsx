@@ -84,15 +84,15 @@ export function staticPaths(): string[] {
   return Object.keys(byPath).filter((p) => !p.includes('$') && !p.includes('*'))
 }
 
-// pageModes lists the routes that ship without the client runtime
-// (staticData.static) and the src/enhance scripts each one loads.
-export function pageModes(): Record<string, { static?: boolean; enhance?: string[] }> {
+// pageModes lists page module preload hints and the routes that ship without
+// the client runtime (staticData.static), with their src/enhance scripts.
+export function pageModes(): Record<string, { static?: boolean; enhance?: string[]; module?: string }> {
   const router = createAppRouter(createMemoryHistory({ initialEntries: ['/'] }))
-  const byPath = (router as unknown as { routesByPath: Record<string, { options: { staticData?: { static?: boolean; enhance?: string[] } } }> }).routesByPath ?? {}
-  const modes: Record<string, { static?: boolean; enhance?: string[] }> = {}
+  const byPath = (router as unknown as { routesByPath: Record<string, { options: { staticData?: { static?: boolean; enhance?: string[]; module?: string } } }> }).routesByPath ?? {}
+  const modes: Record<string, { static?: boolean; enhance?: string[]; module?: string }> = {}
   for (const [path, route] of Object.entries(byPath)) {
     const data = route.options.staticData
-    if (data?.static) modes[path] = { static: true, enhance: data.enhance ?? [] }
+    if (data) modes[path] = { static: data.static, enhance: data.enhance ?? [], module: data.module }
   }
   return modes
 }

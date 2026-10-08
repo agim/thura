@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type ChatRoom, type ChatMessage } from '@lidza/client'
-import { downloadContent } from './LiveMail'
+import { downloadContent } from '../lib/download'
 import { userError } from '../lib/errors'
 export function LiveChat({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()

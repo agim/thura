@@ -1,27 +1,40 @@
-import { CalendarRSVP } from './pages/RSVP'
-import { SharedFile } from './pages/Share'
 import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   Link,
   Outlet,
   type RouterHistory,
   useRouterState,
 } from '@tanstack/react-router'
-import { Home } from './pages/Home'
-import { About } from './pages/About'
 import { RouteError } from './ErrorBoundary'
-import { Workspace } from './pages/Workspace'
-import { Contacts } from './pages/Contacts'
-import { Members } from './pages/Members'
-import { Invite, Forgot, Reset, Verify } from './pages/Account'
-import { AppWorkspace } from './pages/App'
+import { useEffect } from 'react'
+import pageMetadata from './page-metadata.json'
+
+function PageHead() {
+  const path = useRouterState({ select: state => state.location.pathname })
+  useEffect(() => {
+    const page = pageMetadata[path as keyof typeof pageMetadata]
+    if (!page) return
+    document.title = page.title
+    function meta(name: string, content: string) {
+      let tag = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)
+      if (!tag) { tag = document.createElement('meta'); tag.name = name; document.head.append(tag) }
+      tag.content = content
+    }
+    meta('description', page.description)
+    if (page.noIndex) meta('robots', 'noindex, nofollow')
+    else document.head.querySelector('meta[name="robots"]')?.remove()
+  }, [path])
+  return null
+}
 
 function RootLayout() {
   const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' || state.location.pathname === '/app' })
-  if (workspace) return <main className="workspace-frame"><Outlet /></main>
+  if (workspace) return <><PageHead /><main className="workspace-frame"><Outlet /></main></>
   return <>
+    <PageHead />
     <nav className="flex flex-wrap gap-4 border-b border-line px-6 py-3" aria-label="Main navigation">
       <Link to="/">Home</Link>
       <Link to="/about">About</Link>
@@ -45,20 +58,20 @@ export const rootRoute = createRootRoute({
   component: RootLayout,
 })
 
-const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: Home })
-const aboutRoute = createRoute({ getParentRoute: () => rootRoute, path: '/about', component: About, staticData: { static: true } })
+const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: lazyRouteComponent(() => import('./pages/Home'), 'Home'), staticData: { module: 'src/pages/Home.tsx' } })
+const aboutRoute = createRoute({ getParentRoute: () => rootRoute, path: '/about', component: lazyRouteComponent(() => import('./pages/About'), 'About'), staticData: { static: true, module: 'src/pages/About.tsx' } })
 
-const workspaceRoute = createRoute({ getParentRoute: () => rootRoute, path: '/workspace', component: Workspace })
-const contactsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/contacts', component: Contacts })
-const membersRoute = createRoute({ getParentRoute: () => rootRoute, path: '/members', component: Members })
-const inviteRoute = createRoute({ getParentRoute: () => rootRoute, path: '/invite', component: Invite })
-const forgotRoute = createRoute({ getParentRoute: () => rootRoute, path: '/forgot', component: Forgot })
-const resetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset', component: Reset })
-const verifyRoute = createRoute({ getParentRoute: () => rootRoute, path: '/verify', component: Verify })
-const rsvpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rsvp', component: CalendarRSVP })
-const shareRoute = createRoute({ getParentRoute: () => rootRoute, path: '/share', component: SharedFile })
+const workspaceRoute = createRoute({ getParentRoute: () => rootRoute, path: '/workspace', component: lazyRouteComponent(() => import('./pages/Workspace'), 'Workspace'), staticData: { module: 'src/pages/Workspace.tsx' } })
+const contactsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/contacts', component: lazyRouteComponent(() => import('./pages/Contacts'), 'Contacts'), staticData: { module: 'src/pages/Contacts.tsx' } })
+const membersRoute = createRoute({ getParentRoute: () => rootRoute, path: '/members', component: lazyRouteComponent(() => import('./pages/Members'), 'Members'), staticData: { module: 'src/pages/Members.tsx' } })
+const inviteRoute = createRoute({ getParentRoute: () => rootRoute, path: '/invite', component: lazyRouteComponent(() => import('./pages/Account'), 'Invite'), staticData: { module: 'src/pages/Account.tsx' } })
+const forgotRoute = createRoute({ getParentRoute: () => rootRoute, path: '/forgot', component: lazyRouteComponent(() => import('./pages/Account'), 'Forgot'), staticData: { module: 'src/pages/Account.tsx' } })
+const resetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset', component: lazyRouteComponent(() => import('./pages/Account'), 'Reset'), staticData: { module: 'src/pages/Account.tsx' } })
+const verifyRoute = createRoute({ getParentRoute: () => rootRoute, path: '/verify', component: lazyRouteComponent(() => import('./pages/Account'), 'Verify'), staticData: { module: 'src/pages/Account.tsx' } })
+const rsvpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rsvp', component: lazyRouteComponent(() => import('./pages/RSVP'), 'CalendarRSVP'), staticData: { module: 'src/pages/RSVP.tsx' } })
+const shareRoute = createRoute({ getParentRoute: () => rootRoute, path: '/share', component: lazyRouteComponent(() => import('./pages/Share'), 'SharedFile'), staticData: { module: 'src/pages/Share.tsx' } })
 
-const appRoute = createRoute({ getParentRoute: () => rootRoute, path: '/app', component: AppWorkspace })
+const appRoute = createRoute({ getParentRoute: () => rootRoute, path: '/app', component: lazyRouteComponent(() => import('./pages/App'), 'AppWorkspace'), staticData: { module: 'src/pages/App.tsx' } })
 const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute, shareRoute, rsvpRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
@@ -72,6 +85,8 @@ declare module '@tanstack/react-router' {
     router: ReturnType<typeof createAppRouter>
   }
   interface StaticDataRouteOption {
+    /** Browser module to preload for a prerendered route. */
+    module?: string
     /**
      * Prerendered without the client runtime: the page's HTML and CSS,
      * no React, router or query code, no hydration (scripts/prerender.mjs).

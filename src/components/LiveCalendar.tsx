@@ -8,7 +8,7 @@ import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import luxonPlugin from '@fullcalendar/luxon3'
 import { DateTime } from 'luxon'
-import { downloadContent } from './LiveMail'
+import { downloadContent } from '../lib/download'
 import { userError } from '../lib/errors'
 
 export function LiveCalendar({ workspaceId }: { workspaceId: string }) {

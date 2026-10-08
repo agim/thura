@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type DriveFile } from '@lidza/client'
 import { OfficeEditor } from './OfficeEditor'
-import { downloadContent } from './LiveMail'
+import { downloadContent } from '../lib/download'
 
 const CHUNK = 1024 * 1024
 export function LiveDrive({ workspaceId }: { workspaceId: string }) {

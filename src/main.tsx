@@ -9,6 +9,8 @@ import { announceTimezone } from './timezone'
 import { enableAnalytics } from './analytics'
 import { startI18n } from './i18n'
 import './index.css'
+// Shared shell styles arrive before hydration; page code loads on demand.
+import './workspace/styles.css'
 
 announceTimezone()
 if (import.meta.env.VITE_ANALYTICS === '1') enableAnalytics()

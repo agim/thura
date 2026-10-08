@@ -1,14 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type MailItem, type MailFolder, type FileContent } from '@lidza/client'
+import { api, type MailItem, type MailFolder } from '@lidza/client'
+import { downloadContent } from '../lib/download'
 import DOMPurify from 'dompurify'
-
-export function downloadContent(file: FileContent) {
-  const bytes = Uint8Array.from(atob(file.data), c => c.charCodeAt(0))
-  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }))
-  const link = document.createElement('a'); link.href = url; link.download = file.name; link.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
 
 export function LiveMail({ workspaceId }: { workspaceId: string }) {
   const boxes = useQuery({ queryKey: ['mailboxes', workspaceId], queryFn: () => api.listMailboxes({ workspaceId }) })

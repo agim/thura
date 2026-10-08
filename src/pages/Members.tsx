@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type WorkspaceRole } from '@lidza/client'
-import { SignIn } from './Contacts'
+import { SignIn } from '../components/SignIn'
 
 export function Members() {
   const session = useQuery({ queryKey: ['session'], queryFn: () => api.authSession() })

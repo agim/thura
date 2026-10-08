@@ -23,5 +23,6 @@ func app() lidza.App {
 		Tools:      tools(),
 		OnStart:    onStart,
 		Middleware: appMiddleware(),
+		Head:       head,
 	}
 }

@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
 import { api } from '@lidza/client'
 import { userError } from '../lib/errors'
-import { downloadContent } from '../components/LiveMail'
+import { downloadContent } from '../lib/download'
 export function SharedFile() {
   const [token, setToken] = useState('')
   const open = useMutation({ mutationFn: () => api.openDriveShare({ token: token || location.hash.slice(1) }), onSuccess: downloadContent })

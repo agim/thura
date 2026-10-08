@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import WorkspacePrototype from '../workspace/App.js'
-import '../workspace/styles.css'
 
 // Browser-local sample state is loaded only after hydration. Server rendering
 // must never read one visitor's browser state or persist fallback sample data.
@@ -8,7 +7,6 @@ export function Workspace() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => {
     setMounted(true)
-    document.title = 'Thura · Workspace'
   }, [])
   return (
     <div id="orbit-workspace">

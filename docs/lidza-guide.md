@@ -1662,6 +1662,16 @@ The brief's ownership model (docs/brief.md): Each workspace owns its data; acces
 2. Put the access rule in one helper in `handlers/access.go` and call it from every handler; filter every query in `db/queries` by it.
 3. Test it: another user lists nothing and gets 404 on the first user's id; `lidza check`, then `lidza test`.
 
+### Add a deferred page in Thura
+
+Keep the route and each workspace application independently loadable.
+
+1. Follow "Add a page", but use `lazyRouteComponent(() => import('./pages/Things'), 'Things')` instead of importing the page eagerly.
+2. Set the route's `staticData.module` to `src/pages/Things.tsx`. Prerendering uses the Vite manifest to preload that page and its static dependencies, without fetching other pages or application tabs. Keep `static: true` for pages that need no browser runtime.
+3. Add generic title, description and `noIndex` entries to `src/page-metadata.json`; Go serves the same metadata that React maintains after navigation. Never put account, workspace or grant contents in metadata.
+4. Keep sign-in and shared utilities independent of application tabs. Use React lazy/Suspense for tabs. Manual vendor chunk groups must not recursively capture shared React/router dependencies.
+5. Run `lidza check`, the browser suite and a production cold-load audit. `e2e/page-loading.spec.ts` checks the sign-in/tab boundary and route metadata. If the published audit runner stalls across contexts, `scripts/audit-performance-isolated.mjs` runs that unchanged runner in a fresh browser process for every prerendered route and enforces the same default budgets; its report is in `.lidza/`.
+
 ## Packs
 
 A pack is Rust compiled to WASM, run by the app in a bounded pool with a

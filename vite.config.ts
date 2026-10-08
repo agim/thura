@@ -59,9 +59,9 @@ export default defineConfig(({ isSsrBuild }) => ({
     manifest: !isSsrBuild,
     rolldownOptions: isSsrBuild ? undefined : {
       input: { index: 'index.html', ...enhance },
-      output: { codeSplitting: { groups: [
-        { name: 'livekit-client', test: /node_modules\/livekit-client\//, priority: 20 },
-        { name: 'livekit-components', test: /node_modules\/@livekit\//, priority: 10 },
+      output: { strictExecutionOrder: true, codeSplitting: { groups: [
+        { name: 'livekit-client', includeDependenciesRecursively: false, test: /node_modules\/livekit-client\//, priority: 20 },
+        { name: 'livekit-components', includeDependenciesRecursively: false, test: /node_modules\/@livekit\//, priority: 10 },
       ] } },
     },
   },

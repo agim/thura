@@ -26,6 +26,30 @@ const modes = pageModes ? pageModes() : {}
 const manifestFile = join(dist, '.vite', 'manifest.json')
 const manifest = existsSync(manifestFile) ? JSON.parse(readFileSync(manifestFile, 'utf8')) : {}
 
+// Fetch only this route's module and its static dependencies alongside the
+// entry. Dynamic imports (other pages, signed-in shells, application tabs)
+// remain deferred. Static pages retain their zero-runtime contract.
+const preloadPage = (html, path) => {
+  const mode = modes[path]
+  if (!mode?.module || mode.static) return html
+  if (!manifest[mode.module]) throw new Error(`${path}: missing page module ${mode.module}`)
+  const visited = new Set()
+  const files = new Set()
+  const visit = key => {
+    if (visited.has(key)) return
+    visited.add(key)
+    const chunk = manifest[key]
+    if (!chunk) throw new Error(`${path}: missing dependency ${key}`)
+    if (chunk.file.endsWith('.js')) files.add(chunk.file)
+    for (const dependency of chunk.imports ?? []) visit(dependency)
+  }
+  visit(mode.module)
+  const hints = [...files]
+    .filter(file => !html.includes(`href="/${file}"`))
+    .map(file => `<link rel="modulepreload" crossorigin href="/${file}">`)
+  return html.replace('</head>', hints.join('') + '</head>')
+}
+
 // lighten is a static page: the scripts (the app, its preloads, the
 // router's hydration payload, the i18n catalog) dropped but JSON-LD, and
 // the page's enhance scripts added.
@@ -67,7 +91,7 @@ for (const path of staticPaths()) {
     }
     // Outside the try: a static page naming a missing enhance script
     // fails the build.
-    page = lighten(page, path)
+    page = lighten(preloadPage(page, path), path)
     const base = lang ? join(localesDir, lang) : dist
     await write(path === '/' ? join(base, 'index.html') : join(base, path, 'index.html'), page)
     console.log(`prerendered ${path}${lang ? ` (${lang})` : ''}${modes[path]?.static ? ' (static: no client runtime)' : ''}`)

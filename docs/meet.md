@@ -83,6 +83,6 @@ Stop/remove `thura-livekit-test` and the temporary app when finished.
 Media dependencies load on demand. The selected upstream client is a bundled
 module (~518 KB minified, ~135 KB gzip) and is isolated from the initial app
 bundle; the React media controls are a separate ~133 KB minified chunk.
-The upstream client triggers Vite's generic 500 KB chunk warning; it is not
+The bundle groups exclude recursive dependency capture so shared React code cannot pull media chunks into ordinary page loads. Strict execution order preserves module initialization; the real two-browser media suite validates the resulting split. The upstream client triggers Vite's generic 500 KB chunk warning; it is not
 silenced by raising the warning threshold. Review these sizes when upgrading.
 A fixed media viewport supports adaptive subscriptions before remote tracks arrive.
