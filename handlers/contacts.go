@@ -5,12 +5,14 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/pkg/router"
 	"github.com/jackc/pgx/v5"
 	queries "thura/db/queries/gen"
+	"thura/internal/platform/paging"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -29,12 +31,38 @@ func ListContacts(ctx context.Context, req *router.Request[router.None]) (schema
 	if err := workspace.RequireMember(ctx, id); err != nil {
 		return schema.ContactList{}, err
 	}
-	rows, err := queries.New(db.From(ctx)).ListContacts(ctx, id)
+	page, err := paging.Read(req.Raw, 100)
+	if err != nil {
+		return schema.ContactList{}, err
+	}
+	var after *string
+	afterID := "00000000-0000-0000-0000-000000000000"
+	if page.Cursor != "" {
+		var cursor contactCursor
+		if err := paging.Decode(page.Cursor, &cursor); err != nil {
+			return schema.ContactList{}, err
+		}
+		if !workspace.ValidID(cursor.ID) || utf8.RuneCountInString(cursor.Name) > 200 {
+			return schema.ContactList{}, router.Errorf(422, "invalid cursor")
+		}
+		after, afterID = &cursor.Name, cursor.ID
+	}
+	rows, err := queries.New(db.From(ctx)).ListContactsPage(ctx, queries.ListContactsPageParams{WorkspaceID: id, Search: page.Search, AfterName: after, AfterID: afterID, PageLimit: page.Limit + 1})
 	result := schema.ContactList{Items: []schema.Contact{}}
+	if len(rows) > int(page.Limit) {
+		last := rows[page.Limit-1]
+		result.NextCursor = paging.Encode(contactCursor{ID: last.ID, Name: last.Name})
+		rows = rows[:page.Limit]
+	}
 	for _, c := range rows {
 		result.Items = append(result.Items, contact(c))
 	}
 	return result, err
+}
+
+type contactCursor struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func clean(in schema.ContactInput) (schema.ContactInput, error) {

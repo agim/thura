@@ -16,6 +16,12 @@ SELECT EXISTS(SELECT 1 FROM auth_member m JOIN workspace w ON w.id::text = m.sco
 
 -- name: ListContacts :many
 SELECT * FROM contact WHERE workspace_id = $1 ORDER BY name, id LIMIT 500;
+-- name: ListContactsPage :many
+SELECT * FROM contact
+WHERE workspace_id=sqlc.arg(workspace_id)
+AND (sqlc.arg(search)::text='' OR strpos(lower(name || ' ' || email || ' ' || company || ' ' || phone), lower(sqlc.arg(search))) > 0)
+AND (sqlc.narg(after_name)::text IS NULL OR (name,id) > (sqlc.narg(after_name)::text,sqlc.arg(after_id)::uuid))
+ORDER BY name,id LIMIT sqlc.arg(page_limit);
 
 -- name: CreateContact :one
 INSERT INTO contact (workspace_id, name, email, company, phone, favorite)

@@ -13,6 +13,12 @@ INSERT INTO mail_item(mailbox_id,author_id,folder,from_address,to_address,cc,bcc
 VALUES($1,$2,'drafts',$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *;
 -- name: ListMailItems :many
 SELECT * FROM mail_item WHERE mailbox_id=$1 AND folder=$2 ORDER BY updated_at DESC,id LIMIT 200;
+-- name: ListMailItemsPage :many
+SELECT * FROM mail_item
+WHERE mailbox_id=sqlc.arg(mailbox_id) AND folder=sqlc.arg(folder)
+AND (sqlc.arg(search)::text='' OR strpos(lower(from_address || ' ' || to_address || ' ' || subject || ' ' || text_body), lower(sqlc.arg(search))) > 0)
+AND (sqlc.narg(before_time)::timestamptz IS NULL OR (updated_at,id) < (sqlc.narg(before_time)::timestamptz,sqlc.arg(before_id)::uuid))
+ORDER BY updated_at DESC,id DESC LIMIT sqlc.arg(page_limit);
 -- name: GetMailItem :one
 SELECT * FROM mail_item WHERE id=$1;
 -- name: LockMailItem :one

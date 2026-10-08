@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type MailItem, type MailFolder } from '@lidza/client'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api, type MailItem, type MailFolder, type DraftInput } from '@lidza/client'
 import { downloadContent } from '../lib/download'
+import { DraftAutosave } from '../lib/draft-autosave'
 import DOMPurify from 'dompurify'
 
 export function LiveMail({ workspaceId }: { workspaceId: string }) {
@@ -22,14 +23,14 @@ function MailView({ workspaceId, mailboxId }: { workspaceId: string; mailboxId: 
   const [editing, setEditing] = useState<MailItem | null>(null)
   const [notice, setNotice] = useState('')
   const [readerError, setReaderError] = useState('')
-  const list = useQuery({ queryKey: ['mail', mailboxId, folder], queryFn: ({ signal }) => api.listMail({ workspaceId, mailboxId }, { query: { folder }, signal }), refetchInterval: 5000 })
+  const list = useInfiniteQuery({ queryKey: ['mail', mailboxId, folder, query], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listMail({ workspaceId, mailboxId }, { query: { folder, search: query, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined, refetchInterval: 5000 })
   const detail = useQuery({ queryKey: ['mail-detail', selected], queryFn: () => api.getMail({ workspaceId, mailboxId, id: selected }), enabled: !!selected })
   const refresh = async () => { await client.invalidateQueries({ queryKey: ['mail', mailboxId] }); await client.invalidateQueries({ queryKey: ['mail-detail', selected] }) }
   const compose = useMutation({ mutationFn: () => api.createMailDraft({ workspaceId, mailboxId }, {}), onSuccess: async i => { setEditing(i); setSelected(i.id); setFolder('drafts'); await refresh() } })
   const flags = useMutation({ mutationFn: ({ id, values }: { id: string; values: { folder?: MailFolder; starred?: boolean; unread?: boolean } }) => api.updateMailFlags({ workspaceId, mailboxId, id }, values), onSuccess: refresh })
   const undo = useMutation({ mutationFn: (id: string) => api.undoMail({ workspaceId, mailboxId, id }), onSuccess: async i => { setEditing(i); setNotice('Sending cancelled. Draft restored.'); await refresh() } })
   const current = detail.isError ? undefined : detail.data?.item
-  const visible = list.isError ? [] : list.data?.items.filter(i => `${i.fromAddress} ${i.toAddress} ${i.subject} ${i.textBody}`.toLowerCase().includes(query.toLowerCase())) ?? []
+  const visible = list.isError ? [] : [...new Map(list.data?.pages.flatMap(page => page.items).map(item => [item.id, item]) ?? []).values()]
   const failure = list.error ?? detail.error ?? compose.error ?? flags.error ?? undo.error
   async function download(id: string) { try { downloadContent(await api.downloadMailAttachment({ workspaceId, mailboxId, id: selected, attachmentId: id })) } catch(e) { setReaderError(String(e)) } }
   async function reply(all = false, forward = false) {
@@ -47,7 +48,8 @@ function MailView({ workspaceId, mailboxId }: { workspaceId: string; mailboxId: 
         {list.isPending && <p role="status" className="empty">Loading messages…</p>}
         {list.data && visible.length === 0 && <p className="empty">No messages in this view.</p>}
         {visible.map(i => <button className={`mailrow ${selected === i.id ? 'selected' : ''}`} key={i.id} onClick={() => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null); setReaderError(''); if (i.unread) flags.mutate({ id: i.id, values: { unread: false } }) }}><span className="sendername">{folder === 'inbox' ? i.fromAddress : i.toAddress || 'No recipients'}</span><span className="subject">{i.subject || '(No subject)'}</span><span className="small quiet">{i.status === 'captured' ? 'Captured locally · not delivered' : i.status}{i.starred ? ' · ★' : ''}</span></button>)}
-        <p className="small quiet p-3">Latest 200 messages in this folder.</p>
+        {list.hasNextPage && <button disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>Load more messages</button>}
+        <p className="small quiet p-3">{visible.length} messages loaded. Search covers this folder.</p>
       </section>
       <section className="reader" aria-label="Reading pane">
         {editing ? <DraftEditor key={editing.id} item={editing} workspaceId={workspaceId} mailboxId={mailboxId} saved={async i => { setEditing(i.status === 'draft' ? i : null); setNotice(i.status === 'queued' ? 'Queued · undo is available until the scheduled send time.' : 'Draft saved.'); await refresh() }} /> : current ? <>
@@ -73,32 +75,40 @@ function SafeEmail({ html }: { html: string }) {
 }
 
 function DraftEditor({ item, workspaceId, mailboxId, saved }: { item: MailItem; workspaceId: string; mailboxId: string; saved: (i: MailItem) => Promise<void> }) {
-  const [to, setTo] = useState(item.toAddress)
-  const [cc, setCc] = useState(item.cc)
-  const [bcc, setBcc] = useState(item.bcc)
-  const [subject, setSubject] = useState(item.subject)
-  const [text, setText] = useState(item.textBody)
+  const [input, setInput] = useState<DraftInput>({ to: item.toAddress, cc: item.cc, bcc: item.bcc, subject: item.subject, text: item.textBody, threadId: item.threadId })
   const [schedule, setSchedule] = useState('')
   const [error, setError] = useState('')
   const [state, setState] = useState('Draft loaded')
+  const [autosave] = useState(() => new DraftAutosave(item,
+    body => api.updateMailDraft({ workspaceId, mailboxId, id: item.id }, body),
+    (next, failure) => { setState(next); setError(failure) }))
   const detail = useQuery({ queryKey: ['mail-detail', item.id], queryFn: () => api.getMail({ workspaceId, mailboxId, id: item.id }) })
   const client = useQueryClient()
-  const save = useMutation({ mutationFn: () => api.updateMailDraft({ workspaceId, mailboxId, id: item.id }, { to, cc, bcc, subject, text, threadId: item.threadId }), onSuccess: () => setState('Draft saved') })
+  const save = useMutation({ mutationFn: () => autosave.flush() })
   const send = useMutation({ mutationFn: async () => { const i = await save.mutateAsync(); return api.sendMail({ workspaceId, mailboxId, id: i.id }, { sendAt: schedule ? new Date(schedule).toISOString() : undefined }) }, onSuccess: saved })
   const upload = useMutation({ mutationFn: (file: File) => api.uploadMailAttachment({ workspaceId, mailboxId, id: item.id }, file), onSuccess: () => client.invalidateQueries({ queryKey: ['mail-detail', item.id] }) })
   const busy = save.isPending || send.isPending || upload.isPending
   const failure = save.error ?? send.error ?? upload.error
-  useEffect(() => { setState('Unsaved changes') }, [to, cc, bcc, subject, text])
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (autosave.dirty) { event.preventDefault(); event.returnValue = '' } }
+    window.addEventListener('beforeunload', warn)
+    return () => { window.removeEventListener('beforeunload', warn); void autosave.flush().catch(() => {}) }
+  }, [autosave])
+  function change(field: keyof DraftInput, value: string) {
+    const next = { ...input, [field]: value }
+    setInput(next)
+    autosave.update(next)
+  }
   function submit(e: FormEvent) { e.preventDefault(); setError(''); send.mutate() }
   return <form className="composer-form" onSubmit={submit}>
     <h3 className="title">Compose message</h3>
-    {([[to, setTo, 'To'], [cc, setCc, 'Cc'], [bcc, setBcc, 'Bcc'], [subject, setSubject, 'Subject']] as const).map(([value, set, label]) => <label key={label}>{label}<input value={value} onChange={e => set(e.target.value)} /></label>)}
-    <label>Message<textarea aria-label="Message" value={text} onChange={e => setText(e.target.value)} /></label>
+    {([['to', 'To'], ['cc', 'Cc'], ['bcc', 'Bcc'], ['subject', 'Subject']] as const).map(([field, label]) => <label key={field}>{label}<input disabled={send.isPending} value={input[field] ?? ''} onChange={e => change(field, e.target.value)} /></label>)}
+    <label>Message<textarea disabled={send.isPending} aria-label="Message" value={input.text ?? ''} onChange={e => change('text', e.target.value)} /></label>
     <label>Attachments<input type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
     <ul>{detail.data?.attachments.map(a => <li key={a.id}>{a.name}</li>)}</ul>
     <label>Schedule send<input type="datetime-local" value={schedule} onChange={e => setSchedule(e.target.value)} /></label>
     {(failure || error) && <p role="alert">{failure?.message || error}</p>}
     <div className="row"><button type="button" disabled={busy} onClick={() => save.mutate()}>Save draft</button><button className="mainaction" disabled={busy}>Send</button></div>
-    <p role="status" className="small quiet">{state}. Sending has a ten-second undo window.</p>
+    <p role="status" className="small quiet">{state}. Changes save automatically. Sending has a ten-second undo window.</p>
   </form>
 }

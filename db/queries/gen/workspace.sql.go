@@ -138,6 +138,57 @@ func (q *Queries) ListContacts(ctx context.Context, workspaceID string) ([]Conta
 	return items, nil
 }
 
+const listContactsPage = `-- name: ListContactsPage :many
+SELECT id, workspace_id, name, email, company, phone, favorite, created_at FROM contact
+WHERE workspace_id=$1
+AND ($2::text='' OR strpos(lower(name || ' ' || email || ' ' || company || ' ' || phone), lower($2)) > 0)
+AND ($3::text IS NULL OR (name,id) > ($3::text,$4::uuid))
+ORDER BY name,id LIMIT $5
+`
+
+type ListContactsPageParams struct {
+	WorkspaceID string  `json:"workspace_id"`
+	Search      string  `json:"search"`
+	AfterName   *string `json:"after_name"`
+	AfterID     string  `json:"after_id"`
+	PageLimit   int32   `json:"page_limit"`
+}
+
+func (q *Queries) ListContactsPage(ctx context.Context, arg ListContactsPageParams) ([]Contact, error) {
+	rows, err := q.db.Query(ctx, listContactsPage,
+		arg.WorkspaceID,
+		arg.Search,
+		arg.AfterName,
+		arg.AfterID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Contact
+	for rows.Next() {
+		var i Contact
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.Email,
+			&i.Company,
+			&i.Phone,
+			&i.Favorite,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWorkspaces = `-- name: ListWorkspaces :many
 SELECT w.id, w.name, w.created_at FROM workspace w WHERE EXISTS (
   SELECT 1 FROM auth_member m WHERE m.scope = w.id::text AND m.subject = $1

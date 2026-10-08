@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { api, validators, type Contact, type ContactInput } from '@lidza/client'
 import { SignIn } from '../components/SignIn'
 
@@ -42,7 +42,7 @@ export function ContactBook({ workspaceId }: { workspaceId: string }) {
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
   const key = ['contacts', workspaceId]
-  const contacts = useQuery({ queryKey: key, queryFn: () => api.listContacts({ workspaceId }) })
+  const contacts = useInfiniteQuery({ queryKey: [...key, query], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listContacts({ workspaceId }, { query: { search: query, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined })
   const refresh = () => client.invalidateQueries({ queryKey: key })
   const save = useMutation({
     mutationFn: (body: ContactInput) => edit ? api.updateContact({ workspaceId, id: edit.id }, body) : api.createContact({ workspaceId }, body),
@@ -56,7 +56,7 @@ export function ContactBook({ workspaceId }: { workspaceId: string }) {
     setError(problems.map(p => `${p.field}: ${p.message}`).join('; '))
     if (problems.length === 0) save.mutate(body)
   }
-  const visible = contacts.isError ? [] : contacts.data?.items.filter(c => `${c.name} ${c.email} ${c.company}`.toLowerCase().includes(query.toLowerCase())) ?? []
+  const visible = contacts.isError ? [] : [...new Map(contacts.data?.pages.flatMap(page => page.items).map(item => [item.id, item]) ?? []).values()]
   return <>
     <form onSubmit={submit} className="space-y-3 rounded border border-line p-4">
       <h2 className="text-xl font-medium">{edit ? 'Edit contact' : 'Add contact'}</h2>
@@ -75,6 +75,7 @@ export function ContactBook({ workspaceId }: { workspaceId: string }) {
       <h2 className="font-semibold">{c.name}{c.favorite ? ' ★' : ''}</h2><p>{c.email}</p><p>{c.company} {c.phone}</p>
       <div className="mt-2 flex gap-4"><button type="button" disabled={save.isPending || remove.isPending} onClick={() => { setEdit(c); setForm(c); setError(''); save.reset() }}>Edit {c.name}</button><button type="button" disabled={save.isPending || remove.isPending} onClick={() => { if (window.confirm(`Delete ${c.name}?`)) { if (edit?.id === c.id) { setEdit(null); setForm(emptyContact) }; remove.mutate(c.id) } }}>Delete {c.name}</button></div>
     </li>)}</ul>
-    <p className="text-sm text-muted">Shared with this workspace. This first version shows up to 500 contacts.</p>
+    {contacts.hasNextPage && <button disabled={contacts.isFetchingNextPage} onClick={() => void contacts.fetchNextPage()}>Load more contacts</button>}
+    <p className="text-sm text-muted">Shared with this workspace. {visible.length} contacts loaded; search covers the full directory.</p>
   </>
 }

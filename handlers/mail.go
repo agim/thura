@@ -13,8 +13,10 @@ import (
 	"net/http"
 	queries "thura/db/queries/gen"
 	"thura/internal/mailbox"
+	"thura/internal/platform/paging"
 	"thura/internal/workspace"
 	"thura/schema"
+	"time"
 )
 
 func ListMailboxes(ctx context.Context, r *router.Request[router.None]) (schema.MailboxList, error) {
@@ -55,13 +57,40 @@ func ListMail(ctx context.Context, r *router.Request[router.None]) (schema.MailI
 	default:
 		return schema.MailItemList{}, router.Errorf(422, "invalid folder")
 	}
-	rows, err := queries.New(db.From(ctx)).ListMailItems(ctx, queries.ListMailItemsParams{MailboxID: r.Param("mailboxId"), Folder: folder})
+	page, err := paging.Read(r.Raw, 50)
+	if err != nil {
+		return schema.MailItemList{}, err
+	}
+	var before *time.Time
+	beforeID := "00000000-0000-0000-0000-000000000000"
+	if page.Cursor != "" {
+		var cursor mailCursor
+		if err := paging.Decode(page.Cursor, &cursor); err != nil {
+			return schema.MailItemList{}, err
+		}
+		if !workspace.ValidID(cursor.ID) || cursor.Time.IsZero() {
+			return schema.MailItemList{}, router.Errorf(422, "invalid cursor")
+		}
+		before, beforeID = &cursor.Time, cursor.ID
+	}
+	rows, err := queries.New(db.From(ctx)).ListMailItemsPage(ctx, queries.ListMailItemsPageParams{MailboxID: r.Param("mailboxId"), Folder: folder, Search: page.Search, BeforeTime: before, BeforeID: beforeID, PageLimit: page.Limit + 1})
 	out := schema.MailItemList{Items: []schema.MailItem{}}
+	if len(rows) > int(page.Limit) {
+		last := rows[page.Limit-1]
+		out.NextCursor = paging.Encode(mailCursor{ID: last.ID, Time: last.UpdatedAt})
+		rows = rows[:page.Limit]
+	}
 	for _, i := range rows {
 		out.Items = append(out.Items, mailbox.View(i))
 	}
 	return out, err
 }
+
+type mailCursor struct {
+	ID   string    `json:"id"`
+	Time time.Time `json:"time"`
+}
+
 func GetMail(ctx context.Context, r *router.Request[router.None]) (schema.MailDetail, error) {
 	i, err := mailbox.ItemAccess(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Param("id"))
 	if err != nil {

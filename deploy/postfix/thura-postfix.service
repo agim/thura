@@ -1,0 +1,17 @@
+[Unit]
+Description=Thura Debian Postfix mail transport
+After=network-online.target
+Wants=network-online.target
+Conflicts=postfix.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/thura-postfix/environment
+ExecStart=/usr/bin/python3 /opt/thura-postfix/configure.py
+ExecStop=/usr/sbin/postfix stop
+Restart=on-failure
+RestartSec=5
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+{
+  "baseUrl": "http://127.0.0.1:3000",
+  "mailboxes": {
+    "inbox@example.org": {
+      "id": "REPLACE_WITH_PROVISIONED_MAILBOX_UUID",
+      "secret": "REPLACE_WITH_RANDOM_INBOUND_SECRET"
+    }
+  }
+}

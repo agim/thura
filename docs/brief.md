@@ -89,7 +89,7 @@ _Open._
 
 ### Which mail provider in production? <!-- brief:mail -->
 
-_Open._
+Postfix, available through Debian/Linux distribution packages; Līdza uses its official SMTP transport.
 
 ### Which language model provider? <!-- brief:model -->
 
@@ -111,11 +111,11 @@ _Open._
 
 ### Where will it run? <!-- brief:hosting -->
 
-_Open._
+Chosen by the deploying user; Thura must not assume a single host.
 
 ### Which domain? <!-- brief:domain -->
 
-_Open._
+Chosen by the deploying user at deployment time; no fixed domain.
 
 ### How many people in the first year? <!-- brief:scale -->
 

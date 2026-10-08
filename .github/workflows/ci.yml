@@ -62,3 +62,9 @@ jobs:
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
       - name: lidza test --e2e
         run: lidza test --e2e --install
+      - name: Postfix signed relay policy
+        run: python3 -m unittest discover -s deploy/postfix -p 'test_*.py'
+      - name: Debian Postfix SMTP and recovery acceptance
+        run: |
+          docker build -t thura-postfix:test deploy/postfix
+          python3 scripts/postfix-fixture.py

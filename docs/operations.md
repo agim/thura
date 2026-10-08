@@ -5,6 +5,8 @@ Thura is a generated application on published Līdza v0.1.88. Build with
 using the generated Dockerfile/systemd deployment. Use a separate Postgres
 database and private local or S3-compatible storage. Valkey supplies the cache.
 All instances need the same sealed credential configuration and master key.
+The default mail service is [Debian Postfix](postfix.md); its host, mappings and
+public domains are chosen per deployment.
 Set a public HTTPS `APP_URL`, trusted proxy settings, production auth cookies,
 and working mail credentials before inviting real users. Disable development
 outbox capture in production. Initial owners are provisioned through the
@@ -17,6 +19,27 @@ Matrix application-service namespaces, and LiveKit `room.auto_create: false`.
 The tested service versions are compatibility pins, not a claim that these are
 the newest secure releases. Review vendor advisories before public deployment.
 Keep `/workspace` labelled as the browser-local sample.
+
+## Debian local-storage deployment
+
+The generated `deploy/thura.service` treats `/opt/thura` as read-only. When
+using private local object storage, select `deploy/thura-local.service` instead.
+It gives the application one mode-0700 state directory at `/var/lib/thura`;
+set `STORAGE_PROVIDER=local` and `STORAGE_DIR=/var/lib/thura/storage` in the
+operator's private `/opt/thura/.env`. Environment-file values override unit
+defaults, so verify that path instead of leaving a relative `storage` value.
+Create the `thura` system user/group and install the binary/assets as in the
+generated unit. Install and enable only one of the app units.
+
+For editable sealed operator settings, store the private config directory at
+`/var/lib/thura/config` owned by `thura`, with directory mode 0700 and files
+0600, and link `/opt/thura/config` to it before starting. Supply the master key
+privately; it does not belong in an image or a Git checkout. Keep code/assets
+read-only. Back up both storage and sealed configuration/master-key sets.
+S3 deployments can retain the generated app unit and use the selected
+provider's backup/access design. Installation on an actual operator host is a
+deployment operation; the systemd unit has not been started on a public host
+by this implementation.
 
 ## Limits and jobs
 

@@ -117,3 +117,15 @@ Serialize workspace quota reservations and immutable version saves with the work
 ## Deferred page code and private page metadata
 
 Use TanStack lazy route components so the router resolves page code before server rendering and hydration. Separate sign-in from the authenticated workspace shell and load each application tab on demand. Keep shell CSS in the entry to avoid an unstyled hydration frame. Prerendered routes preload only their own module and static dependencies, avoiding a hydration loading waterfall; dynamic tab imports remain deferred and static pages retain zero scripts/preloads. File downloads use a small shared helper instead of importing the Mail renderer. Rolldown media groups capture package modules without recursively capturing shared React dependencies; strict execution order preserves initialization across chunks. A browser network test proves unopened applications and LiveKit remain unloaded. A shared static route metadata file drives server heads and browser navigation, with generic descriptions and noindex for private/account/share/invitation pages; it never includes workspace data or URL tokens.
+
+## Debian Postfix as the default deployment mail transport
+
+The developer selected the mail transport available through Debian/Linux packages and explicitly left hosts and domains to deploying users. Use Debian Postfix with the official Līdza SMTP provider, a persistent MTA queue, and exact recipient mappings into Thura's existing signed raw-MIME ingestion. The pipe adapter returns a temporary failure until Thura acknowledges persistence; repeated raw deliveries retain a stable idempotency key. Hostname, mailbox mappings, inbound secrets and app origin are operator settings. No fixed public host/domain or new public-registration policy is inferred.
+
+## Serialized draft autosave
+
+Persist edits after a 750 ms pause with one write in flight per editor. Drain newer snapshots before queueing a send, retain dirty state after failures, and show save status explicitly. A reload/close warns while edits remain unsaved; internal unmount attempts a final flush. Closing a browser before acknowledgment can still lose edits. Cross-browser concurrent editing remains last-write-wins; this is not a collaborative editor.
+
+## Bounded complete Mail and Contacts lists
+
+Replace the latest-200/first-500 API truncation with ordered cursor pages and literal server-side search. Fetch one extra row to prove whether another page exists; validate limits/search/cursor size and enforce membership before reading or parsing a cursor. Use timestamp/ID and name/ID pairs to handle tied sort values without offsets. Cursors select positions, not permissions, and concurrent edits can reorder a live listing; the client deduplicates IDs while rendering. No snapshot-consistency guarantee is implied.

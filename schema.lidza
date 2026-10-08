@@ -31,6 +31,7 @@ type WorkspaceList {
 }
 type ContactList {
   items Contact[]
+  nextCursor string
 }
 type ContactInput {
   name string @min(1) @max(200)
@@ -146,6 +147,7 @@ type MailboxList {
 }
 type MailItemList {
   items MailItem[]
+  nextCursor string
 }
 type AttachmentView {
   id uuid

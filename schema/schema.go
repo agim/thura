@@ -1237,7 +1237,8 @@ func (v WorkspaceList) Validate() error {
 
 // ContactList is an API type.
 type ContactList struct {
-	Items []Contact `json:"items"`
+	Items      []Contact `json:"items"`
+	NextCursor string    `json:"nextCursor"`
 }
 
 // Validate applies the rules of ContactList from schema.lidza.
@@ -1248,6 +1249,9 @@ func (v ContactList) Validate() error {
 			errs.Add("items", "nested", err.Error())
 			break
 		}
+	}
+	if v.NextCursor == "" {
+		errs.Add("nextCursor", "required", "required")
 	}
 	return errs.Result()
 }
@@ -1555,7 +1559,8 @@ func (v MailboxList) Validate() error {
 
 // MailItemList is an API type.
 type MailItemList struct {
-	Items []MailItem `json:"items"`
+	Items      []MailItem `json:"items"`
+	NextCursor string     `json:"nextCursor"`
 }
 
 // Validate applies the rules of MailItemList from schema.lidza.
@@ -1566,6 +1571,9 @@ func (v MailItemList) Validate() error {
 			errs.Add("items", "nested", err.Error())
 			break
 		}
+	}
+	if v.NextCursor == "" {
+		errs.Add("nextCursor", "required", "required")
 	}
 	return errs.Result()
 }

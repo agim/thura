@@ -414,6 +414,72 @@ func (q *Queries) ListMailItems(ctx context.Context, arg ListMailItemsParams) ([
 	return items, nil
 }
 
+const listMailItemsPage = `-- name: ListMailItemsPage :many
+SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, send_at, created_at, updated_at FROM mail_item
+WHERE mailbox_id=$1 AND folder=$2
+AND ($3::text='' OR strpos(lower(from_address || ' ' || to_address || ' ' || subject || ' ' || text_body), lower($3)) > 0)
+AND ($4::timestamptz IS NULL OR (updated_at,id) < ($4::timestamptz,$5::uuid))
+ORDER BY updated_at DESC,id DESC LIMIT $6
+`
+
+type ListMailItemsPageParams struct {
+	MailboxID  string     `json:"mailbox_id"`
+	Folder     MailFolder `json:"folder"`
+	Search     string     `json:"search"`
+	BeforeTime *time.Time `json:"before_time"`
+	BeforeID   string     `json:"before_id"`
+	PageLimit  int32      `json:"page_limit"`
+}
+
+func (q *Queries) ListMailItemsPage(ctx context.Context, arg ListMailItemsPageParams) ([]MailItem, error) {
+	rows, err := q.db.Query(ctx, listMailItemsPage,
+		arg.MailboxID,
+		arg.Folder,
+		arg.Search,
+		arg.BeforeTime,
+		arg.BeforeID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MailItem
+	for rows.Next() {
+		var i MailItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.MailboxID,
+			&i.AuthorID,
+			&i.Folder,
+			&i.FromAddress,
+			&i.ToAddress,
+			&i.Cc,
+			&i.Bcc,
+			&i.Subject,
+			&i.TextBody,
+			&i.HTMLBody,
+			&i.Status,
+			&i.Starred,
+			&i.Unread,
+			&i.ProviderID,
+			&i.RawKey,
+			&i.ExternalID,
+			&i.ThreadID,
+			&i.SendAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMailboxes = `-- name: ListMailboxes :many
 SELECT id, workspace_id, name, address, config_prefix, created_at FROM mailbox WHERE workspace_id=$1 ORDER BY name,id
 `

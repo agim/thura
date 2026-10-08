@@ -1,0 +1,33 @@
+# Local-storage variant of the generated deployment unit. Set STORAGE_DIR
+# to /var/lib/thura/storage in /opt/thura/.env. Place sealed credentials in
+# /var/lib/thura/config and link /opt/thura/config to that directory if
+# operator settings must be editable. Keep .env and master keys private.
+[Unit]
+Description=Thura workspace with private local storage
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=thura
+Group=thura
+WorkingDirectory=/opt/thura
+Environment=STORAGE_PROVIDER=local
+Environment=STORAGE_DIR=/var/lib/thura/storage
+EnvironmentFile=/opt/thura/.env
+ExecStart=/opt/thura/bin/thura
+Restart=on-failure
+RestartSec=2
+UMask=0077
+StateDirectory=thura
+StateDirectoryMode=0700
+NoNewPrivileges=true
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadOnlyPaths=/opt/thura
+ReadWritePaths=/var/lib/thura
+
+[Install]
+WantedBy=multi-user.target

@@ -12,7 +12,7 @@ import (
 // account, workspace, file, invitation or token contents.
 //
 //go:embed src/page-metadata.json
-var pageMetadataJSON []byte
+var pageMetadataJSON string
 
 type pageMetadata struct {
 	Title       string `json:"title"`
@@ -22,7 +22,7 @@ type pageMetadata struct {
 
 var pageHeads = func() map[string]pageMetadata {
 	var pages map[string]pageMetadata
-	if err := json.Unmarshal(pageMetadataJSON, &pages); err != nil {
+	if err := json.Unmarshal([]byte(pageMetadataJSON), &pages); err != nil {
 		panic(err)
 	}
 	return pages
