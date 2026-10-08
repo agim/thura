@@ -457,6 +457,33 @@ type Mailbox struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+type Meeting struct {
+	ID          string     `json:"id"`
+	WorkspaceID string     `json:"workspace_id"`
+	RequestID   string     `json:"request_id"`
+	Name        string     `json:"name"`
+	CreatedBy   string     `json:"created_by"`
+	EndedAt     *time.Time `json:"ended_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+type MeetingParticipant struct {
+	ID             string    `json:"id"`
+	MeetingID      string    `json:"meeting_id"`
+	Subject        string    `json:"subject"`
+	TokenExpiresAt time.Time `json:"token_expires_at"`
+	Joined         bool      `json:"joined"`
+	SessionID      string    `json:"session_id"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type MeetingWebhook struct {
+	ID        string    `json:"id"`
+	EventID   string    `json:"event_id"`
+	Checksum  string    `json:"checksum"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type OfficeSession struct {
 	ID            string    `json:"id"`
 	FileID        string    `json:"file_id"`

@@ -1116,6 +1116,84 @@ func (v ChatParticipant) Validate() error {
 	return errs.Result()
 }
 
+// Meeting is a row of the meeting table.
+type Meeting struct {
+	ID          string     `json:"id" db:"id"`
+	WorkspaceID string     `json:"workspaceId" db:"workspace_id"`
+	RequestID   string     `json:"requestId" db:"request_id"`
+	Name        string     `json:"name" db:"name"`
+	CreatedBy   string     `json:"createdBy" db:"created_by"`
+	EndedAt     *time.Time `json:"endedAt" db:"ended_at"`
+	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of Meeting from schema.lidza.
+func (v Meeting) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.RequestID == "" {
+		errs.Add("requestId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.CreatedBy == "" {
+		errs.Add("createdBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MeetingParticipant is a row of the meeting_participant table.
+type MeetingParticipant struct {
+	ID             string    `json:"id" db:"id"`
+	MeetingID      string    `json:"meetingId" db:"meeting_id"`
+	Subject        string    `json:"subject" db:"subject"`
+	TokenExpiresAt time.Time `json:"tokenExpiresAt" db:"token_expires_at"`
+	Joined         bool      `json:"joined" db:"joined"`
+	SessionID      string    `json:"sessionId" db:"session_id"`
+	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of MeetingParticipant from schema.lidza.
+func (v MeetingParticipant) Validate() error {
+	var errs validate.Errors
+	if v.MeetingID == "" {
+		errs.Add("meetingId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.SessionID == "" {
+		errs.Add("sessionId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MeetingWebhook is a row of the meeting_webhook table.
+type MeetingWebhook struct {
+	ID        string    `json:"id" db:"id"`
+	EventID   string    `json:"eventId" db:"event_id"`
+	Checksum  string    `json:"checksum" db:"checksum"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of MeetingWebhook from schema.lidza.
+func (v MeetingWebhook) Validate() error {
+	var errs validate.Errors
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	if v.Checksum == "" {
+		errs.Add("checksum", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -2636,6 +2714,71 @@ func (v ChatMessageFile) Validate() error {
 	var errs validate.Errors
 	if v.Name == "" {
 		errs.Add("name", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MeetingInput is an API type.
+type MeetingInput struct {
+	Name      string `json:"name"`
+	RequestID string `json:"requestId"`
+}
+
+// Validate applies the rules of MeetingInput from schema.lidza.
+func (v MeetingInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 200 {
+		errs.Add("name", "max", "at most 200 character(s)")
+	}
+	if v.RequestID == "" {
+		errs.Add("requestId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MeetingList is an API type.
+type MeetingList struct {
+	Items      []Meeting `json:"items"`
+	Configured bool      `json:"configured"`
+}
+
+// Validate applies the rules of MeetingList from schema.lidza.
+func (v MeetingList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// MeetingAccess is an API type.
+type MeetingAccess struct {
+	Token     string    `json:"token"`
+	ServerURL string    `json:"serverUrl"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Meeting   Meeting   `json:"meeting"`
+}
+
+// Validate applies the rules of MeetingAccess from schema.lidza.
+func (v MeetingAccess) Validate() error {
+	var errs validate.Errors
+	if v.Token == "" {
+		errs.Add("token", "required", "required")
+	}
+	if v.ServerURL == "" {
+		errs.Add("serverUrl", "required", "required")
+	}
+	if err := v.Meeting.Validate(); err != nil {
+		errs.Add("meeting", "nested", err.Error())
 	}
 	return errs.Result()
 }

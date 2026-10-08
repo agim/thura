@@ -1,0 +1,2 @@
+import { defineConfig } from '@playwright/test'
+export default defineConfig({ testDir: '.', outputDir: '../.lidza/test-results-meet', testMatch: 'meet.spec.ts', timeout: 120000, workers: 1, reporter: 'list', use: { baseURL: process.env.BASE_URL || 'http://127.0.0.1:3002', trace: 'retain-on-failure', launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--enable-usermedia-screen-capturing', '--auto-select-desktop-capture-source=Entire screen'] } } })

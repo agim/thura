@@ -1463,3 +1463,7 @@
 .chat-body { white-space: pre-wrap; overflow-wrap: anywhere; }
 .chat-messages { max-height: 32rem; overflow: auto; padding-inline-start: 1.5rem; }
 .chat-messages li { margin-block: 1rem; }
+/* Give adaptive media subscriptions a real viewport even before a remote
+   camera is published; a zero-height grid otherwise suppresses subscriptions. */
+.live-meet .lk-room-container { height: min(70vh, 720px); min-height: 360px; }
+.live-meet .lk-video-conference { height: 100%; }

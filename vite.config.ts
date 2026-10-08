@@ -57,7 +57,13 @@ export default defineConfig(({ isSsrBuild }) => ({
     // dist/.vite/manifest.json: where each entry was built, for the
     // prerender to find the enhance scripts.
     manifest: !isSsrBuild,
-    rollupOptions: isSsrBuild ? undefined : { input: { index: 'index.html', ...enhance } },
+    rolldownOptions: isSsrBuild ? undefined : {
+      input: { index: 'index.html', ...enhance },
+      output: { codeSplitting: { groups: [
+        { name: 'livekit-client', test: /node_modules\/livekit-client\//, priority: 20 },
+        { name: 'livekit-components', test: /node_modules\/@livekit\//, priority: 10 },
+      ] } },
+    },
   },
   // The SSR bundle carries its dependencies, so the sidecar needs only
   // Node and the files under dist/.server.

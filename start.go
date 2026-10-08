@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"strings"
 	"thura/internal/calendar"
 	"thura/internal/chat"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"github.com/agim/lidza/packs/jobs"
 	"github.com/agim/lidza/pkg/middleware"
 	"thura/internal/mailbox"
+	"thura/internal/meet"
+	livekit "thura/internal/providers/livekit"
 	provider "thura/internal/providers/onlyoffice"
 )
 
@@ -25,7 +28,11 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 		return err
 	}
 	jobs.FromServices(s).Handle(chat.ReconcileJob, chat.Reconcile, jobs.Concurrency(1))
-	return jobs.FromServices(s).Schedule(chat.ReconcileJob, jobs.Every(time.Minute), nil)
+	if err := jobs.FromServices(s).Schedule(chat.ReconcileJob, jobs.Every(time.Minute), nil); err != nil {
+		return err
+	}
+	jobs.FromServices(s).Handle(meet.ReconcileJob, meet.Reconcile, jobs.Concurrency(1))
+	return jobs.FromServices(s).Schedule(meet.ReconcileJob, jobs.Every(time.Minute), nil)
 }
 
 // appMiddleware wraps the whole app, pages and API alike, outermost
@@ -44,5 +51,13 @@ func appMiddleware() []middleware.Middleware {
 		policy = middleware.AddCSP(policy, "frame-src", "'self'", cfg.ServerURL)
 		policy = middleware.AddCSP(policy, "connect-src", cfg.ServerURL)
 	}
-	return []middleware.Middleware{middleware.SecureHeaders(middleware.SecureHeadersOptions{CSP: policy})}
+	permissions := middleware.DefaultPermissionsPolicy
+	if cfg, err := livekit.Load(); err == nil {
+		policy = middleware.AddCSP(policy, "connect-src", cfg.PublicURL)
+		policy = middleware.AddCSP(policy, "connect-src", strings.Replace(strings.Replace(cfg.PublicURL, "wss://", "https://", 1), "ws://", "http://", 1))
+		policy = middleware.AddCSP(policy, "media-src", "'self'", "blob:")
+		policy = middleware.AddCSP(policy, "style-src-attr", "'unsafe-inline'")
+		permissions = "camera=(self), microphone=(self), display-capture=(self), geolocation=()"
+	}
+	return []middleware.Middleware{middleware.SecureHeaders(middleware.SecureHeadersOptions{CSP: policy, PermissionsPolicy: permissions})}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/agim/lidza/pkg/middleware"
 	"github.com/agim/lidza/pkg/router"
 	"thura/handlers"
+	"thura/internal/meet"
 	"thura/internal/office"
 
 	"thura/schema"
@@ -17,6 +18,7 @@ import (
 // handler typed input and output: the client in .lidza/client is generated
 // from these types, so the frontend cannot drift from the API.
 func routes(r *router.Router) {
+	r.HandleFunc("POST /api/v1/meet/webhook", meet.Webhook)
 	r.HandleFunc("GET /api/v1/office/source", office.Source)
 	r.HandleFunc("POST /api/v1/office/callback/{id}", office.Callback)
 	auth.Mount(r, auth.Options{NoRegister: true, Providers: []auth.Provider{}, Title: "Thura"})
@@ -30,6 +32,11 @@ func routes(r *router.Router) {
 	router.Route(reply, "POST /api/v1/calendar-replies/ics", handlers.ReplyCalendarICS)
 	g := r.Group("/api/v1", auth.Require())
 	router.Route(g, "GET /api/v1/workspaces", handlers.ListWorkspaces)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/meet", handlers.ListMeetings)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/meet", handlers.CreateMeeting)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/meet/{id}/join", handlers.JoinMeeting)
+	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/meet/{id}", handlers.EndMeeting)
+
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/chat", handlers.ListChatRooms)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/chat", handlers.CreateChatRoom)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/chat/{id}/messages", handlers.ChatTimeline)

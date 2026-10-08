@@ -88,3 +88,24 @@ apply to a shared channel, with admin-controlled invitations/bans and joined
 history. A dedicated two-domain Synapse v1.139.0 test proves bidirectional
 messages, authorized file bytes, transaction-id deduplication, and remote bans.
 Encrypted-room/device recovery work remains a separate design decision.
+
+## Scoped LiveKit access and explicit media lifecycle
+
+Meetings map workspace-owned UUIDs to server-controlled LiveKit room names.
+The control plane uses the official protocol package for scoped JWTs and signed
+webhooks, with no new authentication authority. Guests, recording and
+transcription are disabled in the first version. Cameras/microphones start off.
+Short token lifetimes bound admission reuse; webhook checks and a minute
+reconciliation job terminate revoked participants. Self-hosted token reuse and
+in-flight webhook delivery create a documented revocation window, so media
+revocation is not described as instantaneous. Ended rooms cannot be recreated
+when the required SFU auto-create setting is disabled. Physical-device and
+restrictive-network acceptance remain deployment gates.
+
+## 2026-10-08: Dependency github.com/livekit/protocol
+
+Why: Use the official LiveKit token grants and signed webhook verifier rather than hand-built JWT or checksum verification. The vendor client confines the room-service protocol to workspace-bound meetings.
+
+## 2026-10-08: Dependency github.com/teambition/rrule-go
+
+Why: Use a maintained MIT recurrence parser rather than inventing RRULE parsing. The Calendar wrapper bounds occurrence count and time range and tests timezone/DST semantics.

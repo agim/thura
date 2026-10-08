@@ -720,3 +720,44 @@ type ChatMessageFile {
  name string
  size int
 }
+
+model Meeting {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace) @index
+ requestId uuid
+ name string @max(200)
+ createdBy string
+ endedAt time?
+ createdAt time @default(now())
+ @@unique(workspaceId,requestId)
+}
+model MeetingParticipant {
+ id uuid @id @default(uuid())
+ meetingId uuid @ref(Meeting) @index
+ subject string
+ tokenExpiresAt time
+ joined bool @default(false)
+ sessionId string @default("")
+ updatedAt time @default(now())
+ @@unique(meetingId,subject)
+}
+model MeetingWebhook {
+ id uuid @id @default(uuid())
+ eventId string @unique
+ checksum string
+ createdAt time @default(now())
+}
+type MeetingInput {
+ name string @min(1) @max(200)
+ requestId uuid
+}
+type MeetingList {
+ items Meeting[]
+ configured bool
+}
+type MeetingAccess {
+ token string
+ serverUrl string
+ expiresAt time
+ meeting Meeting
+}
