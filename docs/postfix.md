@@ -1,5 +1,7 @@
 # Debian Postfix transport
 
+Start with [the server installation guide](install-server.md) for DNS/MX, Mailgun sending, administrator setup and user invitations. This document covers the receiving/SMTP transport.
+
 Thura defaults to the maintained Postfix package available in Debian-family
 distributions. Deployment supplies every hostname, domain and mailbox; the app
 has no fixed public origin. Postfix is a separate SMTP service with a durable

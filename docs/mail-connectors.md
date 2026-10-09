@@ -1,5 +1,7 @@
 # Mail connectors
 
+For deployment steps and Mailgun/DNS/MX configuration, see [Install and configure a Thura server](install-server.md). Outbound provider selection and incoming mail routing are separate configuration steps.
+
 An operator assigns a mailbox with `app_provision_mailbox` (`workspaceId`, `name`, `address`, optional `configPrefix`). The address is the sender; members cannot override it. A prefix such as `SALES_` selects sealed `SALES_MAIL_PROVIDER`, `SALES_MAIL_API_KEY`, `SALES_MAIL_DOMAIN`, and the other official Līdza mail settings. An empty prefix uses the application's `MAIL_*` settings. Invitation/recovery delivery uses the application's own mail pack independently.
 
 Supported outbound providers are the official pack's SMTP, Mailgun, SendGrid, Postmark, and Resend transports. Local log/outbox capture is visibly labelled as not delivered. Draft edits autosave after a pause with serialized writes; failures remain visibly unsaved. Wait for “Draft saved” before closing. Concurrent browser editors are last-write-wins. Queueing commits the draft state and job together. The default send time is ten seconds ahead; scheduled sends can be cancelled before their deadline. Message row locking serializes send/undo/edit. Provider errors retain a failed state and jobs retry. Provider acceptance followed by a lost database commit can cause duplicate delivery: this is at-least-once transport, not an exactly-once guarantee.

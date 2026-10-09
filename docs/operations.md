@@ -192,7 +192,7 @@ before restarting any app or worker node with the new binary.** From the new
 release checkout, with production database credentials supplied privately, run:
 
 ```sh
-LIDZA_MODE=production lidza db migrate
+LIDZA_MODE=production lidza db migrate --production
 ```
 
 Confirm success, then restart each node and verify its active revision and

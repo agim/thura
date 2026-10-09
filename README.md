@@ -35,6 +35,8 @@ import).
 
 ## Deploy
 
+Follow [Install and configure a Thura server](docs/install-server.md) for services, DNS/MX, Mailgun or SMTP, private storage, first-administrator setup and user invitations. Existing deployments must apply pending migrations before restarting.
+
 ```sh
 lidza ship --domains "$THURA_APP_DOMAIN" --email "$THURA_OPERATOR_EMAIL"
 ```
@@ -42,5 +44,6 @@ lidza ship --domains "$THURA_APP_DOMAIN" --email "$THURA_OPERATOR_EMAIL"
 Set those variables to the deploying operator's chosen domain/email. The command builds `bin/thura` after the checks and writes `deploy/production.env`.
 The process needs that file plus `DATABASE_URL` and `LIDZA_MASTER_KEY`;
 `deploy/thura.service` runs it under systemd, the `Dockerfile` in a
-container. With the domains set the binary serves HTTPS itself. Admins
-are named in `ADMIN_USERS` and manage providers at `/admin`.
+container. With the domains set the binary serves HTTPS itself. New servers create their first administrator at `/setup` and configure providers
+in the resumable `/admin/setup` wizard. Existing servers authorize operator
+accounts explicitly through `ADMIN_USERS`.
