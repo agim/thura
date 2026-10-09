@@ -570,6 +570,17 @@ type ServerSetup struct {
 	PublishedAt       *time.Time `json:"published_at"`
 }
 
+type SetupProbe struct {
+	ID          string    `json:"id"`
+	Kind        string    `json:"kind"`
+	Subject     string    `json:"subject"`
+	Revision    int32     `json:"revision"`
+	Fingerprint string    `json:"fingerprint"`
+	State       string    `json:"state"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type ShareGrant struct {
 	ID          string     `json:"id"`
 	FileID      string     `json:"file_id"`

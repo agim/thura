@@ -5,6 +5,7 @@ import (
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/admin"
 	"github.com/agim/lidza/packs/db"
+	"github.com/google/uuid"
 	"net/http"
 	q "thura/db/queries/gen"
 )
@@ -15,6 +16,8 @@ type View struct {
 	Steps                                       []Step
 	Validation, Message                         string
 	Secrets                                     []string
+	Probes                                      []ProbeView
+	MailCheckID, StorageCheckID                 string
 }
 
 func Page() admin.Page {
@@ -36,7 +39,7 @@ func Page() admin.Page {
 			step, _ = stepByID("server")
 		}
 		state, _ := lidza.Optional[runtimeState](r.Context())
-		view := View{ActiveRevision: state.Revision, Revision: row.Revision, PublishedRevision: row.PublishedRevision, Step: step, Steps: Catalog()}
+		view := View{MailCheckID: uuid.NewString(), StorageCheckID: uuid.NewString(), ActiveRevision: state.Revision, Revision: row.Revision, PublishedRevision: row.PublishedRevision, Step: step, Steps: Catalog()}
 		for i, f := range step.Fields {
 			view.Step.Fields[i].Saved = v[f.Name] != ""
 			if f.Kind != "secret" {
@@ -44,7 +47,13 @@ func Page() admin.Page {
 			}
 		}
 		if step.ID == "review" {
+			view.Probes, e = probeViews(r.Context(), v)
+			if e != nil {
+				return nil, e
+			}
 			if e := validate(v); e != nil {
+				view.Validation = e.Error()
+			} else if e := requireProviderChecks(r.Context(), q.New(db.From(r.Context())), v); e != nil {
 				view.Validation = e.Error()
 			}
 			for _, s := range Catalog() {
@@ -68,6 +77,18 @@ func Page() admin.Page {
 			}
 			e := Save(r.Context(), r.Form, true)
 			return "Draft restarted; published settings were preserved.", e
+		},
+		"check-mail": func(r *http.Request) (string, error) {
+			if r.Form.Get("confirm") != "send" {
+				return "", fmt.Errorf("confirm sending a test email to your administrator inbox")
+			}
+			return Probe(r.Context(), "mail", r.Form.Get("revision"), r.Form.Get("check_id"))
+		},
+		"check-storage": func(r *http.Request) (string, error) {
+			if r.Form.Get("confirm") != "check" {
+				return "", fmt.Errorf("confirm creating and deleting a small storage test object")
+			}
+			return Probe(r.Context(), "storage", r.Form.Get("revision"), r.Form.Get("check_id"))
 		},
 		"publish": func(r *http.Request) (string, error) {
 			if r.Form.Get("confirm") != "publish" {

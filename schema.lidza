@@ -1038,3 +1038,18 @@ model AuthOwnerClaim @table("auth_owner_claim") {
   createdAt time   @default(now())
   updatedAt time   @default(now())
 }
+
+// Durable setup checks record intent before any provider side effect.
+// No provider response bodies or credentials belong in this table.
+model SetupProbe {
+ id uuid @id
+ kind string
+ subject string
+ revision int
+ fingerprint string
+ state string @default("started")
+ createdAt time @default(now()) @index
+ updatedAt time @default(now())
+ @@index(subject, kind, createdAt)
+ @@index(kind, fingerprint, state, createdAt)
+}

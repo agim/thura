@@ -1564,6 +1564,36 @@ func (v AuthOwnerClaim) Validate() error {
 	return errs.Result()
 }
 
+// SetupProbe is a row of the setup_probe table.
+type SetupProbe struct {
+	ID          string    `json:"id" db:"id"`
+	Kind        string    `json:"kind" db:"kind"`
+	Subject     string    `json:"subject" db:"subject"`
+	Revision    int       `json:"revision" db:"revision"`
+	Fingerprint string    `json:"fingerprint" db:"fingerprint"`
+	State       string    `json:"state" db:"state"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of SetupProbe from schema.lidza.
+func (v SetupProbe) Validate() error {
+	var errs validate.Errors
+	if v.Kind == "" {
+		errs.Add("kind", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Fingerprint == "" {
+		errs.Add("fingerprint", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`

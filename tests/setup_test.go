@@ -151,10 +151,12 @@ func saveStep(t *testing.T, s *lidzatest.Server, step string, values map[string]
 func completeSetup(t *testing.T, s *lidzatest.Server) {
 	t.Helper()
 	saveStep(t, s, "server", map[string]string{"APP_URL": "https://setup.example", "THURA_OPERATOR_EMAIL": "owner@setup.example", "THURA_BACKUP_PLAN": "Encrypted daily database and objects; separate master-key backup; quarterly restore."})
-	saveStep(t, s, "mail", map[string]string{"MAIL_FROM": "team@setup.example", "MAIL_SMTP_HOST": "localhost", "MAIL_SMTP_PORT": "25", "MAIL_SMTP_SECURITY": "none", "MAIL_INBOUND_SECRET": "PUBLIC-inbound-test-secret-with-32-characters"})
-	saveStep(t, s, "storage", nil)
+	port, _ := setupSMTP(t)
+	saveStep(t, s, "mail", map[string]string{"MAIL_FROM": "team@setup.example", "MAIL_SMTP_HOST": "127.0.0.1", "MAIL_SMTP_PORT": port, "MAIL_SMTP_SECURITY": "none", "MAIL_INBOUND_SECRET": "PUBLIC-inbound-test-secret-with-32-characters"})
+	saveStep(t, s, "storage", map[string]string{"STORAGE_DIR": t.TempDir()})
 	saveStep(t, s, "policy", nil)
 	saveStep(t, s, "integrations", nil)
+	runSetupChecks(t, s)
 }
 func TestSetupFirstAdminTokenAndConcurrentClaim(t *testing.T) {
 	s := setupServer(t)

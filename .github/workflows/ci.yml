@@ -51,13 +51,15 @@ jobs:
         run: |
           go install github.com/agim/lidza/cmd/lidza@$(go list -m -f '{{.Version}}' github.com/agim/lidza)
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Staticcheck with Go export-data support
+        run: bash scripts/install-analysis-tools.sh
       - run: npm ci --no-fund --no-audit
       - name: npm audit (runtime dependencies, high and critical)
         run: npm audit --omit=dev --audit-level=high
       - name: lidza verify --strict
         run: |
           git add -A
-          lidza verify --strict
+          JOBS_WORKERS=0 lidza verify --strict
       - name: govulncheck (known vulnerabilities in code the app calls)
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
       - name: lidza test --e2e

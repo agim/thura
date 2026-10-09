@@ -598,3 +598,17 @@ CREATE TABLE auth_owner_claim (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE setup_probe (
+  id uuid PRIMARY KEY,
+  kind text NOT NULL,
+  subject text NOT NULL,
+  revision integer NOT NULL,
+  fingerprint text NOT NULL,
+  state text NOT NULL DEFAULT 'started',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX setup_probe_created_at_idx ON setup_probe (created_at);
+CREATE INDEX setup_probe_subject_kind_created_at_idx ON setup_probe (subject, kind, created_at);
+CREATE INDEX setup_probe_kind_fingerprint_state_created_at_idx ON setup_probe (kind, fingerprint, state, created_at);
+

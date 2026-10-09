@@ -24,6 +24,23 @@ func (q *Queries) ClaimServerSetup(ctx context.Context, arg ClaimServerSetupPara
 	return err
 }
 
+const countRecentSetupProbes = `-- name: CountRecentSetupProbes :one
+SELECT COUNT(*) FROM setup_probe WHERE subject=$1 AND kind=$2 AND created_at>$3
+`
+
+type CountRecentSetupProbesParams struct {
+	Subject   string    `json:"subject"`
+	Kind      string    `json:"kind"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (q *Queries) CountRecentSetupProbes(ctx context.Context, arg CountRecentSetupProbesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countRecentSetupProbes, arg.Subject, arg.Kind, arg.CreatedAt)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countSetupAccounts = `-- name: CountSetupAccounts :one
 SELECT COUNT(*) FROM auth_user
 `
@@ -35,12 +52,52 @@ func (q *Queries) CountSetupAccounts(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const createSetupProbe = `-- name: CreateSetupProbe :exec
+INSERT INTO setup_probe(id,kind,subject,revision,fingerprint,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$6)
+`
+
+type CreateSetupProbeParams struct {
+	ID          string    `json:"id"`
+	Kind        string    `json:"kind"`
+	Subject     string    `json:"subject"`
+	Revision    int32     `json:"revision"`
+	Fingerprint string    `json:"fingerprint"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+func (q *Queries) CreateSetupProbe(ctx context.Context, arg CreateSetupProbeParams) error {
+	_, err := q.db.Exec(ctx, createSetupProbe,
+		arg.ID,
+		arg.Kind,
+		arg.Subject,
+		arg.Revision,
+		arg.Fingerprint,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const ensureServerSetup = `-- name: EnsureServerSetup :exec
 INSERT INTO server_setup(id) VALUES('00000000-0000-4000-8000-000000000001') ON CONFLICT DO NOTHING
 `
 
 func (q *Queries) EnsureServerSetup(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, ensureServerSetup)
+	return err
+}
+
+const finishSetupProbe = `-- name: FinishSetupProbe :exec
+UPDATE setup_probe SET state=$2,updated_at=$3 WHERE id=$1 AND state='started'
+`
+
+type FinishSetupProbeParams struct {
+	ID        string    `json:"id"`
+	State     string    `json:"state"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (q *Queries) FinishSetupProbe(ctx context.Context, arg FinishSetupProbeParams) error {
+	_, err := q.db.Exec(ctx, finishSetupProbe, arg.ID, arg.State, arg.UpdatedAt)
 	return err
 }
 
@@ -81,6 +138,76 @@ func (q *Queries) GetServerSetupRouting(ctx context.Context) (GetServerSetupRout
 	var i GetServerSetupRoutingRow
 	err := row.Scan(&i.Subject, &i.PublishedRevision, &i.HasAccounts)
 	return i, err
+}
+
+const getSetupProbe = `-- name: GetSetupProbe :one
+SELECT id, kind, subject, revision, fingerprint, state, created_at, updated_at FROM setup_probe WHERE id=$1
+`
+
+func (q *Queries) GetSetupProbe(ctx context.Context, id string) (SetupProbe, error) {
+	row := q.db.QueryRow(ctx, getSetupProbe, id)
+	var i SetupProbe
+	err := row.Scan(
+		&i.ID,
+		&i.Kind,
+		&i.Subject,
+		&i.Revision,
+		&i.Fingerprint,
+		&i.State,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const hasSuccessfulSetupProbe = `-- name: HasSuccessfulSetupProbe :one
+SELECT EXISTS(SELECT 1 FROM setup_probe WHERE kind=$1 AND fingerprint=$2 AND state='succeeded' AND created_at>$3) AS succeeded
+`
+
+type HasSuccessfulSetupProbeParams struct {
+	Kind        string    `json:"kind"`
+	Fingerprint string    `json:"fingerprint"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+func (q *Queries) HasSuccessfulSetupProbe(ctx context.Context, arg HasSuccessfulSetupProbeParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasSuccessfulSetupProbe, arg.Kind, arg.Fingerprint, arg.CreatedAt)
+	var succeeded bool
+	err := row.Scan(&succeeded)
+	return succeeded, err
+}
+
+const listSetupProbes = `-- name: ListSetupProbes :many
+SELECT id, kind, subject, revision, fingerprint, state, created_at, updated_at FROM setup_probe ORDER BY created_at DESC,id DESC LIMIT 20
+`
+
+func (q *Queries) ListSetupProbes(ctx context.Context) ([]SetupProbe, error) {
+	rows, err := q.db.Query(ctx, listSetupProbes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SetupProbe
+	for rows.Next() {
+		var i SetupProbe
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Subject,
+			&i.Revision,
+			&i.Fingerprint,
+			&i.State,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const lockServerSetup = `-- name: LockServerSetup :one
@@ -168,6 +295,20 @@ func (q *Queries) SetupWorkspaceSeats(ctx context.Context, arg SetupWorkspaceSea
 	var seats int32
 	err := row.Scan(&seats)
 	return seats, err
+}
+
+const supersedeSetupProbeSuccesses = `-- name: SupersedeSetupProbeSuccesses :exec
+UPDATE setup_probe SET state='superseded' WHERE kind=$1 AND fingerprint=$2 AND state='succeeded'
+`
+
+type SupersedeSetupProbeSuccessesParams struct {
+	Kind        string `json:"kind"`
+	Fingerprint string `json:"fingerprint"`
+}
+
+func (q *Queries) SupersedeSetupProbeSuccesses(ctx context.Context, arg SupersedeSetupProbeSuccessesParams) error {
+	_, err := q.db.Exec(ctx, supersedeSetupProbeSuccesses, arg.Kind, arg.Fingerprint)
+	return err
 }
 
 const updateSetupWorkspace = `-- name: UpdateSetupWorkspace :exec

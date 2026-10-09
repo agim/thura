@@ -1,6 +1,7 @@
 # Deployment and recovery
 
-Thura is a generated application on published Līdza v0.1.90. Build with
+Thura is a generated application on published Līdza v0.1.90. Build with Go
+1.27.2 or a later patched release in the same supported series. Build with
 `lidza build`; deploy the binary, production assets, and operator configuration
 using the generated Dockerfile/systemd deployment. Use a separate Postgres
 database and private local or S3-compatible storage. Valkey supplies the cache.
@@ -9,8 +10,9 @@ The default mail service is [Debian Postfix](postfix.md); its host, mappings and
 public domains are chosen per deployment.
 Set a public HTTPS `APP_URL`, trusted proxy settings, production auth cookies,
 and working mail credentials before inviting real users. Disable development
-outbox capture in production. Initial owners are provisioned through the
-operator MCP tools described in [implementation status](implementation-status.md).
+outbox capture in production. Create the first administrator through [server setup](server-setup.md), complete
+the resumable provider/configuration wizard, run its checks and restart every
+node after publishing. Operator MCP provisioning remains available.
 
 The six live apps are available at `/app`. Optional integrations need separate
 services: [ONLYOFFICE](office.md), [Matrix](chat.md), and [LiveKit](meet.md).
@@ -163,3 +165,29 @@ SMIP is default-disabled and separate from Matrix conversations. [The SMIP opera
 ## Initial server configuration
 
 Use the [resumable setup wizard](server-setup.md) for a new server administrator, provider credentials, quotas and restrictions. Supply a private unpredictable `THURA_SETUP_TOKEN` before first-account creation and remove it afterward. Existing deployments require an explicitly listed `ADMIN_USERS` account. Publishing writes an encrypted configuration snapshot and initial workspace/mailbox atomically; restart every node to activate it. Draft restart preserves active settings. Back up the `server_setup` snapshots with Postgres and protect the master key separately. Ordinary app pushes do not change cloud environment settings.
+
+## Opening production traffic
+
+Keep the bootstrap reachable only by operators until setup is complete. Use
+`/healthz` for process liveness and `/readyz` for readiness: a first installation
+returns 503 until this node successfully activates its published configuration.
+After publishing, restart **every** app and worker node, confirm its setup page
+shows the intended active revision, and check readiness before adding it to the
+load balancer. Already active old nodes can remain ready during a rolling update,
+so readiness alone does not prove that every node loaded the new revision.
+
+Before inviting users, confirm the wizard email arrived and test public
+mail ingress/replies, signed relays, sending-domain authentication, browser
+HTTPS/cookies, private file access, persistent storage and account recovery.
+Enable bounded job workers and monitor failed/deferred jobs, mail errors, storage
+capacity, database availability and backups. Perform an actual stopped-writer
+restore with the deployment's secret backup and optional service state. The
+wizard records a backup plan; operators supply scheduling, independent copies,
+retention and alerts. Local test fixtures do not validate a public deployment.
+
+Back up before applying migrations. This release adds `setup_probe`, a durable
+check-intent ledger containing keyed fingerprints and generic states rather
+than credentials. Apply migrations before starting new binaries. Existing
+published settings remain valid; a new publication requires successful checks
+for its saved providers. Storage location changes require a planned offline
+migration; the wizard permits credential changes for the same location.

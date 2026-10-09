@@ -1,6 +1,6 @@
 module thura
 
-go 1.27
+go 1.27.2
 
 require (
 	github.com/agim/lidza v0.1.90
@@ -9,7 +9,7 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/livekit/protocol v1.49.0
 	github.com/teambition/rrule-go v1.8.2
-	golang.org/x/net v0.59.0
+	golang.org/x/net v0.60.0
 )
 
 require (
@@ -26,7 +26,7 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/gammazero/deque v1.2.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
-	github.com/google/cel-go v0.28.1 // indirect
+	github.com/google/cel-go v0.30.0 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
@@ -45,7 +45,7 @@ require (
 	github.com/nats-io/nkeys v0.4.16 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pion/datachannel v1.6.0 // indirect
-	github.com/pion/dtls/v3 v3.1.3 // indirect
+	github.com/pion/dtls/v3 v3.1.4 // indirect
 	github.com/pion/ice/v4 v4.2.7 // indirect
 	github.com/pion/interceptor v0.1.45 // indirect
 	github.com/pion/logging v0.2.4 // indirect
@@ -56,7 +56,7 @@ require (
 	github.com/pion/sctp v1.9.5 // indirect
 	github.com/pion/sdp/v3 v3.0.18 // indirect
 	github.com/pion/srtp/v3 v3.0.11 // indirect
-	github.com/pion/stun/v3 v3.1.4 // indirect
+	github.com/pion/stun/v3 v3.1.5 // indirect
 	github.com/pion/transport/v4 v4.0.2 // indirect
 	github.com/pion/turn/v5 v5.0.8 // indirect
 	github.com/pion/webrtc/v4 v4.2.11 // indirect
@@ -86,7 +86,7 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	google.golang.org/grpc v1.81.1 // indirect
+	google.golang.org/grpc v1.83.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

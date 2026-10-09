@@ -49,7 +49,7 @@ func Gate(next http.Handler) http.Handler {
 			if status.Claimed && status.Administrator {
 				target = "/admin/setup"
 			}
-			if path == target || (status.Claimed && auth.CurrentUser(r.Context()) != nil && (path == "/admin/setup" || path == "/admin/setup/save" || path == "/admin/setup/restart" || path == "/admin/setup/publish")) {
+			if path == target || (status.Claimed && auth.CurrentUser(r.Context()) != nil && (path == "/admin/setup" || path == "/admin/setup/save" || path == "/admin/setup/restart" || path == "/admin/setup/publish" || path == "/admin/setup/check-mail" || path == "/admin/setup/check-storage")) {
 				// The official admin handler retains its authorization and CSRF checks.
 				next.ServeHTTP(w, r)
 				return

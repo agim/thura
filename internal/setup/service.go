@@ -254,6 +254,9 @@ func Publish(ctx context.Context, revision string) error {
 	if e = validate(v); e != nil {
 		return e
 	}
+	if e = requireProviderChecks(ctx, queries, v); e != nil {
+		return e
+	}
 	for _, step := range Catalog() {
 		for _, f := range step.Fields {
 			if value, ok := os.LookupEnv(f.Name); ok && value != v[f.Name] {
@@ -264,6 +267,23 @@ func Publish(ctx context.Context, revision string) error {
 	for _, name := range []string{"MAIL_SMTP_URL", "MAIL_BASE_URL", "STORAGE_PUBLIC_URL"} {
 		if os.Getenv(name) != "" {
 			return fmt.Errorf("remove the conflicting %s process environment override before publishing", name)
+		}
+	}
+
+	// Publication cannot stop old nodes or serialize every future upload.
+	// Freeze the location from the first published snapshot, even while empty.
+	if row.PublishedRevision > 0 {
+		if row.Published == "" {
+			return errors.New("published storage configuration is missing; restore it before updating setup")
+		}
+		previous, err := unseal(row.Published)
+		if err != nil {
+			return err
+		}
+		for _, name := range []string{"STORAGE_PROVIDER", "STORAGE_DIR", "STORAGE_ENDPOINT", "STORAGE_BUCKET", "STORAGE_PREFIX", "STORAGE_REGION"} {
+			if previous[name] != v[name] {
+				return errors.New("published storage location cannot be changed in the wizard; plan an offline migration across all nodes")
+			}
 		}
 	}
 	populated, e := queries.SetupHasStoredContent(ctx)

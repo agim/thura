@@ -197,3 +197,13 @@ Why: Use the newest published framework and CLI through lidza update. Keep Thura
 ## 2026-10-09: Gate first production traffic on successful node activation
 
 Why: Publication alone cannot prove that a process has loaded its mail, storage and policy settings. Register the activated revision only after decrypting, validating and successfully reconfiguring the official packs; first installations remain restricted and /readyz returns 503 until then. Existing initialized nodes retain availability through their previous valid settings during rolling updates. Explicit externally configured test fixtures are recognized only in test mode, and cannot initialize production without an encrypted snapshot.
+
+## Check saved providers before publishing setup
+
+Email and storage checks use separate official-pack instances filled only from the encrypted draft, avoiding mutation of live providers. Explicit administrator confirmation permits one test email to that administrator and one unique storage object. Durable intent/audit precede network contact; repeated IDs never repeat side effects. A master-key HMAC binds success to relevant provider settings, and a newer intent supersedes earlier success. Publish requires matching successful checks. Generic result states avoid provider error leaks, and failed storage cleanup identifies only the reserved unique object for manual removal.
+
+Storage location freezes after first publication, even before app content exists. Checking for existing files alone cannot prevent old nodes or concurrent uploads writing to the prior backend during a configuration change. Changing credentials for the same location remains supported; relocation needs a coordinated offline migration.
+
+## 2026-10-09: Patch Go and affected transport dependencies
+
+Why: Go 1.27.2 and fixed x/net, DTLS, STUN, CEL and gRPC releases remove reachable/imported security advisories. Staticcheck 2026.2.1 needs published x/tools v0.51.0 to read the patched compiler export format; scripts/install-analysis-tools.sh builds that analyzer in an isolated module for cloud setup and CI without changing application dependencies.

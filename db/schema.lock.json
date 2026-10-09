@@ -7966,7 +7966,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1032
+          "Line": 1034
         },
         {
           "Name": "tokenHash",
@@ -7985,7 +7985,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1033
+          "Line": 1035
         },
         {
           "Name": "subject",
@@ -8004,7 +8004,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1034
+          "Line": 1036
         },
         {
           "Name": "claimedAt",
@@ -8023,7 +8023,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1035
+          "Line": 1037
         },
         {
           "Name": "createdAt",
@@ -8042,7 +8042,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1036
+          "Line": 1038
         },
         {
           "Name": "updatedAt",
@@ -8061,11 +8061,190 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1037
+          "Line": 1039
         }
       ],
       "Indexes": null,
-      "Line": 1031,
+      "Line": 1033,
+      "Persisted": true
+    },
+    {
+      "Name": "SetupProbe",
+      "Table": "setup_probe",
+      "Fields": [
+        {
+          "Name": "id",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": true,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1045
+        },
+        {
+          "Name": "kind",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1046
+        },
+        {
+          "Name": "subject",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1047
+        },
+        {
+          "Name": "revision",
+          "Type": "int",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1048
+        },
+        {
+          "Name": "fingerprint",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1049
+        },
+        {
+          "Name": "state",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "\"started\"",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1050
+        },
+        {
+          "Name": "createdAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": true,
+          "Default": "now()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1051
+        },
+        {
+          "Name": "updatedAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "now()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1052
+        }
+      ],
+      "Indexes": [
+        {
+          "Fields": [
+            "subject",
+            "kind",
+            "createdAt"
+          ],
+          "Unique": false
+        },
+        {
+          "Fields": [
+            "kind",
+            "fingerprint",
+            "state",
+            "createdAt"
+          ],
+          "Unique": false
+        }
+      ],
+      "Line": 1044,
       "Persisted": true
     }
   ],
