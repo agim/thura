@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
  && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
  && apt-get install -y --no-install-recommends nodejs \
  && rm -rf /var/lib/apt/lists/*
-RUN go install github.com/agim/lidza/cmd/lidza@v0.1.89
+RUN go install github.com/agim/lidza/cmd/lidza@v0.1.90
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

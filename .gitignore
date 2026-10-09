@@ -10,6 +10,7 @@ bin/
 playwright-report/
 test-results/
 config/master.key
+config/owner-claim
 storage/
 
 __pycache__/

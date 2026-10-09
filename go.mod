@@ -3,7 +3,7 @@ module thura
 go 1.27
 
 require (
-	github.com/agim/lidza v0.1.89
+	github.com/agim/lidza v0.1.90
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.11.0

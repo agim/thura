@@ -155,3 +155,9 @@ New installations automatically open `/setup` when no accounts exist. Until serv
 All 52 browser tests pass, including automatic setup navigation and administrator sign-in routing. The full Go suite passes under `lidza verify --strict` with zero warnings, and the setup race suite passes with isolated first-account databases. Routing tests cover unsigned visitors, operators and ordinary accounts; publication and draft restart; non-cached redirects; application API blocking; missing operator tokens; and provider bearer tokens passing through to their own verifier. Production build succeeds. Normal routing reads only singleton setup metadata and an account-existence check, without loading encrypted drafts or counting the entire user table.
 
 Local Postfix 3.10.13 acceptance passes with the updated binary: signed inbound/deduplication, relay restrictions, deferred and MTA restart recovery, official-pack SMTP delivery, 10 MiB attachment/wire limits and reply headers.
+
+## Līdza v0.1.90 update
+
+`lidza update` upgrades the CLI, application module and Docker pin to published v0.1.90, regenerates the framework-owned schema/docs/skills and applies the additive owner-claim migration to the development and test databases. Thura keeps its operator-token bootstrap and explicit server-administrator authorization. The new framework token directory is excluded from Git and Docker contexts without replacing the app's other ignore rules.
+
+Strict verification and the full Go suite pass with zero warnings; all 52 browser tests and the setup race checks pass. The production binary builds at 43.6 MB. The cloud refresh installer was exercised with unchanged tracked files and now selects the CLI from the app's module version, avoiding its previous v0.1.88 pin. Its reusable installer draft is saved; publication is a separate platform operation. Existing deployed databases need the new migration before restarting with this release.

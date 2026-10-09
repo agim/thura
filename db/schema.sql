@@ -589,3 +589,12 @@ CREATE TABLE server_setup (
   published_at timestamptz
 );
 
+CREATE TABLE auth_owner_claim (
+  id text PRIMARY KEY,
+  token_hash text NOT NULL,
+  subject text,
+  claimed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+

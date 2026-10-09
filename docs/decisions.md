@@ -189,3 +189,7 @@ Why: The server administrator manages encrypted draft/published snapshots, opera
 ## 2026-10-08: Redirect unfinished installations into server setup
 
 Why: Without accounts only /setup is reachable as a page. Until configuration is published, signed-in operators automatically enter the official /admin/setup wizard and other visitors sign in on /setup. An application-wide gate blocks normal APIs with 503, preserves setup assets and health, rechecks shared database state on every request, and leaves previously published settings available during draft restarts.
+
+## 2026-10-09: Upgrade Thura to published Līdza v0.1.90
+
+Why: Use the newest published framework and CLI through lidza update. Keep Thura operator-token bootstrap and explicit server-administrator authorization; the framework owner-claim model is additive and does not replace this flow. Regenerated schema includes the non-destructive owner-claim migration, and Docker pins the same release. Preserve app-specific ignore rules while excluding the new owner-claim token directory from Git and Docker contexts.

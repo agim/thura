@@ -1,6 +1,6 @@
 # Deployment and recovery
 
-Thura is a generated application on published Līdza v0.1.89. Build with
+Thura is a generated application on published Līdza v0.1.90. Build with
 `lidza build`; deploy the binary, production assets, and operator configuration
 using the generated Dockerfile/systemd deployment. Use a separate Postgres
 database and private local or S3-compatible storage. Valkey supplies the cache.
