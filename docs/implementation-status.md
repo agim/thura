@@ -161,3 +161,9 @@ Local Postfix 3.10.13 acceptance passes with the updated binary: signed inbound/
 `lidza update` upgrades the CLI, application module and Docker pin to published v0.1.90, regenerates the framework-owned schema/docs/skills and applies the additive owner-claim migration to the development and test databases. Thura keeps its operator-token bootstrap and explicit server-administrator authorization. The new framework token directory is excluded from Git and Docker contexts without replacing the app's other ignore rules.
 
 Strict verification and the full Go suite pass with zero warnings; all 52 browser tests and the setup race checks pass. The production binary builds at 43.6 MB. The cloud refresh installer was exercised with unchanged tracked files and now selects the CLI from the app's module version, avoiding its previous v0.1.88 pin. Its reusable installer draft is saved; publication is a separate platform operation. Existing deployed databases need the new migration before restarting with this release.
+
+## Node activation before first traffic
+
+A first installation stays restricted after publication until this node decrypts, validates and initializes the published providers successfully. Runtime activation is local to each node; another node restarting cannot unlock an uninitialized process. Existing active nodes keep their last valid settings while an updated publication awaits restart. `/healthz` remains live; `/readyz` returns 503 before initial activation. Missing or corrupt published configuration fails closed.
+
+Strict verification and the complete Go suite pass with zero warnings. All 53 browser tests pass, the setup race suite passes, and the production binary builds at 43.6 MB. Tests cover separate nodes, publication without activation, corrupted snapshots, recovery and production rejection of the explicit test-only fixture marker.

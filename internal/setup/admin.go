@@ -2,6 +2,7 @@ package setup
 
 import (
 	"fmt"
+	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/admin"
 	"github.com/agim/lidza/packs/db"
 	"net/http"
@@ -9,11 +10,11 @@ import (
 )
 
 type View struct {
-	Revision, PublishedRevision int32
-	Step                        Step
-	Steps                       []Step
-	Validation, Message         string
-	Secrets                     []string
+	Revision, PublishedRevision, ActiveRevision int32
+	Step                                        Step
+	Steps                                       []Step
+	Validation, Message                         string
+	Secrets                                     []string
 }
 
 func Page() admin.Page {
@@ -34,7 +35,8 @@ func Page() admin.Page {
 		if !ok {
 			step, _ = stepByID("server")
 		}
-		view := View{Revision: row.Revision, PublishedRevision: row.PublishedRevision, Step: step, Steps: Catalog()}
+		state, _ := lidza.Optional[runtimeState](r.Context())
+		view := View{ActiveRevision: state.Revision, Revision: row.Revision, PublishedRevision: row.PublishedRevision, Step: step, Steps: Catalog()}
 		for i, f := range step.Fields {
 			view.Step.Fields[i].Saved = v[f.Name] != ""
 			if f.Kind != "secret" {

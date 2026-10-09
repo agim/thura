@@ -28,7 +28,7 @@ func Gate(next http.Handler) http.Handler {
 			http.Error(w, "Server setup status is unavailable", http.StatusServiceUnavailable)
 			return
 		}
-		if status.Claimed && status.Published {
+		if status.Claimed && status.Active {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -54,7 +54,7 @@ func Gate(next http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
-			if strings.HasPrefix(path, "/api/") || (r.Method != http.MethodGet && r.Method != http.MethodHead) {
+			if path == "/readyz" || strings.HasPrefix(path, "/api/") || (r.Method != http.MethodGet && r.Method != http.MethodHead) {
 				router.Error(w, http.StatusServiceUnavailable, "Server setup is required. Open "+target)
 				return
 			}
@@ -72,7 +72,7 @@ func setupResource(r *http.Request) bool {
 		return false
 	}
 	path := requestPath
-	if path == "/api/v1/health" || path == "/admin/theme.css" || path == "/favicon.ico" || path == "/favicon.svg" || strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/admin/assets/") {
+	if path == "/healthz" || path == "/api/v1/health" || path == "/admin/theme.css" || path == "/favicon.ico" || path == "/favicon.svg" || strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/admin/assets/") {
 		return true
 	}
 	if os.Getenv("LIDZA_MODE") == "dev" {

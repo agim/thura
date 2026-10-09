@@ -3654,10 +3654,12 @@ func (v SmipDispatchJob) Validate() error {
 
 // SetupStatus is an API type.
 type SetupStatus struct {
-	Administrator bool `json:"administrator"`
-	Open          bool `json:"open"`
-	Claimed       bool `json:"claimed"`
-	Published     bool `json:"published"`
+	Active          bool `json:"active"`
+	RestartRequired bool `json:"restartRequired"`
+	Administrator   bool `json:"administrator"`
+	Open            bool `json:"open"`
+	Claimed         bool `json:"claimed"`
+	Published       bool `json:"published"`
 }
 
 // Validate applies the rules of SetupStatus from schema.lidza.

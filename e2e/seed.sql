@@ -38,6 +38,6 @@ INSERT INTO auth_member(subject,scope,role) VALUES ('thura-meeting-peer-fixture'
 -- Browser fixtures use explicit .env.test providers rather than real wizard
 -- credentials. Mark this synthetic installation configured; bootstrap tests
 -- exercise fresh state in isolated databases and mocked browser responses.
-INSERT INTO server_setup(id,published_revision)
-VALUES ('00000000-0000-4000-8000-000000000001',1)
-ON CONFLICT(id) DO UPDATE SET published_revision=1;
+INSERT INTO server_setup(id,subject,published_revision)
+VALUES ('00000000-0000-4000-8000-000000000001','thura-fixture:externally-configured',1)
+ON CONFLICT(id) DO UPDATE SET subject='thura-fixture:externally-configured',published_revision=1;

@@ -26,6 +26,12 @@ import (
 	"thura/schema"
 )
 
+// runtimeState records only configuration loaded by this process. Publishing
+// a shared database snapshot cannot mark another node as initialized.
+type runtimeState struct{ Revision int32 }
+
+const fixtureSubject = "thura-fixture:externally-configured"
+
 type bootstrapConfig struct {
 	Token string `env:"THURA_SETUP_TOKEN"`
 }
@@ -39,7 +45,8 @@ func Status(ctx context.Context) (schema.SetupStatus, error) {
 	if e = env.Load(".", &cfg); e != nil {
 		return schema.SetupStatus{}, e
 	}
-	return schema.SetupStatus{Open: row.Subject == "" && !row.HasAccounts && len(cfg.Token) >= 32, Claimed: row.HasAccounts, Published: row.PublishedRevision > 0, Administrator: Allow(ctx)}, nil
+	state, _ := lidza.Optional[runtimeState](ctx)
+	return schema.SetupStatus{Active: row.PublishedRevision > 0 && state.Revision > 0, RestartRequired: row.PublishedRevision > 0 && row.PublishedRevision != state.Revision, Open: row.Subject == "" && !row.HasAccounts && len(cfg.Token) >= 32, Claimed: row.HasAccounts, Published: row.PublishedRevision > 0, Administrator: Allow(ctx)}, nil
 }
 func Allow(ctx context.Context) bool {
 	user := auth.CurrentUser(ctx)
@@ -312,6 +319,7 @@ func Publish(ctx context.Context, revision string) error {
 // Activate runs on startup: one encrypted snapshot publishes every setting
 // together. Drafts never affect runtime packs. Restart every deployment node.
 func Activate(ctx context.Context, s *lidza.Services) error {
+	lidza.Provide(s, runtimeState{})
 	queries := q.New(db.From(ctx))
 	if e := queries.EnsureServerSetup(ctx); e != nil {
 		return e
@@ -321,7 +329,19 @@ func Activate(ctx context.Context, s *lidza.Services) error {
 		return e
 	}
 	if row.Published == "" {
+		if row.PublishedRevision > 0 {
+			// CLI browser fixtures deliberately use .env.test transports and
+			// prohibit access to deployment master keys. Their explicit marker
+			// represents already configured test services, never a deployment.
+			if os.Getenv("LIDZA_MODE") != "test" || row.Subject != fixtureSubject || row.PublishedRevision != 1 {
+				return errors.New("published server configuration is missing")
+			}
+			lidza.Provide(s, runtimeState{Revision: 1})
+		}
 		return nil
+	}
+	if row.PublishedRevision <= 0 {
+		return errors.New("published server configuration has no valid revision")
 	}
 	v, e := unseal(row.Published)
 	if e != nil {
@@ -345,6 +365,7 @@ func Activate(ctx context.Context, s *lidza.Services) error {
 	if e = lidza.Reconfigure(ctx, s); e != nil {
 		return errors.New("published providers could not be initialized; check server settings")
 	}
+	lidza.Provide(s, runtimeState{Revision: row.PublishedRevision})
 	return nil
 }
 

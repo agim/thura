@@ -3,7 +3,8 @@
 <h1>Set up your Thura server</h1>
 <p>Save each step to pause and resume. Draft settings remain inactive until published and the server is restarted. Saved secrets are never displayed.</p>
 <nav aria-label="Setup steps"><ol>{{range .Steps}}<li><a href="?step={{.ID}}">{{.Title}}</a></li>{{end}}</ol></nav>
-<p>Draft revision {{.Revision}} · Published revision {{.PublishedRevision}}</p>
+<p>Draft revision {{.Revision}} · Published revision {{.PublishedRevision}} · Active on this node {{.ActiveRevision}}</p>
+{{if and .PublishedRevision (ne .PublishedRevision .ActiveRevision)}}<p role="status">Restart this server node to load the published configuration. A first installation remains locked until activation succeeds.</p>{{end}}
 <h2>{{.Step.Title}}</h2>
 {{if ne .Step.ID "review"}}
 <form method="post" action="setup/save" autocomplete="off">

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/agim/lidza/packs/auth"
+	"thura/internal/setup"
 	"thura/schema"
 )
 
@@ -93,6 +94,12 @@ func TestSetupRoutingPublicationAndDraftRestart(t *testing.T) {
 	r := setupForm(t, s, "publish", url.Values{"revision": {strconv.Itoa(revision)}, "confirm": {"publish"}})
 	if strings.Contains(r.Header.Get("Location"), "error=") {
 		t.Fatal("publication failed")
+	}
+	if r := s.JSON(t, "GET", "/api/v1/workspaces", nil, nil); r.StatusCode != 503 {
+		t.Fatal("publication opened an uninitialized node")
+	}
+	if err := setup.Activate(s.Context(), s.Services); err != nil {
+		t.Fatal(err)
 	}
 	if r := s.JSON(t, "GET", "/api/v1/workspaces", nil, nil); r.StatusCode != 200 {
 		t.Fatal("published installation remained blocked")

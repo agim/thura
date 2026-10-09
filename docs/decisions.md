@@ -193,3 +193,7 @@ Why: Without accounts only /setup is reachable as a page. Until configuration is
 ## 2026-10-09: Upgrade Thura to published Līdza v0.1.90
 
 Why: Use the newest published framework and CLI through lidza update. Keep Thura operator-token bootstrap and explicit server-administrator authorization; the framework owner-claim model is additive and does not replace this flow. Regenerated schema includes the non-destructive owner-claim migration, and Docker pins the same release. Preserve app-specific ignore rules while excluding the new owner-claim token directory from Git and Docker contexts.
+
+## 2026-10-09: Gate first production traffic on successful node activation
+
+Why: Publication alone cannot prove that a process has loaded its mail, storage and policy settings. Register the activated revision only after decrypting, validating and successfully reconfiguring the official packs; first installations remain restricted and /readyz returns 503 until then. Existing initialized nodes retain availability through their previous valid settings during rolling updates. Explicit externally configured test fixtures are recognized only in test mode, and cannot initialize production without an encrypted snapshot.

@@ -35,7 +35,7 @@ function PageHead() {
 function RootLayout() {
   const path = useRouterState({ select: state => state.location.pathname })
   const setup = useQuery({ queryKey: ['setup-status'], queryFn: () => api.setupStatus(), enabled: typeof window !== 'undefined', retry: false })
-  const unfinished = setup.data && (!setup.data.claimed || !setup.data.published)
+  const unfinished = setup.data && (!setup.data.claimed || !setup.data.active)
   const target = setup.data?.claimed && setup.data.administrator ? '/admin/setup' : '/setup'
   useEffect(() => {
     if (unfinished && path !== target) window.location.replace(target)

@@ -68,3 +68,11 @@ test('administrator sign-in automatically opens the unfinished configuration wiz
   await expect(page).toHaveURL(/\/admin\/setup$/)
   await expect(page.getByRole('heading', { name: 'Native configuration wizard fixture' })).toBeVisible()
 })
+
+test('publication keeps a first installation locked until runtime activation', async ({ page }) => {
+  await page.route('**/api/v1/setup/status', route => route.fulfill({ json: { open: false, claimed: true, published: true, active: false, restartRequired: true, administrator: false } }))
+  await page.goto('/app')
+  await expect(page).toHaveURL(/\/setup$/)
+  await expect(page.getByText('Configuration is published. Restart the server to activate it; the app remains locked until activation succeeds.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCount(0)
+})

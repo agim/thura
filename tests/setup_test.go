@@ -314,6 +314,9 @@ func TestSetupPublishAuditRollbackRestartAndPolicyActivation(t *testing.T) {
 	if e := env.Load(".", &quota); e != nil || quota.Bytes != 1<<30 {
 		t.Fatal("published quota did not activate")
 	}
+	if e := setup.Activate(ctx, s.Services); e != nil {
+		t.Fatal(e)
+	}
 	var work schema.WorkspaceList
 	if res := s.JSON(t, "GET", "/api/v1/workspaces", nil, &work); res.StatusCode != 200 || len(work.Items) != 1 {
 		t.Fatal("initial owner workspace missing")
@@ -352,9 +355,13 @@ func TestSetupEnforcedSharingAndInvitationRestrictions(t *testing.T) {
 	s := setupServer(t)
 	in := claimSetup(t, s)
 	completeSetup(t, s)
+	saveStep(t, s, "policy", map[string]string{"THURA_ALLOW_ANONYMOUS_SHARES": "true"})
 	revision, _, _ := setupRow(t, s)
 	if r := setupForm(t, s, "publish", url.Values{"revision": {strconv.Itoa(revision)}, "confirm": {"publish"}}); strings.Contains(r.Header.Get("Location"), "error=") {
 		t.Fatal("policy fixture setup publication failed")
+	}
+	if e := setup.Activate(s.Context(), s.Services); e != nil {
+		t.Fatal(e)
 	}
 	w, e := workspace.Create(s.Context(), schema.CreateWorkspaceInput{Name: "Restricted team", OwnerEmail: in.Email})
 	if e != nil {
@@ -408,6 +415,9 @@ func TestSetupInvitationAcceptanceRechecksReducedQuota(t *testing.T) {
 	revision, _, _ := setupRow(t, s)
 	if r := setupForm(t, s, "publish", url.Values{"revision": {strconv.Itoa(revision)}, "confirm": {"publish"}}); strings.Contains(r.Header.Get("Location"), "error=") {
 		t.Fatal("policy fixture setup publication failed")
+	}
+	if e := setup.Activate(s.Context(), s.Services); e != nil {
+		t.Fatal(e)
 	}
 	w, e := workspace.Create(s.Context(), schema.CreateWorkspaceInput{Name: "Seat limit", OwnerEmail: in.Email})
 	if e != nil {
