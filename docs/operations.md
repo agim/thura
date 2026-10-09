@@ -187,7 +187,18 @@ retention and alerts. Local test fixtures do not validate a public deployment.
 
 Back up before applying migrations. This release adds `setup_probe`, a durable
 check-intent ledger containing keyed fingerprints and generic states rather
-than credentials. Apply migrations before starting new binaries. Existing
+than credentials. **Existing deployments must apply all pending migrations
+before restarting any app or worker node with the new binary.** From the new
+release checkout, with production database credentials supplied privately, run:
+
+```sh
+LIDZA_MODE=production lidza db migrate
+```
+
+Confirm success, then restart each node and verify its active revision and
+readiness. Upgrades from earlier releases also need the additive owner-claim
+migration; apply the entire pending sequence, including both setup-probe
+migrations. Do not restart on a migration failure. Existing
 published settings remain valid; a new publication requires successful checks
 for its saved providers. Storage location changes require a planned offline
 migration; the wizard permits credential changes for the same location.

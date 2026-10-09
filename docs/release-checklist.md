@@ -22,3 +22,5 @@ The roadmap reconciliation adds audit history, private previews, safe CID readin
 Each deployment must supply credentials and its own DNS/TLS/provider/storage endpoints, validate public mail delivery, and test physical devices/TURN on its networks. Local fixtures do not establish those results. No public deployment is performed by this implementation.
 
 SMIP is implemented as an opt-in experimental cross-server chat/file adapter with durable sending, receipts, review and explicit file import. Pairing and peer deployment require operator configuration; it remains separate from Matrix conversations. Recording/transcription, AI summaries, E2EE/device recovery, native collaborative sheets, CalDAV/IMAP and expanded hosted ingress/contact integrations remain outside this first release.
+
+Existing deployments must back up and apply all pending database migrations from the new release before restarting any app or worker node. See the command and restart/readiness sequence in [operations](operations.md#opening-production-traffic).
