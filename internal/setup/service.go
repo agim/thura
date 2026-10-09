@@ -31,11 +31,7 @@ type bootstrapConfig struct {
 }
 
 func Status(ctx context.Context) (schema.SetupStatus, error) {
-	row, e := q.New(db.From(ctx)).GetServerSetup(ctx)
-	if e != nil {
-		return schema.SetupStatus{}, e
-	}
-	count, e := q.New(db.From(ctx)).CountSetupAccounts(ctx)
+	row, e := q.New(db.From(ctx)).GetServerSetupRouting(ctx)
 	if e != nil {
 		return schema.SetupStatus{}, e
 	}
@@ -43,7 +39,7 @@ func Status(ctx context.Context) (schema.SetupStatus, error) {
 	if e = env.Load(".", &cfg); e != nil {
 		return schema.SetupStatus{}, e
 	}
-	return schema.SetupStatus{Open: row.Subject == "" && count == 0 && len(cfg.Token) >= 32, Claimed: row.Subject != "" || count > 0, Published: row.PublishedRevision > 0}, nil
+	return schema.SetupStatus{Open: row.Subject == "" && !row.HasAccounts && len(cfg.Token) >= 32, Claimed: row.HasAccounts, Published: row.PublishedRevision > 0, Administrator: Allow(ctx)}, nil
 }
 func Allow(ctx context.Context) bool {
 	user := auth.CurrentUser(ctx)
