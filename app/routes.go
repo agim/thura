@@ -36,6 +36,7 @@ func routes(r *router.Router) {
 	router.Route(reply, "POST /api/v1/calendar-replies/open", handlers.OpenCalendarReply)
 	router.Route(reply, "POST /api/v1/calendar-replies/respond", handlers.ReplyCalendar)
 	router.Route(reply, "POST /api/v1/calendar-replies/ics", handlers.ReplyCalendarICS)
+	router.Route(r.Group("/api/v1/meeting-guests", auth.Optional(), middleware.RateLimit(middleware.RateLimitOptions{RPS: 1, Burst: 10})), "POST /api/v1/meeting-guests/join", handlers.JoinGuestMeeting)
 	g := r.Group("/api/v1", auth.Require())
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/smip/outbox", handlers.QueueSmipMessage)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/smip/outbox", handlers.ListSmipOutbox)

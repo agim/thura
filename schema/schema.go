@@ -1205,8 +1205,41 @@ func (v Meeting) Validate() error {
 	return errs.Result()
 }
 
+// MeetingInvite is a row of the meeting_invite table.
+type MeetingInvite struct {
+	ID        string    `json:"id" db:"id"`
+	MeetingID string    `json:"meetingId" db:"meeting_id"`
+	EventID   string    `json:"eventId" db:"event_id"`
+	Code      string    `json:"code" db:"code"`
+	PinHash   string    `json:"pinHash" db:"pin_hash"`
+	PinSealed string    `json:"pinSealed" db:"pin_sealed"`
+	ExpiresAt time.Time `json:"expiresAt" db:"expires_at"`
+}
+
+// Validate applies the rules of MeetingInvite from schema.lidza.
+func (v MeetingInvite) Validate() error {
+	var errs validate.Errors
+	if v.MeetingID == "" {
+		errs.Add("meetingId", "required", "required")
+	}
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	if v.Code == "" {
+		errs.Add("code", "required", "required")
+	}
+	if v.PinHash == "" {
+		errs.Add("pinHash", "required", "required")
+	}
+	if v.PinSealed == "" {
+		errs.Add("pinSealed", "required", "required")
+	}
+	return errs.Result()
+}
+
 // MeetingParticipant is a row of the meeting_participant table.
 type MeetingParticipant struct {
+	GuestInviteID  *string   `json:"guestInviteId" db:"guest_invite_id"`
 	ID             string    `json:"id" db:"id"`
 	MeetingID      string    `json:"meetingId" db:"meeting_id"`
 	Subject        string    `json:"subject" db:"subject"`
@@ -2677,6 +2710,8 @@ func (v CalendarInput) Validate() error {
 
 // EventInput is an API type.
 type EventInput struct {
+	CreateMeeting   *bool      `json:"createMeeting"`
+	SendInvitations *bool      `json:"sendInvitations"`
 	ResetExceptions bool       `json:"resetExceptions"`
 	Title           string     `json:"title"`
 	Description     *string    `json:"description"`
@@ -2739,14 +2774,21 @@ func (v EventInput) Validate() error {
 
 // EventDetail is an API type.
 type EventDetail struct {
-	Event      CalendarEvent    `json:"event"`
-	Attendees  []EventAttendee  `json:"attendees"`
-	Exceptions []EventException `json:"exceptions"`
+	Dispatch   *CalendarDispatchResult `json:"dispatch"`
+	Event      CalendarEvent           `json:"event"`
+	Attendees  []EventAttendee         `json:"attendees"`
+	Exceptions []EventException        `json:"exceptions"`
 }
 
 // Validate applies the rules of EventDetail from schema.lidza.
 func (v EventDetail) Validate() error {
 	var errs validate.Errors
+	if v.Dispatch != nil {
+		x := *v.Dispatch
+		if err := x.Validate(); err != nil {
+			errs.Add("dispatch", "nested", err.Error())
+		}
+	}
 	if err := v.Event.Validate(); err != nil {
 		errs.Add("event", "nested", err.Error())
 	}
@@ -3281,6 +3323,69 @@ type ChatMessageFile struct {
 // Validate applies the rules of ChatMessageFile from schema.lidza.
 func (v ChatMessageFile) Validate() error {
 	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	return errs.Result()
+}
+
+// GuestMeetingInput is an API type.
+type GuestMeetingInput struct {
+	Code string `json:"code"`
+	Pin  string `json:"pin"`
+	Name string `json:"name"`
+}
+
+// Validate applies the rules of GuestMeetingInput from schema.lidza.
+func (v GuestMeetingInput) Validate() error {
+	var errs validate.Errors
+	if v.Code == "" {
+		errs.Add("code", "required", "required")
+	}
+	if len(v.Code) < 9 {
+		errs.Add("code", "min", "at least 9 character(s)")
+	}
+	if len(v.Code) > 9 {
+		errs.Add("code", "max", "at most 9 character(s)")
+	}
+	if v.Pin == "" {
+		errs.Add("pin", "required", "required")
+	}
+	if len(v.Pin) < 6 {
+		errs.Add("pin", "min", "at least 6 character(s)")
+	}
+	if len(v.Pin) > 6 {
+		errs.Add("pin", "max", "at most 6 character(s)")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 80 {
+		errs.Add("name", "max", "at most 80 character(s)")
+	}
+	return errs.Result()
+}
+
+// GuestMeetingAccess is an API type.
+type GuestMeetingAccess struct {
+	Token     string    `json:"token"`
+	ServerURL string    `json:"serverUrl"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Name      string    `json:"name"`
+}
+
+// Validate applies the rules of GuestMeetingAccess from schema.lidza.
+func (v GuestMeetingAccess) Validate() error {
+	var errs validate.Errors
+	if v.Token == "" {
+		errs.Add("token", "required", "required")
+	}
+	if v.ServerURL == "" {
+		errs.Add("serverUrl", "required", "required")
+	}
 	if v.Name == "" {
 		errs.Add("name", "required", "required")
 	}

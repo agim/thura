@@ -529,7 +529,18 @@ type Meeting struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
+type MeetingInvite struct {
+	ID        string    `json:"id"`
+	MeetingID string    `json:"meeting_id"`
+	EventID   string    `json:"event_id"`
+	Code      string    `json:"code"`
+	PinHash   string    `json:"pin_hash"`
+	PinSealed string    `json:"pin_sealed"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
 type MeetingParticipant struct {
+	GuestInviteID  *string   `json:"guest_invite_id"`
 	ID             string    `json:"id"`
 	MeetingID      string    `json:"meeting_id"`
 	Subject        string    `json:"subject"`

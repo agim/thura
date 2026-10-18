@@ -268,3 +268,15 @@ The route audit also found the legacy standalone Contacts/Members and guest/acco
 - 2026-10-18: AppSidebar is the shared sidebar implementation for Inbox, Calendar, Contacts, Loop, Drive, Chat, Meet and Settings. Small screens expose every local menu through the same visible Browse action and dialog; choosing a navigation item closes it. Loop's unselected people list remains primary content. Drive storage lives with its local menu, and preview uses one show/hide action with separate retry spacing.
 
 - 2026-10-18: Chat uses a searchable conversation list, compact sender rows with day separators, a separately scrolling history and a persistent composer. Enter sends; Shift+Enter adds a line. Paging preserves the user's scroll position, and reconnect/access-revocation logic remains authoritative. The server resolves display names only from current workspace membership; unknown Matrix identities remain visible with the full provider ID retained in accessible descriptions and search results. Meet uses available/past meeting navigation, validated workspace links and a muted pre-join lobby. Joining still uses the existing member-scoped LiveKit API with camera and microphone initially off; no simulated call or device permission request is introduced. Both apps retain AppPageHeader, AppSidebar and shared dialogs across desktop and mobile.
+
+## Event-scoped guest meetings and explicit transactional delivery
+
+The user authorized invited external guests with a meeting link and PIN. Keep
+ordinary member meeting links unchanged. A calendar-owned grant binds one event
+to one room, with a random numeric ID/PIN, PIN hashing and master-key sealing,
+fragment-based invitation URLs, rate-limited POST admission, short room-only
+LiveKit tokens and existing signed webhook/minute reconciliation enforcement.
+Create event/room/grant and optional invitation outbox together, so failures
+cannot leave partial calendar records or send incomplete invites. Camera and
+microphone start off for members and guests. Compose the shared in-call view
+from LiveKit's public components to retain labelled controls at phone sizes.

@@ -594,6 +594,8 @@ type CalendarInput {
  personal bool
 }
 type EventInput {
+ createMeeting bool?
+ sendInvitations bool?
  resetExceptions bool
  title string @min(1) @max(500)
  description string? @max(20000)
@@ -609,6 +611,7 @@ type EventInput {
  attendees string[]
 }
 type EventDetail {
+ dispatch CalendarDispatchResult?
  event CalendarEvent
  attendees EventAttendee[]
  exceptions EventException[]
@@ -789,7 +792,30 @@ model Meeting {
  createdAt time @default(now())
  @@unique(workspaceId,requestId)
 }
+model MeetingInvite {
+ id uuid @id @default(uuid())
+ meetingId uuid @ref(Meeting) @unique
+ eventId uuid @ref(CalendarEvent) @unique
+ code string @unique
+ pinHash string
+ pinSealed text
+ expiresAt time
+}
+
+type GuestMeetingInput {
+ code string @min(9) @max(9)
+ pin string @min(6) @max(6)
+ name string @min(1) @max(80)
+}
+type GuestMeetingAccess {
+ token string
+ serverUrl string
+ expiresAt time
+ name string
+}
+
 model MeetingParticipant {
+ guestInviteId uuid? @ref(MeetingInvite)
  id uuid @id @default(uuid())
  meetingId uuid @ref(Meeting) @index
  subject string

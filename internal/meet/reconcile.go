@@ -22,15 +22,11 @@ func Reconcile(ctx context.Context, _ json.RawMessage) error {
 			return err
 		}
 		for _, p := range rows {
-			current, xerr := queries.IsWorkspaceMember(ctx, q.IsWorkspaceMemberParams{Scope: p.WorkspaceID, Subject: p.Subject})
+			allowed, xerr := queries.MeetingParticipantAllowed(ctx, q.MeetingParticipantAllowedParams{MeetingID: p.MeetingID, Subject: p.Subject})
 			if xerr != nil {
 				return xerr
 			}
-			meeting, xerr := queries.FindMeeting(ctx, p.MeetingID)
-			if xerr != nil {
-				return xerr
-			}
-			if current && meeting.EndedAt == nil {
+			if allowed {
 				continue
 			}
 

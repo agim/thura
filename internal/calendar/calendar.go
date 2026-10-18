@@ -205,11 +205,7 @@ func CreateEvent(ctx context.Context, w, calendarID string, in schema.EventInput
 	if err != nil {
 		return schema.EventDetail{}, err
 	}
-	out, err := Detail(ctx, queries, e)
-	if err != nil {
-		return out, err
-	}
-	return out, tx.Commit(ctx)
+	return finishEvent(ctx, tx, queries, w, e, in)
 }
 func Lock(ctx context.Context, w, calendarID, id string) (pgx.Tx, *q.Queries, q.CalendarEvent, error) {
 	if _, err := Get(ctx, w, calendarID, id); err != nil {
@@ -268,11 +264,7 @@ func Update(ctx context.Context, w, calendarID, id string, in schema.EventInput)
 	if err != nil {
 		return schema.EventDetail{}, err
 	}
-	out, err := Detail(ctx, queries, e)
-	if err != nil {
-		return out, err
-	}
-	return out, tx.Commit(ctx)
+	return finishEvent(ctx, tx, queries, w, e, in)
 }
 func Cancel(ctx context.Context, w, calendarID, id string, sequence int) (schema.EventDetail, error) {
 	tx, queries, e, err := Lock(ctx, w, calendarID, id)
@@ -311,6 +303,10 @@ func Exception(ctx context.Context, w, calendarID, id string, in schema.Exceptio
 	if err == nil {
 		e, err = queries.BumpEventSequence(ctx, id)
 	}
+	if err != nil {
+		return schema.EventDetail{}, err
+	}
+	e, err = prepareMeeting(ctx, queries, w, e, eventInput(e))
 	if err != nil {
 		return schema.EventDetail{}, err
 	}

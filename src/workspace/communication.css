@@ -868,3 +868,62 @@
 }
 #orbit-workspace.zero-workspace .workspace-dialog .chat-search { margin:0; padding:0; border:0; border-radius:0; background:transparent; }
 #orbit-workspace.zero-workspace .chat-search-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px; }
+/* The live call is a focused workspace view with its own media canvas. */
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call { --ink:#f1f3f4; --quiet:#bdc1c6; --paper:#202124; --canvas:#2b2c30; --line:#45464a; --lk-bg:#202124; --lk-bg2:#2b2c30; --lk-control-bg:#343539; --lk-control-fg:#f1f3f4; --lk-control-hover-bg:#45464a; --lk-font-family:inherit; --lk-font-size:14px; --lk-accent-bg:#0066ff; --lk-border-radius:8px; position:relative; height:calc(100dvh - 195px); min-height:360px; border-radius:12px; overflow:hidden; color:var(--lk-fg); background:var(--lk-bg); }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-video-conference { height:100%; min-height:0; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-video-conference-inner { min-height:0; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call :is(.lk-grid-layout-wrapper,.lk-focus-layout-wrapper) { flex:1; min-height:0; height:auto; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-control-bar { flex-shrink:0; height:auto; min-height:64px; padding:12px; gap:8px; flex-wrap:wrap; border-color:var(--line); }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call button { color:var(--lk-control-fg); background:var(--lk-control-bg); border:0; border-radius:8px; min-height:40px; padding:10px 12px; font-size:13px; line-height:1.5; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call button:hover { background:var(--lk-control-hover-bg); }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-disconnect-button { color:#fff; background:#b3261e; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-disconnect-button:hover { background:#cf3028; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-button-menu { padding-inline:8px; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call-status { position:absolute; z-index:5; top:16px; left:16px; display:flex; align-items:center; gap:8px; padding:6px 10px!important; margin:0; border-radius:20px; background:#202124e6; color:#e8eaed!important; font-size:12px; pointer-events:none; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call-status > span:first-child { width:7px; height:7px; border-radius:50%; background:#fbbc04; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call-status > span.connected { background:#81c995; }
+#orbit-workspace.zero-workspace .meeting-end-button { border:1px solid var(--line); border-radius:8px; background:var(--paper); color:#b3261e; padding:10px 12px; min-height:44px; font-size:13px; white-space:nowrap; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call-note { margin:10px 0 0; color:var(--quiet); font-size:12px; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call input { color:var(--lk-fg); background:var(--lk-bg2); border-color:var(--lk-border-color); }
+@media(max-width:999px) {
+ :is(#orbit-workspace.zero-workspace,.public-page) .meeting-call { height:calc(100dvh - 240px); min-height:320px; }
+ :is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-control-bar { min-height:60px; padding:8px; gap:6px; }
+ :is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-control-bar button { min-height:44px; padding:10px; }
+ :is(#orbit-workspace.zero-workspace,.public-page) .meeting-call-status { top:10px; left:10px; font-size:11px; }
+ #orbit-workspace.zero-workspace .meeting-end-button { font-size:12px; padding:8px 10px; }
+ #orbit-workspace.zero-workspace .live-meet:has(.meeting-call) .app-page-header h2 { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+ #orbit-workspace.zero-workspace .live-meet:has(.meeting-call) .app-page-actions { flex-shrink:0; }
+}
+
+.public-page:has(.guest-meeting .meeting-call) { width:calc(100% - 48px); max-width:none; margin:16px auto; padding:20px; }
+.public-page .guest-meeting .meeting-call { height:calc(100dvh - 230px); }
+.guest-meet-icon { display:inline-flex; padding:12px; border-radius:12px; color:var(--teal); background:var(--canvas); margin-bottom:16px; }
+.guest-meeting-privacy { display:flex; align-items:flex-start; gap:8px; color:var(--quiet); margin-top:20px; line-height:1.6; }
+.guest-meeting-privacy svg { flex-shrink:0; margin-top:3px; }
+#orbit-workspace.zero-workspace .event-meeting-link { display:grid; gap:6px; padding:12px; border:1px solid var(--line); border-radius:8px; }
+#orbit-workspace.zero-workspace .event-meeting-link small { color:var(--quiet); }
+@media(max-width:640px) {
+ .public-page:has(.guest-meeting .meeting-call) { width:100%; margin:0; padding:16px; border:0; border-radius:0; }
+ .public-page .guest-meeting .meeting-call { height:calc(100dvh - 200px); min-height:320px; }
+}
+
+@media(max-width:760px) { .meeting-call .meeting-control-label { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; } }
+@media(max-width:640px) {
+ #orbit-workspace.zero-workspace .live-calendar .fc-list-table { table-layout:fixed; }
+ #orbit-workspace.zero-workspace .live-calendar .fc-list-event-time { width:112px; white-space:normal; }
+ #orbit-workspace.zero-workspace .live-calendar .fc-list-event-graphic { width:24px; padding-inline:4px; }
+ #orbit-workspace.zero-workspace .live-calendar .fc-list-event-title { overflow-wrap:anywhere; }
+}
+
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-chat { grid-template-rows:auto minmax(0,1fr) auto; min-height:0; border-color:var(--line); }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-chat-form { display:flex; align-items:center; gap:8px; padding:12px; min-height:68px; max-width:none; width:100%; margin:0; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-chat-form-input { flex:1; min-width:0; width:0; min-height:44px; margin:0; padding:10px 12px; border:1px solid var(--line); border-radius:8px; color:var(--ink); background:var(--canvas); font:inherit; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-chat-form-button { flex-shrink:0; margin:0; min-height:44px; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-chat-messages { min-height:0; overflow:auto; }
+.meeting-call .lk-focus-toggle-button::after { content:"Focus participant"; position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+@media(max-width:760px) {
+ :is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-chat { position:absolute; inset:0; z-index:20; width:100%; height:100%; max-height:100%; border:0; }
+}
+
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-chat-header { justify-content:space-between; padding:12px 16px; min-height:60px; }
+:is(#orbit-workspace.zero-workspace,.public-page) .meeting-call .lk-chat-header .lk-chat-toggle { margin-left:auto; }

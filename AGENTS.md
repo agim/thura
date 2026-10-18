@@ -60,3 +60,5 @@ never in an agent's local memory.
 - 2026-10-18: Date and time entry must be separate fields: reuse DateControl for the readable calendar date, TimeControl for the AM/PM menu, and DateTimeControl to compose the pair in every date/time workflow.
 - 2026-10-18: App sidebars share the same 1000px breakpoint. Below it use compact app controls; do not leave Mail's desktop folder sidebar visible while the other apps collapse.
 - 2026-10-18: All workspace app sidebars, including Settings, use AppSidebar. It owns the frame, captions, navigation spacing and a visible Browse button below 1000px; Browse opens the full local menu in the shared dialog. Keep primary content available outside that menu.
+
+- 2026-10-18: Calendar events may explicitly create a guest-capable Meet room. Invited external guests may join with the link and PIN, without a workspace account. Keep the grant scoped to that event's room, include manual meeting ID/PIN instructions, and preserve ordinary member-only links. Saving sends no mail unless the user chooses Save & send invitations.

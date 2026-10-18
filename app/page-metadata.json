@@ -118,5 +118,10 @@
     "title": "Members \u00b7 Thura",
     "description": "Manage workspace members and invitations.",
     "noIndex": true
+  },
+  "/meet": {
+    "title": "Join a meeting \u00b7 Thura",
+    "description": "Join your invited Thura meeting.",
+    "noIndex": true
   }
 }

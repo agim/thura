@@ -462,7 +462,18 @@ CREATE TABLE chat_participant (
 CREATE INDEX chat_participant_room_id_idx ON chat_participant (room_id);
 CREATE UNIQUE INDEX chat_participant_room_id_subject_key ON chat_participant (room_id, subject);
 
+CREATE TABLE meeting_invite (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  meeting_id uuid NOT NULL UNIQUE REFERENCES meeting(id),
+  event_id uuid NOT NULL UNIQUE REFERENCES calendar_event(id),
+  code text NOT NULL UNIQUE,
+  pin_hash text NOT NULL,
+  pin_sealed text NOT NULL,
+  expires_at timestamptz NOT NULL
+);
+
 CREATE TABLE meeting_participant (
+  guest_invite_id uuid REFERENCES meeting_invite(id),
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   meeting_id uuid NOT NULL REFERENCES meeting(id),
   subject text NOT NULL,

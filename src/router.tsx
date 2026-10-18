@@ -68,6 +68,7 @@ const forgotRoute = createRoute({ getParentRoute: () => rootRoute, path: '/forgo
 const resetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/reset', component: lazyRouteComponent(() => import('./pages/Account'), 'Reset'), staticData: { module: 'src/pages/Account.tsx' } })
 const verifyRoute = createRoute({ getParentRoute: () => rootRoute, path: '/verify', component: lazyRouteComponent(() => import('./pages/Account'), 'Verify'), staticData: { module: 'src/pages/Account.tsx' } })
 const rsvpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rsvp', component: lazyRouteComponent(() => import('./pages/RSVP'), 'CalendarRSVP'), staticData: { module: 'src/pages/RSVP.tsx' } })
+const guestMeetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/meet', component: lazyRouteComponent(() => import('./pages/GuestMeet'), 'GuestMeet'), staticData: { module: 'src/pages/GuestMeet.tsx' } })
 const shareRoute = createRoute({ getParentRoute: () => rootRoute, path: '/share', component: lazyRouteComponent(() => import('./pages/Share'), 'SharedFile'), staticData: { module: 'src/pages/Share.tsx' } })
 
 const appRoute = createRoute({ getParentRoute: () => rootRoute, path: '/app', component: lazyRouteComponent(() => import('./pages/App'), 'AppWorkspace'), staticData: { module: 'src/pages/App.tsx' } })
@@ -83,7 +84,7 @@ const mailSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, pat
 const memberSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/members', component: () => null })
 const calendarSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/calendar', component: () => null })
 const setupRoute = createRoute({ getParentRoute: () => rootRoute, path: "/setup", component: lazyRouteComponent(() => import("./pages/Setup"), "Setup"), staticData: { module: "src/pages/Setup.tsx" } })
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute.addChildren([loopRoute, mailRoute, driveRoute, calendarRoute, chatRoute, meetRoute, appContactsRoute, settingsRoute.addChildren([mailSettingsRoute, calendarSettingsRoute, memberSettingsRoute])]), shareRoute, rsvpRoute, setupRoute])
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute.addChildren([loopRoute, mailRoute, driveRoute, calendarRoute, chatRoute, meetRoute, appContactsRoute, settingsRoute.addChildren([mailSettingsRoute, calendarSettingsRoute, memberSettingsRoute])]), shareRoute, rsvpRoute, guestMeetRoute, setupRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).
