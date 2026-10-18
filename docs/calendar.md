@@ -46,7 +46,7 @@ mail capture/provider status in the official admin pages.
 
 ## Meetings
 
-From a saved event, prepare a Meet room or open its existing meeting. Creating/linking a room explicitly binds it to that event, preserves any physical location, and increments the event sequence once. Linking checks the current workspace, event access/version, cancellation and meeting state; repeated binding to the same room is idempotent. A saved link is included in ICS exports and invitations. Links require current workspace membership and grant no guest access. Invitations remain a separate explicit action, and opening Meet does not automatically join camera/microphone media.
+For legacy member-only rooms, prepare a Meet room from a saved event or open its existing meeting. Creating/linking a room explicitly binds it to that event, preserves any physical location, and increments the event sequence once. Linking checks the current workspace, event access/version, cancellation and meeting state; repeated binding to the same room is idempotent. A saved link is included in ICS exports and invitations. Links require current workspace membership and grant no guest access. Invitations remain a separate explicit action, and opening Meet does not automatically join camera/microphone media.
 
 Events can also create a guest-capable room directly with **Add Thura Meet**.
 **Save & send invitations** sends its link and PIN to every attendee, with a

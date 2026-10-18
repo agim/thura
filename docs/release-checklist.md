@@ -1,15 +1,15 @@
 # First-release checklist
 
-The completed [brief](brief.md) defines this release. The prototype under `/workspace` remains labelled sample data; `/app` uses authorized server APIs and durable workspace data.
+The completed [brief](brief.md) defines this release. There is one live application under `/app`, with per-app routes. `/workspace` redirects to it; authorized server APIs and durable workspace data back the interface.
 
 | Workflow | Implementation |
 | --- | --- |
 | Accounts and ownership | Invite-only password accounts; workspace-owned data; owner/admin/member roles; invitation/recovery flows; current-membership checks and last-owner protection; durable transaction-bound access/sharing audit and manager-only history. |
 | Mail and Contacts | Shared directory and suggestions; persisted/autosaved drafts; signatures; labels and filtering; scoped conversations and reply headers; recipient privacy; private uploads/removal/forwards; send/schedule/undo; Debian Postfix ingress/outbound; server sanitization, sandboxed formatted reading and opt-in authorized CID thumbnails. |
 | Drive and Office | Private resumable uploads; immutable versions and conflict checks; sharing/revocation; trash/restore/purge; quotas/cleanup; private version-bound background PNG/text previews; optional ONLYOFFICE editing. |
-| Calendar | Shared/personal events; recurrence/exceptions; timezones; ICS import/export; explicit invitations/cancellations; RSVP/reminders; persistent member-only meeting links. |
+| Calendar | Shared/personal events; recurrence/exceptions; timezones; ICS import/export; explicit invitations/cancellations; RSVP/reminders; persistent member meeting links and event-scoped guest link/PIN invitations. |
 | Chat | Optional Matrix channels/direct conversations, receipts, retained history, anchored backfill and bounded reconnect bridging, authorized file copies, federation and administrator invitations/bans. |
-| Meet | Optional LiveKit member-only rooms/tokens, media controls, signed webhooks/reconciliation and ending; Calendar/Chat entry points. |
+| Meet | Optional LiveKit workspace rooms and event-scoped guest link/PIN admission, shared media/chat controls, signed webhooks/reconciliation and ending; Calendar/Chat entry points. |
 | Interface | Lazy application tabs, saved workspace/app/theme preferences, accessible controls, phone layout and explicit loading/empty/unconfigured/error states. |
 | Operations | Operator-chosen hosts/domains; encrypted resumable administrator setup with mail/storage checks; per-node activation/readiness; documented services; bounded jobs/storage; metadata/object backup and clean restore. |
 

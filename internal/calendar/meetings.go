@@ -32,6 +32,13 @@ func BindMeeting(ctx context.Context, w, calendarID, id string, in schema.BindMe
 	if event.Cancelled || int(event.Sequence) != in.Sequence {
 		return schema.EventDetail{}, router.Errorf(409, "event changed or was cancelled; reload before linking")
 	}
+	invite, inviteErr := queries.MeetingInviteByEvent(ctx, event.ID)
+	if inviteErr != nil && !errors.Is(inviteErr, pgx.ErrNoRows) {
+		return schema.EventDetail{}, inviteErr
+	}
+	if inviteErr == nil && invite.MeetingID != meeting.ID {
+		return schema.EventDetail{}, router.Errorf(409, "this event already has a guest meeting; create a new event to use another room")
+	}
 	if event.MeetingID == nil || *event.MeetingID != meeting.ID {
 		event, err = queries.BindCalendarMeeting(ctx, q.BindCalendarMeetingParams{ID: id, MeetingID: &meeting.ID})
 		if err != nil {

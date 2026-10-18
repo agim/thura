@@ -100,7 +100,8 @@ The calendar LOCATION and URL contain `/meet?room=<9-digit-ID>#pin=<6-digit-PIN>
 The description and plain-text email include that link, the meeting ID, PIN and
 manual instructions for `/meet`. A physical location supplied during creation is
 preserved in the description. Existing member-only meeting bindings keep their
-original behavior and physical location.
+original behavior and physical location. A guest-enabled event cannot be rebound
+to a different room while retaining its old invitation; create a new event instead.
 
 The public joining page asks for a display name and issues only a two-minute
 LiveKit token for that room. It creates no account, membership or workspace

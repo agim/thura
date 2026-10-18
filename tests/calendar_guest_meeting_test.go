@@ -154,6 +154,10 @@ func TestCalendarGuestMeetingInvitationAndRevocation(t *testing.T) {
 	if err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM meeting WHERE workspace_id=$1", w).Scan(&count); err != nil || count != 1 {
 		t.Fatal("editing created another meeting")
 	}
+	// Do not leave a calendar invitation pointing at a different room's old PIN.
+	var replacement schema.Meeting
+	request("POST", base+"/meet", schema.MeetingInput{Name: "Replacement", RequestID: uuid.NewString()}, &replacement, 200)
+	request("PUT", events+"/"+event.Event.ID+"/meeting", schema.BindMeetingInput{MeetingID: replacement.ID, Sequence: event.Event.Sequence}, nil, 409)
 	// A separate client has no workspace session or account.
 	guestRequest := func(input schema.GuestMeetingInput, want int) schema.GuestMeetingAccess {
 		t.Helper()

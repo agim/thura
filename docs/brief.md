@@ -15,7 +15,7 @@ Thura is a self-hosted team workspace for mail, contacts, files and document edi
 
 ### Who uses it? <!-- brief:users -->
 
-Invite-only teams and small organizations, with workspace owners, administrators, and members; limited guests use explicit file-sharing or calendar-RSVP grants.
+Invite-only teams and small organizations, with workspace owners, administrators, and members; limited guests use explicit file-sharing, calendar-RSVP or event-scoped meeting grants.
 
 ### What are the three to five things people come to do? <!-- brief:journeys -->
 
@@ -25,7 +25,7 @@ Upload, share, recover, and edit documents and spreadsheets.
 
 Plan events, invite attendees, manage reminders, and open associated meetings.
 
-Communicate through private conversations, shared channels, and member-only calls.
+Communicate through private conversations, shared channels, workspace calls and explicitly invited meeting guests.
 
 Invite teammates and manage workspace access.
 
