@@ -11,25 +11,27 @@ import { DateTime } from 'luxon'
 import { downloadContent } from '../lib/download'
 import { userError } from '../lib/errors'
 
-export function LiveCalendar({ workspaceId, onMeet }: { workspaceId: string; onMeet?: (event: CalendarEvent) => void }) {
+export function LiveCalendar({ workspaceId, onMeet, initialEvent }: { workspaceId: string; initialEvent?: { id: string; calendarId: string }; onMeet?: (event: CalendarEvent) => void }) {
   const client = useQueryClient()
   const calendars = useQuery({ queryKey: ['calendars', workspaceId], queryFn: () => api.listCalendars({ workspaceId }) })
-  const [selected, setSelected] = useState('')
+  const [selected, setSelected] = useState(initialEvent?.calendarId || '')
+  const selectedCalendar = useQuery({ queryKey: ['calendar', workspaceId, selected], queryFn: () => api.getCalendar({ workspaceId, calendarId: selected }), enabled: !!selected })
   const [name, setName] = useState('')
   const [personal, setPersonal] = useState(false)
   const [zone, setZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
-  const calendar = selected ? calendars.data?.items.find(c => c.id === selected) : calendars.data?.items[0]
+  const calendar = selected ? (selectedCalendar.isError ? undefined : selectedCalendar.data) : calendars.data?.items[0]
   const create = useMutation({ mutationFn: () => api.createCalendar({ workspaceId }, { name, color: '#15756b', personal }), onSuccess: async c => { setSelected(c.id); setName(''); await client.invalidateQueries({ queryKey: ['calendars', workspaceId] }) } })
-  return <div className="ws-page live-calendar"><h2>Calendar</h2><div className="row"><label>Calendar<select aria-label="Calendar" value={calendar?.id || ''} onChange={e => setSelected(e.target.value)}><option value="" disabled>Select a calendar</option>{calendars.data?.items.map(c => <option key={c.id} value={c.id}>{c.name} · {c.ownerSubject ? 'Personal' : 'Shared'}</option>)}</select></label><label>View timezone<input value={zone} onChange={e => setZone(e.target.value)} /></label></div><form className="row" onSubmit={e => { e.preventDefault(); create.mutate() }}><label>New calendar name<input required maxLength={200} value={name} onChange={e => setName(e.target.value)} /></label><label className="checkbox"><input type="checkbox" checked={personal} onChange={e => setPersonal(e.target.checked)} />Personal (only you can access it)</label><button disabled={create.isPending}>Create calendar</button></form>
-    {(calendars.error || create.error) && <p role="alert">{userError(calendars.error || create.error)}</p>}
-    {calendar ? <CalendarView key={calendar.id} calendar={calendar} zone={zone} onMeet={onMeet} /> : <p>Create a shared or personal calendar to add events.</p>}
+  return <div className="ws-page live-calendar"><h2>Calendar</h2><div className="row"><label>Calendar<select aria-label="Calendar" value={calendar?.id || ''} onChange={e => setSelected(e.target.value)}><option value="" disabled>Select a calendar</option>{calendar && !calendars.data?.items.some(c => c.id === calendar.id) && <option value={calendar.id}>{calendar.name}</option>}{calendars.data?.items.map(c => <option key={c.id} value={c.id}>{c.name} · {c.ownerSubject ? 'Personal' : 'Shared'}</option>)}</select></label><label>View timezone<input value={zone} onChange={e => setZone(e.target.value)} /></label></div><form className="row" onSubmit={e => { e.preventDefault(); create.mutate() }}><label>New calendar name<input required maxLength={200} value={name} onChange={e => setName(e.target.value)} /></label><label className="checkbox"><input type="checkbox" checked={personal} onChange={e => setPersonal(e.target.checked)} />Personal (only you can access it)</label><button disabled={create.isPending}>Create calendar</button></form>
+    {(selectedCalendar.error || calendars.error || create.error) && <p role="alert">{userError(selectedCalendar.error || calendars.error || create.error)}</p>}
+    {selected && selectedCalendar.isPending && <p role="status">Loading calendar…</p>}
+    {calendar ? <CalendarView initialEventId={initialEvent?.calendarId === calendar.id ? initialEvent.id : undefined} key={calendar.id} calendar={calendar} zone={zone} onMeet={onMeet} /> : <p>Create a shared or personal calendar to add events.</p>}
   </div>
 }
-function CalendarView({ calendar, zone, onMeet }: { calendar: Calendar; zone: string; onMeet?: (event: CalendarEvent) => void }) {
+function CalendarView({ calendar, zone, onMeet, initialEventId }: { initialEventId?: string; calendar: Calendar; zone: string; onMeet?: (event: CalendarEvent) => void }) {
   const client = useQueryClient()
   const workspaceId = calendar.workspaceId, calendarId = calendar.id
   const [range, setRange] = useState<{ from: string; to: string } | null>(null)
-  const [chosen, setChosen] = useState<{ id: string; instanceKey: string } | null>(null)
+  const [chosen, setChosen] = useState<{ id: string; instanceKey: string } | null>(initialEventId ? { id: initialEventId, instanceKey: '' } : null)
   const [creating, setCreating] = useState(false)
   const [date, setDate] = useState('')
   const [notice, setNotice] = useState('')

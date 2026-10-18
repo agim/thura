@@ -215,3 +215,7 @@ Why: Reuse explicitly saved contacts as the manual organization funnel and their
 ## 2026-10-17: Preserve native light-dark theme colors in production CSS
 
 Why: Thura changes color-scheme at runtime. The default CSS target lowered light-dark() to static compiler helper variables, leaving invalid concatenated colors when neither helper was defined. Preserve native CSS with cssTarget: esnext so the existing shared palette works for both themes. Correspondence reuses the workspace tokens and secondary controls; its browser test checks actual light and dark background colors.
+
+## 2026-10-17: Correspondence source records and explicit associations
+
+Why: Matrix owns chat messages, while Thura owns conversation, Drive, meeting, and calendar metadata. A unified source-record query supports existing exact mail matching, named file recipients, local participants, and calendar invitees without inventing message or attendance history. Explicit contact/source links cover external relationships and unrelated project documents; every read rechecks source permissions. A tuple cursor includes source to distinguish equal timestamps/IDs across tables. Single-record metadata endpoints let existing apps open older items beyond their recent-list limits. The person remains primary and organization remains an optional current-contact rollup. Source content indexing and automatic suggestions are separate work.

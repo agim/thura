@@ -1594,6 +1594,37 @@ func (v SetupProbe) Validate() error {
 	return errs.Result()
 }
 
+// CorrespondenceLink is a row of the correspondence_link table.
+type CorrespondenceLink struct {
+	ID        string    `json:"id" db:"id"`
+	ContactID string    `json:"contactId" db:"contact_id"`
+	Source    string    `json:"source" db:"source"`
+	SourceID  string    `json:"sourceId" db:"source_id"`
+	CreatedBy string    `json:"createdBy" db:"created_by"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of CorrespondenceLink from schema.lidza.
+func (v CorrespondenceLink) Validate() error {
+	var errs validate.Errors
+	if v.ContactID == "" {
+		errs.Add("contactId", "required", "required")
+	}
+	if v.Source == "" {
+		errs.Add("source", "required", "required")
+	}
+	if v.Source != "" && !validate.Pattern("^(chat|document|meeting|calendar)$", v.Source) {
+		errs.Add("source", "pattern", "does not match ^(chat|document|meeting|calendar)$")
+	}
+	if v.SourceID == "" {
+		errs.Add("sourceId", "required", "required")
+	}
+	if v.CreatedBy == "" {
+		errs.Add("createdBy", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -3748,6 +3779,10 @@ func (v SetupClaimInput) Validate() error {
 // CorrespondenceEntry is an API type.
 type CorrespondenceEntry struct {
 	ID          string    `json:"id"`
+	Source      string    `json:"source"`
+	ContainerID string    `json:"containerId"`
+	Reason      string    `json:"reason"`
+	Linked      bool      `json:"linked"`
 	MailboxID   string    `json:"mailboxId"`
 	Subject     string    `json:"subject"`
 	Preview     string    `json:"preview"`
@@ -3762,6 +3797,15 @@ func (v CorrespondenceEntry) Validate() error {
 	var errs validate.Errors
 	if v.ID == "" {
 		errs.Add("id", "required", "required")
+	}
+	if v.Source == "" {
+		errs.Add("source", "required", "required")
+	}
+	if v.ContainerID == "" {
+		errs.Add("containerId", "required", "required")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
 	}
 	if v.MailboxID == "" {
 		errs.Add("mailboxId", "required", "required")
@@ -3805,6 +3849,27 @@ func (v CorrespondenceTimeline) Validate() error {
 	}
 	if v.NextCursor == "" {
 		errs.Add("nextCursor", "required", "required")
+	}
+	return errs.Result()
+}
+
+// CorrespondenceLinkInput is an API type.
+type CorrespondenceLinkInput struct {
+	Source   string `json:"source"`
+	SourceID string `json:"sourceId"`
+}
+
+// Validate applies the rules of CorrespondenceLinkInput from schema.lidza.
+func (v CorrespondenceLinkInput) Validate() error {
+	var errs validate.Errors
+	if v.Source == "" {
+		errs.Add("source", "required", "required")
+	}
+	if v.Source != "" && !validate.Pattern("^(chat|document|meeting|calendar)$", v.Source) {
+		errs.Add("source", "pattern", "does not match ^(chat|document|meeting|calendar)$")
+	}
+	if v.SourceID == "" {
+		errs.Add("sourceId", "required", "required")
 	}
 	return errs.Result()
 }

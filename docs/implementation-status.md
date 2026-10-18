@@ -4,7 +4,7 @@ The uploaded `Orbit_Workspace_React (1).zip` now runs inside the published Līdz
 
 ## What works
 
-- Correspondence: internal person-first contact lookup and searchable, paginated mail timelines, with optional current-organization rollups and original-message handoffs. Calendar, chat, Drive linking and automatic profile suggestions remain follow-up work. See [Correspondence](correspondence.md).
+- Correspondence: internal person-first contact lookup and searchable, paginated timelines across mail, conversation records, Drive documents, meeting records, and calendar events. Source filters, explicit links, original-item handoffs, and optional current-organization rollups respect source permissions. Automatic profile suggestions and full-text indexing of chat/document contents remain follow-up work. See [Correspondence](correspondence.md).
 
 - `/workspace`: Thura-branded six-app preview, preserving the prototype's layout, browser-local state, themes, Contacts-to-Chat and Calendar-to-Meet interactions. A persistent banner describes its simulated behavior. Its storage namespace is `thura:demo:v1:`; it never contains live account data or credentials.
 - `/app`: authenticated workspace shell with persistent Mail, Contacts, Drive, Calendar, Matrix Chat, and LiveKit Meet. Mail includes server-backed autosaved drafts, recipients, private attachments, signed raw-MIME ingress, server-side folder search and cursor paging, read/star/folder actions, reply/forward with retained attachments, shared-contact recipient suggestions, scheduled delivery and undo, server-sanitized sandboxed formatted reading, and opt-in private CID thumbnails. Outbound connectors use each mailbox’s operator-controlled credentials. See [mail connectors](mail-connectors.md).

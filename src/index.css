@@ -80,7 +80,7 @@
 /* Correspondence follows the live workspace's controls and theme tokens. */
 #orbit-workspace .correspondence-layout { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 24px; margin-top: 20px; }
 #orbit-workspace .correspondence label { display: flex; flex-direction: column; gap: 5px; margin: 10px 0; }
-#orbit-workspace .correspondence input { width: 100%; min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+#orbit-workspace .correspondence input, #orbit-workspace .correspondence select { width: 100%; min-width: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
 #orbit-workspace .correspondence aside ul { list-style: none; padding: 0; margin-top: 12px; }
 #orbit-workspace .correspondence aside li button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 12px; margin-bottom: 6px; border: 1px solid var(--line); background: var(--paper); }
 #orbit-workspace .correspondence button[aria-pressed="true"] { color: var(--teal); background: var(--tealsoft); }
@@ -92,3 +92,8 @@
 #orbit-workspace .correspondence-timeline time, #orbit-workspace .correspondence aside small { color: var(--quiet); font-size: 12px; }
 #orbit-workspace .correspondence { padding: 24px; overflow-wrap: anywhere; }
 @media (max-width: 700px) { #orbit-workspace .correspondence { padding: 16px; } #orbit-workspace .correspondence-layout { grid-template-columns: minmax(0,1fr); } }
+
+#orbit-workspace .correspondence details { margin: 16px 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+#orbit-workspace .correspondence summary { cursor: pointer; }
+#orbit-workspace .correspondence details ul { list-style: none; padding: 0; }
+#orbit-workspace .correspondence details li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }

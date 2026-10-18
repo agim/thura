@@ -326,6 +326,15 @@ type Contact struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type CorrespondenceLink struct {
+	ID        string    `json:"id"`
+	ContactID string    `json:"contact_id"`
+	Source    string    `json:"source"`
+	SourceID  string    `json:"source_id"`
+	CreatedBy string    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type DriveFile struct {
 	ID             string    `json:"id"`
 	WorkspaceID    string    `json:"workspace_id"`

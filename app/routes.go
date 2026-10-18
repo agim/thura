@@ -65,6 +65,14 @@ func routes(r *router.Router) {
 
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts", handlers.ListContacts)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts/{id}/correspondence", handlers.GetCorrespondence)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts/{id}/correspondence/sources", handlers.ListCorrespondenceSources)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/contacts/{id}/correspondence/links", handlers.LinkCorrespondence)
+	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/contacts/{id}/correspondence/links/{source}/{sourceId}", handlers.UnlinkCorrespondence)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/files/{id}", handlers.GetDriveFile)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/chat/{id}", handlers.GetChatRoom)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/meet/{id}", handlers.GetMeeting)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars/{calendarId}", handlers.GetCalendar)
+
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/contacts", handlers.CreateContact)
 	router.Route(g, "PATCH /api/v1/workspaces/{workspaceId}/contacts/{id}", handlers.UpdateContact)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/contacts/{id}", handlers.DeleteContact)

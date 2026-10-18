@@ -22,7 +22,7 @@ function rememberUpload(key: string, id: string | null) {
   } catch { /* Restricted browser storage must not prevent uploading. */ }
 }
 
-export function LiveDrive({ workspaceId }: { workspaceId: string }) {
+export function LiveDrive({ workspaceId, initialFileId }: { workspaceId: string; initialFileId?: string }) {
   const client = useQueryClient()
   const list = useQuery({ queryKey: ['drive', workspaceId], queryFn: () => api.listDrive({ workspaceId }), refetchInterval: 5000 })
   const quota = useQuery({ queryKey: ['drive', workspaceId, 'quota'], queryFn: () => api.driveQuota({ workspaceId }), refetchInterval: 15000 })
@@ -34,9 +34,10 @@ export function LiveDrive({ workspaceId }: { workspaceId: string }) {
   const [search, setSearch] = useState('')
   const [name, setName] = useState('')
   const [progress, setProgress] = useState('')
-  const [selected, setSelected] = useState('')
+  const [selected, setSelected] = useState(initialFileId || '')
+  const detail = useQuery({ queryKey: ['drive', workspaceId, 'file', selected], queryFn: () => api.getDriveFile({ workspaceId, id: selected }), enabled: !!selected })
   const refresh = () => client.invalidateQueries({ queryKey: ['drive', workspaceId] })
-  const current = list.data?.files.find(f => f.id === selected)
+  const current = detail.isError ? undefined : detail.data
   const purge = useMutation({ mutationFn: (id: string) => api.purgeDriveFile({ workspaceId, id }), onSuccess: async () => { setSelected(''); await refresh() } })
   const createFolder = useMutation({ mutationFn: () => api.createDriveFolder({ workspaceId }, { name, parentId: folder || undefined }), onSuccess: async () => { setName(''); await refresh() } })
   const upload = useMutation({ mutationFn: async ({ file, replacing }: { file: File; replacing?: DriveFile }) => {
@@ -70,7 +71,7 @@ export function LiveDrive({ workspaceId }: { workspaceId: string }) {
   }, onSuccess: async file => { setSelected(file.id); setProgress('Upload complete'); await refresh() } })
   const flags = useMutation({ mutationFn: ({ file, values }: { file: DriveFile; values: { name?: string; folderId?: string; trashed?: boolean } }) => api.updateDriveFile({ workspaceId, id: file.id }, { name: values.name || file.name, folderId: values.folderId !== undefined ? values.folderId || undefined : file.folderId, trashed: values.trashed ?? file.trashed }), onSuccess: refresh })
   const download = useMutation({ mutationFn: (file: DriveFile) => api.downloadDriveFile({ workspaceId, id: file.id }), onSuccess: downloadContent })
-  const failure = list.error ?? upload.error ?? createFolder.error ?? flags.error ?? download.error
+  const failure = detail.error ?? list.error ?? upload.error ?? createFolder.error ?? flags.error ?? download.error
   const files = list.data?.files.filter(f => f.trashed === trash && (trash || (f.folderId || '') === folder) && f.name.toLowerCase().includes(search.toLowerCase())) ?? []
   function submit(e: FormEvent) { e.preventDefault(); createFolder.mutate() }
   return <div className="ws-page live-drive"><div className="ws-page-head"><h2>Drive</h2><span className="ws-muted">Private workspace files · 10 MB per upload</span></div>
@@ -82,6 +83,7 @@ export function LiveDrive({ workspaceId }: { workspaceId: string }) {
       <p>Folder: {list.data?.folders.find(f => f.id === folder)?.name || 'Root'}</p><div className="row">{list.data?.folders.filter(f => (f.parentId || '') === folder).map(f => <button key={f.id} onClick={() => { setFolder(f.id); setSelected('') }}>📁 {f.name}</button>)}</div></>}
     {progress && <p role="status">{progress}{upload.isError ? ' · interrupted; select the same file to resume' : ''}</p>}
     {list.isPending && <p role="status">Loading files…</p>}
+    {selected && detail.isPending && <p role="status">Loading file…</p>}
     <div className="drive-grid">{files.map(f => <article key={f.id} className="drive-card"><h3><button onClick={() => setSelected(f.id)}>{f.name}</button></h3><p>{Math.ceil(f.size / 1024)} KB · version {f.currentVersion}</p><div className="row">{!trash && <button onClick={() => download.mutate(f)}>Download {f.name}</button>}<button disabled={flags.isPending} onClick={() => flags.mutate({ file: f, values: { trashed: !f.trashed } })}>{trash ? 'Restore' : 'Move to trash'} {f.name}</button>{trash && manager && <button disabled={purge.isPending} onClick={() => { if (confirm(`Permanently delete ${f.name}, all its versions and share links? This cannot be undone. Copies already sent through Chat remain on Matrix.`)) purge.mutate(f.id) }}>Delete permanently {f.name}</button>}</div></article>)}</div>
     {list.data && files.length === 0 && <p>No files in this view.</p>}
     {current && <section className="drive-detail"><h3>{current.name}</h3>{!current.trashed && <><label>Move to folder<select value={current.folderId || ''} onChange={e => flags.mutate({ file: current, values: { folderId: e.target.value } })}><option value="">Root</option>{list.data?.folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>Upload new version<input type="file" disabled={upload.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate({ file, replacing: current }); e.target.value = '' }} /></label>{/\.(docx|xlsx)$/i.test(current.name) && <OfficeEditor key={current.id} workspaceId={workspaceId} fileId={current.id} />}<DrivePreview key={`preview:${current.id}:${current.currentVersion}`} workspaceId={workspaceId} file={current} /><FileHistory key={`${current.id}:${current.currentVersion}`} workspaceId={workspaceId} file={current} /><FileSharing key={current.id} workspaceId={workspaceId} file={current} /></>}</section>}

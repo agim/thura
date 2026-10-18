@@ -4,12 +4,13 @@ import { api, ApiError, type ChatRoom, type ChatMessage, type Contact } from '@l
 import { downloadContent } from '../lib/download'
 import { userError } from '../lib/errors'
 const SmipReview = lazy(() => import('./SmipReview').then(module => ({ default: module.SmipReview })))
-export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string; contact?: Contact; onMeet?: (name: string) => void }) {
+export function LiveChat({ workspaceId, contact, onMeet, initialRoomId }: { workspaceId: string; initialRoomId?: string; contact?: Contact; onMeet?: (name: string) => void }) {
   const client = useQueryClient()
   const rooms = useQuery({ queryKey: ['chat-rooms', workspaceId], queryFn: () => api.listChatRooms({ workspaceId }) })
   const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.listMembers({ workspaceId }) })
   const session = useQuery({ queryKey: ['session'], queryFn: () => api.authSession() })
-  const [selected, setSelected] = useState('')
+  const [selected, setSelected] = useState(initialRoomId || '')
+  const detail = useQuery({ queryKey: ['chat-room', workspaceId, selected], queryFn: () => api.getChatRoom({ workspaceId, id: selected }), enabled: !!selected })
   const [name, setName] = useState(contact?.name || '')
   const [contactNotice, setContactNotice] = useState('')
   const [recipient, setRecipient] = useState('')
@@ -21,13 +22,14 @@ export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string
     setContactNotice(member ? `Prepare a private conversation with ${contact.name}.` : 'This contact is not another workspace member. Choose a member for a private conversation; external users require an administrator-managed channel invitation.')
   }, [contact, members.data, session.data])
   const create = useMutation({ mutationFn: (id: string) => api.createChatRoom({ workspaceId }, { name, participant: recipient || undefined, requestId: id }), onSuccess: async r => { setSelected(r.id); setName(''); setRequestId(''); await client.invalidateQueries({ queryKey: ['chat-rooms', workspaceId] }) } })
-  const room = rooms.data?.items.find(r => r.id === selected) ?? rooms.data?.items[0]
+  const room = selected ? (detail.isError ? undefined : detail.data) : rooms.data?.items[0]
   return <section className="ws-page"><h2>Chat</h2><p>Matrix channels and private conversations. Rooms are server-readable; this version does not enable end-to-end encryption.</p>
     {rooms.data && !rooms.data.configured && <p role="status">Matrix chat is not configured. An operator must connect a homeserver before creating a room.</p>}
+    {selected && detail.isPending && <p role="status">Loading conversation…</p>}
     {contactNotice && <p role="status">{contactNotice}</p>}
     <form className="row" onSubmit={e => { e.preventDefault(); const id = requestId || crypto.randomUUID(); setRequestId(id); create.mutate(id) }}><label>Room name<input required maxLength={200} value={name} onChange={e => { setName(e.target.value); setRequestId('') }} /></label><label>Conversation<select aria-label="Conversation" value={recipient} onChange={e => { setRecipient(e.target.value); setRequestId('') }}><option value="">Shared workspace channel</option>{members.data?.items.filter(m => m.subject !== session.data?.user?.subject).map(m => <option key={m.subject} value={m.subject}>{m.name || m.email}</option>)}</select></label><button disabled={create.isPending || !rooms.data?.configured}>Create room</button></form>
-    <label>Chat room<select aria-label="Chat room" value={room?.id || ''} onChange={e => setSelected(e.target.value)}><option value="" disabled>Select a room</option>{rooms.data?.items.map(r => <option key={r.id} value={r.id}>{r.name}{r.direct ? ' · Private' : ''}</option>)}</select></label>
-    {(rooms.error || members.error || create.error) && <p role="alert">{userError(rooms.error || members.error || create.error)}</p>}
+    <label>Chat room<select aria-label="Chat room" value={room?.id || ''} onChange={e => setSelected(e.target.value)}><option value="" disabled>Select a room</option>{room && !rooms.data?.items.some(r => r.id === room.id) && <option value={room.id}>{room.name}</option>}{rooms.data?.items.map(r => <option key={r.id} value={r.id}>{r.name}{r.direct ? ' · Private' : ''}</option>)}</select></label>
+    {(detail.error || rooms.error || members.error || create.error) && <p role="alert">{userError(detail.error || rooms.error || members.error || create.error)}</p>}
     {room && rooms.data?.configured && <ChatConversation onMeet={onMeet} key={room.id} room={room} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} />}
     <Suspense fallback={null}><SmipReview key={workspaceId} workspaceId={workspaceId} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} /></Suspense>
   </section>

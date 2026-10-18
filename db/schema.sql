@@ -612,3 +612,14 @@ CREATE INDEX setup_probe_created_at_idx ON setup_probe (created_at);
 CREATE INDEX setup_probe_subject_kind_created_at_idx ON setup_probe (subject, kind, created_at);
 CREATE INDEX setup_probe_kind_fingerprint_state_created_at_idx ON setup_probe (kind, fingerprint, state, created_at);
 
+CREATE TABLE correspondence_link (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  contact_id uuid NOT NULL REFERENCES contact(id) ON DELETE CASCADE,
+  source text NOT NULL,
+  source_id uuid NOT NULL,
+  created_by text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX correspondence_link_contact_id_idx ON correspondence_link (contact_id);
+CREATE UNIQUE INDEX correspondence_link_contact_id_source_source_id_key ON correspondence_link (contact_id, source, source_id);
+

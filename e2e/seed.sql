@@ -41,3 +41,9 @@ INSERT INTO auth_member(subject,scope,role) VALUES ('thura-meeting-peer-fixture'
 INSERT INTO server_setup(id,subject,published_revision)
 VALUES ('00000000-0000-4000-8000-000000000001','thura-fixture:externally-configured',1)
 ON CONFLICT(id) DO UPDATE SET subject='thura-fixture:externally-configured',published_revision=1;
+
+-- Correspondence handoff fixtures are metadata only; no provider calls.
+INSERT INTO chat_room(id,workspace_id,matrix_room_id,request_id,name,direct,created_by)
+VALUES ('a0000000-0000-4000-8000-000000000030','a0000000-0000-4000-8000-000000000001','!correspondence-fixture:example.invalid','a0000000-0000-4000-8000-000000000030','Correspondence fixture conversation',false,'thura-e2e-owner') ON CONFLICT(id) DO NOTHING;
+INSERT INTO meeting(id,workspace_id,request_id,name,created_by,ended_at)
+VALUES ('a0000000-0000-4000-8000-000000000031','a0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000031','Correspondence fixture meeting','thura-e2e-owner',now()) ON CONFLICT(id) DO NOTHING;

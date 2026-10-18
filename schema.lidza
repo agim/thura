@@ -1057,7 +1057,11 @@ model SetupProbe {
 // Internal, person-first correspondence; organization is an optional rollup.
 type CorrespondenceEntry {
   id uuid
-  mailboxId uuid
+  source string
+  containerId string
+  reason string
+  linked bool
+  mailboxId string
   subject string
   preview string
   fromAddress string
@@ -1069,4 +1073,18 @@ type CorrespondenceTimeline {
   contact Contact
   items CorrespondenceEntry[]
   nextCursor string
+}
+
+model CorrespondenceLink {
+ id uuid @id @default(uuid())
+ contactId uuid @ref(Contact, cascade) @index
+ source string @pattern("^(chat|document|meeting|calendar)$")
+ sourceId uuid
+ createdBy string
+ createdAt time @default(now())
+ @@unique(contactId,source,sourceId)
+}
+type CorrespondenceLinkInput {
+ source string @pattern("^(chat|document|meeting|calendar)$")
+ sourceId uuid
 }
