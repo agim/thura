@@ -34,8 +34,8 @@ func (q *Queries) AddCorrespondenceLink(ctx context.Context, arg AddCorresponden
 
 const correspondenceCandidates = `-- name: CorrespondenceCandidates :many
 WITH people AS (
- SELECT p.id, p.workspace_id, p.name, p.email, p.company, p.phone, p.favorite, p.created_at FROM contact p WHERE p.workspace_id=$9
- AND (p.id=$1 OR ($10::boolean AND p.company<>'' AND lower(trim(p.company))=lower(trim($11::text))))
+ SELECT p.id, p.workspace_id, p.name, p.email, p.company, p.phone, p.favorite, p.created_at FROM contact p WHERE p.workspace_id=$10
+ AND (p.id=$1 OR ($11::boolean AND p.company<>'' AND lower(trim(p.company))=lower(trim($12::text))))
 ), links AS (
  SELECT l.id, l.contact_id, l.source, l.source_id, l.created_by, l.created_at FROM correspondence_link l JOIN people p ON p.id=l.contact_id
 ), sources AS (
@@ -43,29 +43,29 @@ WITH people AS (
  left(m.text_body,1000)::text AS preview, m.from_address,m.to_address,m.cc,m.bcc,m.status::text AS status,
  m.created_at AS at, 'Email participant'::text AS reason
  FROM mail_item m JOIN mailbox b ON b.id=m.mailbox_id
- WHERE b.workspace_id=$9 AND NOT $12::boolean
+ WHERE b.workspace_id=$10 AND NOT $5::boolean
  AND m.status IN ('received','sent','captured') AND m.folder NOT IN ('trash','spam')
  AND EXISTS (SELECT 1 FROM people p WHERE strpos(lower(m.from_address || ' ' || m.to_address || ' ' || m.cc || ' ' || m.bcc),lower(p.email))>0)
  AND ($4::text='' OR strpos(lower(m.subject || ' ' || m.text_body || ' ' || m.from_address || ' ' || m.to_address),lower($4))>0)
  UNION ALL
  SELECT f.id,'document', ''::text,f.name,f.content_type,''::text,''::text,''::text,''::text,'Drive file',f.created_at,
  CASE WHEN EXISTS(SELECT 1 FROM links l WHERE l.source='document' AND l.source_id=f.id) THEN 'Linked to contact' ELSE 'Shared with contact' END
- FROM drive_file f WHERE f.workspace_id=$9 AND NOT f.trashed
- AND ($12::boolean OR EXISTS(SELECT 1 FROM links l WHERE l.source='document' AND l.source_id=f.id)
+ FROM drive_file f WHERE f.workspace_id=$10 AND NOT f.trashed
+ AND ($5::boolean OR EXISTS(SELECT 1 FROM links l WHERE l.source='document' AND l.source_id=f.id)
  OR EXISTS(SELECT 1 FROM share_grant g JOIN people p ON lower(trim(g.target_email))=lower(p.email) WHERE g.file_id=f.id AND g.revoked_at IS NULL AND g.expires_at>now()))
  UNION ALL
  SELECT r.id,'chat',''::text,r.name,CASE WHEN r.direct THEN 'Private conversation' ELSE 'Shared channel' END,''::text,''::text,''::text,''::text,'Conversation',r.created_at,
  CASE WHEN EXISTS(SELECT 1 FROM links l WHERE l.source='chat' AND l.source_id=r.id) THEN 'Linked to contact' ELSE 'Conversation participant' END
- FROM chat_room r WHERE r.workspace_id=$9
+ FROM chat_room r WHERE r.workspace_id=$10
  AND (NOT r.direct OR EXISTS(SELECT 1 FROM chat_participant cp WHERE cp.room_id=r.id AND cp.subject=$13))
- AND ($12::boolean OR EXISTS(SELECT 1 FROM links l WHERE l.source='chat' AND l.source_id=r.id)
+ AND ($5::boolean OR EXISTS(SELECT 1 FROM links l WHERE l.source='chat' AND l.source_id=r.id)
  OR EXISTS(SELECT 1 FROM chat_participant cp JOIN auth_user u ON u.subject=cp.subject JOIN people p ON lower(u.email)=lower(p.email) WHERE cp.room_id=r.id))
  UNION ALL
  SELECT m.id,'meeting',''::text,m.name,'Meeting record'::text,''::text,''::text,''::text,''::text,
  CASE WHEN m.ended_at IS NULL THEN 'Open meeting' ELSE 'Ended meeting' END,m.created_at,
  CASE WHEN EXISTS(SELECT 1 FROM links l WHERE l.source='meeting' AND l.source_id=m.id) THEN 'Linked to contact' ELSE 'Meeting participant record' END
- FROM meeting m WHERE m.workspace_id=$9
- AND ($12::boolean OR EXISTS(SELECT 1 FROM links l WHERE l.source='meeting' AND l.source_id=m.id)
+ FROM meeting m WHERE m.workspace_id=$10
+ AND ($5::boolean OR EXISTS(SELECT 1 FROM links l WHERE l.source='meeting' AND l.source_id=m.id)
  OR EXISTS(SELECT 1 FROM meeting_participant mp JOIN auth_user u ON u.subject=mp.subject JOIN people p ON lower(u.email)=lower(p.email) WHERE mp.meeting_id=m.id))
  UNION ALL
  SELECT e.id,'calendar',e.calendar_id::text,e.title,
@@ -74,17 +74,17 @@ WITH people AS (
  coalesce(e.starts_at,e.created_at),
  CASE WHEN EXISTS(SELECT 1 FROM links l WHERE l.source='calendar' AND l.source_id=e.id) THEN 'Linked to contact' ELSE 'Event organizer or invitee' END
  FROM calendar_event e JOIN calendar c ON c.id=e.calendar_id
- WHERE c.workspace_id=$9 AND (c.owner_subject IS NULL OR c.owner_subject=$13)
- AND ($12::boolean OR EXISTS(SELECT 1 FROM links l WHERE l.source='calendar' AND l.source_id=e.id)
+ WHERE c.workspace_id=$10 AND (c.owner_subject IS NULL OR c.owner_subject=$13)
+ AND ($5::boolean OR EXISTS(SELECT 1 FROM links l WHERE l.source='calendar' AND l.source_id=e.id)
  OR EXISTS(SELECT 1 FROM people p WHERE lower(e.organizer)=lower(p.email) OR EXISTS(SELECT 1 FROM event_attendee a WHERE a.event_id=e.id AND lower(a.email)=lower(p.email))))
 )
 SELECT s.id, s.source, s.container_id, s.subject, s.preview, s.from_address, s.to_address, s.cc, s.bcc, s.status, s.at, s.reason, EXISTS(SELECT 1 FROM correspondence_link l WHERE l.contact_id=$1 AND l.source=s.source AND l.source_id=s.id)::boolean AS linked
 FROM sources s
 WHERE ($2::text='' OR s.id::text=$2)
 AND ($3::text='' OR s.source=$3)
-AND ($4::text='' OR s.source='mail' OR strpos(lower(s.subject || ' ' || s.preview),lower($4))>0)
-AND ($5::timestamptz IS NULL OR (s.at,s.source,s.id)<($5::timestamptz,$6::text,$7::uuid))
-ORDER BY s.at DESC,s.source DESC,s.id DESC LIMIT $8
+AND ($4::text='' OR s.source='mail' OR (NOT $5::boolean AND s.source IN ('chat','document')) OR strpos(lower(s.subject || ' ' || s.preview),lower($4))>0)
+AND ($6::timestamptz IS NULL OR (s.at,s.source,s.id)<($6::timestamptz,$7::text,$8::uuid))
+ORDER BY s.at DESC,s.source DESC,s.id DESC LIMIT $9
 `
 
 type CorrespondenceCandidatesParams struct {
@@ -92,6 +92,7 @@ type CorrespondenceCandidatesParams struct {
 	TargetID     string     `json:"target_id"`
 	SourceFilter string     `json:"source_filter"`
 	Search       string     `json:"search"`
+	Browse       bool       `json:"browse"`
 	BeforeTime   *time.Time `json:"before_time"`
 	BeforeSource string     `json:"before_source"`
 	BeforeID     string     `json:"before_id"`
@@ -99,7 +100,6 @@ type CorrespondenceCandidatesParams struct {
 	WorkspaceID  string     `json:"workspace_id"`
 	Organization bool       `json:"organization"`
 	Company      string     `json:"company"`
-	Browse       bool       `json:"browse"`
 	Viewer       string     `json:"viewer"`
 }
 
@@ -125,6 +125,7 @@ func (q *Queries) CorrespondenceCandidates(ctx context.Context, arg Corresponden
 		arg.TargetID,
 		arg.SourceFilter,
 		arg.Search,
+		arg.Browse,
 		arg.BeforeTime,
 		arg.BeforeSource,
 		arg.BeforeID,
@@ -132,7 +133,6 @@ func (q *Queries) CorrespondenceCandidates(ctx context.Context, arg Corresponden
 		arg.WorkspaceID,
 		arg.Organization,
 		arg.Company,
-		arg.Browse,
 		arg.Viewer,
 	)
 	if err != nil {

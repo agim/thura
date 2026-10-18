@@ -49,3 +49,5 @@ never in an agent's local memory.
 - 2026-10-09: Setup publication requires successful mail and storage checks less than 24 hours old, bound to saved provider settings. Check IDs never repeat external operations. Every node must activate the published snapshot before first app traffic. Storage location freezes after first publication; migration needs an offline plan.
 - 2026-10-17: Correspondence is an internal, person-first timeline and search feature. Organization is optional for personal correspondence and is a secondary rollup; external contacts receive no accounts or dashboard access.
 - 2026-10-17: New features must follow the existing Thura design patterns, including shared workspace theme tokens, controls, responsive layouts, and loading/error states.
+
+- 2026-10-17: The person-first correspondence feature is branded Loop ("Stay in the loop"). Keep it distinct from Contacts. Use /app/loop and /contacts/{id}/loop routes; internal database identifiers remain stable. The user selected Zero as the UI reference and rejected Shadcn Admin.

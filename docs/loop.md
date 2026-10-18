@@ -1,7 +1,7 @@
-# Correspondence
+# Loop
 
-Correspondence is Thura's internal, person-first timeline and search feature.
-Open it from the workspace navigation or a contact's Correspondence button.
+Loop is Thura's internal, person-first timeline and search feature.
+Open it from the workspace navigation or a contact's Loop button.
 Save a contact to begin organizing their history; no organization is required.
 An external contact is a record, never a login or an invitation.
 
@@ -31,8 +31,26 @@ sources disappear from results; later restored access can make them visible.
 
 Search contact names, emails, and organizations in the directory. Timeline
 search covers mail subjects/plain text/addresses, document filenames and media
-types, conversation and meeting names, and calendar titles/descriptions. It does
-not index document contents, Matrix message bodies, recordings, or transcripts.
+types, conversation and meeting names, and calendar titles/descriptions. Chat messages are searched live on Matrix as the current virtual user, scoped
+to each associated accessible room. Search does not join rooms or change
+membership. Matrix determines token matching and history visibility. A matching
+conversation opens in Chat with its search term and paginated matching messages.
+
+Current Drive version contents are extracted on demand: UTF-8 text, Markdown,
+CSV/TSV, JSON/XML, HTML text, DOCX/XLSX/PPTX, and OpenDocument text formats. PDF
+text uses the optional Poppler `pdftotext` executable on PATH (installed in the
+local demo). Scanned PDFs need OCR, which is not included. Binary legacy Office
+formats, encrypted files, and images are unsupported. ZIP expansion and output
+are limited to 2 MiB, with at most 4,096 archive entries; PDF extraction has a
+three-second timeout. Documents still use the existing 10 MiB upload limit.
+No extracted text is persisted. Replacement, trash, and current access are
+rechecked; obsolete versions cannot supply search matches.
+
+Results stay grouped by source record, with a plain-text matching excerpt.
+Content search scans at most ten candidate records per page, or stops between
+records after six seconds, with a continuation cursor. Load more searches older
+records. Source failures and unsupported files produce visible partial-search
+notices; refresh retries them. Recordings and transcripts are not searched.
 Use the source filter or open a result in its existing Thura app to read more.
 Opening a meeting does not join it; opening an event does not send invitations.
 
@@ -58,3 +76,7 @@ Saved contacts are the initial manual funnel. Automatic suggestions, accept/
 dismiss/snooze, archive state, multiple identities, automatic-match exclusions,
 and first-class organization records remain follow-up work. Historical
 organization membership needs explicit affiliations before historical rollups.
+
+## Routes
+
+Open `/app/loop`. Contact timeline, source catalog, and manual-link API routes use `/api/v1/workspaces/{workspaceId}/contacts/{id}/loop` (plus `/sources` and `/links`).

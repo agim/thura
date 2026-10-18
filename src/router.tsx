@@ -40,7 +40,7 @@ function RootLayout() {
   useEffect(() => {
     if (unfinished && path !== target) window.location.replace(target)
   }, [unfinished, path, target])
-  const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' || state.location.pathname === '/app' })
+  const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' || (state.location.pathname === '/app' || state.location.pathname === '/app/loop') })
   if (unfinished) return <><PageHead /><main className="mx-auto max-w-3xl px-6 py-6">{path === target ? <Outlet /> : <p role="status">Opening server setup…</p>}</main></>
   if (workspace) return <><PageHead /><main className="workspace-frame"><Outlet /></main></>
   return <>
@@ -83,8 +83,9 @@ const rsvpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rsvp', 
 const shareRoute = createRoute({ getParentRoute: () => rootRoute, path: '/share', component: lazyRouteComponent(() => import('./pages/Share'), 'SharedFile'), staticData: { module: 'src/pages/Share.tsx' } })
 
 const appRoute = createRoute({ getParentRoute: () => rootRoute, path: '/app', component: lazyRouteComponent(() => import('./pages/App'), 'AppWorkspace'), staticData: { module: 'src/pages/App.tsx' } })
+const loopRoute = createRoute({ getParentRoute: () => appRoute, path: '/loop', component: () => null })
 const setupRoute = createRoute({ getParentRoute: () => rootRoute, path: "/setup", component: lazyRouteComponent(() => import("./pages/Setup"), "Setup"), staticData: { module: "src/pages/Setup.tsx" } })
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute, shareRoute, rsvpRoute, setupRoute])
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute.addChildren([loopRoute]), shareRoute, rsvpRoute, setupRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).

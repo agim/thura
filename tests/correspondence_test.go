@@ -70,7 +70,7 @@ func TestCorrespondencePersonFirst(t *testing.T) {
 	insert("john@example.com", "Spam", "spam", "received")
 	insert("john@example.com", "Trash", "trash", "received")
 	insert("john@example.com", "Draft", "drafts", "draft")
-	path := base + "/" + john.ID + "/correspondence"
+	path := base + "/" + john.ID + "/loop"
 	var timeline schema.CorrespondenceTimeline
 	status("GET", path, nil, &timeline, 200)
 	if len(timeline.Items) != 2 || timeline.Contact.Company != "" {
@@ -95,7 +95,7 @@ func TestCorrespondencePersonFirst(t *testing.T) {
 	if len(timeline.Items) != 3 {
 		t.Fatalf("organization rollup: %+v", timeline)
 	}
-	status("GET", "/api/v1/workspaces/"+other.ID+"/contacts/"+john.ID+"/correspondence", nil, nil, 404)
+	status("GET", "/api/v1/workspaces/"+other.ID+"/contacts/"+john.ID+"/loop", nil, nil, 404)
 	status("GET", path+"?cursor=invalid", nil, nil, 422)
 	if _, err := db.From(ctx).Exec(ctx, "DELETE FROM auth_member WHERE scope=$1", w.ID); err != nil {
 		t.Fatal(err)

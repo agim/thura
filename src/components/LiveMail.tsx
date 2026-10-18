@@ -4,7 +4,8 @@ import { api, type MailItem, type MailFolder, type DraftInput } from '@lidza/cli
 import { downloadContent } from '../lib/download'
 import { RecipientInput } from './RecipientInput'
 import { DraftAutosave } from '../lib/draft-autosave'
-import { X } from 'lucide-react'
+import { X, Inbox, FilePenLine, Send, Archive, ShieldAlert, Trash2, PenLine } from 'lucide-react'
+const folderIcons = { inbox: Inbox, drafts: FilePenLine, sent: Send, archive: Archive, spam: ShieldAlert, trash: Trash2 }
 import { MailReader } from './MailReader'
 import { MailOrganization, MailSignature, MailConversation } from './MailTools'
 
@@ -44,10 +45,10 @@ function MailView({ workspaceId, mailboxId, signature, initialDraft, initialMess
       setEditing(i); setSelected(i.id); setFolder('drafts'); await refresh()
     } catch (e) { setReaderError(String(e)) }
   }
-  return <div id="orbit-mail-vibrant">
+  return <div id="orbit-mail-vibrant" className={selected ? 'has-message' : ''}>
     {(failure || readerError) && <p role="alert" className="inlinepanel">{failure?.message || readerError}</p>}
     <div className="layout">
-      <aside className="folders"><button className="mainaction" disabled={compose.isPending} onClick={() => compose.mutate()}>Compose</button>{(['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as MailFolder[]).map(f => <button className={folder === f ? 'on' : ''} key={f} onClick={() => { setFolder(f); setSelected(''); setEditing(null) }}>{f[0].toUpperCase() + f.slice(1)}</button>)}<MailOrganization scope={{ workspaceId, mailboxId }} selected={selected} filter={labelId} onFilter={setLabelId} /><MailSignature scope={{ workspaceId, mailboxId }} signature={signature} /></aside>
+      <aside className="folders"><button className="mainaction" disabled={compose.isPending} onClick={() => compose.mutate()}><PenLine size={16} aria-hidden="true" />Compose</button>{(['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as MailFolder[]).map(f => <button className={folder === f ? 'on' : ''} key={f} onClick={() => { setFolder(f); setSelected(''); setEditing(null) }}>{(() => { const Icon = folderIcons[f]; return <Icon size={16} aria-hidden="true" /> })()}{f[0].toUpperCase() + f.slice(1)}</button>)}<MailOrganization scope={{ workspaceId, mailboxId }} selected={selected} filter={labelId} onFilter={setLabelId} /><MailSignature scope={{ workspaceId, mailboxId }} signature={signature} /></aside>
       <section className="list" aria-label="Messages"><div className="listhead"><h2>{folder[0].toUpperCase() + folder.slice(1)}</h2><label className="search">Search mail<input value={query} onChange={e => setQuery(e.target.value)} /></label></div>
         {list.isPending && <p role="status" className="empty">Loading messages…</p>}
         {list.data && visible.length === 0 && <p className="empty">No messages in this view.</p>}
@@ -55,7 +56,7 @@ function MailView({ workspaceId, mailboxId, signature, initialDraft, initialMess
         {list.hasNextPage && <button disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>Load more messages</button>}
         <p className="small quiet p-3">{visible.length} messages loaded. Search covers this folder.</p>
       </section>
-      <section className="reader" aria-label="Reading pane">
+      <section className="reader" aria-label="Reading pane"><button className="mobile-back" onClick={() => { setSelected(''); setEditing(null) }}>Back to messages</button>
         {editing ? <DraftEditor key={editing.id} item={editing} workspaceId={workspaceId} mailboxId={mailboxId} saved={async i => { setEditing(i.status === 'draft' ? i : null); setNotice(i.status === 'queued' ? 'Queued · undo is available until the scheduled send time.' : 'Draft saved.'); await refresh() }} /> : current ? <>
           <div className="toolbar"><button disabled={flags.isPending} onClick={() => flags.mutate({ id: current.id, values: { starred: !current.starred } })}>{current.starred ? 'Unstar' : 'Star'}</button><button disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'archive' } })}>Archive</button><button disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'trash' } })}>Trash</button>{current.folder === 'trash' && <button onClick={() => flags.mutate({ id: current.id, values: { folder: current.status === 'draft' ? 'drafts' : current.status === 'received' ? 'inbox' : 'sent' } })}>Restore</button>}</div>
           <MailConversation key={current.id} scope={{ workspaceId, mailboxId }} item={current} onSelect={i => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null) }} /><h3 className="title">{current.subject || '(No subject)'}</h3><p className="small quiet">From {current.fromAddress} · To {current.toAddress}</p>

@@ -55,7 +55,7 @@ SELECT s.*, EXISTS(SELECT 1 FROM correspondence_link l WHERE l.contact_id=sqlc.a
 FROM sources s
 WHERE (sqlc.arg(target_id)::text='' OR s.id::text=sqlc.arg(target_id))
 AND (sqlc.arg(source_filter)::text='' OR s.source=sqlc.arg(source_filter))
-AND (sqlc.arg(search)::text='' OR s.source='mail' OR strpos(lower(s.subject || ' ' || s.preview),lower(sqlc.arg(search)))>0)
+AND (sqlc.arg(search)::text='' OR s.source='mail' OR (NOT sqlc.arg(browse)::boolean AND s.source IN ('chat','document')) OR strpos(lower(s.subject || ' ' || s.preview),lower(sqlc.arg(search)))>0)
 AND (sqlc.narg(before_time)::timestamptz IS NULL OR (s.at,s.source,s.id)<(sqlc.narg(before_time)::timestamptz,sqlc.arg(before_source)::text,sqlc.arg(before_id)::uuid))
 ORDER BY s.at DESC,s.source DESC,s.id DESC LIMIT sqlc.arg(page_limit);
 

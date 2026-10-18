@@ -1,0 +1,148 @@
+/* Zero-inspired mail workspace. Adapted palette and panel composition from
+   Mail-0/Zero (64c5480), MIT © 2025 Zero Email; see docs/licenses/zero-MIT.txt.
+   Scoped to the live application; the original prototype remains independent. */
+.workspace-frame:has(.zero-workspace) { padding: 0; background: light-dark(#f5f5f5, #141414); }
+#orbit-workspace.zero-workspace {
+  --paper: light-dark(#fff, #1a1a1a); --canvas: light-dark(#f5f5f5, #141414);
+  --ink: light-dark(#18181b, #fafafa); --quiet: light-dark(#71717a, #a1a1aa);
+  --line: light-dark(#e4e4e7, #303033); --teal: light-dark(#0066ff, #91b7ff);
+  --tealsoft: light-dark(#eaf2ff, #202f49); --coral: light-dark(#0066ff, #91b7ff);
+  --oncoral: light-dark(#fff, #121827); --coralsoft: var(--tealsoft);
+  display: grid; grid-template-columns: 196px minmax(0,1fr); grid-template-rows: auto 1fr;
+  min-height: 100dvh; border: 0; border-radius: 0; overflow: visible;
+}
+#orbit-workspace.zero-workspace button { cursor: pointer; transition: background .15s; }
+#orbit-workspace.zero-workspace button:disabled { cursor: not-allowed; }
+#orbit-workspace.zero-workspace .ws-top { grid-column: 1/-1; padding: 14px 22px; background: var(--canvas); min-width: 0; }
+#orbit-workspace.zero-workspace .ws-brand { font-size: 21px; letter-spacing: -.8px; min-width: 0; }
+#orbit-workspace.zero-workspace .ws-logo { background: var(--ink); color: var(--paper); border-radius: 9px; }
+#orbit-workspace.zero-workspace .ws-org { display: flex; align-items: center; margin-left: 28px; gap: 8px; }
+#orbit-workspace.zero-workspace .ws-brand select { margin: 0; font-size: 12px; max-width: 260px; padding: 7px 10px; }
+#orbit-workspace.zero-workspace .ws-nav { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 5px; padding: 26px 12px; background: var(--canvas); border: 0; }
+#orbit-workspace.zero-workspace .ws-nav button { justify-content: flex-start; padding: 10px 12px; font-size: 13px; }
+#orbit-workspace.zero-workspace .ws-nav button.active { color: var(--ink); background: var(--paper); box-shadow: 0 1px 3px #0000000a; font-weight: 600; }
+#orbit-workspace.zero-workspace .nav-caption { font-size: 10px; letter-spacing: 1.3px; padding: 0 12px 12px; color: var(--quiet); }
+#orbit-workspace.zero-workspace .theme-control { margin: auto 0 0; }
+#orbit-workspace.zero-workspace .workspace-content { min-width: 0; padding: 8px 8px 8px 0; }
+#orbit-workspace.zero-workspace .ws-page { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 24px; min-height: calc(100dvh - 96px); }
+#orbit-workspace.zero-workspace h2 { font-size: 22px; letter-spacing: -.6px; }
+#orbit-workspace.zero-workspace h2 + p, #orbit-workspace.zero-workspace header > p { color: var(--quiet); margin-top: 5px; }
+#orbit-workspace.zero-workspace .row { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 14px 0; }
+#orbit-workspace.zero-workspace label { font-size: 12px; font-weight: 500; }
+#orbit-workspace.zero-workspace :is(.live-chat,.live-meet) label { display: flex; flex-direction: column; gap: 7px; margin: 12px 0; min-width: 0; }
+#orbit-workspace.zero-workspace :is(.live-chat,.live-meet) .row label { flex: 1 1 220px; margin: 0; }
+#orbit-workspace.zero-workspace input, #orbit-workspace.zero-workspace select, #orbit-workspace.zero-workspace textarea { font-size: 13px; border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px; background: var(--canvas); }
+#orbit-workspace.zero-workspace [role=alert] { padding: 12px; margin: 12px 0; border: 1px solid var(--line); border-left: 3px solid #d93036; border-radius: 6px; }
+#orbit-workspace.zero-workspace [role=status] { padding: 10px 0; color: var(--quiet); }
+#orbit-workspace.zero-workspace .mobile-back { display: none; }
+/* Zero's list/detail panel model, adapted for people and their source records. */
+#orbit-workspace.zero-workspace .correspondence { background: transparent; padding: 0; border: 0; }
+#orbit-workspace.zero-workspace .correspondence > header { padding: 20px 24px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
+#orbit-workspace.zero-workspace .correspondence-layout { grid-template-columns: minmax(220px,290px) minmax(0,1fr); gap: 8px; margin-top: 8px; }
+#orbit-workspace.zero-workspace .correspondence aside { padding: 18px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); min-width: 0; }
+#orbit-workspace.zero-workspace .correspondence aside > label { padding: 0 4px; }
+#orbit-workspace.zero-workspace .search-control { display: flex; align-items: center; gap: 8px; background: var(--canvas); border: 1px solid var(--line); border-radius: 7px; padding-left: 10px; color: var(--quiet); }
+#orbit-workspace.zero-workspace .search-control input { border: 0; background: transparent; min-width: 0; width: 100%; }
+#orbit-workspace.zero-workspace .correspondence aside > button { width: 100%; margin-top: 6px; }
+#orbit-workspace.zero-workspace .correspondence aside li button { flex-direction: row; align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 14px 10px; margin: 2px 0; background: transparent; }
+#orbit-workspace.zero-workspace .correspondence aside button[aria-pressed=true] { background: var(--canvas); color: var(--ink); }
+#orbit-workspace.zero-workspace .person-avatar { flex-shrink: 0; width: 36px; height: 36px; display: inline-grid; place-items: center; border-radius: 50%; color: var(--teal); background: var(--tealsoft); font-size: 12px; font-weight: 600; }
+#orbit-workspace.zero-workspace .person-avatar.large { width: 44px; height: 44px; font-size: 15px; }
+#orbit-workspace.zero-workspace .person-copy { display: flex; flex-direction: column; min-width: 0; text-align: left; gap: 2px; }
+#orbit-workspace.zero-workspace .person-copy > span { font-size: 12px; color: var(--quiet); }
+#orbit-workspace.zero-workspace .person-copy strong { font-size: 13px; font-weight: 600; }
+#orbit-workspace.zero-workspace .correspondence-detail, #orbit-workspace.zero-workspace .correspondence-empty { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 24px; min-width: 0; }
+#orbit-workspace.zero-workspace .correspondence-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 480px; gap: 14px; color: var(--quiet); }
+#orbit-workspace.zero-workspace .correspondence-empty p { max-width: 300px; }
+#orbit-workspace.zero-workspace .person-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+#orbit-workspace.zero-workspace .person-heading p { color: var(--quiet); font-size: 12px; }
+#orbit-workspace.zero-workspace .correspondence-scope { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+#orbit-workspace.zero-workspace .correspondence-scope button { font-size: 12px; }
+#orbit-workspace.zero-workspace .correspondence-filters { display: grid; grid-template-columns: minmax(0,1fr) 145px; gap: 12px; }
+#orbit-workspace.zero-workspace .correspondence-timeline { padding: 0; border: 0; margin-top: 18px; }
+#orbit-workspace.zero-workspace .correspondence-timeline li { padding: 20px 0; margin: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+#orbit-workspace.zero-workspace .entry-meta { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 9px; }
+#orbit-workspace.zero-workspace .source-label { display: flex; align-items: center; gap: 6px; color: var(--quiet); font-size: 11px; }
+#orbit-workspace.zero-workspace .correspondence-timeline h4 button { text-decoration: none; font-size: 15px; font-weight: 600; }
+#orbit-workspace.zero-workspace .correspondence-timeline p { margin: 8px 0; line-height: 1.7; }
+#orbit-workspace.zero-workspace .entry-reason { color: var(--quiet); font-size: 11px; }
+#orbit-workspace.zero-workspace .correspondence-timeline li > .secondary { display: flex; font-size: 11px; margin-top: 10px; padding: 5px 8px; }
+/* Conversation search, messages, and composition share the same panel controls. */
+#orbit-workspace.zero-workspace .chat-conversation { padding: 22px; margin-top: 20px; border: 1px solid var(--line); border-radius: 12px; }
+#orbit-workspace.zero-workspace .chat-search { margin: 16px 0; padding: 12px 16px; background: var(--canvas); border-radius: 9px; }
+#orbit-workspace.zero-workspace .chat-search ul { list-style: none; padding: 0; }
+#orbit-workspace.zero-workspace .chat-search li { padding: 14px 0; border-top: 1px solid var(--line); }
+#orbit-workspace.zero-workspace .chat-search small { display: block; color: var(--quiet); overflow-wrap: anywhere; margin-bottom: 8px; }
+#orbit-workspace.zero-workspace .chat-messages { list-style: none; padding: 0; margin: 16px 0; }
+#orbit-workspace.zero-workspace .chat-messages li { padding: 16px; background: var(--canvas); border-radius: 10px; overflow-wrap: anywhere; }
+#orbit-workspace.zero-workspace .chat-messages strong { display: block; font-size: 12px; font-weight: 500; }
+#orbit-workspace.zero-workspace .chat-messages time { display: block; color: var(--quiet); font-size: 11px; margin-bottom: 8px; }
+#orbit-workspace.zero-workspace .chat-messages button { font-size: 12px; padding: 5px 0; color: var(--teal); }
+#orbit-workspace.zero-workspace .chat-composer { padding-top: 16px; border-top: 1px solid var(--line); }
+/* Mail adopts the same neutral surfaces and mobile reading flow. */
+#orbit-workspace.zero-workspace #orbit-mail-vibrant { --paper: light-dark(#fff,#1a1a1a); --canvas: light-dark(#f5f5f5,#141414); --ink: light-dark(#18181b,#fafafa); --quiet: light-dark(#71717a,#a1a1aa); --line: light-dark(#e4e4e7,#303033); --coral: light-dark(#0066ff,#91b7ff); --coralsoft: light-dark(#eaf2ff,#202f49); --teal: var(--coral); --tealsoft: var(--coralsoft); border-radius: 12px; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .layout { grid-template-columns: 150px minmax(240px, .85fr) minmax(0,1.3fr); }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .mailrow { border-radius: 7px; margin: 3px 6px; width: calc(100% - 12px); border-bottom: 0; gap: 4px; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .mailrow.selected { background: var(--canvas); }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .reader { min-width: 0; overflow-wrap: anywhere; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .toolbar { flex-wrap: wrap; }
+@media (max-width: 1100px) {
+  #orbit-workspace.zero-workspace { grid-template-columns: 72px minmax(0,1fr); }
+  #orbit-workspace.zero-workspace .ws-nav button { justify-content: center; }
+  #orbit-workspace.zero-workspace .ws-nav button span, #orbit-workspace.zero-workspace .nav-caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #orbit-workspace.zero-workspace #orbit-mail-vibrant .layout { grid-template-columns: 130px minmax(200px,.8fr) minmax(0,1fr); }
+}
+@media (max-width: 760px) {
+  #orbit-workspace.zero-workspace { display: flex; flex-direction: column; }
+  #orbit-workspace.zero-workspace .ws-top { padding: 12px 14px; flex-wrap: wrap; gap: 12px; }
+  #orbit-workspace.zero-workspace .ws-brand { flex-wrap: wrap; gap: 8px; }
+  #orbit-workspace.zero-workspace .ws-org { display: flex; margin-left: 8px; font-size: 0; }
+  #orbit-workspace.zero-workspace .ws-brand select { max-width: 180px; }
+  #orbit-workspace.zero-workspace .ws-account { display: flex; margin-left: auto; font-size: 12px; }
+  #orbit-workspace.zero-workspace .ws-nav { flex-direction: row; overflow-x: auto; gap: 4px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  #orbit-workspace.zero-workspace .ws-nav button { flex: 0 0 auto; flex-direction: column; gap: 4px; padding: 8px; min-width: 58px; }
+  #orbit-workspace.zero-workspace .ws-nav button span { position: static; width: auto; height: auto; clip-path: none; overflow: visible; font-size: 10px; }
+  #orbit-workspace.zero-workspace .theme-control { margin: 0; }
+  #orbit-workspace.zero-workspace .workspace-content { padding: 8px; }
+  #orbit-workspace.zero-workspace .ws-page { padding: 18px; min-height: 60dvh; }
+  #orbit-workspace.zero-workspace .correspondence { padding: 0; }
+  #orbit-workspace.zero-workspace .correspondence > header { padding: 18px; }
+  #orbit-workspace.zero-workspace .correspondence-layout { grid-template-columns: minmax(0,1fr); }
+  #orbit-workspace.zero-workspace .correspondence.has-person aside { display: none; }
+  #orbit-workspace.zero-workspace .correspondence-detail { padding: 18px; }
+  #orbit-workspace.zero-workspace .correspondence-empty { display: none; }
+  #orbit-workspace.zero-workspace .mobile-back { display: inline-flex; margin-bottom: 16px; padding-left: 0; color: var(--quiet); }
+  #orbit-workspace.zero-workspace .correspondence-filters { grid-template-columns: minmax(0,1fr); gap: 0; }
+  #orbit-workspace.zero-workspace .chat-conversation { padding: 14px; }
+  #orbit-workspace.zero-workspace .chat-search { padding: 10px; }
+  #orbit-workspace.zero-workspace #orbit-mail-vibrant .layout { display: flex; flex-direction: column; }
+  #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders { display: flex; flex-wrap: wrap; gap: 4px; padding: 12px; }
+  #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders > button { width: auto; }
+  #orbit-workspace.zero-workspace #orbit-mail-vibrant .list { display: block; width: 100%; }
+  #orbit-workspace.zero-workspace #orbit-mail-vibrant .reader { display: none; }
+  #orbit-workspace.zero-workspace #orbit-mail-vibrant.has-message .reader { display: block; padding: 16px; }
+  #orbit-workspace.zero-workspace #orbit-mail-vibrant.has-message :is(.list,.folders) { display: none; }
+}
+#orbit-workspace.zero-workspace .correspondence aside li button { justify-content: flex-start; }
+#orbit-workspace.zero-workspace .correspondence aside { align-self: start; }
+#orbit-workspace.zero-workspace .correspondence-timeline li > small:not(.entry-reason) { color: var(--quiet); }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .folders { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .folders > button { width: 100%; justify-content: flex-start; font-size: 12px; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .folders > button.on { background: var(--paper); font-weight: 600; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .listhead .search { display: flex; flex-direction: column; align-items: stretch; background: transparent; gap: 7px; margin-top: 16px; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .search input { width: 100%; background: var(--canvas); }
+#orbit-workspace.zero-workspace .search-control:focus-within { outline: 2px solid var(--teal); outline-offset: 2px; }
+#orbit-workspace.zero-workspace .search-control input:focus { outline: 0; box-shadow: none; }
+@media(max-width:760px) {
+  #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders { flex-direction: row; }
+  #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders > button { width: auto; }
+}
+#orbit-workspace.zero-workspace .live-calendar .fc { min-width: 0; }
+#orbit-workspace.zero-workspace .live-calendar .fc-toolbar-chunk { min-width: 0; max-width: 100%; }
+#orbit-workspace.zero-workspace .live-calendar .fc-button-group { flex-wrap: wrap; }
+#orbit-workspace.zero-workspace .live-calendar .fc-toolbar { gap: 10px; }
+@media(max-width:760px) {
+  #orbit-workspace.zero-workspace .live-calendar { padding: 12px; }
+  #orbit-workspace.zero-workspace .live-calendar .fc-header-toolbar { flex-direction: column; align-items: flex-start; }
+  #orbit-workspace.zero-workspace .live-calendar .fc-button { padding: 6px 8px; font-size: 12px; }
+}

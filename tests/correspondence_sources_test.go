@@ -70,7 +70,7 @@ func TestCorrespondenceSourcesAndPermissions(t *testing.T) {
 	base := "/api/v1/workspaces/" + w.ID
 	var person schema.Contact
 	status("POST", base+"/contacts", schema.ContactInput{Name: "Person", Email: email}, &person, 201)
-	path := base + "/contacts/" + person.ID + "/correspondence"
+	path := base + "/contacts/" + person.ID + "/loop"
 	file := func(space, name string) string {
 		return insert("INSERT INTO drive_file(workspace_id,name,content_type,size,created_at) VALUES($1,$2,'text/plain',1,'2026-01-01')", space, name)
 	}
@@ -131,7 +131,7 @@ func TestCorrespondenceSourcesAndPermissions(t *testing.T) {
 	var colleague schema.Contact
 	status("POST", base+"/contacts", schema.ContactInput{Name: "Colleague", Email: "colleague@example.com", Company: &org}, &colleague, 201)
 	exec("INSERT INTO event_attendee(event_id,email) VALUES($1,$2)", event, colleague.Email)
-	colleaguePath := base + "/contacts/" + colleague.ID + "/correspondence"
+	colleaguePath := base + "/contacts/" + colleague.ID + "/loop"
 	status("GET", colleaguePath, nil, &timeline, 200)
 	if len(timeline.Items) != 1 || timeline.Items[0].ID != event {
 		t.Fatalf("attendee association: %+v", timeline)

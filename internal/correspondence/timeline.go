@@ -23,7 +23,7 @@ type correspondenceCursor struct {
 }
 
 func Timeline(ctx context.Context, w, id, scope, source string, page paging.Request, browse bool) (schema.CorrespondenceTimeline, error) {
-	result := schema.CorrespondenceTimeline{Items: []schema.CorrespondenceEntry{}}
+	result := schema.CorrespondenceTimeline{Items: []schema.CorrespondenceEntry{}, Notices: []string{}}
 	if err := workspace.RequireMember(ctx, w); err != nil {
 		return result, err
 	}
@@ -88,11 +88,43 @@ func Timeline(ctx context.Context, w, id, scope, source string, page paging.Requ
 	if err != nil {
 		return result, err
 	}
+	scanLimit := 200
+	if page.Search != "" && !browse {
+		scanLimit = 10
+	}
+	notices := map[string]bool{}
+	started := time.Now()
 	for i, m := range rows {
-		if i == 200 {
+		if i > 0 && page.Search != "" && !browse && time.Since(started) > 6*time.Second {
+			previous := rows[i-1]
+			result.NextCursor = paging.Encode(correspondenceCursor{At: previous.At, ID: previous.ID, Source: previous.Source})
 			break
 		}
-		if m.Source != "mail" || Matches(identities, m.FromAddress, m.ToAddress, m.Cc, m.Bcc) {
+		if i == scanLimit {
+			break
+		}
+		include := m.Source != "mail" || Matches(identities, m.FromAddress, m.ToAddress, m.Cc, m.Bcc)
+		if page.Search != "" && !browse && (m.Source == "chat" || m.Source == "document") {
+			metadata := strings.Contains(strings.ToLower(m.Subject+" "+m.Preview), strings.ToLower(page.Search))
+			excerpt, matched, notice := contentMatch(ctx, w, m.ID, m.Source, page.Search)
+			if notice != "" && !notices[notice] {
+				result.Notices = append(result.Notices, notice)
+				notices[notice] = true
+			}
+			include = metadata || matched
+			if matched {
+				m.Preview = excerpt
+			}
+			// Recheck both the person's association and source access after external I/O.
+			visible, err := q.CorrespondenceCandidates(ctx, queries.CorrespondenceCandidatesParams{WorkspaceID: w, ContactID: id, Organization: scope == "organization", Company: c.Company, Viewer: auth.CurrentUser(ctx).ID, SourceFilter: m.Source, TargetID: m.ID, BeforeID: "00000000-0000-0000-0000-000000000000", PageLimit: 1})
+			if err != nil {
+				return result, err
+			}
+			if len(visible) == 0 {
+				include = false
+			}
+		}
+		if include {
 			preview := []rune(strings.Join(strings.Fields(m.Preview), " "))
 			if len(preview) > 220 {
 				preview = append(preview[:220], '…')
@@ -103,12 +135,15 @@ func Timeline(ctx context.Context, w, id, scope, source string, page paging.Requ
 			}
 			result.Items = append(result.Items, schema.CorrespondenceEntry{ID: m.ID, Source: m.Source, ContainerID: m.ContainerID, Reason: m.Reason, Linked: m.Linked, MailboxID: mailboxID, Subject: m.Subject, Preview: string(preview), FromAddress: m.FromAddress, ToAddress: m.ToAddress, Status: m.Status, At: m.At})
 		}
-		if len(result.Items) == int(page.Limit) || i == 199 {
+		if len(result.Items) == int(page.Limit) || i == scanLimit-1 {
 			if i+1 < len(rows) {
 				result.NextCursor = paging.Encode(correspondenceCursor{At: m.At, ID: m.ID, Source: m.Source})
 			}
 			break
 		}
+	}
+	if err := workspace.RequireMember(ctx, w); err != nil {
+		return schema.CorrespondenceTimeline{}, err
 	}
 	return result, nil
 }

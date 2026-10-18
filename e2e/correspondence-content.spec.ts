@@ -1,0 +1,41 @@
+import { expect, test } from '@playwright/test'
+
+test('Correspondence finds document text and drops replaced content', async ({ page }) => {
+  await page.goto('/app')
+  await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Compose', exact: true })).toBeVisible()
+  const base = '/api/v1/workspaces/a0000000-0000-4000-8000-000000000001'
+  const stamp = Date.now(), name = `Content person ${stamp}`, filename = `Agreement ${stamp}.txt`
+  const response = await page.request.post(base + '/contacts', { data: { name, email: `content-${stamp}@example.com`, favorite: false }, headers: { 'Sec-Fetch-Site': 'same-origin' } })
+  expect(response.status()).toBe(201)
+  const person = await response.json()
+  await page.getByRole('button', { name: 'Drive', exact: true }).click()
+  await page.getByLabel('Upload file', { exact: true }).setInputFiles({ name: filename, mimeType: 'text/plain', buffer: Buffer.from('Neutral introduction. '.repeat(100) + 'The orchid bandwidth upgrade is approved.') })
+  await expect(page.getByRole('status')).toHaveText('Upload complete')
+  async function openPerson() {
+    await page.getByRole('button', { name: 'Loop', exact: true }).click()
+    await page.getByLabel('Find a person').fill(name)
+    await page.getByRole('button', { name: new RegExp(name) }).click()
+  }
+  await openPerson()
+  await page.getByText('Link existing item', { exact: true }).click()
+  await page.getByLabel('Find an item').fill(filename)
+  await page.getByRole('button', { name: `Link ${filename}`, exact: true }).click()
+  await expect(page.getByRole('button', { name: filename, exact: true })).toBeVisible()
+  await page.getByLabel('Search Loop').fill('orchid bandwidth')
+  await expect(page.getByText(/Document text:.*orchid bandwidth/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Organization:/ })).toHaveCount(0)
+  await page.getByRole('button', { name: filename, exact: true }).click()
+  await page.getByLabel('Upload new version', { exact: true }).setInputFiles({ name: filename, mimeType: 'text/plain', buffer: Buffer.from('Replacement contains only the sapphire migration.') })
+  await expect(page.getByRole('button', { name: 'Download version 2', exact: true })).toBeVisible()
+  await openPerson()
+  await page.getByLabel('Search Loop').fill('orchid bandwidth')
+  await expect(page.getByText('No items match your search.', { exact: true })).toBeVisible()
+  await page.getByLabel('Search Loop').fill('sapphire migration')
+  await expect(page.getByText(/Document text:.*sapphire migration/)).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect((await page.request.delete(base + '/contacts/' + person.id, { headers: { 'Sec-Fetch-Site': 'same-origin' } })).status()).toBe(204)
+})

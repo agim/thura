@@ -17,7 +17,7 @@ test('Correspondence links source records and opens the existing apps', async ({
   await page.getByLabel('Upload file', { exact: true }).setInputFiles({ name: fileName, mimeType: 'text/plain', buffer: Buffer.from('Correspondence private document') })
   await expect(page.getByRole('status')).toHaveText('Upload complete')
   async function openPerson() {
-    await page.getByRole('button', { name: 'Correspondence', exact: true }).click()
+    await page.getByRole('button', { name: 'Loop', exact: true }).click()
     await page.getByLabel('Find a person').fill(name)
     await page.getByRole('button', { name: new RegExp(name) }).click()
   }

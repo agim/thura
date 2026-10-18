@@ -63,5 +63,10 @@
     "title": "Set up Thura",
     "description": "Private server setup and administration.",
     "noIndex": true
+  },
+  "/app/loop": {
+    "title": "Loop \u00b7 Thura",
+    "description": "Stay in the loop. Find messages, documents, and meetings around a person.",
+    "noIndex": true
   }
 }

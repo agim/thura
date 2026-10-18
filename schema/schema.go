@@ -3830,6 +3830,7 @@ func (v CorrespondenceEntry) Validate() error {
 
 // CorrespondenceTimeline is an API type.
 type CorrespondenceTimeline struct {
+	Notices    []string              `json:"notices"`
 	Contact    Contact               `json:"contact"`
 	Items      []CorrespondenceEntry `json:"items"`
 	NextCursor string                `json:"nextCursor"`

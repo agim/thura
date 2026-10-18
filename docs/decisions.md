@@ -219,3 +219,15 @@ Why: Thura changes color-scheme at runtime. The default CSS target lowered light
 ## 2026-10-17: Correspondence source records and explicit associations
 
 Why: Matrix owns chat messages, while Thura owns conversation, Drive, meeting, and calendar metadata. A unified source-record query supports existing exact mail matching, named file recipients, local participants, and calendar invitees without inventing message or attendance history. Explicit contact/source links cover external relationships and unrelated project documents; every read rechecks source permissions. A tuple cursor includes source to distinguish equal timestamps/IDs across tables. Single-record metadata endpoints let existing apps open older items beyond their recent-list limits. The person remains primary and organization remains an optional current-contact rollup. Source content indexing and automatic suggestions are separate work.
+
+## 2026-10-17: Live person-scoped content search
+
+Search Matrix using the current virtual user's native room-filtered search endpoint, never the application-service bot or a shared message index. Do not join rooms during search. Use live current-version Drive text extraction with checksums, bounded ZIP/XML parsing, and an optional timed Poppler PDF process. This avoids retaining stale private text after edits, replacement, or access changes. Keep one timeline entry per source, with excerpts and Chat search handoff; cap candidate scanning and surface partial coverage. Matrix endpoint contract: https://spec.matrix.org/v1.16/client-server-api/#searching.
+
+## 2026-10-17 — Zero-based communication workspace
+
+The user selected Mail-0/Zero as the visual foundation and explicitly rejected admin dashboard templates. Adapt Zero's neutral light/dark palette, compact navigation, separated list/reading panels, and mobile detail/back flow to the existing React application. The source reference is commit 64c5480c341750578da0746f2db9ad84da686334; its MIT notice is retained in docs/licenses/zero-MIT.txt. The application-specific stylesheet is scoped to the live workspace. Thura keeps its own backend, authentication, source permissions, and person-first Correspondence model; no Zero AI services, provider integrations, or account system are imported.
+
+## 2026-10-17 — Loop product name
+
+The user selected Loop as the short, brandable feature name. Navigation, headings, contact actions, search labels, and current documentation use Loop. The feature route is /app/loop, and contact APIs use /contacts/{id}/loop with matching generated client operation names. Documentation lives at docs/loop.md. Internal database identifiers remain unchanged.
