@@ -1,3 +1,4 @@
+import { chooseOption } from './controls'
 import { expect, test, type Page } from '@playwright/test'
 
 const base = '/api/v1/workspaces/a0000000-0000-4000-8000-000000000001'
@@ -26,18 +27,23 @@ test('workspace managers can page and filter durable activity on a phone', async
     })
     await page.getByText('Workspace activity', { exact: true }).click()
     const history = page.getByRole('region', { name: 'Workspace activity', exact: true })
-    await history.getByRole('combobox', { name: 'Activity filter', exact: true }).selectOption('invitation.create')
-    await history.getByRole('combobox', { name: 'Outcome filter', exact: true }).selectOption('ok')
+    await chooseOption(history.getByRole('combobox', { name: 'Activity filter', exact: true }), 'invitation.create')
+    await chooseOption(history.getByRole('combobox', { name: 'Outcome filter', exact: true }), 'ok')
     await expect(history.locator('ol > li')).toHaveCount(2)
     await history.getByRole('button', { name: 'Load earlier activity', exact: true }).click()
     await expect.poll(() => history.locator('ol > li').count()).toBeGreaterThanOrEqual(3)
     expect(await history.locator('ol > li').count()).toBeLessThanOrEqual(4)
     // Open details and verify that the new actions identify their durable rows.
-    await history.getByText('Activity details', { exact: true }).evaluateAll(elements => {
-      for (const element of elements) (element.parentElement as HTMLDetailsElement).open = true
-    })
-    for (const id of created) await expect(history.getByText('invitation/' + id, { exact: true })).toBeVisible()
-    await history.getByRole('combobox', { name: 'Outcome filter', exact: true }).selectOption('failed')
+    const resources: string[] = []
+    for (const button of await history.getByRole('button', { name: 'Activity details', exact: true }).all()) {
+      await button.click()
+      const details = page.getByRole('dialog', { name: 'Activity details', exact: true })
+      await expect(details).toBeVisible()
+      resources.push(await details.locator('dd').first().innerText())
+      await details.getByRole('button', { name: 'Close Activity details', exact: true }).click()
+    }
+    for (const id of created) expect(resources).toContain('invitation/' + id)
+    await chooseOption(history.getByRole('combobox', { name: 'Outcome filter', exact: true }), 'failed')
     await expect(history.getByText('No activity matches these filters.', { exact: true })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
     await page.reload()

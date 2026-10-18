@@ -1,86 +1,90 @@
+import { chooseOption, openSettings } from './controls'
 import { expect, test, type Page } from '@playwright/test'
 import { expectNoSidewaysScroll } from './layout'
 
-async function openApp(page: Page, name: string) {
-  await page.getByRole('navigation', { name: 'Workspace applications' }).getByRole('button', { name, exact: true }).click()
+async function signIn(page: Page, path = '/app') {
+  await page.goto(path)
+  await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('navigation', { name: 'Workspace applications' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Workspace applications' }).getByRole('link')).toHaveText(['Inbox', 'Calendar', 'Contacts', 'Loop', 'Drive', 'Chat', 'Meet'])
 }
 
-test('all six preview apps render and Contacts opens Chat', async ({ page }) => {
+test('the retired workspace redirects to the signed-in app without a sample workspace', async ({ page }) => {
+  await signIn(page, '/workspace')
+  await expect(page).toHaveURL(/\/app$/)
+  await expect(page.getByText('Preview workspace', { exact: false })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'New message', exact: true })).toBeVisible()
+})
+
+test('all seven apps have real links and direct URLs', async ({ page }) => {
   const errors: string[] = []
-  page.on('pageerror', error => errors.push(error.message))
-  await page.goto('/workspace')
-  await expect(page.getByRole('note')).toContainText('Sample data')
-  for (const name of ['Chat', 'Calendar', 'Drive', 'Contacts', 'Meet']) {
-    await openApp(page, name)
-    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
+  page.on('pageerror', e => errors.push(e.message))
+  await signIn(page)
+  for (const name of ['Mail', 'Contacts', 'Loop', 'Drive', 'Calendar', 'Chat', 'Meet']) {
+    const link = page.getByRole('navigation', { name: 'Workspace applications' }).getByRole('link', { name: name === 'Mail' ? 'Inbox' : name, exact: true })
+    await link.click()
+    await expect(page).toHaveURL(new RegExp('/app/' + name.toLowerCase() + '$'))
+    await expect(link).toHaveAttribute('aria-current', 'page')
+    await page.reload()
+    await expect(page.getByRole('heading', { name: name === 'Mail' ? 'Inbox' : name, exact: true })).toBeVisible()
   }
-  await openApp(page, 'Contacts')
-  await page.getByRole('button', { name: 'Message', exact: true }).click()
-  await page.getByRole('textbox', { name: 'Message Sarah Chen' }).fill('Hello from Thura')
-  await page.getByRole('button', { name: 'Send', exact: true }).click()
-  await expect(page.getByText('Hello from Thura')).toBeVisible()
   expect(errors).toEqual([])
 })
 
-test('preview composer validates and saves locally without delivering mail', async ({ page }) => {
-  await page.goto('/workspace')
-  await page.getByRole('button', { name: 'Compose', exact: true }).click()
-  await page.getByRole('button', { name: 'Send', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('valid recipient')
-  await page.getByRole('textbox', { name: 'To', exact: true }).fill('test@example.com')
-  await page.getByRole('textbox', { name: 'Subject', exact: true }).fill('A new chapter')
-  await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Ready for launch.')
-  await page.getByRole('button', { name: 'Send', exact: true }).click()
-  await expect(page.getByText('Message added to Sent · demo only')).toBeVisible()
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('thura:demo:v1:mail') ?? '[]'))
-  expect(stored.some((m: { subject: string; folder: string }) => m.subject === 'A new chapter' && m.folder === 'Sent')).toBe(true)
+test('browser back and forward restore the selected app', async ({ page }) => {
+  await signIn(page, '/app/mail')
+  await page.getByRole('link', { name: 'Contacts', exact: true }).click()
+  await page.getByRole('link', { name: 'Drive', exact: true }).click()
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Contacts', exact: true })).toBeVisible()
+  await page.goForward()
+  await expect(page.getByRole('heading', { name: 'Drive', exact: true })).toBeVisible()
 })
 
-test('Calendar carries event details to Meet', async ({ page }) => {
-  await page.goto('/workspace')
-  await openApp(page, 'Calendar')
-  await page.getByRole('button', { name: 'Create event', exact: true }).click()
-  await page.getByRole('textbox', { name: 'Event title' }).fill('Project kickoff')
-  await page.getByRole('button', { name: 'Save event', exact: true }).click()
-  await page.getByRole('button', { name: 'Project kickoff 9am' }).click()
-  await page.getByRole('button', { name: 'Open meeting' }).click()
-  await expect(page.getByRole('textbox', { name: 'Meeting name' })).toHaveValue('project-kickoff')
-  await page.getByRole('button', { name: 'Join meeting' }).click()
-  await expect(page.getByRole('button', { name: 'Leave meeting' })).toBeVisible()
+test('header search opens a matching person in Loop', async ({ page }) => {
+  await signIn(page, '/app/contacts')
+  const name = `Search person ${Date.now()}`
+  await page.getByRole('button', { name: 'New contact', exact: true }).click()
+  await page.getByLabel('Name', { exact: true }).fill(name)
+  await page.getByLabel('Email', { exact: true }).fill('search-person@example.com')
+  await page.getByRole('button', { name: 'Save contact', exact: true }).click()
+  await page.getByRole('link', { name: 'Calendar', exact: true }).click()
+  await page.getByLabel('Search people and files').fill(name)
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  const results = page.getByRole('dialog')
+  await expect(results).toBeVisible()
+  await results.getByRole('button', { name: new RegExp('^' + name) }).click()
+  await expect(page).toHaveURL(/\/app\/loop$/)
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
 })
 
-test('Drive moves a file to Trash and restores it', async ({ page }) => {
-  await page.goto('/workspace')
-  await openApp(page, 'Drive')
-  await page.getByRole('button', { name: 'Open Launch brief.pdf' }).click()
-  await page.getByRole('button', { name: 'Move to trash' }).click()
-  await expect(page.getByRole('button', { name: 'Open Launch brief.pdf' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Trash', exact: true }).click()
-  await page.getByRole('button', { name: 'Open Launch brief.pdf' }).click()
-  await page.getByRole('button', { name: 'Restore', exact: true }).click()
-  const trash = await page.evaluate(() => JSON.parse(localStorage.getItem('thura:demo:v1:files') ?? '[]').find((f: { id: number }) => f.id === 1).trash)
-  expect(trash).toBe(false)
+test('account and secondary controls use dismissible dialogs', async ({ page }) => {
+  await signIn(page, '/app/drive')
+  await expect(page.getByLabel('Workspace', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Account menu', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Account', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Workspace', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Close Account', exact: true }).press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('button', { name: 'New', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'New', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Close New', exact: true }).click()
+  await expect(page.locator('details')).toHaveCount(0)
 })
 
-test('Contacts and appearance persist across a reload', async ({ page }) => {
-  await page.goto('/workspace')
-  await openApp(page, 'Contacts')
-  await page.getByRole('button', { name: 'Add contact' }).click()
-  await page.getByRole('textbox', { name: 'Full name' }).fill('New Person')
-  await page.getByRole('textbox', { name: 'Email', exact: true }).fill('new@example.com')
-  await page.getByRole('button', { name: 'Save contact' }).click()
-  await page.getByRole('button', { name: 'Theme: system. Click to change' }).click()
-  await page.reload()
-  await expect(page.getByRole('heading', { name: 'New Person' }).first()).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Theme: light. Click to change' })).toBeVisible()
-})
-
-test('preview apps fit a phone', async ({ page }) => {
+test('top app bar and dialogs fit a phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/workspace')
-  await expect(page.getByRole('button', { name: 'Compose', exact: true })).toBeVisible()
-  for (const name of ['Mail', 'Chat', 'Calendar', 'Drive', 'Contacts', 'Meet']) {
-    await openApp(page, name)
+  await signIn(page, '/app/calendar')
+  const nav = page.getByRole('navigation', { name: 'Workspace applications' })
+  expect((await nav.boundingBox())!.y).toBeLessThan(100)
+  await openSettings(page, 'calendar')
+  await expect(page.getByRole('heading', { name: 'Calendar settings', exact: true })).toBeInViewport()
+  await expectNoSidewaysScroll(page)
+  await page.getByRole('navigation', { name: 'Workspace applications' }).getByRole('link', { name: 'Calendar', exact: true }).click()
+  for (const name of ['Mail', 'Contacts', 'Loop', 'Drive', 'Calendar', 'Chat', 'Meet']) {
+    await nav.getByRole('link', { name: name === 'Mail' ? 'Inbox' : name, exact: true }).click()
     await expectNoSidewaysScroll(page)
   }
 })
@@ -93,4 +97,54 @@ test('real Contacts requires an invited account', async ({ page }) => {
   await page.getByLabel('Password', { exact: true }).fill('uninvited fake password 8293')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('alert')).toBeVisible()
+})
+
+test('custom menus and date picker support keyboard input without browser-native controls', async ({ page }) => {
+  await signIn(page, '/app/drive')
+  const sort = page.getByRole('combobox', { name: 'Sort files', exact: true })
+  await sort.focus()
+  await sort.press('ArrowDown')
+  await expect(page.getByRole('listbox')).toBeVisible()
+  await sort.press('End')
+  await sort.press('Enter')
+  await expect(sort).toHaveAttribute('data-value', 'size')
+  await expect(page.getByRole('listbox')).toHaveCount(0)
+  await page.getByRole('link', { name: 'Calendar', exact: true }).click()
+  await page.getByRole('button', { name: 'New event', exact: true }).click()
+  await page.getByRole('button', { name: 'Choose Starts at', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Choose Starts at', exact: true })
+  await expect(picker).toBeVisible()
+  await picker.getByRole('button', { name: 'Next month', exact: true }).click()
+  const chosen = new Date(); chosen.setDate(1); chosen.setMonth(chosen.getMonth() + 1)
+  const label = chosen.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  await picker.getByRole('button', { name: label, exact: true }).click()
+  await chooseOption(picker.getByRole('combobox', { name: 'Time', exact: true }), { label: '2:30 PM' })
+  await picker.getByRole('button', { name: 'Done', exact: true }).click()
+  const date = `${chosen.getFullYear()}-${String(chosen.getMonth()+1).padStart(2,'0')}-01`
+  await expect(page.getByLabel('Starts at', { exact: true })).toHaveValue(new Date(`${date}T14:30`).toLocaleDateString('en-US', { month:'short',day:'numeric',year:'numeric' }) + ', 2:30 PM')
+  await expect(page.locator('select,input[type="date"],input[type="datetime-local"],input[type="time"]')).toHaveCount(0)
+})
+
+test('all app headers share typography, placement and the same New action', async ({ page }) => {
+  await signIn(page)
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+    await page.setViewportSize(viewport)
+    let baseline: { x: number; y: number; width: number; height: number } | undefined
+    for (const name of ['Mail', 'Contacts', 'Loop', 'Drive', 'Calendar', 'Chat', 'Meet']) {
+      await page.getByRole('navigation', { name: 'Workspace applications' }).getByRole('link', { name: name === 'Mail' ? 'Inbox' : name, exact: true }).click()
+      const header = page.locator('.app-page-header')
+      await expect(header).toBeVisible()
+      const action = header.getByRole('button')
+      await expect(action).toHaveText('New')
+      await expect(action.locator('svg')).toHaveCount(1)
+      await expect(header.getByRole('heading')).toHaveCSS('font-size', '20px')
+      const box = (await header.boundingBox())!
+      const actionBox = (await action.boundingBox())!
+      expect(Math.round(actionBox.width)).toBe(100)
+      expect(Math.round(actionBox.height)).toBe(44)
+      if (baseline) { expect(Math.abs(box.x-baseline.x)).toBeLessThanOrEqual(1); expect(Math.abs(box.y-baseline.y)).toBeLessThanOrEqual(1); expect(Math.abs(box.width-baseline.width)).toBeLessThanOrEqual(1) }
+      else baseline = box
+      await expectNoSidewaysScroll(page)
+    }
+  }
 })

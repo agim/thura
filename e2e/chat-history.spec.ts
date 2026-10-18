@@ -21,7 +21,7 @@ test('Chat retains windows, bridges a reconnect gap, and anchors older paging', 
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Chat', exact: true }).click()
+  await page.getByRole('link', { name: 'Chat', exact: true }).click()
   const messages = page.getByRole('list', { name: 'Messages', exact: true })
   await expect(messages.getByRole('listitem')).toHaveCount(2)
   let interruptions = 0
@@ -71,7 +71,7 @@ test('Chat bounds reconnect work and keeps the remaining gap available across po
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Chat', exact: true }).click()
+  await page.getByRole('link', { name: 'Chat', exact: true }).click()
   const messages = page.getByRole('list', { name: 'Messages', exact: true })
   await expect(messages.getByRole('listitem')).toHaveCount(2)
   const bounded = page.waitForResponse(response => new URL(response.url()).searchParams.get('from') === 'gap-20')

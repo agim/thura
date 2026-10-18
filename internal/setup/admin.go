@@ -1,11 +1,14 @@
 package setup
 
 import (
+	_ "embed"
 	"fmt"
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/admin"
 	"github.com/agim/lidza/packs/db"
 	"github.com/google/uuid"
+	"io"
+	"log/slog"
 	"net/http"
 	q "thura/db/queries/gen"
 )
@@ -20,8 +23,17 @@ type View struct {
 	MailCheckID, StorageCheckID                 string
 }
 
+//go:embed admin-controls.js
+var adminControls string
+
 func Page() admin.Page {
-	return admin.Page{Name: "Server setup", Path: "setup", Icon: "settings", Template: "setup.html", Data: func(r *http.Request) (any, error) {
+	return admin.Page{Name: "Server setup", Path: "setup", Icon: "settings", Template: "setup.html", Downloads: map[string]http.HandlerFunc{"controls.js": func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if _, err := io.WriteString(w, adminControls); err != nil {
+			slog.WarnContext(r.Context(), "serve setup controls", "error", err)
+		}
+	}}, Data: func(r *http.Request) (any, error) {
 		row, e := q.New(db.From(r.Context())).GetServerSetup(r.Context())
 		if e != nil {
 			return nil, e

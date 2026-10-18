@@ -51,3 +51,9 @@ never in an agent's local memory.
 - 2026-10-17: New features must follow the existing Thura design patterns, including shared workspace theme tokens, controls, responsive layouts, and loading/error states.
 
 - 2026-10-17: The person-first correspondence feature is branded Loop ("Stay in the loop"). Keep it distinct from Contacts. Use /app/loop and /contacts/{id}/loop routes; internal database identifiers remain stable. The user selected Zero as the UI reference and rejected Shadcn Admin.
+- 2026-10-18: Use one live application: `/workspace` redirects to `/app`, and each subapp has its own `/app/<name>` URL. Main navigation belongs in the topbar; local app controls belong in one sidebar. Keep primary content visible on the first screen, avoid duplicate search/hero/root headings, and use dialogs for secondary tools rather than expandable sections. Verify actual desktop and phone screens, not only tests.
+
+- 2026-10-18: Keep typography, icons, forms, headers, sidebars, buttons and panels consistent across apps. Configuration belongs on Settings pages. Mailbox/mobile folder switching belongs in the user menu. Use Thura-styled menus, date/time pickers, file controls and confirmations rather than browser-native interfaces.
+
+- 2026-10-18: App landing headers must reuse `AppPageHeader` and `NewAction` (visible "+ New", contextual accessible name). Main menu order is Inbox, Calendar, Contacts, Loop, Drive, Chat, Meet.
+- 2026-10-18: Display dates in readable English (Oct 19, 2026) and times with AM/PM. Use the shared custom DateTimeControl and displayDate helper; ISO values belong at API boundaries, not in visible date fields.

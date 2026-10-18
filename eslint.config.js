@@ -24,5 +24,6 @@ export default tseslint.config(
   {
     files: ['**/*.{ts,tsx,js}'],
     languageOptions: { globals: globals.browser },
+    rules: { 'jsx-a11y/label-has-associated-control': ['error', { controlComponents: ['SelectControl', 'DateTimeControl', 'FileControl'], depth: 3 }] },
   },
 )

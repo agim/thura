@@ -1,3 +1,4 @@
+import { openSettings } from './controls'
 import { createHmac } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 
@@ -6,7 +7,7 @@ test('person-first correspondence supports private contacts, organization rollup
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Compose', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New message', exact: true })).toBeVisible()
   const base = '/api/v1/workspaces/a0000000-0000-4000-8000-000000000001'
   const unique = Date.now()
   const name = `Personal correspondent ${unique}`
@@ -22,12 +23,16 @@ test('person-first correspondence supports private contacts, organization rollup
   const signature = createHmac('sha256', 'synthetic-browser-reader-secret-at-least-32-characters').update(`${stamp}.${delivery}.`).update(raw).digest('hex')
   const received = await page.request.post('/api/v1/inbound/' + box.id, { data: raw, headers: { 'Content-Type': 'message/rfc822', 'X-Thura-Timestamp': stamp, 'X-Thura-Delivery': delivery, 'X-Thura-Signature': signature } })
   expect(received.status()).toBe(200)
-  await page.getByRole('button', { name: 'Loop', exact: true }).click()
+  await page.getByRole('link', { name: 'Loop', exact: true }).click()
   const workspace = page.locator('#orbit-workspace')
   await expect(workspace).toHaveCSS('background-color', 'rgb(245, 245, 245)')
+  await openSettings(page)
   await page.getByRole('button', { name: 'Light', exact: true }).click()
+  await page.goBack()
   await expect(workspace).toHaveCSS('background-color', 'rgb(20, 20, 20)')
+  await openSettings(page)
   await page.getByRole('button', { name: 'Dark', exact: true }).click()
+  await page.goBack()
   await expect(workspace).toHaveCSS('background-color', 'rgb(245, 245, 245)')
   await page.getByLabel('Find a person').fill(name)
   await page.getByRole('button', { name: new RegExp(name) }).click()
@@ -35,9 +40,13 @@ test('person-first correspondence supports private contacts, organization rollup
   await expect(page.getByRole('button', { name: /^Organization:/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: subject, exact: true })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('correspondence-light.png'), fullPage: true })
+  await openSettings(page)
   await page.getByRole('button', { name: 'Light', exact: true }).click()
+  await page.goBack()
   await page.screenshot({ path: testInfo.outputPath('correspondence-dark.png'), fullPage: true })
+  await openSettings(page)
   await page.getByRole('button', { name: 'Dark', exact: true }).click()
+  await page.goBack()
   await page.getByLabel('Search Loop').fill('no matching text')
   await expect(page.getByText('No items match your search.')).toBeVisible()
   await page.getByLabel('Search Loop').fill('searchable')
@@ -47,10 +56,10 @@ test('person-first correspondence supports private contacts, organization rollup
   await page.screenshot({ path: testInfo.outputPath('correspondence-mobile.png'), fullPage: true })
   await page.getByRole('button', { name: subject, exact: true }).click()
   await expect(page.getByRole('heading', { name: subject, exact: true })).toBeVisible()
-  await expect(page.getByText('Personal history searchable here.', { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Reading pane' }).getByText('Personal history searchable here.', { exact: true })).toBeVisible()
   const updated = await page.request.patch(base + '/contacts/' + contact.id, { data: { name, email, company: 'Charm City Networks', favorite: false }, headers: { 'Sec-Fetch-Site': 'same-origin' } })
   expect(updated.status()).toBe(200)
-  await page.getByRole('button', { name: 'Loop', exact: true }).click()
+  await page.getByRole('link', { name: 'Loop', exact: true }).click()
   await page.getByLabel('Find a person').fill(name)
   await page.getByRole('button', { name: new RegExp(name) }).click()
   await page.getByRole('button', { name: 'Organization: Charm City Networks', exact: true }).click()

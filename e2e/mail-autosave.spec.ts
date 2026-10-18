@@ -5,7 +5,7 @@ async function compose(page: Page) {
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Compose', exact: true }).click()
+  await page.getByRole('button', { name: 'New message', exact: true }).click()
 }
 
 test('autosave serializes slow requests and persists the newest edits across reload', async ({ page }) => {

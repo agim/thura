@@ -1,32 +1,35 @@
-import { CompactDisclosure } from './CompactDisclosure'
-import { useEffect, useState, type FormEvent } from 'react'
+import { DetailBack } from './DetailBack'
+import { AppPageHeader, NewAction } from './AppPageHeader'
+import { DateTimeControl } from './DateTimeControl'
+import { ModalAction } from './ModalAction'
+import { useEffect, useState, useRef, type FormEvent } from 'react'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type MailItem, type MailFolder, type DraftInput } from '@lidza/client'
 import { downloadContent } from '../lib/download'
 import { RecipientInput } from './RecipientInput'
 import { DraftAutosave } from '../lib/draft-autosave'
-import { X, Inbox, FilePenLine, Send, Archive, ShieldAlert, Trash2, PenLine } from 'lucide-react'
+import { X, Inbox, FilePenLine, Send, Archive, ShieldAlert, Trash2, Paperclip, Star } from 'lucide-react'
 const folderIcons = { inbox: Inbox, drafts: FilePenLine, sent: Send, archive: Archive, spam: ShieldAlert, trash: Trash2 }
 import { MailReader } from './MailReader'
-import { MailOrganization, MailSignature, MailConversation } from './MailTools'
+import { MailOrganization, MailLabelFilter, MailConversation } from './MailTools'
 
-export function LiveMail({ workspaceId, initialDraft, initialMessage }: { workspaceId: string; initialDraft?: MailItem; initialMessage?: { id: string; mailboxId: string } }) {
+export function LiveMail({ workspaceId, initialDraft, initialMessage, search, mailboxId: chosenMailbox, folder, onFolderChange, resetToken }: { workspaceId: string; search: string; mailboxId: string; folder: MailFolder; onFolderChange: (folder: MailFolder) => void; resetToken: number; initialDraft?: MailItem; initialMessage?: { id: string; mailboxId: string } }) {
   const boxes = useQuery({ queryKey: ['mailboxes', workspaceId], queryFn: () => api.listMailboxes({ workspaceId }) })
-  const [chosen, setChosen] = useState(initialMessage?.mailboxId ?? initialDraft?.mailboxId ?? '')
+  const chosen = initialMessage?.mailboxId ?? initialDraft?.mailboxId ?? chosenMailbox
   const box = boxes.data?.items.find(b => b.id === chosen) ?? boxes.data?.items[0]
   if (boxes.isPending) return <p role="status">Loading mailboxes…</p>
   if (boxes.isError) return <p role="alert">{boxes.error.message}</p>
   if (!box) return <div className="ws-page"><h2>Mail</h2><p>Your workspace has no mailbox yet. An operator must assign its sending address and provider.</p></div>
-  return <div><label className="mailbox-picker">Mailbox<select value={box.id} onChange={e => setChosen(e.target.value)}>{boxes.data?.items.map(b => <option value={b.id} key={b.id}>{b.name} · {b.address}</option>)}</select></label><MailView initialMessageId={initialMessage?.mailboxId === box.id ? initialMessage.id : undefined} key={box.id} workspaceId={workspaceId} mailboxId={box.id} signature={box.signature} initialDraft={initialDraft?.mailboxId === box.id ? initialDraft : undefined} /></div>
+  return <div className="mail-app"><MailView folder={folder} setFolder={onFolderChange} resetToken={resetToken} query={search} initialMessageId={initialMessage?.mailboxId === box.id ? initialMessage.id : undefined} key={box.id} workspaceId={workspaceId} mailboxId={box.id} initialDraft={initialDraft?.mailboxId === box.id ? initialDraft : undefined} /></div>
 }
 
-function MailView({ workspaceId, mailboxId, signature, initialDraft, initialMessageId }: { workspaceId: string; mailboxId: string; signature: string; initialDraft?: MailItem; initialMessageId?: string }) {
+function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, query, folder, setFolder, resetToken }: { workspaceId: string; query: string; folder: MailFolder; setFolder: (folder: MailFolder) => void; resetToken: number; mailboxId: string; initialDraft?: MailItem; initialMessageId?: string }) {
   const client = useQueryClient()
-  const [folder, setFolder] = useState<MailFolder>(initialDraft ? 'drafts' : 'inbox')
-  const [query, setQuery] = useState('')
   const [labelId, setLabelId] = useState('')
   const [selected, setSelected] = useState(initialMessageId ?? initialDraft?.id ?? '')
   const [editing, setEditing] = useState<MailItem | null>(initialDraft ?? null)
+  const previousReset = useRef(resetToken)
+  useEffect(() => { if (previousReset.current !== resetToken) { previousReset.current = resetToken; setSelected(''); setEditing(null) } }, [resetToken])
   const [notice, setNotice] = useState('')
   const [readerError, setReaderError] = useState('')
   const list = useInfiniteQuery({ queryKey: ['mail', mailboxId, folder, query, labelId], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listMail({ workspaceId, mailboxId }, { query: { folder, labelId, search: query, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined, refetchInterval: 5000 })
@@ -46,29 +49,30 @@ function MailView({ workspaceId, mailboxId, signature, initialDraft, initialMess
       setEditing(i); setSelected(i.id); setFolder('drafts'); await refresh()
     } catch (e) { setReaderError(String(e)) }
   }
-  return <div id="orbit-mail-vibrant" className={selected ? 'has-message' : ''}>
+  return <div id="orbit-mail-vibrant" className={selected ? 'has-message' : ''}><AppPageHeader title={folder[0].toUpperCase() + folder.slice(1)} action={<NewAction label="New message" disabled={compose.isPending} onClick={() => compose.mutate()} />} />
     {(failure || readerError) && <p role="alert" className="inlinepanel">{failure?.message || readerError}</p>}
     <div className="layout">
-      <aside className="folders"><label className="mobile-folder-picker">Folder<select aria-label="Folder" value={folder} onChange={e => { setFolder(e.target.value as MailFolder); setSelected(''); setEditing(null) }}>{(['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as MailFolder[]).map(f => <option key={f} value={f}>{f[0].toUpperCase() + f.slice(1)}</option>)}</select></label><button className="mainaction" disabled={compose.isPending} onClick={() => compose.mutate()}><PenLine size={16} aria-hidden="true" />Compose</button>{(['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as MailFolder[]).map(f => <button className={`folder-button ${folder === f ? 'on' : ''}`} key={f} onClick={() => { setFolder(f); setSelected(''); setEditing(null) }}>{(() => { const Icon = folderIcons[f]; return <Icon size={16} aria-hidden="true" /> })()}{f[0].toUpperCase() + f.slice(1)}</button>)}<CompactDisclosure label="Mail options"><MailOrganization scope={{ workspaceId, mailboxId }} selected={selected} filter={labelId} onFilter={setLabelId} /><MailSignature scope={{ workspaceId, mailboxId }} signature={signature} /></CompactDisclosure></aside>
-      <section className="list" aria-label="Messages"><div className="listhead"><h2>{folder[0].toUpperCase() + folder.slice(1)}</h2><label className="search">Search mail<input value={query} onChange={e => setQuery(e.target.value)} /></label></div>
+      <aside className="folders">{(['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as MailFolder[]).map(f => <button className={`folder-button ${folder === f ? 'on' : ''}`} key={f} onClick={() => { setFolder(f); setSelected(''); setEditing(null) }}>{(() => { const Icon = folderIcons[f]; return <Icon size={16} aria-hidden="true" /> })()}{f[0].toUpperCase() + f.slice(1)}</button>)}<MailLabelFilter scope={{ workspaceId, mailboxId }} value={labelId} onChange={setLabelId} /></aside>
+      <section className="list" aria-label="Messages">
         {list.isPending && <p role="status" className="empty">Loading messages…</p>}
         {list.data && visible.length === 0 && <p className="empty">No messages in this view.</p>}
-        {visible.map(i => <button className={`mailrow ${selected === i.id ? 'selected' : ''}`} key={i.id} onClick={() => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null); setReaderError(''); if (i.unread) flags.mutate({ id: i.id, values: { unread: false } }) }}><span className="sendername">{folder === 'inbox' ? i.fromAddress : i.toAddress || 'No recipients'}</span><span className="subject">{i.subject || '(No subject)'}</span><span className="small quiet">{i.status === 'captured' ? 'Captured locally · not delivered' : i.status}{i.starred ? ' · ★' : ''}</span></button>)}
+        {visible.map(i => <button className={`mailrow ${i.unread ? 'unread' : ''} ${selected === i.id ? 'selected' : ''}`} key={i.id} onClick={() => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null); setReaderError(''); if (i.unread) flags.mutate({ id: i.id, values: { unread: false } }) }}><span className="mail-avatar" aria-hidden="true">{(folder === 'inbox' ? i.fromAddress : i.toAddress || 'D').slice(0, 1).toUpperCase()}</span><span className="sendername">{folder === 'inbox' ? i.fromAddress : i.toAddress || 'No recipients'}</span><span className="subject"><span>{i.subject || '(No subject)'}</span><small className="mail-snippet">{i.textBody.slice(0, 160)}</small></span><time className="mail-date" dateTime={i.updatedAt}>{new Date(i.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time><span className="small quiet">{i.status === 'captured' ? 'Captured locally · not delivered' : i.status}{i.starred ? ' · ★' : ''}</span></button>)}
         {list.hasNextPage && <button disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>Load more messages</button>}
-        <p className="small quiet p-3">{visible.length} messages loaded. Search covers this folder.</p>
+        <p className="mail-count">{visible.length} {visible.length === 1 ? 'message' : 'messages'}{list.hasNextPage ? ' loaded' : ''}</p>
       </section>
-      <section className="reader" aria-label="Reading pane"><button className="mobile-back" onClick={() => { setSelected(''); setEditing(null) }}>Back to messages</button>
+      <section className="reader" aria-label="Reading pane"><div className="detail-return-row"><DetailBack className="mobile-back" onClick={() => { setSelected(''); setEditing(null) }}>Back to messages</DetailBack>{selected && <MailOrganization scope={{ workspaceId, mailboxId }} selected={selected} filter={labelId} onFilter={setLabelId} />}</div>
         {editing ? <DraftEditor key={editing.id} item={editing} workspaceId={workspaceId} mailboxId={mailboxId} saved={async i => { setEditing(i.status === 'draft' ? i : null); setNotice(i.status === 'queued' ? 'Queued · undo is available until the scheduled send time.' : 'Draft saved.'); await refresh() }} /> : current ? <>
-          <div className="toolbar"><button disabled={flags.isPending} onClick={() => flags.mutate({ id: current.id, values: { starred: !current.starred } })}>{current.starred ? 'Unstar' : 'Star'}</button><button disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'archive' } })}>Archive</button><button disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'trash' } })}>Trash</button>{current.folder === 'trash' && <button onClick={() => flags.mutate({ id: current.id, values: { folder: current.status === 'draft' ? 'drafts' : current.status === 'received' ? 'inbox' : 'sent' } })}>Restore</button>}</div>
-          <MailConversation key={current.id} scope={{ workspaceId, mailboxId }} item={current} onSelect={i => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null) }} /><h3 className="title">{current.subject || '(No subject)'}</h3><p className="small quiet">From {current.fromAddress} · To {current.toAddress}</p>
+          <div className="toolbar"><button aria-label={current.starred ? 'Unstar' : 'Star'} title={current.starred ? 'Unstar' : 'Star'} disabled={flags.isPending} onClick={() => flags.mutate({ id: current.id, values: { starred: !current.starred } })}><Star size={18} fill={current.starred ? 'currentColor' : 'none'} /></button><button disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'archive' } })}>Archive</button><button disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'trash' } })}>Trash</button>{current.folder === 'trash' && <button onClick={() => flags.mutate({ id: current.id, values: { folder: current.status === 'draft' ? 'drafts' : current.status === 'received' ? 'inbox' : 'sent' } })}>Restore</button>}</div>
+          <h3 className="title">{current.subject || '(No subject)'}</h3><p className="small quiet">From {current.fromAddress} · To {current.toAddress}</p>
           <p className="small quiet">{current.status === 'captured' ? 'Captured by the development provider. This message was not delivered.' : current.status}</p>
           {current.status === 'queued' && <button disabled={undo.isPending} onClick={() => undo.mutate(current.id)}>Undo send</button>}
-          <MailReader key={current.id} workspaceId={workspaceId} mailboxId={mailboxId} id={current.id} html={current.htmlBody} text={current.textBody} attachments={detail.data?.attachments || []} />
+          <MailReader key={`reader:${current.id}`} workspaceId={workspaceId} mailboxId={mailboxId} id={current.id} html={current.htmlBody} text={current.textBody} attachments={detail.data?.attachments || []} />
           {detail.data?.attachments.map(a => <button className="attachment" key={a.id} onClick={() => void download(a.id)}>Download {a.name} · {Math.ceil(a.size / 1024)} KB</button>)}
           <div className="row replybar"><button onClick={() => void reply()}>Reply</button><button onClick={() => void reply(true)}>Reply all</button><button onClick={() => void reply(false, true)}>Forward</button></div>
+          <MailConversation key={`conversation:${current.id}`} scope={{ workspaceId, mailboxId }} item={current} onSelect={i => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null) }} />
         </> : <p className="empty">Select a message or compose a new one.</p>}
       </section>
-    </div><footer className="footer" aria-live="polite">{notice || 'Messages are stored in your workspace.'}</footer>
+    </div><footer className="footer" aria-live="polite">{notice}</footer>
   </div>
 }
 
@@ -91,6 +95,7 @@ function DraftEditor(props: DraftEditorProps) {
 function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorProps) {
   const [input, setInput] = useState<DraftInput>({ to: item.toAddress, cc: item.cc, bcc: item.bcc, subject: item.subject, text: item.textBody, threadId: item.threadId })
   const [schedule, setSchedule] = useState('')
+  const attachmentInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
   const [state, setState] = useState('Draft loaded')
   const [autosave] = useState(() => new DraftAutosave(item,
@@ -117,14 +122,15 @@ function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorP
   function submit(e: FormEvent) { e.preventDefault(); setError(''); send.mutate() }
   return <form className="composer-form" onSubmit={submit}>
     <h3 className="title">Compose message</h3>
-    {([['to', 'To'], ['cc', 'Cc'], ['bcc', 'Bcc']] as const).map(([field, label]) => <RecipientInput key={field} workspaceId={workspaceId} label={label} disabled={send.isPending} value={input[field] ?? ''} onChange={value => change(field, value)} />)}
+    <div className="composer-recipient-row">{([['to', 'To']] as const).map(([field, label]) => <RecipientInput key={field} workspaceId={workspaceId} label={label} disabled={send.isPending} value={input[field] ?? ''} onChange={value => change(field, value)} />)}
+    <ModalAction label="Cc / Bcc"><div className="recipient-extras">{([['cc', 'Cc'], ['bcc', 'Bcc']] as const).map(([field, label]) => <RecipientInput key={field} workspaceId={workspaceId} label={label} disabled={send.isPending} value={input[field] ?? ''} onChange={value => change(field, value)} />)}</div></ModalAction></div>
     <label>Subject<input disabled={send.isPending} value={input.subject ?? ''} onChange={e => change('subject', e.target.value)} /></label>
     <label>Message<textarea disabled={send.isPending} aria-label="Message" value={input.text ?? ''} onChange={e => change('text', e.target.value)} /></label>
-    <label>Attachments<input type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
+    <button type="button" className="attach-action" disabled={busy} onClick={() => attachmentInput.current?.click()}><Paperclip size={16} />Attach file</button><label className="visually-hidden">Attachments<input ref={attachmentInput} type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
     <ul>{detail.data?.attachments.map(a => <li key={a.id}>{a.name} <button type="button" aria-label={`Remove ${a.name}`} disabled={busy} onClick={() => removeAttachment.mutate(a.id)}><X size={14} aria-hidden="true" /></button></li>)}</ul>
-    <label>Schedule send<input type="datetime-local" value={schedule} onChange={e => setSchedule(e.target.value)} /></label>
+    <ModalAction label="Schedule send"><label>Schedule send<DateTimeControl type="datetime-local" value={schedule} onChange={e => setSchedule(e.target.value)} /></label></ModalAction>
     {(failure || error) && <p role="alert">{failure?.message || error}</p>}
-    <div className="row"><button type="button" disabled={busy} onClick={() => save.mutate()}>Save draft</button><button className="mainaction" disabled={busy}>Send</button></div>
+    <div className="row composer-actions"><button type="button" disabled={busy} onClick={() => save.mutate()}>Save draft</button><button className="mainaction" disabled={busy}>Send</button></div>
     <p role="status" className="small quiet">{state}. Changes save automatically. Sending has a ten-second undo window.</p>
   </form>
 }

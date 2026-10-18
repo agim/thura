@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { api } from '@lidza/client'
+import { Link } from '@tanstack/react-router'
 import { SignIn } from '../components/SignIn'
 import { userError } from '../lib/errors'
 
@@ -30,6 +31,7 @@ export function Setup() {
     {status.data && !status.data.open && !status.data.claimed && <p>The deployment operator must enable first-account setup with a private setup token before an administrator can be created.</p>}
     {status.data?.claimed && <>
       <p>{status.data.published ? (status.data.active ? 'Server configuration is active.' : 'Configuration is published. Restart the server to activate it; the app remains locked until activation succeeds.') : 'Your administrator can resume the setup wizard at any time.'}</p>
+      {status.data.active && <Link className="public-primary-link" to="/app">Open Thura</Link>}
       {!session.data?.user && <SignIn setup />}
       {session.data?.user && status.data.administrator && <a className="inline-block rounded border p-2" href="/admin/setup">Open server setup wizard</a>}
       {session.data?.user && !status.data.administrator && <>

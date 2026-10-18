@@ -7,7 +7,7 @@ async function signIn(page: Page) {
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Compose', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New message', exact: true })).toBeVisible()
 }
 
 test('returning to a contact draft loads saved edits instead of the handoff snapshot', async ({ page }) => {
@@ -17,13 +17,13 @@ test('returning to a contact draft loads saved edits instead of the handoff snap
   expect(response.status()).toBe(201)
   const contact = await response.json()
   try {
-    await page.getByRole('button', { name: 'Contacts', exact: true }).click()
+    await page.getByRole('link', { name: 'Contacts', exact: true }).click()
     await page.getByRole('button', { name: `Email ${name}`, exact: true }).click()
     await page.getByLabel('Subject', { exact: true }).fill(name)
     await page.getByLabel('Message', { exact: true }).fill('The saved body must survive tab navigation.')
     await page.getByRole('button', { name: 'Save draft', exact: true }).click()
     await expect(page.locator('.composer-form').getByRole('status')).toContainText('Draft saved')
-    await page.getByRole('button', { name: 'Drive', exact: true }).click()
+    await page.getByRole('link', { name: 'Drive', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Drive', exact: true })).toBeVisible()
     let unavailable = true
     await page.route('**/mailboxes/*/messages/*', route => {
@@ -32,7 +32,7 @@ test('returning to a contact draft loads saved edits instead of the handoff snap
       }
       return route.continue()
     })
-    await page.getByRole('button', { name: 'Mail', exact: true }).click()
+    await page.getByRole('link', { name: 'Inbox', exact: true }).click()
     await expect(page.getByRole('alert').filter({ hasText: 'Synthetic unavailable draft' }).first()).toBeVisible()
     await expect(page.getByLabel('Subject', { exact: true })).toHaveCount(0)
     unavailable = false
@@ -54,7 +54,7 @@ test('returning to a contact draft loads saved edits instead of the handoff snap
 
 test('interrupted uploads distinguish filenames and resume their own sessions', async ({ page }) => {
   await signIn(page)
-  await page.getByRole('button', { name: 'Drive', exact: true }).click()
+  await page.getByRole('link', { name: 'Drive', exact: true }).click()
   const first = `interrupted-${Date.now()}.txt`
   const second = `separate-${Date.now()}.txt`
   const buffer = Buffer.from('Identical private bytes with distinct filenames')
@@ -93,7 +93,7 @@ test('interrupted uploads distinguish filenames and resume their own sessions', 
 
 test('a removed upload session can be restarted after selecting the file again', async ({ page }) => {
   await signIn(page)
-  await page.getByRole('button', { name: 'Drive', exact: true }).click()
+  await page.getByRole('link', { name: 'Drive', exact: true }).click()
   const name = `removed-session-${Date.now()}.txt`
   const buffer = Buffer.from('Restart after cleanup removes an interrupted session')
   let interrupt = true
@@ -133,7 +133,7 @@ test('Drive uploads still work when browser session storage is unavailable', asy
     Object.defineProperty(window, 'sessionStorage', { get() { throw new DOMException('Storage disabled', 'SecurityError') } })
   })
   await signIn(page)
-  await page.getByRole('button', { name: 'Drive', exact: true }).click()
+  await page.getByRole('link', { name: 'Drive', exact: true }).click()
   const name = `restricted-storage-${Date.now()}.txt`
   await page.getByLabel('Upload file', { exact: true }).setInputFiles({ name, mimeType: 'text/plain', buffer: Buffer.from('Upload without browser storage') })
   await expect(page.getByRole('status')).toHaveText('Upload complete')

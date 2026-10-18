@@ -1,35 +1,38 @@
 {{define "content"}}
 {{with .Data}}
-<h1>Set up your Thura server</h1>
-<p>Save each step to pause and resume. Draft settings remain inactive until published and the server is restarted. Saved secrets are never displayed.</p>
-<nav aria-label="Setup steps"><ol>{{range .Steps}}<li><a href="?step={{.ID}}">{{.Title}}</a></li>{{end}}</ol></nav>
-<p>Draft revision {{.Revision}} · Published revision {{.PublishedRevision}} · Active on this node {{.ActiveRevision}}</p>
+<div class="thura-setup">
+<p class="setup-intro">Save each step to pause and resume. Draft settings remain inactive until published and the server is restarted. Saved secrets are never displayed.</p>
+{{$current := .Step.ID}}
+<nav class="setup-steps" aria-label="Setup steps">{{range .Steps}}<a href="?step={{.ID}}" {{if eq .ID $current}}aria-current="step"{{end}}><span class="setup-step-number" aria-hidden="true"></span><span>{{.Title}}</span></a>{{end}}</nav>
+<p class="setup-revisions">Draft revision {{.Revision}} · Published revision {{.PublishedRevision}} · Active on this node {{.ActiveRevision}}</p>
 {{if and .PublishedRevision (ne .PublishedRevision .ActiveRevision)}}<p role="status">Restart this server node to load the published configuration. A first installation remains locked until activation succeeds.</p>{{end}}
-<h2>{{.Step.Title}}</h2>
+<section class="setup-panel"><h2>{{.Step.Title}}</h2>
 {{if ne .Step.ID "review"}}
 <form method="post" action="setup/save" autocomplete="off">
 <input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="step" value="{{.Step.ID}}"><input type="hidden" name="back" value="?step={{.Step.ID}}">
-{{range .Step.Fields}}<div class="mb-3"><label class="form-label" for="{{.Name}}">{{.Label}}</label>
-{{if eq .Kind "select"}}{{$value := .Value}}<select class="form-select" id="{{.Name}}" name="{{.Name}}">{{range .Options}}<option value="{{.}}" {{if eq . $value}}selected{{end}}>{{.}}</option>{{end}}</select>
+{{range .Step.Fields}}<div class="mb-3"><label class="form-label" id="label-{{.Name}}" for="{{.Name}}">{{.Label}}</label>
+{{if eq .Kind "select"}}{{$value := .Value}}<div class="setup-select"><input type="hidden" id="{{.Name}}" name="{{.Name}}" value="{{.Value}}"><button type="button" class="form-control setup-select-trigger" role="combobox" aria-labelledby="label-{{.Name}}" aria-expanded="false" aria-controls="options-{{.Name}}"><span>{{if .Value}}{{.Value}}{{else}}Choose an option{{end}}</span><span aria-hidden="true">⌄</span></button><div id="options-{{.Name}}" class="setup-options" role="listbox" aria-labelledby="label-{{.Name}}" hidden>{{range .Options}}<button type="button" role="option" aria-selected="{{if eq . $value}}true{{else}}false{{end}}" data-value="{{.}}">{{.}}</button>{{end}}</div></div>
 {{else if eq .Kind "textarea"}}<textarea class="form-control" id="{{.Name}}" name="{{.Name}}" maxlength="32768">{{.Value}}</textarea>
-{{else if eq .Kind "secret"}}<input class="form-control" type="password" id="{{.Name}}" name="{{.Name}}" maxlength="32768" autocomplete="new-password" value=""><p>{{if .Saved}}Secret saved; leave blank to keep it.{{else}}No secret saved.{{end}}</p><label><input type="checkbox" name="clear_{{.Name}}" value="true"> Clear saved secret</label>
+{{else if eq .Kind "secret"}}<input class="form-control" type="password" id="{{.Name}}" name="{{.Name}}" maxlength="32768" autocomplete="new-password" value=""><p class="form-hint">{{if .Saved}}Secret saved; leave blank to keep it.{{else}}No secret saved.{{end}}</p><label><input type="checkbox" name="clear_{{.Name}}" value="true"> Clear saved secret</label>
 {{else}}<input class="form-control" type="{{.Kind}}" id="{{.Name}}" name="{{.Name}}" value="{{.Value}}" maxlength="32768">{{end}}
 <p class="form-hint">{{.Help}}</p></div>{{end}}
-<button class="btn btn-primary" type="submit">Save this step</button></form>
+<div class="setup-save"><button class="btn btn-primary" type="submit">Save this step</button><span>Changes stay in your draft.</span></div></form>
 {{else}}
 <p>{{.Message}}</p>
 {{if .Validation}}<p role="alert">Not ready to publish: {{.Validation}}</p>{{else}}<p>Required configuration fields and provider checks are complete. Confirm receipt of the test email and finish the deployment checklist.</p>{{end}}
 <h3>Check the saved providers</h3>
 <p>Complete and save every step first. These checks use the saved draft without changing the active providers. A successful check within the last 24 hours is required for each provider before publishing. Changing its connection settings or credentials requires a new check. Other draft edits keep matching checks valid.</p>
-<form method="post" action="setup/check-mail"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="check_id" value="{{.MailCheckID}}"><input type="hidden" name="back" value="?step=review"><label for="confirm-mail">Type send to send one test email to your signed-in administrator account</label><input id="confirm-mail" name="confirm" required pattern="send"><button class="btn btn-secondary">Send test email</button></form>
-<form method="post" action="setup/check-storage"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="check_id" value="{{.StorageCheckID}}"><input type="hidden" name="back" value="?step=review"><label for="confirm-storage">Type check to create, read, list and delete a small private test object</label><input id="confirm-storage" name="confirm" required pattern="check"><button class="btn btn-secondary">Check storage</button></form>
+<form method="post" action="setup/check-mail"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="check_id" value="{{.MailCheckID}}"><input type="hidden" name="back" value="?step=review"><label for="confirm-mail">Type send to send one test email to your signed-in administrator account</label><input class="form-control" id="confirm-mail" name="confirm" required pattern="send"><button class="btn btn-secondary">Send test email</button></form>
+<form method="post" action="setup/check-storage"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="check_id" value="{{.StorageCheckID}}"><input type="hidden" name="back" value="?step=review"><label for="confirm-storage">Type check to create, read, list and delete a small private test object</label><input class="form-control" id="confirm-storage" name="confirm" required pattern="check"><button class="btn btn-secondary">Check storage</button></form>
 <p>Checks are limited to three per provider per administrator in fifteen minutes. A submitted check ID never repeats the operation. If interrupted, inspect its recorded state and your inbox before explicitly starting another check.</p>
 <ul>{{range .Probes}}<li>{{.Kind}} · {{.State}} · Draft {{.Revision}} · {{.CreatedAt}} · ID {{.ID}}{{if not .Current}} · Previous provider settings or expired check{{end}}<p>{{.Message}}</p></li>{{else}}<li>No provider checks recorded.</li>{{end}}</ul>
 <p>Stored secret names:</p><ul>{{range .Secrets}}<li>{{.}}</li>{{else}}<li>None</li>{{end}}</ul>
 <p>Deployment checklist: verified sending domain and SPF/DKIM/DMARC, inbound raw-MIME relay, private S3 bucket or persistent local disk, public DNS and TLS, protected master key, tested backups and restore. Configure Postgres, any optional Valkey service and the system service before opening this wizard. Optional Matrix, ONLYOFFICE, LiveKit/TURN and SMIP peers need their own service configuration.</p>
 <p>Publishing does not deploy a host, provision DNS/buckets, send email, migrate existing storage or restart processes. Restart every server node after publication. Environment variables can override saved configuration; remove conflicting overrides deliberately in deployment settings.</p>
-<form method="post" action="setup/publish"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="back" value="?step=review"><label for="confirm-publish">Type publish to confirm</label><input id="confirm-publish" name="confirm" required pattern="publish"><button class="btn btn-primary" {{if .Validation}}disabled{{end}}>Publish configuration</button></form>
+<form method="post" action="setup/publish"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="back" value="?step=review"><label for="confirm-publish">Type publish to confirm</label><input class="form-control" id="confirm-publish" name="confirm" required pattern="publish"><button class="btn btn-primary" {{if .Validation}}disabled{{end}}>Publish configuration</button></form>
 {{end}}
-<hr><h2>Restart the wizard</h2><p>Resets the draft, including its saved credentials. The published revision and administrator account are preserved.</p>
-<form method="post" action="setup/restart"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="step" value="server"><input type="hidden" name="back" value="?step=server"><label for="confirm-restart">Type restart to confirm</label><input id="confirm-restart" name="confirm" required pattern="restart"><button class="btn btn-secondary">Restart draft</button></form>
+</section><div class="setup-secondary"><button type="button" class="btn btn-secondary" data-setup-open="setup-restart">Restart draft…</button><a class="btn btn-secondary" href="/app">Back to Thura</a></div>
+<dialog id="setup-restart" class="setup-dialog" aria-labelledby="restart-title"><header><h2 id="restart-title">Restart the wizard</h2><button type="button" class="btn btn-icon" data-setup-close aria-label="Close restart draft">×</button></header><p>Resets the draft, including its saved credentials. The published revision and administrator account are preserved.</p>
+<form method="post" action="setup/restart"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="step" value="server"><input type="hidden" name="back" value="?step=server"><label for="confirm-restart">Type restart to confirm</label><input class="form-control" id="confirm-restart" name="confirm" required pattern="restart"><button class="btn btn-secondary">Restart draft</button></form>
+</dialog></div><script src="setup/controls.js" defer></script>
 {{end}}{{end}}

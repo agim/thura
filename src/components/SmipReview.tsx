@@ -1,3 +1,5 @@
+import { displayDate } from '../lib/display-date'
+import { SelectControl } from './SelectControl'
 import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@lidza/client'
@@ -47,23 +49,23 @@ export function SmipReview({ workspaceId, manager }: { workspaceId: string; mana
     <ul>{bindings.data?.items.map(binding => <li key={binding.id}>{binding.sender} → {binding.recipient} · {binding.stream} · {binding.enabled ? 'Authorized' : 'Disabled'} {manager && binding.enabled && <button disabled={disable.isPending} onClick={() => disable.mutate(binding.id)}>Disable {binding.stream}</button>}</li>)}</ul>
     {(bindings.data?.items.some(binding => binding.enabled && bindings.data?.sendablePeers?.includes(binding.peer))) && <form onSubmit={event => { event.preventDefault(); const id = transactionId || crypto.randomUUID(); setTransactionId(id); send.mutate(id) }}>
       <h4>Send through SMIP</h4>
-      <label>SMIP destination<select required value={sendBinding} disabled={send.isPending} onChange={event => { setSendBinding(event.target.value); setTransactionId('') }}><option value="">Choose a paired stream</option>{bindings.data.items.filter(binding => binding.enabled && bindings.data?.sendablePeers?.includes(binding.peer)).map(binding => <option key={binding.id} value={binding.id}>{binding.sender} · {binding.stream}</option>)}</select></label>
+      <label>SMIP destination<SelectControl required value={sendBinding} disabled={send.isPending} onChange={event => { setSendBinding(event.target.value); setTransactionId('') }}><option value="">Choose a paired stream</option>{bindings.data.items.filter(binding => binding.enabled && bindings.data?.sendablePeers?.includes(binding.peer)).map(binding => <option key={binding.id} value={binding.id}>{binding.sender} · {binding.stream}</option>)}</SelectControl></label>
       <label>SMIP message<textarea maxLength={65536} required={!sendFile} disabled={send.isPending || !!sendFile} value={sendBody} onChange={event => { setSendBody(event.target.value); setTransactionId('') }} /></label>
-      <label>SMIP file copy<select value={sendFile} disabled={send.isPending || drive.isError} onChange={event => { setSendFile(event.target.value); setTransactionId('') }}><option value="">Send chat text</option>{drive.data?.files.filter(file => !file.trashed).map(file => <option key={file.id} value={file.id}>{file.name} · {file.size.toLocaleString()} bytes</option>)}</select></label>
+      <label>SMIP file copy<SelectControl value={sendFile} disabled={send.isPending || drive.isError} onChange={event => { setSendFile(event.target.value); setTransactionId('') }}><option value="">Send chat text</option>{drive.data?.files.filter(file => !file.trashed).map(file => <option key={file.id} value={file.id}>{file.name} · {file.size.toLocaleString()} bytes</option>)}</SelectControl></label>
       <p>A file send queues an immutable copy of its current version. Editing or deleting the original does not withdraw that copy.</p>
       <button disabled={send.isPending || !sendBinding}>Queue SMIP send</button>
     </form>}
     <h4>Outgoing SMIP packets</h4>
     {outgoing.isError ? <p role="alert">{userError(outgoing.error)} <button onClick={() => void outgoing.refetch()}>Retry SMIP outbox</button></p> : <ul>{[...new Map(outgoing.data?.pages.flatMap(page => page.items).map(entry => [entry.id, entry]) || []).values()].map(entry => <li key={entry.id}><p>{entry.kind === 'file' ? entry.name : entry.body} · {entry.state}{entry.state === 'accepted' ? ' · Verified transport receipt; reading/import not confirmed' : entry.state === 'uncertain' ? ' · May have reached the peer' : entry.state === 'blocked' ? ` · Attempts paused: ${reasonText(entry.reason)}; ${entry.attempts ? "prior delivery may be uncertain" : "not attempted"}` : entry.state === 'cancelled' ? ' · Cancelled before any attempt' : entry.state === 'expired' ? ' · Expired before any attempt' : ' · Queued'}</p>{manager && entry.attempts === 0 && (entry.state === 'pending' || entry.state === 'blocked') && <button disabled={cancel.isPending} onClick={() => cancel.mutate(entry.id)}>Cancel {entry.id}</button>}{manager && entry.state === 'blocked' && <button disabled={resume.isPending} onClick={() => resume.mutate(entry.id)}>Resume {entry.id}</button>}</li>)}</ul>}
     {outgoing.hasNextPage && !outgoing.isError && <button disabled={outgoing.isFetchingNextPage} onClick={() => void outgoing.fetchNextPage()}>Load more outgoing SMIP packets</button>}
-    <label>Import folder<select value={folderId} onChange={event => setFolderId(event.target.value)}><option value="">Drive root</option>{drive.data?.folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
+    <label>Import folder<SelectControl value={folderId} onChange={event => setFolderId(event.target.value)}><option value="">Drive root</option>{drive.data?.folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</SelectControl></label>
     <button disabled={inbox.isFetching} onClick={() => void inbox.refetch()}>Refresh SMIP inbox</button>
     {error && <p role="alert">{userError(error)}</p>}
     {inbox.isError ? <p role="alert">{userError(inbox.error)} <button onClick={() => void inbox.refetch()}>Retry SMIP inbox</button></p> : <>
       {inbox.isPending && <p role="status">Loading SMIP inbox…</p>}
       {inbox.data && items.length === 0 && <p>No accepted SMIP packets.</p>}
       <ul>{items.map(item => <li key={item.id}>
-        <p>Server assertion: {item.sender} · {new Date(item.acceptedAt).toLocaleString()}</p>
+        <p>Server assertion: {item.sender} · {displayDate(item.acceptedAt)}</p>
         {item.kind === 'chat' ? <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{item.body}</p> : <p>{item.name} · {item.size.toLocaleString()} bytes · {item.importedAt ? 'Imported into Drive' : 'Accepted; not imported'} {!item.importedAt && <button disabled={importFile.isPending || !drive.data || drive.isError} onClick={() => importFile.mutate(item.id)}>Import {item.name} into Drive</button>}</p>}
       </li>)}</ul>
       {inbox.hasNextPage && <button disabled={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()}>Load more SMIP packets</button>}

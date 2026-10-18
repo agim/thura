@@ -6,7 +6,7 @@ async function signIn(page: Page) {
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Drive', exact: true }).click()
+  await page.getByRole('link', { name: 'Drive', exact: true }).click()
 }
 
 test('private image preview survives reload and never exposes a public storage URL', async ({ page }) => {
@@ -59,11 +59,14 @@ test('text preview stays inert, refreshes after a new version, and explains unsu
     expect(remoteRequests).toEqual([])
     await page.getByText('Manage file', { exact: true }).click()
   await page.getByLabel('Upload new version', { exact: true }).setInputFiles({ name, mimeType: 'text/plain', buffer: Buffer.from('Replacement private text.') })
+    await page.getByRole('button', { name: 'Close Manage file', exact: true }).click()
     await expect(page.getByRole('complementary', { name: 'File details' })).toContainText('Version 2')
     await expect(page.locator('.file-preview pre')).toHaveCount(0)
     await page.getByRole('button', { name: 'Preview file', exact: true }).click()
     await expect(page.locator('.file-preview pre')).toHaveText('Replacement private text.')
+    await page.getByRole('button', { name: 'Manage file', exact: true }).click()
     await page.getByLabel('Upload new version', { exact: true }).setInputFiles({ name, mimeType: 'text/plain', buffer: Buffer.from([0xff, 0xfe, 0x00]) })
+    await page.getByRole('button', { name: 'Close Manage file', exact: true }).click()
     await expect(page.getByRole('complementary', { name: 'File details' })).toContainText('Version 3')
     await page.getByRole('button', { name: 'Preview file', exact: true }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Preview is unavailable for this file' })).toBeVisible()

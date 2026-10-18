@@ -1,9 +1,9 @@
+import { PublicLayout } from './components/PublicLayout'
 import {
   createRootRoute,
   createRoute,
   createRouter,
   lazyRouteComponent,
-  Link,
   Outlet,
   type RouterHistory,
   useRouterState,
@@ -40,22 +40,10 @@ function RootLayout() {
   useEffect(() => {
     if (unfinished && path !== target) window.location.replace(target)
   }, [unfinished, path, target])
-  const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' || (state.location.pathname === '/app' || state.location.pathname === '/app/loop') })
-  if (unfinished) return <><PageHead /><main className="mx-auto max-w-3xl px-6 py-6">{path === target ? <Outlet /> : <p role="status">Opening server setup…</p>}</main></>
+  const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' || state.location.pathname === '/members' || state.location.pathname === '/contacts' || (state.location.pathname === '/app' || state.location.pathname.startsWith('/app/')) })
+  if (unfinished) return <><PageHead /><PublicLayout setup>{path === target ? <Outlet /> : <p role="status">Opening server setup…</p>}</PublicLayout></>
   if (workspace) return <><PageHead /><main className="workspace-frame"><Outlet /></main></>
-  return <>
-    <PageHead />
-    <nav className="flex flex-wrap gap-4 border-b border-line px-6 py-3" aria-label="Main navigation">
-      <Link to="/">Home</Link>
-      <Link to="/about">About</Link>
-      <Link to="/workspace">Workspace</Link>
-      <Link to="/contacts">Your contacts</Link>
-      <Link to="/app">Open Thura</Link>
-      <Link to="/members">Members</Link>
-      <Link to="/setup">Server setup</Link>
-    </nav>
-    <main className="mx-auto max-w-3xl px-6 py-6"><Outlet /></main>
-  </>
+  return <><PageHead /><PublicLayout setup={path === '/setup'}><Outlet /></PublicLayout></>
 }
 
 // Code-based routes. Add a page: create it under src/pages, declare a route
@@ -84,8 +72,18 @@ const shareRoute = createRoute({ getParentRoute: () => rootRoute, path: '/share'
 
 const appRoute = createRoute({ getParentRoute: () => rootRoute, path: '/app', component: lazyRouteComponent(() => import('./pages/App'), 'AppWorkspace'), staticData: { module: 'src/pages/App.tsx' } })
 const loopRoute = createRoute({ getParentRoute: () => appRoute, path: '/loop', component: () => null })
+const mailRoute = createRoute({ getParentRoute: () => appRoute, path: '/mail', component: () => null })
+const driveRoute = createRoute({ getParentRoute: () => appRoute, path: '/drive', component: () => null })
+const calendarRoute = createRoute({ getParentRoute: () => appRoute, path: '/calendar', component: () => null })
+const chatRoute = createRoute({ getParentRoute: () => appRoute, path: '/chat', component: () => null })
+const meetRoute = createRoute({ getParentRoute: () => appRoute, path: '/meet', component: () => null })
+const appContactsRoute = createRoute({ getParentRoute: () => appRoute, path: '/contacts', component: () => null })
+const settingsRoute = createRoute({ getParentRoute: () => appRoute, path: '/settings', component: () => null })
+const mailSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/mail', component: () => null })
+const memberSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/members', component: () => null })
+const calendarSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/calendar', component: () => null })
 const setupRoute = createRoute({ getParentRoute: () => rootRoute, path: "/setup", component: lazyRouteComponent(() => import("./pages/Setup"), "Setup"), staticData: { module: "src/pages/Setup.tsx" } })
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute.addChildren([loopRoute]), shareRoute, rsvpRoute, setupRoute])
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute.addChildren([loopRoute, mailRoute, driveRoute, calendarRoute, chatRoute, meetRoute, appContactsRoute, settingsRoute.addChildren([mailSettingsRoute, calendarSettingsRoute, memberSettingsRoute])]), shareRoute, rsvpRoute, setupRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).

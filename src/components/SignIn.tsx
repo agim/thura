@@ -29,7 +29,6 @@ export function SignIn({ setup = false }: { setup?: boolean }) {
         {login.isPending && <p role="status">Signing in…</p>}
         <p className="signin-invite">Workspaces are invite-only. Use the account provided by your workspace owner.</p>
       </form>
-      {!setup && <Link className="signin-sample" to="/workspace">Explore the sample workspace</Link>}
     </div>
   </section>
 }

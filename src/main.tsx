@@ -1,3 +1,4 @@
+import { ConfirmationHost } from './components/ConfirmationHost'
 import { StrictMode } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -13,6 +14,7 @@ import './index.css'
 import './workspace/styles.css'
 import './workspace/zero.css'
 import './workspace/drive.css'
+import './workspace/communication.css'
 
 announceTimezone()
 if (import.meta.env.VITE_ANALYTICS === '1') enableAnalytics()
@@ -32,6 +34,7 @@ const app = (
   <StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
+        <ConfirmationHost />
         {hydrating ? <RouterClient router={router} /> : <RouterProvider router={router} />}
       </QueryClientProvider>
     </ErrorBoundary>

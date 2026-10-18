@@ -6,7 +6,7 @@ test('shared mailbox persists drafts, uploads privately, queues and undoes sendi
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Compose', exact: true }).click()
+  await page.getByRole('button', { name: 'New message', exact: true }).click()
   await page.getByLabel('To', { exact: true }).fill('recipient@example.com')
   await page.getByLabel('Subject', { exact: true }).fill(subject)
   await page.getByLabel('Message', { exact: true }).fill('A durable draft body')

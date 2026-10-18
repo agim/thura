@@ -8,7 +8,7 @@ async function signIn(page: import('@playwright/test').Page) {
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Compose', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New message', exact: true })).toBeVisible()
 }
 
 test('shared contact suggestions preserve recipients and work with the keyboard', async ({ page }) => {
@@ -19,7 +19,7 @@ test('shared contact suggestions preserve recipients and work with the keyboard'
   expect(response.status()).toBe(201)
   const contact = await response.json()
   try {
-    await page.getByRole('button', { name: 'Compose', exact: true }).click()
+    await page.getByRole('button', { name: 'New message', exact: true }).click()
     await page.getByLabel('To', { exact: true }).fill(`first@example.com, ${name}`)
     const suggestion = page.getByRole('group', { name: 'To contact suggestions' }).getByRole('button', { name: `${name} · ${email}` })
     await expect(suggestion).toBeVisible()
@@ -27,11 +27,13 @@ test('shared contact suggestions preserve recipients and work with the keyboard'
     await expect(suggestion).toBeFocused()
     await suggestion.press('Enter')
     await expect(page.getByLabel('To', { exact: true })).toHaveValue(`first@example.com, ${email}`)
+    await page.getByText('Cc / Bcc', { exact: true }).click()
     for (const label of ['Cc', 'Bcc']) {
       await page.getByLabel(label, { exact: true }).fill(name)
       await page.getByRole('group', { name: `${label} contact suggestions` }).getByRole('button', { name: `${name} · ${email}` }).click()
       await expect(page.getByLabel(label, { exact: true })).toHaveValue(email)
     }
+    await page.getByRole('button', { name: 'Close Cc / Bcc', exact: true }).click()
     await page.getByRole('button', { name: 'Save draft', exact: true }).click()
     await expect(page.getByRole('status')).toContainText('Draft saved')
   } finally {
@@ -43,7 +45,7 @@ test('forwarding keeps private attachment bytes in the new persisted draft', asy
   await signIn(page)
   const subject = `Forward attachment ${Date.now()}`
   const bytes = Buffer.from('Forwarded browser fixture bytes\n')
-  await page.getByRole('button', { name: 'Compose', exact: true }).click()
+  await page.getByRole('button', { name: 'New message', exact: true }).click()
   await page.getByLabel('To', { exact: true }).fill('recipient@example.com')
   await page.getByLabel('Subject', { exact: true }).fill(subject)
   await page.getByLabel('Message', { exact: true }).fill('Keep this attachment when forwarding')

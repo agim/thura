@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -28,7 +29,7 @@ func TestSetupRoutingRequiresBootstrapThenConfiguration(t *testing.T) {
 			t.Fatalf("%s: got %d location %q cache %q", path, r.StatusCode, r.Header.Get("Location"), r.Header.Get("Cache-Control"))
 		}
 	}
-	for _, path := range []string{"/", "/app", "/about", "/forgot", "/invite", "/admin", "/admin/setup", "/assets/../app"} {
+	for _, path := range []string{"/", "/app", "/about", "/forgot", "/invite", "/admin", "/admin/setup", "/admin/setup/controls.js", "/assets/../app"} {
 		redirect(path, "/setup")
 	}
 	if r := s.JSON(t, "GET", "/api/v1/workspaces", nil, nil); r.StatusCode != 503 {
@@ -54,6 +55,15 @@ func TestSetupRoutingRequiresBootstrapThenConfiguration(t *testing.T) {
 			t.Fatalf("wizard got %d", r.StatusCode)
 		}
 	}
+	if response, err := client.Get(s.URL + "/admin/setup/controls.js"); err != nil {
+		t.Fatal(err)
+	} else {
+		body, readErr := io.ReadAll(response.Body)
+		response.Body.Close()
+		if readErr != nil || response.StatusCode != 200 || response.Header.Get("Content-Type") != "text/javascript; charset=utf-8" || response.Header.Get("X-Content-Type-Options") != "nosniff" || !strings.Contains(string(body), "setup-select") {
+			t.Fatal("administrator setup controls unavailable or unsafe content type")
+		}
+	}
 	var status schema.SetupStatus
 	if r := s.JSON(t, "GET", "/api/v1/setup/status", nil, &status); r.StatusCode != 200 || !status.Administrator || status.Published {
 		t.Fatal("administrator setup status incorrect")
@@ -65,6 +75,7 @@ func TestSetupRoutingRequiresBootstrapThenConfiguration(t *testing.T) {
 		t.Fatal("logout failed")
 	}
 	redirect("/admin/setup", "/setup")
+	redirect("/admin/setup/controls.js", "/setup")
 	ordinary, err := auth.From(s.Context()).CreateUser(s.Context(), "ordinary-routing@setup.example", "Ordinary", "ordinary private oak river 88333")
 	if err != nil {
 		t.Fatal(err)
@@ -84,6 +95,15 @@ func TestSetupRoutingRequiresBootstrapThenConfiguration(t *testing.T) {
 			t.Fatalf("ordinary wizard got %d", r.StatusCode)
 		}
 	}
+	if response, err := client.Get(s.URL + "/admin/setup/controls.js"); err != nil {
+		t.Fatal(err)
+	} else {
+		response.Body.Close()
+		if response.StatusCode != 403 {
+			t.Fatalf("ordinary setup controls got %d", response.StatusCode)
+		}
+	}
+
 }
 
 func TestSetupRoutingPublicationAndDraftRestart(t *testing.T) {

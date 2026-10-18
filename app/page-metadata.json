@@ -10,8 +10,8 @@
     "noIndex": false
   },
   "/workspace": {
-    "title": "Sample workspace \u00b7 Thura",
-    "description": "Explore Thura with sample data that stays in your browser.",
+    "title": "Open Thura",
+    "description": "Opening your Thura workspace.",
     "noIndex": true
   },
   "/app": {
@@ -67,6 +67,56 @@
   "/app/loop": {
     "title": "Loop \u00b7 Thura",
     "description": "Stay in the loop. Find messages, documents, and meetings around a person.",
+    "noIndex": true
+  },
+  "/app/mail": {
+    "title": "Mail \u00b7 Thura",
+    "description": "Your Thura mail.",
+    "noIndex": true
+  },
+  "/app/contacts": {
+    "title": "Contacts \u00b7 Thura",
+    "description": "Your Thura contacts.",
+    "noIndex": true
+  },
+  "/app/drive": {
+    "title": "Drive \u00b7 Thura",
+    "description": "Your Thura drive.",
+    "noIndex": true
+  },
+  "/app/calendar": {
+    "title": "Calendar \u00b7 Thura",
+    "description": "Your Thura calendar.",
+    "noIndex": true
+  },
+  "/app/chat": {
+    "title": "Chat \u00b7 Thura",
+    "description": "Your Thura chat.",
+    "noIndex": true
+  },
+  "/app/meet": {
+    "title": "Meet \u00b7 Thura",
+    "description": "Your Thura meet.",
+    "noIndex": true
+  },
+  "/app/settings": {
+    "title": "Settings \u00b7 Thura",
+    "description": "Manage your Thura workspace preferences.",
+    "noIndex": true
+  },
+  "/app/settings/mail": {
+    "title": "Mail settings \u00b7 Thura",
+    "description": "Manage your Thura workspace preferences.",
+    "noIndex": true
+  },
+  "/app/settings/calendar": {
+    "title": "Calendar settings \u00b7 Thura",
+    "description": "Manage your Thura workspace preferences.",
+    "noIndex": true
+  },
+  "/app/settings/members": {
+    "title": "Members \u00b7 Thura",
+    "description": "Manage workspace members and invitations.",
     "noIndex": true
   }
 }

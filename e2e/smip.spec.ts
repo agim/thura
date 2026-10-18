@@ -1,3 +1,4 @@
+import { chooseOption } from './controls'
 import { expect, test, type Page } from '@playwright/test'
 
 async function openChat(page: Page) {
@@ -5,7 +6,7 @@ async function openChat(page: Page) {
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Chat', exact: true }).click()
+  await page.getByRole('link', { name: 'Chat', exact: true }).click()
 }
 const at = '2026-10-08T12:00:00Z'
 const bindingID = '11111111-1111-4111-8111-111111111111'
@@ -78,7 +79,7 @@ test('SMIP send retries keep the same intent and distinguish queued from accepte
   })
   await openChat(page)
   const review = page.getByRole('region', { name: 'SMIP review' })
-  await review.getByLabel('SMIP destination').selectOption(bindingID)
+  await chooseOption(review.getByLabel('SMIP destination'), bindingID)
   await review.getByLabel('SMIP message').fill('A signed chat')
   await review.getByRole('button', { name: 'Queue SMIP send' }).click()
   await expect(review.getByRole('alert')).toContainText('Queue response lost')

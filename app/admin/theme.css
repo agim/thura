@@ -1,0 +1,70 @@
+/* App-owned theme for the official Līdza administration frame. */
+:root,[data-bs-theme=light] {
+  --admin-accent:#0666ff; --admin-accent-fg:#fff; --admin-bg:#f5f5f5;
+  --admin-surface:#fff; --admin-surface-2:#f4f4f5; --admin-line:#e4e4e7;
+  --admin-fg:#18181b; --admin-muted:#71717a; --admin-sidebar:#18181b;
+  --admin-font:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --admin-mono:ui-monospace,SFMono-Regular,Menlo,monospace; --admin-radius:8px;
+}
+[data-bs-theme=dark] {
+  --admin-accent:#91b7ff; --admin-accent-fg:#101828; --admin-bg:#141414;
+  --admin-surface:#1c1c1e; --admin-surface-2:#262629; --admin-line:#38383d;
+  --admin-fg:#fafafa; --admin-muted:#a1a1aa;
+}
+.page-title {font-size:24px;font-weight:650;letter-spacing:-.6px}
+.page-header {margin-top:24px}
+.page-body {margin-top:16px}
+.thura-setup {max-width:1000px;font-size:14px;line-height:1.5}
+.thura-setup h2 {font-size:20px;letter-spacing:-.4px;font-weight:650;margin:0 0 24px}
+.thura-setup h3 {font-size:16px;margin-top:28px}
+.setup-intro {max-width:700px;color:var(--admin-muted);margin:0 0 20px}
+.setup-steps {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;counter-reset:setup}
+.setup-steps a {display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--admin-line);border-radius:8px;background:var(--admin-surface);color:var(--admin-muted);font-size:13px;text-decoration:none;counter-increment:setup}
+.setup-step-number {display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--admin-surface-2);font-size:11px;flex-shrink:0}
+.setup-step-number::before {content:counter(setup)}
+.setup-steps [aria-current=step] {color:var(--admin-accent);border-color:var(--admin-accent)}
+.setup-steps [aria-current=step] .setup-step-number {background:var(--admin-accent);color:var(--admin-accent-fg)}
+.setup-revisions {font-size:12px;color:var(--admin-muted);margin:14px 0 24px}
+.setup-panel {padding:24px;background:var(--admin-surface);border:1px solid var(--admin-line);border-radius:12px}
+.thura-setup form {max-width:680px}
+.thura-setup .mb-3 {margin-bottom:22px!important}
+.thura-setup .form-label,.setup-dialog label {font-size:13px;font-weight:550;margin-bottom:7px;display:block}
+.thura-setup .form-control {min-height:44px;background:var(--admin-surface-2);color:var(--admin-fg);border:1px solid var(--admin-line);border-radius:8px;font-size:14px;padding:10px 12px;box-shadow:none}
+.thura-setup textarea.form-control {min-height:112px;resize:vertical}
+.thura-setup .form-control:focus-visible,.thura-setup button:focus-visible,.thura-setup a:focus-visible {outline:2px solid var(--admin-accent);outline-offset:3px}
+.thura-setup .form-hint {font-size:12px;color:var(--admin-muted);margin:7px 0 0}
+.thura-setup .btn {min-height:44px;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:550;box-shadow:none}
+.thura-setup .btn-primary {background:var(--admin-accent);border-color:var(--admin-accent);color:var(--admin-accent-fg)}
+.thura-setup .btn-secondary {background:var(--admin-surface);border-color:var(--admin-line);color:var(--admin-fg)}
+.setup-save {display:flex;align-items:center;gap:16px;padding-top:8px}
+.setup-save span {font-size:12px;color:var(--admin-muted)}
+.setup-secondary {display:flex;gap:12px;justify-content:space-between;margin:20px 0}
+.setup-select {position:relative}
+.setup-select-trigger {display:flex;align-items:center;justify-content:space-between;text-align:left;width:100%}
+.setup-options {position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:30;max-height:240px;overflow:auto;padding:5px;border:1px solid var(--admin-line);border-radius:10px;background:var(--admin-surface);box-shadow:0 10px 30px #0002}
+.setup-options[hidden] {display:none}
+.setup-options button {display:block;width:100%;min-height:40px;text-align:left;padding:8px 12px;border:0;background:transparent;color:var(--admin-fg);border-radius:6px}
+.setup-options button:hover,.setup-options button:focus-visible,.setup-options [aria-selected=true] {background:var(--admin-surface-2);outline:none}
+.setup-dialog {width:min(520px,calc(100% - 32px));max-height:calc(100dvh - 32px);padding:24px;border:1px solid var(--admin-line);border-radius:14px;background:var(--admin-surface);color:var(--admin-fg);overflow:auto;box-shadow:0 24px 100px #0003}
+.setup-dialog::backdrop {background:#0006}
+.setup-dialog header {display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
+.setup-dialog header h2 {margin:0}
+.setup-dialog .btn-icon {padding:0;min-width:40px;font-size:24px}
+.setup-dialog form .btn {margin-top:16px}
+.setup-panel form[action*="check-"] {padding:16px;margin:16px 0;border:1px solid var(--admin-line);border-radius:10px}
+.setup-panel form[action*="check-"] label,.setup-panel form[action*="publish"] label {display:block;margin-bottom:8px;font-weight:550}
+.setup-panel form[action*="check-"] .btn,.setup-panel form[action*="publish"] .btn {margin-top:12px}
+@media(max-width:767px) {
+ .page-header {margin-top:18px}.page-title {font-size:22px}
+ .setup-steps {display:flex;overflow:auto;gap:6px;padding-bottom:5px;scrollbar-width:thin}
+ .setup-steps a {flex:0 0 auto;padding:8px 10px;font-size:12px}
+ .setup-panel {padding:18px 16px}.thura-setup h2 {font-size:18px;margin-bottom:20px}
+ .setup-intro {font-size:13px}.setup-revisions {font-size:11px;margin:10px 0 16px}
+ .setup-save {align-items:flex-start;flex-direction:column;gap:8px}
+ .setup-save .btn {width:100%}
+ .setup-secondary .btn {font-size:12px;padding:8px 12px}
+}
+.thura-setup input[type=number] {appearance:textfield;-moz-appearance:textfield}
+.thura-setup input::-webkit-inner-spin-button,.thura-setup input::-webkit-outer-spin-button {appearance:none;margin:0}
+.thura-setup input[type=checkbox] {appearance:none;vertical-align:middle;width:18px;height:18px;border:1px solid var(--admin-line);border-radius:4px;background:var(--admin-surface-2);margin:0 8px 0 0}
+.thura-setup input[type=checkbox]:checked {background:var(--admin-accent);box-shadow:inset 0 0 0 4px var(--admin-surface)}
