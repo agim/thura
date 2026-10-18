@@ -207,3 +207,11 @@ Storage location freezes after first publication, even before app content exists
 ## 2026-10-09: Patch Go and affected transport dependencies
 
 Why: Go 1.27.2 and fixed x/net, DTLS, STUN, CEL and gRPC releases remove reachable/imported security advisories. Staticcheck 2026.2.1 needs published x/tools v0.51.0 to read the patched compiler export format; scripts/install-analysis-tools.sh builds that analyzer in an isolated module for cloud setup and CI without changing application dependencies.
+
+## 2026-10-17: Person-first Correspondence mail slice
+
+Why: Reuse explicitly saved contacts as the manual organization funnel and their optional company field for a secondary rollup. Parse exact mailbox identities after a bounded SQL candidate scan; retain workspace authorization, cursor pagination, and original-message handoffs. This first slice covers mail only; normalized organizations, historical affiliations, qualification suggestions, chat, calendar and document links remain follow-up work.
+
+## 2026-10-17: Preserve native light-dark theme colors in production CSS
+
+Why: Thura changes color-scheme at runtime. The default CSS target lowered light-dark() to static compiler helper variables, leaving invalid concatenated colors when neither helper was defined. Preserve native CSS with cssTarget: esnext so the existing shared palette works for both themes. Correspondence reuses the workspace tokens and secondary controls; its browser test checks actual light and dark background colors.

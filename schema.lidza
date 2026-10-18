@@ -1053,3 +1053,20 @@ model SetupProbe {
  @@index(subject, kind, createdAt)
  @@index(kind, fingerprint, state, createdAt)
 }
+
+// Internal, person-first correspondence; organization is an optional rollup.
+type CorrespondenceEntry {
+  id uuid
+  mailboxId uuid
+  subject string
+  preview string
+  fromAddress string
+  toAddress string
+  status string
+  at time
+}
+type CorrespondenceTimeline {
+  contact Contact
+  items CorrespondenceEntry[]
+  nextCursor string
+}

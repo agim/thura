@@ -8,22 +8,22 @@ import { X } from 'lucide-react'
 import { MailReader } from './MailReader'
 import { MailOrganization, MailSignature, MailConversation } from './MailTools'
 
-export function LiveMail({ workspaceId, initialDraft }: { workspaceId: string; initialDraft?: MailItem }) {
+export function LiveMail({ workspaceId, initialDraft, initialMessage }: { workspaceId: string; initialDraft?: MailItem; initialMessage?: { id: string; mailboxId: string } }) {
   const boxes = useQuery({ queryKey: ['mailboxes', workspaceId], queryFn: () => api.listMailboxes({ workspaceId }) })
-  const [chosen, setChosen] = useState(initialDraft?.mailboxId ?? '')
+  const [chosen, setChosen] = useState(initialMessage?.mailboxId ?? initialDraft?.mailboxId ?? '')
   const box = boxes.data?.items.find(b => b.id === chosen) ?? boxes.data?.items[0]
   if (boxes.isPending) return <p role="status">Loading mailboxes…</p>
   if (boxes.isError) return <p role="alert">{boxes.error.message}</p>
   if (!box) return <div className="ws-page"><h2>Mail</h2><p>Your workspace has no mailbox yet. An operator must assign its sending address and provider.</p></div>
-  return <div><label className="mailbox-picker">Mailbox<select value={box.id} onChange={e => setChosen(e.target.value)}>{boxes.data?.items.map(b => <option value={b.id} key={b.id}>{b.name} · {b.address}</option>)}</select></label><MailView key={box.id} workspaceId={workspaceId} mailboxId={box.id} signature={box.signature} initialDraft={initialDraft?.mailboxId === box.id ? initialDraft : undefined} /></div>
+  return <div><label className="mailbox-picker">Mailbox<select value={box.id} onChange={e => setChosen(e.target.value)}>{boxes.data?.items.map(b => <option value={b.id} key={b.id}>{b.name} · {b.address}</option>)}</select></label><MailView initialMessageId={initialMessage?.mailboxId === box.id ? initialMessage.id : undefined} key={box.id} workspaceId={workspaceId} mailboxId={box.id} signature={box.signature} initialDraft={initialDraft?.mailboxId === box.id ? initialDraft : undefined} /></div>
 }
 
-function MailView({ workspaceId, mailboxId, signature, initialDraft }: { workspaceId: string; mailboxId: string; signature: string; initialDraft?: MailItem }) {
+function MailView({ workspaceId, mailboxId, signature, initialDraft, initialMessageId }: { workspaceId: string; mailboxId: string; signature: string; initialDraft?: MailItem; initialMessageId?: string }) {
   const client = useQueryClient()
   const [folder, setFolder] = useState<MailFolder>(initialDraft ? 'drafts' : 'inbox')
   const [query, setQuery] = useState('')
   const [labelId, setLabelId] = useState('')
-  const [selected, setSelected] = useState(initialDraft?.id ?? '')
+  const [selected, setSelected] = useState(initialMessageId ?? initialDraft?.id ?? '')
   const [editing, setEditing] = useState<MailItem | null>(initialDraft ?? null)
   const [notice, setNotice] = useState('')
   const [readerError, setReaderError] = useState('')

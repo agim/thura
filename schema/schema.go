@@ -3744,3 +3744,67 @@ func (v SetupClaimInput) Validate() error {
 	}
 	return errs.Result()
 }
+
+// CorrespondenceEntry is an API type.
+type CorrespondenceEntry struct {
+	ID          string    `json:"id"`
+	MailboxID   string    `json:"mailboxId"`
+	Subject     string    `json:"subject"`
+	Preview     string    `json:"preview"`
+	FromAddress string    `json:"fromAddress"`
+	ToAddress   string    `json:"toAddress"`
+	Status      string    `json:"status"`
+	At          time.Time `json:"at"`
+}
+
+// Validate applies the rules of CorrespondenceEntry from schema.lidza.
+func (v CorrespondenceEntry) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.MailboxID == "" {
+		errs.Add("mailboxId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Preview == "" {
+		errs.Add("preview", "required", "required")
+	}
+	if v.FromAddress == "" {
+		errs.Add("fromAddress", "required", "required")
+	}
+	if v.ToAddress == "" {
+		errs.Add("toAddress", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	return errs.Result()
+}
+
+// CorrespondenceTimeline is an API type.
+type CorrespondenceTimeline struct {
+	Contact    Contact               `json:"contact"`
+	Items      []CorrespondenceEntry `json:"items"`
+	NextCursor string                `json:"nextCursor"`
+}
+
+// Validate applies the rules of CorrespondenceTimeline from schema.lidza.
+func (v CorrespondenceTimeline) Validate() error {
+	var errs validate.Errors
+	if err := v.Contact.Validate(); err != nil {
+		errs.Add("contact", "nested", err.Error())
+	}
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	if v.NextCursor == "" {
+		errs.Add("nextCursor", "required", "required")
+	}
+	return errs.Result()
+}
