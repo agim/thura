@@ -270,6 +270,23 @@ func (q *Queries) DeleteEventAttendee(ctx context.Context, arg DeleteEventAttend
 	return err
 }
 
+const ensurePersonalCalendar = `-- name: EnsurePersonalCalendar :exec
+INSERT INTO calendar(id, workspace_id, name, color, owner_subject)
+VALUES($1, $2, 'My calendar', '#0066ff', $3)
+ON CONFLICT(id) DO NOTHING
+`
+
+type EnsurePersonalCalendarParams struct {
+	ID           string  `json:"id"`
+	WorkspaceID  string  `json:"workspace_id"`
+	OwnerSubject *string `json:"owner_subject"`
+}
+
+func (q *Queries) EnsurePersonalCalendar(ctx context.Context, arg EnsurePersonalCalendarParams) error {
+	_, err := q.db.Exec(ctx, ensurePersonalCalendar, arg.ID, arg.WorkspaceID, arg.OwnerSubject)
+	return err
+}
+
 const findCalendarEventUID = `-- name: FindCalendarEventUID :one
 SELECT meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND uid=$2
 `

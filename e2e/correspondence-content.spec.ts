@@ -28,6 +28,7 @@ test('Correspondence finds document text and drops replaced content', async ({ p
   await expect(page.getByText(/Document text:.*orchid bandwidth/)).toBeVisible()
   await expect(page.getByRole('button', { name: /^Organization:/ })).toHaveCount(0)
   await page.getByRole('button', { name: filename, exact: true }).click()
+  await page.getByText('Manage file', { exact: true }).click()
   await page.getByLabel('Upload new version', { exact: true }).setInputFiles({ name: filename, mimeType: 'text/plain', buffer: Buffer.from('Replacement contains only the sapphire migration.') })
   await expect(page.getByRole('button', { name: 'Download version 2', exact: true })).toBeVisible()
   await openPerson()

@@ -1,3 +1,6 @@
+import { CompactDisclosure } from '../components/CompactDisclosure'
+import { WorkspaceDialog } from '../components/WorkspaceDialog'
+import { Plus, Search } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { api, validators, type Contact, type ContactInput } from '@lidza/client'
@@ -38,6 +41,7 @@ function WorkspaceContacts() {
 export function ContactBook({ workspaceId, onEmail, onChat, onCorrespondence, handoffPending }: { workspaceId: string; onCorrespondence?: (contact: Contact) => void; onEmail?: (contact: Contact) => void; onChat?: (contact: Contact) => void; handoffPending?: boolean }) {
   const client = useQueryClient()
   const [edit, setEdit] = useState<Contact | null>(null)
+  const [adding, setAdding] = useState(false)
   const [form, setForm] = useState<ContactInput>(emptyContact)
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
@@ -46,7 +50,7 @@ export function ContactBook({ workspaceId, onEmail, onChat, onCorrespondence, ha
   const refresh = () => client.invalidateQueries({ queryKey: key })
   const save = useMutation({
     mutationFn: (body: ContactInput) => edit ? api.updateContact({ workspaceId, id: edit.id }, body) : api.createContact({ workspaceId }, body),
-    onSuccess: async () => { setForm(emptyContact); setEdit(null); await refresh() },
+    onSuccess: async () => { setForm(emptyContact); setEdit(null); setAdding(false); await refresh() },
   })
   const remove = useMutation({ mutationFn: (id: string) => api.deleteContact({ workspaceId, id }), onSuccess: refresh })
   function submit(event: FormEvent) {
@@ -58,22 +62,21 @@ export function ContactBook({ workspaceId, onEmail, onChat, onCorrespondence, ha
   }
   const visible = contacts.isError ? [] : [...new Map(contacts.data?.pages.flatMap(page => page.items).map(item => [item.id, item]) ?? []).values()]
   return <>
-    <form onSubmit={submit} className="space-y-3 rounded border border-line p-4">
-      <h2 className="text-xl font-medium">{edit ? 'Edit contact' : 'Add contact'}</h2>
+    <div className="contacts-toolbar"><label><Search size={18} aria-hidden="true" /><input aria-label="Search contacts" placeholder="Search contacts" value={query} onChange={e => setQuery(e.target.value)} /></label><button className="primary-action" onClick={() => setAdding(true)}><Plus size={18} />Add contact</button></div>
+    {(adding || edit) && <WorkspaceDialog title={edit ? 'Edit contact' : 'Add contact'} onClose={() => { setAdding(false); setEdit(null); setForm(emptyContact); setError(''); save.reset() }}><form onSubmit={submit} className="space-y-3 rounded border border-line p-4">
       {(['name', 'email', 'company', 'phone'] as const).map(field => <label className="block capitalize" key={field}>{field === 'company' ? 'Organization (optional)' : field[0].toUpperCase() + field.slice(1)}<input className="block w-full rounded border p-2" value={form[field] ?? ''} required={field === 'name' || field === 'email'} type={field === 'email' ? 'email' : 'text'} onChange={e => setForm({ ...form, [field]: e.target.value })} /></label>)}
       <label className="flex gap-2"><input type="checkbox" checked={form.favorite} onChange={e => setForm({ ...form, favorite: e.target.checked })} />Favorite</label>
       {(error || save.isError) && <p role="alert">{error || save.error?.message}</p>}
       <button className="rounded bg-brand px-4 py-2 text-white" disabled={save.isPending || remove.isPending}>Save contact</button>
       {edit && <button type="button" className="ml-3" disabled={save.isPending} onClick={() => { setEdit(null); setForm(emptyContact); setError(''); save.reset() }}>Cancel editing</button>}
-    </form>
-    <label className="block">Search contacts<input className="ml-3 rounded border p-2" value={query} onChange={e => setQuery(e.target.value)} /></label>
+    </form></WorkspaceDialog>}
     {contacts.isPending && <p role="status">Loading contacts…</p>}
     {contacts.isError && <p role="alert">{contacts.error.message}</p>}
     {remove.isError && <p role="alert">{remove.error.message}</p>}
     {contacts.data && visible.length === 0 && <p>{query ? 'No contacts match your search.' : 'No contacts yet.'}</p>}
     <ul className="contact-grid">{visible.map(c => <li key={c.id} className="rounded border border-line p-4">
       <h2 className="font-semibold">{c.name}{c.favorite ? ' ★' : ''}</h2><p>{c.email}</p><p>{c.company} {c.phone}</p>
-      <div className="mt-2 flex flex-wrap gap-4">{onCorrespondence && <button type="button" onClick={() => onCorrespondence(c)}>Open Loop with {c.name}</button>}{onEmail && <button type="button" disabled={handoffPending} onClick={() => onEmail(c)}>Email {c.name}</button>}{onChat && <button type="button" disabled={handoffPending} onClick={() => onChat(c)}>Chat with {c.name}</button>}<button type="button" disabled={save.isPending || remove.isPending} onClick={() => { setEdit(c); setForm(c); setError(''); save.reset() }}>Edit {c.name}</button><button type="button" disabled={save.isPending || remove.isPending} onClick={() => { if (window.confirm(`Delete ${c.name}?`)) { if (edit?.id === c.id) { setEdit(null); setForm(emptyContact) }; remove.mutate(c.id) } }}>Delete {c.name}</button></div>
+      <CompactDisclosure label={`Actions for ${c.name}`}><div className="mt-2 flex flex-wrap gap-4">{onCorrespondence && <button type="button" onClick={() => onCorrespondence(c)}>Open Loop with {c.name}</button>}{onEmail && <button type="button" disabled={handoffPending} onClick={() => onEmail(c)}>Email {c.name}</button>}{onChat && <button type="button" disabled={handoffPending} onClick={() => onChat(c)}>Chat with {c.name}</button>}<button type="button" disabled={save.isPending || remove.isPending} onClick={() => { setEdit(c); setForm(c); setError(''); save.reset() }}>Edit {c.name}</button><button type="button" disabled={save.isPending || remove.isPending} onClick={() => { if (window.confirm(`Delete ${c.name}?`)) { if (edit?.id === c.id) { setEdit(null); setForm(emptyContact) }; remove.mutate(c.id) } }}>Delete {c.name}</button></div></CompactDisclosure>
     </li>)}</ul>
     {contacts.hasNextPage && <button disabled={contacts.isFetchingNextPage} onClick={() => void contacts.fetchNextPage()}>Load more contacts</button>}
     <p className="text-sm text-muted">Shared with this workspace. {visible.length} contacts loaded; search covers the full directory.</p>

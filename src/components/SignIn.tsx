@@ -2,8 +2,12 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@lidza/client'
 import { Link } from '@tanstack/react-router'
+import { usePreference } from '../lib/use-preference'
+
+const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean'
 
 export function SignIn({ setup = false }: { setup?: boolean }) {
+  const [dark] = usePreference('dark', false, isBoolean)
   const client = useQueryClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -12,15 +16,20 @@ export function SignIn({ setup = false }: { setup?: boolean }) {
     onSuccess: async () => { setPassword(''); await client.invalidateQueries({ queryKey: ['session'] }); await client.invalidateQueries({ queryKey: ['setup-status'] }) },
   })
   function submit(event: FormEvent) { event.preventDefault(); login.mutate() }
-  return <form onSubmit={submit} className="space-y-4 max-w-sm">
-    <h1 className="text-3xl font-semibold">Sign in to Thura</h1>
-    <p>Workspaces are invite-only. Use the account provided by your workspace owner.</p>
-    <label className="block">Email<input className="block w-full rounded border p-2" type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} /></label>
-    <label className="block">Password<input className="block w-full rounded border p-2" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></label>
-    {login.isError && <p role="alert">{login.error.message}</p>}
-    <button className="rounded bg-brand px-4 py-2 text-white" disabled={login.isPending}>Sign in</button>
-    {!setup && <p><Link to="/forgot">Forgot your password?</Link></p>}
-    {!setup && <p><Link to="/workspace">Explore the sample workspace</Link></p>}
-  </form>
+  return <section className={`thura-signin ${setup ? 'signin-embedded' : ''}`} style={{ colorScheme: dark ? 'dark' : 'light' }} aria-label="Thura sign in">
+    <div className="signin-wrap">
+      <div className="signin-brand"><span aria-hidden="true">t</span>thura</div>
+      <form onSubmit={submit} className="signin-card" aria-busy={login.isPending}>
+        <header><h1>Sign in to Thura</h1><p>Your conversations, files, and people. All together.</p></header>
+        <label>Email<input type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} /></label>
+        <label>Password<input type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></label>
+        {!setup && <Link className="signin-recovery" to="/forgot">Forgot your password?</Link>}
+        {login.isError && <p className="signin-error" role="alert">{login.error.message}</p>}
+        <button className="signin-submit" disabled={login.isPending}>Sign in</button>
+        {login.isPending && <p role="status">Signing in…</p>}
+        <p className="signin-invite">Workspaces are invite-only. Use the account provided by your workspace owner.</p>
+      </form>
+      {!setup && <Link className="signin-sample" to="/workspace">Explore the sample workspace</Link>}
+    </div>
+  </section>
 }
-

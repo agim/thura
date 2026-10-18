@@ -231,3 +231,15 @@ The user selected Mail-0/Zero as the visual foundation and explicitly rejected a
 ## 2026-10-17 — Loop product name
 
 The user selected Loop as the short, brandable feature name. Navigation, headings, contact actions, search labels, and current documentation use Loop. The feature route is /app/loop, and contact APIs use /contacts/{id}/loop with matching generated client operation names. Documentation lives at docs/loop.md. Internal database identifiers remain unchanged.
+
+## 2026-10-17: Mobile communication flows and private default calendars
+
+Mobile screens prioritize reading and the primary action. The live shell uses a persistent seven-app bottom navigation and an account menu, with 44px touch targets and safe-area padding. Mail uses a folder selector and a separate reader; tablet mail also switches between list and reader instead of squeezing three panels together. Secondary forms and tools use a shared compact disclosure, retaining their desktop presentation. Calendar follows viewport changes, opens in agenda view on phones, and gives the event editor its own reading space. Loop keeps person context and content search visible while moving timeline management out of the main flow. Sign-in and loading use the same workspace surfaces and theme.
+
+Every member receives a stable private `My calendar` within each workspace on their first calendar-list request, including existing accounts. A deterministic workspace/subject UUID and a workspace-locked transaction prevent duplicates and recheck membership before provisioning. The list returns its default ID explicitly and places it first; the frontend selects it unless a source handoff or user selection requests another calendar. Existing owner-only calendar access remains authoritative. Shared calendar creation stays explicit and unchanged. Integration coverage checks stable concurrent reads and isolation between members.
+
+Calendar creation also seeds the detail cache with the server response before selecting the new calendar, so imports and event actions cannot race a stale previous calendar during the handoff. Browser fixtures retain their assertions while following the new mobile account menu and neutral canvas colors. New viewport tests cover all seven live apps and exercise touch targets, disclosures, default calendar selection, composing, and returning to the inbox at 320–1440px.
+
+## 2026-10-17: Content-first Drive and contextual forms
+
+Drive starts with searchable, sortable files in a saved list/grid view, compact folder navigation, and a New menu. Familiar Google Drive interaction patterns inform the organization; no Google code or assets are copied. File tools stay with the selected file; management and sharing expand on demand. Contacts starts with contacts and search, with creation/editing in an accessible native dialog. Mail labels and signature settings also use dialogs rather than permanently expanding the navigation column. Native dialogs provide focus containment and Escape dismissal. Existing APIs and permissions remain authoritative.

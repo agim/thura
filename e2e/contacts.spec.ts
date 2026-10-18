@@ -7,6 +7,7 @@ test('invited owner manages shared contacts across reload and signs out', async 
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Contacts', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Add contact', exact: true }).click()
   await page.getByLabel('Name', { exact: true }).fill(name)
   await page.getByLabel('Email', { exact: true }).fill('browser-contact@example.com')
   await page.getByLabel('Organization (optional)', { exact: true }).fill('Test Studio')

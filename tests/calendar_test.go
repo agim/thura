@@ -57,6 +57,25 @@ func TestCalendarPrivacyConcurrentVersionsAndICSImport(t *testing.T) {
 	base := "/api/v1/workspaces/" + w.ID + "/calendars"
 	status("GET", base, nil, nil, 401)
 	status("POST", "/api/v1/auth/login", auth.Credentials{Email: email, Password: pw}, nil, 200)
+	var defaults schema.CalendarList
+	status("GET", base, nil, &defaults, 200)
+	if len(defaults.Items) != 1 || defaults.DefaultCalendarID != defaults.Items[0].ID || defaults.Items[0].Name != "My calendar" || defaults.Items[0].OwnerSubject == nil || *defaults.Items[0].OwnerSubject != owner.Subject {
+		t.Fatal("missing private default calendar")
+	}
+	defaultResults := make(chan schema.CalendarList, 4)
+	for n := 0; n < 4; n++ {
+		go func() {
+			var result schema.CalendarList
+			srv.JSON(t, "GET", base, nil, &result)
+			defaultResults <- result
+		}()
+	}
+	for n := 0; n < 4; n++ {
+		result := <-defaultResults
+		if len(result.Items) != 1 || result.DefaultCalendarID != defaults.DefaultCalendarID {
+			t.Fatal("concurrent requests duplicated or replaced default calendar")
+		}
+	}
 	var shared, private schema.Calendar
 	status("POST", base, schema.CalendarInput{Name: "Shared", Color: "#15756b"}, &shared, 200)
 	status("POST", base, schema.CalendarInput{Name: "Private", Color: "#c8492f", Personal: true}, &private, 200)
@@ -102,10 +121,11 @@ func TestCalendarPrivacyConcurrentVersionsAndICSImport(t *testing.T) {
 	status("POST", "/api/v1/auth/login", auth.Credentials{Email: otherEmail, Password: pw}, nil, 200)
 	var calendars schema.CalendarList
 	status("GET", base, nil, &calendars, 200)
-	if len(calendars.Items) != 1 || calendars.Items[0].ID != shared.ID {
+	if len(calendars.Items) != 2 || calendars.Items[1].ID != shared.ID || calendars.Items[0].ID != calendars.DefaultCalendarID || calendars.DefaultCalendarID == defaults.DefaultCalendarID || calendars.Items[0].OwnerSubject == nil || *calendars.Items[0].OwnerSubject != other.Subject {
 		t.Fatal("personal calendar exposed to another member")
 	}
 	status("GET", base+"/"+private.ID+"/events", nil, nil, 404)
+	status("GET", base+"/"+defaults.DefaultCalendarID+"/events", nil, nil, 404)
 	status("GET", events+"/"+id, nil, &event, 200)
 	var exported schema.FileContent
 	status("GET", base+"/"+shared.ID+"/export", nil, &exported, 200)

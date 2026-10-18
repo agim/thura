@@ -2628,12 +2628,16 @@ func (v OfficeResult) Validate() error {
 
 // CalendarList is an API type.
 type CalendarList struct {
-	Items []Calendar `json:"items"`
+	DefaultCalendarID string     `json:"defaultCalendarId"`
+	Items             []Calendar `json:"items"`
 }
 
 // Validate applies the rules of CalendarList from schema.lidza.
 func (v CalendarList) Validate() error {
 	var errs validate.Errors
+	if v.DefaultCalendarID == "" {
+		errs.Add("defaultCalendarId", "required", "required")
+	}
 	for _, x := range v.Items {
 		if err := x.Validate(); err != nil {
 			errs.Add("items", "nested", err.Error())

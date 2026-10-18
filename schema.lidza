@@ -585,6 +585,7 @@ model EventAttendee {
  @@unique(eventId,email)
 }
 type CalendarList {
+ defaultCalendarId uuid
  items Calendar[]
 }
 type CalendarInput {

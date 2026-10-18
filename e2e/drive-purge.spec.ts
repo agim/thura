@@ -7,6 +7,7 @@ test('Drive shows quota and administrators can permanently delete a trashed file
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('button', { name: 'Drive', exact: true }).click()
+  await page.getByText('Storage details', { exact: true }).click()
   await expect(page.getByText(/retained.*reserved.*MiB/)).toBeVisible()
   await page.getByLabel('Upload file', { exact: true }).setInputFiles({ name, mimeType: 'text/plain', buffer: Buffer.from('Delete this test fixture') })
   await expect(page.getByRole('status')).toHaveText('Upload complete')

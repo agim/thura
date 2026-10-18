@@ -1,3 +1,4 @@
+import { WorkspaceDialog } from './WorkspaceDialog'
 import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type MailItem } from '@lidza/client'
@@ -6,6 +7,7 @@ type Scope = { workspaceId: string; mailboxId: string }
 export function MailOrganization({ scope, selected, filter, onFilter }: { scope: Scope; selected: string; filter: string; onFilter: (id: string) => void }) {
   const client = useQueryClient()
   const [name, setName] = useState('')
+  const [open, setOpen] = useState(false)
   const [choice, setChoice] = useState<{ itemId: string; labelId: string; applied: boolean } | null>(null)
   const labels = useQuery({ queryKey: ['mail-labels', scope.mailboxId], queryFn: () => api.listMailLabels(scope) })
   const detail = useQuery({ queryKey: ['mail-detail', selected], queryFn: () => api.getMail({ ...scope, id: selected }), enabled: !!selected })
@@ -22,18 +24,19 @@ export function MailOrganization({ scope, selected, filter, onFilter }: { scope:
     },
   })
   const failure = labels.error ?? create.error ?? remove.error ?? apply.error
-  return <details className="mail-tools"><summary>Labels</summary>
+  return <><button className="mail-settings-trigger" onClick={() => setOpen(true)}>Labels</button>{open && <WorkspaceDialog title="Labels" onClose={() => setOpen(false)}><div className="mail-tools">
     {failure && <p role="alert">{failure.message}</p>}{apply.isPending && <p role="status">Saving labels…</p>}
     <label>Filter by label<select aria-label="Filter by label" value={filter} onChange={e => onFilter(e.target.value)}><option value="">All labels</option>{labels.data?.items.map(label => <option key={label.id} value={label.id}>{label.name}</option>)}</select></label>
     <form onSubmit={e => { e.preventDefault(); create.mutate() }}><label>New label<input maxLength={40} required value={name} onChange={e => setName(e.target.value)} /></label><button disabled={create.isPending || !name.trim()}>Add label</button></form>
     {labels.data?.items.map(label => <div className="row" key={label.id}>{selected ? <label><input type="checkbox" checked={choice?.itemId === selected && choice.labelId === label.id ? choice.applied : detail.data?.labels.some(item => item.id === label.id) ?? false} disabled={detail.isPending || detail.isError || apply.isPending || remove.isPending} onChange={e => { const change = { itemId: selected, labelId: label.id, applied: e.target.checked }; setChoice(change); apply.mutate(change) }} />{label.name}</label> : <span>{label.name}</span>}<button disabled={remove.isPending || apply.isPending} aria-label={`Delete label ${label.name}`} onClick={() => remove.mutate(label.id)}>Delete</button></div>)}
-  </details>
+  </div></WorkspaceDialog>}</>
 }
 export function MailSignature({ scope, signature }: { scope: Scope; signature: string }) {
   const client = useQueryClient()
   const [value, setValue] = useState(signature)
+  const [open, setOpen] = useState(false)
   const save = useMutation({ mutationFn: () => api.updateMailSignature(scope, { signature: value }), onSuccess: () => client.invalidateQueries({ queryKey: ['mailboxes', scope.workspaceId] }) })
-  return <details className="mail-tools"><summary>Mailbox signature</summary><form onSubmit={e => { e.preventDefault(); save.mutate() }}><label>Signature<textarea aria-label="Signature" maxLength={5000} value={value} onChange={e => setValue(e.target.value)} /></label><p className="small quiet">Shared by this mailbox. Added to new drafts and replies.</p><button disabled={save.isPending}>Save signature</button>{save.isError && <p role="alert">{save.error.message}</p>}{save.isSuccess && <p role="status">Signature saved.</p>}</form></details>
+  return <><button className="mail-settings-trigger" onClick={() => setOpen(true)}>Mailbox signature</button>{open && <WorkspaceDialog title="Mailbox signature" onClose={() => setOpen(false)}><form onSubmit={e => { e.preventDefault(); save.mutate() }}><label>Signature<textarea aria-label="Signature" maxLength={5000} value={value} onChange={e => setValue(e.target.value)} /></label><p className="small quiet">Shared by this mailbox. Added to new drafts and replies.</p><button disabled={save.isPending}>Save signature</button>{save.isError && <p role="alert">{save.error.message}</p>}{save.isSuccess && <p role="status">Signature saved.</p>}</form></WorkspaceDialog>}</>
 }
 export function MailConversation({ scope, item, onSelect }: { scope: Scope; item: MailItem; onSelect: (item: MailItem) => void }) {
   const [open, setOpen] = useState(false)

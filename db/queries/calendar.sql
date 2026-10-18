@@ -54,3 +54,8 @@ SELECT x.* FROM event_exception x JOIN calendar_event e ON e.id=x.event_id WHERE
 
 -- name: BindCalendarMeeting :one
 UPDATE calendar_event SET meeting_id=$2, sequence=sequence+1, updated_at=now() WHERE id=$1 RETURNING *;
+
+-- name: EnsurePersonalCalendar :exec
+INSERT INTO calendar(id, workspace_id, name, color, owner_subject)
+VALUES($1, $2, 'My calendar', '#0066ff', $3)
+ON CONFLICT(id) DO NOTHING;

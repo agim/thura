@@ -12,6 +12,7 @@ import './index.css'
 // Shared shell styles arrive before hydration; page code loads on demand.
 import './workspace/styles.css'
 import './workspace/zero.css'
+import './workspace/drive.css'
 
 announceTimezone()
 if (import.meta.env.VITE_ANALYTICS === '1') enableAnalytics()

@@ -1,4 +1,5 @@
-import { ArrowLeft, Search, UserRound, Mail, MessageSquare, FileText, Video, CalendarDays } from 'lucide-react'
+import { CompactDisclosure } from './CompactDisclosure'
+import { ArrowLeft, Search, UserRound, Mail, MessageSquare, FileText, Video, CalendarDays, Orbit } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type Contact, type CorrespondenceEntry } from '@lidza/client'
@@ -10,7 +11,7 @@ export function Loop({ workspaceId, initialContact, onOpen, onContacts, onSelect
   const people = useInfiniteQuery({ queryKey: ['contacts', workspaceId, search], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listContacts({ workspaceId }, { query: { search, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined })
   const contacts = people.isError ? [] : [...new Map(people.data?.pages.flatMap(p => p.items).map(c => [c.id, c]) ?? []).values()]
   return <section className={`ws-page correspondence ${person ? 'has-person' : ''}`}>
-    <header><h2>Loop</h2><p>Stay in the loop.</p></header>
+    <header className="loop-masthead"><span className="loop-symbol" aria-hidden="true"><Orbit size={28} /></span><div><h2>Loop</h2><p>Stay in the loop.</p></div><span className="loop-masthead-note">Messages · Files · Meetings</span></header>
     <div className="correspondence-layout">
       <aside aria-label="Loop contacts">
         <label>Find a person<span className="search-control"><Search size={16} aria-hidden="true" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Name, email, or organization" /></span></label>
@@ -42,20 +43,20 @@ function Timeline({ workspaceId, person, onOpen, onBack }: { workspaceId: string
     {current.company && <div className="correspondence-scope"><button aria-pressed={scope === 'person'} onClick={() => setScope('person')}>This person</button><button aria-pressed={scope === 'organization'} onClick={() => setScope('organization')}>Organization: {current.company}</button></div>}
     <div className="correspondence-filters"><label>Search Loop<span className="search-control"><Search size={16} aria-hidden="true" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Messages, documents, and titles" /></span></label>
     <label>Source<select aria-label="Source" value={source} onChange={e => setSource(e.target.value)}><option value="">All sources</option>{sources.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
-    <p className="sub">Newest first · Search messages, document contents, and titles.</p>
+    <CompactDisclosure label="Timeline options"><p className="sub">Newest first · Search messages, document contents, and titles.</p>
     {scope === 'person' && <LinkItems workspaceId={workspaceId} person={current} />}
     {unlink.isError && <p role="alert">{unlink.error.message}</p>}
-    <button className="secondary" onClick={() => void timeline.refetch()} disabled={timeline.isFetching}>Refresh timeline</button>
+    <button className="secondary" onClick={() => void timeline.refetch()} disabled={timeline.isFetching}>Refresh timeline</button></CompactDisclosure>
     {notices.map(notice => <p role="status" key={notice}>{notice}</p>)}
     {timeline.isPending && <p role="status">Loading Loop…</p>}
     {timeline.isError && <p role="alert">{timeline.error.message}</p>}
     {!timeline.isPending && !timeline.isError && items.length === 0 && <p>{timeline.hasNextPage ? 'No matches in this batch. Load more to continue.' : search ? notices.length ? 'No matches in the available content. Some sources could not be searched.' : 'No items match your search.' : 'Nothing in this loop yet.'}</p>}
-    <ol className="correspondence-timeline">{items.map(item => <li key={`${item.source}:${item.id}`}>
+    <div className="loop-activity-heading"><h3>{search ? 'Search results' : 'Activity'}</h3><span>{items.length} items shown</span></div><ol className="correspondence-timeline">{items.map(item => <li data-source={item.source} key={`${item.source}:${item.id}`}>
       <div className="entry-meta"><span className="source-label">{(() => { const Icon = sourceIcons[item.source] || FileText; return <Icon size={14} aria-hidden="true" /> })()}{sources.find(([value]) => value === item.source)?.[1]}</span><time dateTime={item.at}>{new Date(item.at).toLocaleString()}</time></div>
       <h4><button onClick={() => onOpen(item, search)}>{item.subject || '(No subject)'}</button></h4>
       {item.source === 'mail' && <p>From {item.fromAddress} · To {item.toAddress}</p>}
       <small className="entry-reason">{item.reason}</small>
-      <p>{item.preview}</p>
+      <p className="loop-excerpt"><SearchExcerpt text={item.preview} search={search} /></p>
       <small>{item.status === 'captured' ? 'Development capture — not delivered' : item.status}</small>
       {scope === 'person' && item.linked && <button className="secondary" disabled={unlink.isPending} onClick={() => unlink.mutate(item)}>Remove manual link</button>}
     </li>)}</ol>
@@ -63,7 +64,7 @@ function Timeline({ workspaceId, person, onOpen, onBack }: { workspaceId: string
   </section>
 }
 
-const sourceIcons: Record<string, typeof Mail> = { mail: Mail, chat: MessageSquare, document: FileText, meeting: Video, calendar: CalendarDays }
+const sourceIcons: Record<string, typeof Mail> = { mail: Mail, chat: MessageSquare, document: FileText, meeting: Video, calendar: CalendarDays, Orbit }
 const sources = [['mail', 'Mail'], ['chat', 'Chats'], ['document', 'Documents'], ['meeting', 'Meetings'], ['calendar', 'Calendar events']] as const
 
 function LinkItems({ workspaceId, person }: { workspaceId: string; person: Contact }) {
@@ -85,4 +86,10 @@ function LinkItems({ workspaceId, person }: { workspaceId: string; person: Conta
     <ul>{items.map(item => <li key={`${item.source}:${item.id}`}><span>{item.subject} · {new Date(item.at).toLocaleDateString()}</span> <button className="secondary" disabled={link.isPending || item.linked} onClick={() => link.mutate(item)}>{item.linked ? 'Linked' : `Link ${item.subject}`}</button></li>)}</ul>
     {catalog.hasNextPage && <button disabled={catalog.isFetchingNextPage} onClick={() => void catalog.fetchNextPage()}>More items</button>}
   </details>
+}
+
+function SearchExcerpt({ text, search }: { text: string; search: string }) {
+  const term = search.trim()
+  const at = term ? text.toLowerCase().indexOf(term.toLowerCase()) : -1
+  return at < 0 ? text : <>{text.slice(0, at)}<mark>{text.slice(at, at + term.length)}</mark>{text.slice(at + term.length)}</>
 }

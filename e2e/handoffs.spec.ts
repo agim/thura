@@ -46,6 +46,7 @@ test('mail signature, labels and attachment removal persist through reload', asy
     await page.getByLabel('Signature', { exact: true }).fill('Browser team signature')
     await page.getByRole('button', { name: 'Save signature', exact: true }).click()
     await expect(page.getByRole('status')).toContainText('Signature saved')
+    await page.getByRole('button', { name: 'Close Mailbox signature', exact: true }).click()
     await page.getByRole('button', { name: 'Compose', exact: true }).click()
     await expect(page.getByLabel('Message', { exact: true })).toHaveValue('\n\nBrowser team signature')
     await page.getByLabel('Subject', { exact: true }).fill(name)

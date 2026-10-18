@@ -1,4 +1,7 @@
-import { useState, type FormEvent } from 'react'
+import { WorkspaceDialog } from './WorkspaceDialog'
+import { Search, Plus, Folder, FileText, FileImage, FileSpreadsheet, File as FileGlyph, Download, Trash2, RotateCcw, X, List, LayoutGrid, Upload, ChevronRight, HardDrive } from 'lucide-react'
+import { usePreference } from '../lib/use-preference'
+import { useState, useRef, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError, type DriveFile } from '@lidza/client'
 import { DrivePreview } from './DrivePreview'
@@ -33,13 +36,18 @@ export function LiveDrive({ workspaceId, initialFileId }: { workspaceId: string;
   const [trash, setTrash] = useState(false)
   const [search, setSearch] = useState('')
   const [name, setName] = useState('')
+  const [newFolder, setNewFolder] = useState(false)
+  const [sort, setSort] = useState('recent')
+  const [view, setView] = usePreference('drive-view', 'list', (value: unknown): value is string => value === 'list' || value === 'grid')
+  const uploadInput = useRef<HTMLInputElement>(null)
+  const newMenu = useRef<HTMLDetailsElement>(null)
   const [progress, setProgress] = useState('')
   const [selected, setSelected] = useState(initialFileId || '')
   const detail = useQuery({ queryKey: ['drive', workspaceId, 'file', selected], queryFn: () => api.getDriveFile({ workspaceId, id: selected }), enabled: !!selected })
   const refresh = () => client.invalidateQueries({ queryKey: ['drive', workspaceId] })
   const current = detail.isError ? undefined : detail.data
   const purge = useMutation({ mutationFn: (id: string) => api.purgeDriveFile({ workspaceId, id }), onSuccess: async () => { setSelected(''); await refresh() } })
-  const createFolder = useMutation({ mutationFn: () => api.createDriveFolder({ workspaceId }, { name, parentId: folder || undefined }), onSuccess: async () => { setName(''); await refresh() } })
+  const createFolder = useMutation({ mutationFn: () => api.createDriveFolder({ workspaceId }, { name, parentId: folder || undefined }), onSuccess: async () => { setName(''); setNewFolder(false); await refresh() } })
   const upload = useMutation({ mutationFn: async ({ file, replacing }: { file: File; replacing?: DriveFile }) => {
     if (file.size < 1 || file.size > 10 * CHUNK) throw new Error('Choose a file between 1 byte and 10 MB.')
     const subject = session.data?.user?.subject
@@ -72,24 +80,50 @@ export function LiveDrive({ workspaceId, initialFileId }: { workspaceId: string;
   const flags = useMutation({ mutationFn: ({ file, values }: { file: DriveFile; values: { name?: string; folderId?: string; trashed?: boolean } }) => api.updateDriveFile({ workspaceId, id: file.id }, { name: values.name || file.name, folderId: values.folderId !== undefined ? values.folderId || undefined : file.folderId, trashed: values.trashed ?? file.trashed }), onSuccess: refresh })
   const download = useMutation({ mutationFn: (file: DriveFile) => api.downloadDriveFile({ workspaceId, id: file.id }), onSuccess: downloadContent })
   const failure = detail.error ?? list.error ?? upload.error ?? createFolder.error ?? flags.error ?? download.error
-  const files = list.data?.files.filter(f => f.trashed === trash && (trash || (f.folderId || '') === folder) && f.name.toLowerCase().includes(search.toLowerCase())) ?? []
+  const files = (list.data?.files.filter(f => f.trashed === trash && (trash || search.trim() || (f.folderId || '') === folder) && f.name.toLowerCase().includes(search.toLowerCase())) ?? []).sort((a, b) => sort === 'name' ? a.name.localeCompare(b.name) : sort === 'size' ? b.size - a.size : new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  const folders = list.data?.folders ?? []
+  const folderTrail = []
+  let ancestor = folders.find(f => f.id === folder)
+  const visited = new Set<string>()
+  while (ancestor && !visited.has(ancestor.id)) { visited.add(ancestor.id); folderTrail.unshift(ancestor); ancestor = folders.find(f => f.id === ancestor?.parentId) }
+  function openFolder(id: string) { setFolder(id); setTrash(false); setSelected(''); setSearch('') }
   function submit(e: FormEvent) { e.preventDefault(); createFolder.mutate() }
-  return <div className="ws-page live-drive"><div className="ws-page-head"><h2>Drive</h2><span className="ws-muted">Private workspace files · 10 MB per upload</span></div>
-    {failure && <p role="alert">{failure.message}</p>}
-    {quota.data && <p>Drive storage: {(quota.data.retained / CHUNK).toFixed(1)} MiB retained + {(quota.data.reserved / CHUNK).toFixed(1)} MiB reserved / {(quota.data.limit / CHUNK).toFixed(0)} MiB. Trash and version history count toward storage.</p>}
-    {(quota.error || purge.error) && <p role="alert">{quota.error?.message || purge.error?.message}</p>}
-    <div className="row"><button onClick={() => { setTrash(false); setFolder(''); setSelected('') }}>All files</button><button onClick={() => { setTrash(true); setSelected('') }}>Trash</button><label>Search files<input value={search} onChange={e => setSearch(e.target.value)} /></label></div>
-    {!trash && <><label>Upload file<input type="file" disabled={upload.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate({ file }); e.target.value = '' }} /></label><form className="row" onSubmit={submit}><label>New folder<input required maxLength={200} value={name} onChange={e => setName(e.target.value)} /></label><button disabled={createFolder.isPending}>Create folder</button></form>
-      <p>Folder: {list.data?.folders.find(f => f.id === folder)?.name || 'Root'}</p><div className="row">{list.data?.folders.filter(f => (f.parentId || '') === folder).map(f => <button key={f.id} onClick={() => { setFolder(f.id); setSelected('') }}>📁 {f.name}</button>)}</div></>}
-    {progress && <p role="status">{progress}{upload.isError ? ' · interrupted; select the same file to resume' : ''}</p>}
-    {list.isPending && <p role="status">Loading files…</p>}
-    {selected && detail.isPending && <p role="status">Loading file…</p>}
-    <div className="drive-grid">{files.map(f => <article key={f.id} className="drive-card"><h3><button onClick={() => setSelected(f.id)}>{f.name}</button></h3><p>{Math.ceil(f.size / 1024)} KB · version {f.currentVersion}</p><div className="row">{!trash && <button onClick={() => download.mutate(f)}>Download {f.name}</button>}<button disabled={flags.isPending} onClick={() => flags.mutate({ file: f, values: { trashed: !f.trashed } })}>{trash ? 'Restore' : 'Move to trash'} {f.name}</button>{trash && manager && <button disabled={purge.isPending} onClick={() => { if (confirm(`Permanently delete ${f.name}, all its versions and share links? This cannot be undone. Copies already sent through Chat remain on Matrix.`)) purge.mutate(f.id) }}>Delete permanently {f.name}</button>}</div></article>)}</div>
-    {list.data && files.length === 0 && <p>No files in this view.</p>}
-    {current && <section className="drive-detail"><h3>{current.name}</h3>{!current.trashed && <><label>Move to folder<select value={current.folderId || ''} onChange={e => flags.mutate({ file: current, values: { folderId: e.target.value } })}><option value="">Root</option>{list.data?.folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>Upload new version<input type="file" disabled={upload.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate({ file, replacing: current }); e.target.value = '' }} /></label>{/\.(docx|xlsx)$/i.test(current.name) && <OfficeEditor key={current.id} workspaceId={workspaceId} fileId={current.id} />}<DrivePreview key={`preview:${current.id}:${current.currentVersion}`} workspaceId={workspaceId} file={current} /><FileHistory key={`${current.id}:${current.currentVersion}`} workspaceId={workspaceId} file={current} /><FileSharing key={current.id} workspaceId={workspaceId} file={current} /></>}</section>}
-    <p className="ws-muted">Uploads can resume for 24 hours in this browser tab. Select the same file after an interruption. Files in trash cannot be downloaded through share links.</p>
+  return <div className={`ws-page live-drive drive-browser${current ? ' has-detail' : ''}`}>
+    <header className="drive-header"><div><h2>Drive</h2><p>Your workspace files, together.</p></div>
+      <label className="drive-search"><Search size={20} aria-hidden="true" /><input aria-label="Search files" placeholder="Search files in this workspace" value={search} onChange={e => setSearch(e.target.value)} />{search && <button aria-label="Clear file search" onClick={() => setSearch('')}><X size={16} /></button>}</label>
+      <details className="drive-new" ref={newMenu}><summary><Plus size={20} aria-hidden="true" />New</summary><div className="drive-new-menu"><button onClick={() => { if (newMenu.current) newMenu.current.open = false; uploadInput.current?.click() }} disabled={upload.isPending}><Upload size={18} />File upload</button><button onClick={() => { if (newMenu.current) newMenu.current.open = false; setNewFolder(true) }}><Folder size={18} />New folder</button><small>Up to 10 MB per file</small></div></details>
+      <input ref={uploadInput} className="visually-hidden" aria-label="Upload file" type="file" disabled={upload.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate({ file }); e.target.value = '' }} />
+    </header>
+    {(failure || quota.error || purge.error) && <p role="alert">{failure?.message || quota.error?.message || purge.error?.message}</p>}
+    {progress && <p role="status" className="drive-notice">{progress}{upload.isError ? ' · interrupted; select the same file to resume' : ''}</p>}
+    <div className="drive-viewbar"><div className="drive-tabs"><button aria-pressed={!trash} onClick={() => openFolder('')}><HardDrive size={17} />All files</button><button aria-pressed={trash} onClick={() => { setTrash(true); setSelected(''); setSearch('') }}><Trash2 size={17} />Trash</button></div><div className="drive-view-options"><label>Sort<select aria-label="Sort files" value={sort} onChange={e => setSort(e.target.value)}><option value="recent">Last modified</option><option value="name">Name</option><option value="size">File size</option></select></label><div className="view-toggle"><button aria-label="List view" aria-pressed={view === 'list'} onClick={() => setView('list')}><List size={18} /></button><button aria-label="Grid view" aria-pressed={view === 'grid'} onClick={() => setView('grid')}><LayoutGrid size={18} /></button></div></div></div>
+    <div className="drive-body"><section className="drive-contents" aria-label="Files and folders">
+      <nav className="drive-breadcrumbs" aria-label="File location"><button aria-label="Drive root" onClick={() => openFolder('')}>All files</button>{!trash && folderTrail.map(f => <span key={f.id}><ChevronRight size={14} /><button onClick={() => openFolder(f.id)}>{f.name}</button></span>)}{trash && <span><ChevronRight size={14} />Trash</span>}{search && <span><ChevronRight size={14} />Search results</span>}</nav>
+      {!trash && !search && folders.some(f => (f.parentId || '') === folder) && <section className="drive-folders"><h3>Folders</h3><div>{folders.filter(f => (f.parentId || '') === folder).map(f => <button key={f.id} onClick={() => openFolder(f.id)}><Folder size={22} /><span>{f.name}</span><ChevronRight size={16} /></button>)}</div></section>}
+      <div className="drive-files-heading"><h3>{search ? 'Search results' : trash ? 'Trash' : 'Files'}</h3><span>{files.length} {files.length === 1 ? 'file' : 'files'}</span></div>
+      {list.isPending && <p role="status">Loading files…</p>}
+      <div className={`drive-files ${view}`}>
+        {view === 'list' && files.length > 0 && <div className="drive-columns" aria-hidden="true"><span>Name</span><span>Modified</span><span>Size</span><span /></div>}
+        {files.map(f => <article key={f.id} className={`drive-file${selected === f.id ? ' selected' : ''}`}>
+          <h3 aria-label={f.name}><button aria-label={f.name} className="file-name" onClick={() => setSelected(f.id)}><span className={`file-type ${fileKind(f.name)}`}><FileIcon name={f.name} /></span><span>{f.name}<small>{fileKindLabel(f.name)}{search && f.folderId ? ` · ${folders.find(folder => folder.id === f.folderId)?.name || 'Folder'}` : ''}</small></span></button></h3>
+          <time className="file-modified" dateTime={f.updatedAt}>{new Date(f.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</time><span className="file-size">{formatSize(f.size)}</span>
+          <div className="file-actions">{!trash && <button aria-label={`Download ${f.name}`} title="Download" onClick={() => download.mutate(f)}><Download size={17} /></button>}<button aria-label={`${trash ? 'Restore' : 'Move to trash'} ${f.name}`} title={trash ? 'Restore' : 'Move to trash'} disabled={flags.isPending} onClick={() => flags.mutate({ file: f, values: { trashed: !f.trashed } })}>{trash ? <RotateCcw size={17} /> : <Trash2 size={17} />}</button>{trash && manager && <button aria-label={`Delete permanently ${f.name}`} title="Delete permanently" disabled={purge.isPending} onClick={() => { if (confirm(`Permanently delete ${f.name}, all its versions and share links? This cannot be undone. Copies already sent through Chat remain on Matrix.`)) purge.mutate(f.id) }}><X size={17} /></button>}</div>
+        </article>)}
+      </div>
+      {list.data && files.length === 0 && <div className="drive-empty"><Folder size={40} /><h3>{search ? 'No matching files' : trash ? 'Trash is empty' : 'A place for your files'}</h3><p>{search ? 'Try a different name.' : trash ? 'Files you move to trash will appear here.' : 'Upload a file or create a folder to get started.'}</p></div>}
+    </section>
+    {selected && detail.isPending && !progress && <p role="status">Loading file…</p>}
+    {current && <aside className="drive-detail" aria-label="File details"><header><div><span className={`file-type ${fileKind(current.name)}`}><FileIcon name={current.name} /></span><h3>{current.name}</h3><p>{formatSize(current.size)} · Version {current.currentVersion}</p></div><button aria-label="Close file details" onClick={() => setSelected('')}><X size={20} /></button></header>{!current.trashed && <><DrivePreview key={`preview:${current.id}:${current.currentVersion}`} workspaceId={workspaceId} file={current} />{/\.(docx|xlsx)$/i.test(current.name) && <OfficeEditor key={current.id} workspaceId={workspaceId} fileId={current.id} />}<details className="file-tools"><summary>Manage file</summary><label>Move to folder<select value={current.folderId || ''} onChange={e => flags.mutate({ file: current, values: { folderId: e.target.value } })}><option value="">Root</option>{folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>Upload new version<input type="file" disabled={upload.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate({ file, replacing: current }); e.target.value = '' }} /></label></details><FileHistory key={`${current.id}:${current.currentVersion}`} workspaceId={workspaceId} file={current} /><details className="file-tools"><summary>Share file</summary><FileSharing key={current.id} workspaceId={workspaceId} file={current} /></details></>}</aside>}
+    </div>
+    {quota.data && <footer className="drive-storage"><HardDrive size={16} /><progress aria-label="Storage used" value={quota.data.retained + quota.data.reserved} max={quota.data.limit} /><span>{formatSize(quota.data.retained + quota.data.reserved)} of {formatSize(quota.data.limit)} used</span><details><summary>Storage details</summary><p>{(quota.data.retained / 1024 ** 2).toFixed(1)} MiB retained + {(quota.data.reserved / 1024 ** 2).toFixed(1)} MiB reserved / {(quota.data.limit / 1024 ** 2).toFixed(0)} MiB.</p><p>Trash and version history count toward storage. Uploads can resume for 24 hours in this browser tab.</p></details></footer>}
+    {newFolder && <WorkspaceDialog title="New folder" onClose={() => setNewFolder(false)}><form onSubmit={submit}><label>New folder<input required maxLength={200} value={name} onChange={e => setName(e.target.value)} /></label>{createFolder.error && <p role="alert">{createFolder.error.message}</p>}<footer><button type="button" onClick={() => setNewFolder(false)}>Cancel</button><button className="primary-action" disabled={createFolder.isPending}>Create folder</button></footer></form></WorkspaceDialog>}
   </div>
 }
+function fileKind(name: string) { return /\.(xlsx|ods|csv)$/i.test(name) ? 'sheet' : /\.(png|jpe?g|gif|webp)$/i.test(name) ? 'image' : /\.pdf$/i.test(name) ? 'pdf' : /\.(docx|odt|txt|md)$/i.test(name) ? 'document' : 'file' }
+function fileKindLabel(name: string) { return ({ sheet: 'Spreadsheet', image: 'Image', pdf: 'PDF document', document: 'Document', file: 'File' })[fileKind(name)] }
+function FileIcon({ name }: { name: string }) { const kind = fileKind(name); const Icon = kind === 'sheet' ? FileSpreadsheet : kind === 'image' ? FileImage : kind === 'file' ? FileGlyph : FileText; return <Icon size={22} aria-hidden="true" /> }
+function formatSize(bytes: number) { return bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : bytes >= 1024 ** 2 ? `${(bytes / 1024 ** 2).toFixed(1)} MB` : bytes >= 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${bytes} B` }
+
 function FileHistory({ workspaceId, file }: { workspaceId: string; file: DriveFile }) {
   const versions = useQuery({ queryKey: ['versions', file.id, file.currentVersion], queryFn: () => api.listDriveVersions({ workspaceId, id: file.id }) })
   const download = useMutation({ mutationFn: (version: number) => api.downloadDriveFile({ workspaceId, id: file.id }, { query: { version } }), onSuccess: downloadContent })
