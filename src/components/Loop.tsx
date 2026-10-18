@@ -1,3 +1,4 @@
+import { AppSidebar } from './AppSidebar'
 import { displayDate } from '../lib/display-date'
 import { DetailBack } from './DetailBack'
 import { AppPageHeader, NewAction } from './AppPageHeader'
@@ -16,7 +17,7 @@ export function Loop({ workspaceId, initialContact, onOpen, onContacts, onSelect
   return <section className={`ws-page correspondence ${person ? 'has-person' : ''}`}>
     <AppPageHeader title="Loop" action={<NewAction label="New contact" onClick={onContacts} />} />
     <div className="correspondence-layout">
-      <aside aria-label="Loop contacts">
+      <AppSidebar title="People" label="Loop contacts" showContentOnCompact={!person}>
 
 
         {people.isPending && <p role="status">Loading people…</p>}
@@ -24,7 +25,7 @@ export function Loop({ workspaceId, initialContact, onOpen, onContacts, onSelect
         <ul>{contacts.map(c => <li key={c.id}><button aria-pressed={person?.id === c.id} onClick={() => { setPerson(c); onSelect(c) }}><span className="person-avatar" aria-hidden="true">{c.name.split(/\s+/).map(n => n[0]).slice(0, 2).join('')}</span><span className="person-copy"><strong>{c.name}</strong><span>{c.email}</span>{c.company && <small>{c.company}</small>}</span></button></li>)}</ul>
         {!people.isPending && !people.isError && contacts.length === 0 && <p>No contacts found. Add someone to organize their correspondence.</p>}
         {people.hasNextPage && <button disabled={people.isFetchingNextPage} onClick={() => void people.fetchNextPage()}>More people</button>}
-      </aside>
+      </AppSidebar>
       {person ? <Timeline search={timelineSearch} key={person.id} workspaceId={workspaceId} person={person} onBack={() => { setPerson(undefined); onSelect(undefined) }} onOpen={onOpen} /> : <div className="correspondence-empty"><UserRound size={32} aria-hidden="true" /><h3>Your people, in context</h3><p>Select a person to see their timeline. Personal contacts need no organization.</p></div>}
     </div>
   </section>

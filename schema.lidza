@@ -749,6 +749,7 @@ type ChatSendInput {
 }
 type ChatMessage {
  id string
+ senderName string?
  sender string
  body string
  timestamp int

@@ -92,7 +92,7 @@
   #orbit-workspace.zero-workspace .ws-nav button span, #orbit-workspace.zero-workspace .nav-caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant .layout { grid-template-columns: 130px minmax(200px,.8fr) minmax(0,1fr); }
 }
-@media (max-width: 760px) {
+@media (max-width: 999px) {
   #orbit-workspace.zero-workspace { display: flex; flex-direction: column; }
   #orbit-workspace.zero-workspace .ws-top { padding: 12px 14px; flex-wrap: wrap; gap: 12px; }
   #orbit-workspace.zero-workspace .ws-brand { flex-wrap: wrap; gap: 8px; }
@@ -116,7 +116,6 @@
   #orbit-workspace.zero-workspace .chat-conversation { padding: 14px; }
   #orbit-workspace.zero-workspace .chat-search { padding: 10px; }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant .layout { display: flex; flex-direction: column; }
-  #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders { display: flex; flex-wrap: wrap; gap: 4px; padding: 12px; }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders > button { width: auto; }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant .list { display: block; width: 100%; }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant .reader { display: none; }
@@ -126,22 +125,20 @@
 #orbit-workspace.zero-workspace .correspondence aside li button { justify-content: flex-start; }
 #orbit-workspace.zero-workspace .correspondence aside { align-self: start; }
 #orbit-workspace.zero-workspace .correspondence-timeline li > small:not(.entry-reason) { color: var(--quiet); }
-#orbit-workspace.zero-workspace #orbit-mail-vibrant .folders { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders > button { width: 100%; justify-content: flex-start; font-size: 12px; }
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders > button.on { background: var(--paper); font-weight: 600; }
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .listhead .search { display: flex; flex-direction: column; align-items: stretch; background: transparent; gap: 7px; margin-top: 16px; }
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .search input { width: 100%; background: var(--canvas); }
 #orbit-workspace.zero-workspace .search-control:focus-within { outline: 2px solid var(--teal); outline-offset: 2px; }
 #orbit-workspace.zero-workspace .search-control input:focus { outline: 0; box-shadow: none; }
-@media(max-width:760px) {
-  #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders { flex-direction: row; }
+@media(max-width:999px) {
   #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders > button { width: auto; }
 }
 #orbit-workspace.zero-workspace .live-calendar .fc { min-width: 0; }
 #orbit-workspace.zero-workspace .live-calendar .fc-toolbar-chunk { min-width: 0; max-width: 100%; }
 #orbit-workspace.zero-workspace .live-calendar .fc-button-group { flex-wrap: wrap; }
 #orbit-workspace.zero-workspace .live-calendar .fc-toolbar { gap: 10px; }
-@media(max-width:760px) {
+@media(max-width:999px) {
   #orbit-workspace.zero-workspace .live-calendar { padding: 12px; }
   #orbit-workspace.zero-workspace .live-calendar .fc-header-toolbar { flex-direction: column; align-items: flex-start; }
   #orbit-workspace.zero-workspace .live-calendar .fc-button { padding: 6px 8px; font-size: 12px; }
@@ -195,7 +192,7 @@
 .loading-row :is(i,span), .loading-detail span { background: light-dark(#f1f1f3,#27272a); }
 @keyframes thura-spin { to { transform: rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .loading-dot { animation: none; } }
-@media(max-width:760px) { .loading-panels { grid-template-columns: 1fr; } .loading-list { display: none; } .workspace-placeholder { padding: 18px; } }
+@media(max-width:999px) { .loading-panels { grid-template-columns: 1fr; } .loading-list { display: none; } .workspace-placeholder { padding: 18px; } }
 #orbit-workspace.zero-workspace .loop-masthead { display: flex; align-items: center; gap: 14px; background: linear-gradient(110deg,var(--paper),var(--tealsoft)); }
 #orbit-workspace.zero-workspace .loop-masthead p { color: var(--quiet); }
 #orbit-workspace.zero-workspace .loop-symbol { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--ink); color: var(--paper); flex-shrink: 0; }
@@ -212,7 +209,7 @@
 #orbit-workspace.zero-workspace .loop-excerpt { color: var(--ink); }
 #orbit-workspace.zero-workspace .loop-excerpt mark { background: light-dark(#fff0b3,#574415); color: inherit; padding: 1px 2px; border-radius: 3px; }
 #orbit-workspace.zero-workspace .correspondence aside button[aria-pressed=true] { box-shadow: inset 3px 0 var(--teal); background: var(--tealsoft); }
-@media(max-width:760px) { #orbit-workspace.zero-workspace .loop-masthead-note { display: none; } #orbit-workspace.zero-workspace .correspondence-timeline { padding-left: 14px; } #orbit-workspace.zero-workspace .correspondence-timeline li { padding: 14px; } #orbit-workspace.zero-workspace .correspondence-timeline li::before { left: -19px; } }
+@media(max-width:999px) { #orbit-workspace.zero-workspace .loop-masthead-note { display: none; } #orbit-workspace.zero-workspace .correspondence-timeline { padding-left: 14px; } #orbit-workspace.zero-workspace .correspondence-timeline li { padding: 14px; } #orbit-workspace.zero-workspace .correspondence-timeline li::before { left: -19px; } }
 
 /* Mobile is a reading surface with deliberate actions, not a compressed sidebar. */
 #orbit-workspace.zero-workspace { background: var(--canvas); }
@@ -221,14 +218,14 @@
 #orbit-workspace.zero-workspace :is(input,select,textarea,label,.row > *) { min-width: 0; max-width: 100%; }
 #orbit-workspace.zero-workspace .drive-grid { grid-template-columns: repeat(auto-fill,minmax(min(100%,260px),1fr)); }
 #orbit-workspace.zero-workspace .contact-grid { overflow-wrap: anywhere; }
-@media (min-width:761px) and (max-width:1100px) {
+@media (min-width:1000px) and (max-width:1100px) {
   #orbit-workspace.zero-workspace #orbit-mail-vibrant .layout { grid-template-columns: 140px minmax(0,1fr); }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant .reader { display: none; }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant.has-message .reader { display: block; grid-column: 2; }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant.has-message .list { display: none; }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant .mobile-back { display: inline-flex; }
 }
-@media (max-width:760px) {
+@media (max-width:999px) {
   #orbit-workspace.zero-workspace { padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
   #orbit-workspace.zero-workspace .ws-top { flex-wrap: nowrap; padding: 10px 16px; gap: 8px; }
   #orbit-workspace.zero-workspace .ws-brand { flex: 1; flex-wrap: nowrap; font-size: 18px; gap: 7px; }
@@ -263,7 +260,6 @@
   #orbit-workspace.zero-workspace .mailbox-picker { padding: 6px 16px; font-size: 12px; background: var(--paper); }
   #orbit-workspace.zero-workspace .mailbox-picker select { flex: 1; max-width: 100%; font-size: 13px; padding: 8px; border: 0; background: transparent; }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant { border: 0; border-radius: 0; }
-  #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders { display: grid; grid-template-columns: minmax(0,1fr) auto; padding: 12px 16px; gap: 8px; background: var(--paper); align-items: center; }
   #orbit-workspace.zero-workspace #orbit-mail-vibrant .folders > .folder-button { display: none; }
   #orbit-workspace.zero-workspace .mobile-folder-picker { display: block; font-size: 0; }
   #orbit-workspace.zero-workspace .mobile-folder-picker select { font-size: 20px; font-weight: 600; border: 0; background: transparent; padding: 8px 0; }
@@ -288,7 +284,7 @@
   #orbit-workspace.zero-workspace .contact-grid li { padding: 16px; border-color: var(--line); border-radius: 12px; }
   #orbit-workspace.zero-workspace .contact-grid button { text-align: left; justify-content: flex-start; font-size: 13px; }
 }
-@media(max-width:760px) {
+@media(max-width:999px) {
   #orbit-workspace.zero-workspace .primary-action { display: inline-flex; justify-content: center; align-items: center; padding: 12px 18px; border-radius: 10px; font-weight: 600; }
   #orbit-workspace.zero-workspace .live-calendar .fc-header-toolbar { display: grid; grid-template-columns: 1fr auto; gap: 16px 8px; }
   #orbit-workspace.zero-workspace .live-calendar .fc-toolbar-chunk:nth-child(2) { grid-row: 1; grid-column: 1/-1; }
@@ -296,7 +292,7 @@
   #orbit-workspace.zero-workspace .live-calendar .row > .compact-disclosure { margin: 0; }
   #orbit-workspace.zero-workspace .live-calendar .fc-button { border-radius: 8px; padding: 8px 10px; }
 }
-@media(max-width:760px) {
+@media(max-width:999px) {
   #orbit-workspace.zero-workspace .live-calendar .fc-button { background: var(--paper); border-color: var(--line); color: var(--ink); border-radius: 0; }
   #orbit-workspace.zero-workspace .live-calendar .fc-button-group > :first-child { border-radius: 8px 0 0 8px; }
   #orbit-workspace.zero-workspace .live-calendar .fc-button-group > :last-child { border-radius: 0 8px 8px 0; }
@@ -304,7 +300,7 @@
   #orbit-workspace.zero-workspace .live-calendar .fc-today-button { border-radius: 8px; }
   #orbit-workspace.zero-workspace .chat-composer > button { background: var(--teal); color: var(--paper); padding: 12px 18px; border-radius: 10px; }
 }
-@media(max-width:760px) {
+@media(max-width:999px) {
   #orbit-workspace.zero-workspace .correspondence.has-person > .loop-masthead { display: none; }
   #orbit-workspace.zero-workspace .correspondence .mobile-back { margin-bottom: 8px; }
   #orbit-workspace.zero-workspace .correspondence-filters { grid-template-columns: minmax(0,1fr) 112px; gap: 10px; }
@@ -315,7 +311,7 @@
   #orbit-workspace.zero-workspace .correspondence-timeline li h4 button { min-height: 32px; }
   #orbit-workspace.zero-workspace .contact-grid h2 { font-size: 18px; }
 }
-@media(max-width:760px) {
+@media(max-width:999px) {
   #orbit-workspace.zero-workspace .live-calendar:has(.calendar-view.editing) > :is(h2,.row,.compact-disclosure) { display: none; }
   #orbit-workspace.zero-workspace .calendar-view.editing > .row { display: none; }
   #orbit-workspace.zero-workspace .calendar-view.editing .calendar-editor { border: 0; padding: 0; margin-top: 8px; }

@@ -58,7 +58,7 @@ export function LiveWorkspace() {
   const searchScope = app === 'Drive' ? { label: 'Search files', placeholder: 'Search Drive', value: fileSearch, set: setFileSearch } : app === 'Mail' ? { label: 'Search mail', placeholder: 'Search this mail folder', value: mailSearch, set: setMailSearch } : app === 'Contacts' ? { label: 'Search contacts', placeholder: 'Search contacts', value: contactSearch, set: setContactSearch } : app === 'Loop' ? correspondenceContact ? { label: 'Search Loop', placeholder: 'Search this person’s Loop', value: timelineSearch, set: setTimelineSearch } : { label: 'Find a person', placeholder: 'Find a person', value: personSearch, set: setPersonSearch } : null
   const currentSpace = useRef('')
   const [meetingId, setMeetingId] = useState('')
-  useEffect(() => { const params = new URLSearchParams(location.search); if (params.get('meeting')) { setMeetingId(params.get('meeting')!); setSelected(params.get('workspace') || ''); setApp('Meet') } }, [])
+  useEffect(() => { const params = new URLSearchParams(location.search); if (params.get('meeting')) { setMeetingId(params.get('meeting')!); setSelected(params.get('workspace') || ''); if (location.pathname !== appPaths.Meet) void navigate({ to: appPaths.Meet, search: true }) } }, [])
   useEffect(() => { const previous = document.documentElement.style.colorScheme; document.documentElement.style.colorScheme = dark ? 'dark' : 'light'; return () => { document.documentElement.style.colorScheme = previous } }, [dark])
   const space = spaces.data?.items.find(w => w.id === selected) ?? spaces.data?.items[0]
   currentSpace.current = space?.id ?? ''

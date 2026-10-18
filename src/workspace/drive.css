@@ -117,7 +117,7 @@
   #orbit-workspace.zero-workspace .drive-body:has(.drive-detail) .drive-columns, #orbit-workspace.zero-workspace .drive-body:has(.drive-detail) .drive-files.list .drive-file { grid-template-columns: minmax(0,1fr) 70px 84px; }
   #orbit-workspace.zero-workspace .drive-body:has(.drive-detail) .file-modified, #orbit-workspace.zero-workspace .drive-body:has(.drive-detail) .drive-columns > :nth-child(2) { display: none; }
 }
-@media(max-width:760px) {
+@media(max-width:999px) {
   #orbit-workspace.zero-workspace .drive-browser { padding: 20px 16px; }
   #orbit-workspace.zero-workspace .drive-header { margin-bottom: 18px; }
   #orbit-workspace.zero-workspace .drive-header h2 { font-size: 24px; }

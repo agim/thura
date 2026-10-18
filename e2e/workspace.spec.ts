@@ -111,17 +111,21 @@ test('custom menus and date picker support keyboard input without browser-native
   await expect(page.getByRole('listbox')).toHaveCount(0)
   await page.getByRole('link', { name: 'Calendar', exact: true }).click()
   await page.getByRole('button', { name: 'New event', exact: true }).click()
-  await page.getByRole('button', { name: 'Choose Starts at', exact: true }).click()
-  const picker = page.getByRole('dialog', { name: 'Choose Starts at', exact: true })
+  await page.getByRole('button', { name: 'Choose Start date', exact: true }).click()
+  const picker = page.getByRole('dialog', { name: 'Choose Start date', exact: true })
   await expect(picker).toBeVisible()
   await picker.getByRole('button', { name: 'Next month', exact: true }).click()
   const chosen = new Date(); chosen.setDate(1); chosen.setMonth(chosen.getMonth() + 1)
   const label = chosen.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   await picker.getByRole('button', { name: label, exact: true }).click()
-  await chooseOption(picker.getByRole('combobox', { name: 'Time', exact: true }), { label: '2:30 PM' })
-  await picker.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(picker).toHaveCount(0)
+  await chooseOption(page.getByRole('combobox', { name: 'Start time', exact: true }), { label: '2:30 PM' })
+  await expect(page.getByRole('combobox', { name: 'Start time', exact: true })).toContainText('2:30 PM')
   const date = `${chosen.getFullYear()}-${String(chosen.getMonth()+1).padStart(2,'0')}-01`
-  await expect(page.getByLabel('Starts at', { exact: true })).toHaveValue(new Date(`${date}T14:30`).toLocaleDateString('en-US', { month:'short',day:'numeric',year:'numeric' }) + ', 2:30 PM')
+  await expect(page.getByLabel('Start date', { exact: true })).toHaveValue(new Date(`${date}T14:30`).toLocaleDateString('en-US', { month:'short',day:'numeric',year:'numeric' }))
+  await page.getByRole('button', { name: 'Choose Start date', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Choose Start date', exact: true }).getByRole('button', {name: new Date(`${date}T12:00`).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}), exact:true}).click()
+  await expect(page.getByRole('combobox', {name:'Start time', exact:true})).toContainText('2:30 PM')
   await expect(page.locator('select,input[type="date"],input[type="datetime-local"],input[type="time"]')).toHaveCount(0)
 })
 
@@ -147,4 +151,56 @@ test('all app headers share typography, placement and the same New action', asyn
       await expectNoSidewaysScroll(page)
     }
   }
+})
+
+test('app sidebars share the same desktop breakpoint', async ({ page }) => {
+  await signIn(page)
+  const apps = [
+    ['Inbox', '#orbit-mail-vibrant .folders'], ['Calendar', '.calendar-header'],
+    ['Contacts', '.contacts-toolbar'], ['Loop', '.correspondence-layout > aside'],
+    ['Drive', '.drive-tabs'], ['Chat', '.chat-sidebar'], ['Meet', '.meeting-sidebar'],
+  ]
+  for (const width of [900, 1024]) {
+    await page.setViewportSize({width, height:900})
+    for (const [name, selector] of apps) {
+      await page.getByRole('navigation', {name:'Workspace applications'}).getByRole('link', {name, exact:true}).click()
+      const sidebar = page.locator(selector)
+      if (width === 900) {
+        await expect(page.locator('.app-sidebar:not(.app-sidebar-inline)')).toBeHidden()
+        await page.getByRole('button', {name:'Browse',exact:true}).click()
+        const menu = page.getByRole('dialog')
+        await expect(menu).toBeVisible()
+        await expect(menu.getByRole('complementary')).toBeVisible()
+        await expectNoSidewaysScroll(page)
+        await menu.getByRole('button', {name:/^Close /}).click()
+      } else {
+        await expect(sidebar).toBeVisible()
+        const rect = await sidebar.boundingBox()
+        expect(rect).not.toBeNull()
+        expect(rect!.width).toBe(200)
+        expect(rect!.height).toBe(690)
+        await expect(sidebar.locator('.app-sidebar-caption')).toHaveCSS('font-size', '12px')
+        await expect(sidebar).toHaveCSS('padding', '0px 16px 0px 0px')
+      }
+      await expectNoSidewaysScroll(page)
+    }
+  }
+})
+
+test('scheduled mail reuses separate date and AM/PM controls without inventing a date', async ({ page }) => {
+  await page.setViewportSize({width:390,height:844})
+  await signIn(page, '/app/mail')
+  await page.getByRole('button', {name:'New message',exact:true}).click()
+  await page.getByRole('button', {name:'Schedule send',exact:true}).click()
+  const schedule = page.getByRole('dialog', {name:'Schedule send',exact:true})
+  await chooseOption(schedule.getByRole('combobox', {name:'Send time',exact:true}), {label:'11:45 PM'})
+  await expect(schedule.getByLabel('Send date', {exact:true})).toHaveValue('')
+  await schedule.getByRole('button', {name:'Choose Send date',exact:true}).click()
+  const picker = page.getByRole('dialog', {name:'Choose Send date',exact:true})
+  await expect(picker.getByRole('combobox')).toHaveCount(0)
+  await picker.getByRole('button', {name:'Today',exact:true}).click()
+  await expect(picker).toHaveCount(0)
+  await expect(schedule.getByLabel('Send date', {exact:true})).not.toHaveValue('')
+  await expect(schedule.getByRole('combobox', {name:'Send time',exact:true})).toContainText('11:45 PM')
+  await expectNoSidewaysScroll(page)
 })

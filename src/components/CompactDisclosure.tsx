@@ -2,12 +2,12 @@ import { useSyncExternalStore, type ReactNode } from 'react'
 import { ModalAction } from './ModalAction'
 
 const subscribe = (notify: () => void) => {
-  const media = window.matchMedia('(max-width: 760px)')
+  const media = window.matchMedia('(max-width: 999px)')
   media.addEventListener('change', notify)
   return () => media.removeEventListener('change', notify)
 }
 export function useCompactScreen() {
-  return useSyncExternalStore(subscribe, () => window.matchMedia('(max-width: 760px)').matches, () => false)
+  return useSyncExternalStore(subscribe, () => window.matchMedia('(max-width: 999px)').matches, () => false)
 }
 
 /** Secondary tools share the same dialog on every screen size. */

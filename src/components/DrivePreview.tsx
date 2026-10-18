@@ -23,10 +23,7 @@ export function DrivePreview({ workspaceId, file }: { workspaceId: string; file:
   }
   return <section className="file-preview" aria-label={`Preview of ${file.name}`}>
     <h4>File preview</h4>
-    <button disabled={request.isPending || status === 'pending'} onClick={() => request.mutate()}>
-      {status === 'failed' ? 'Retry preview' : 'Preview file'}
-    </button>
-    {open && <button onClick={() => setOpen(false)}>Hide preview</button>}
+    <div className="file-preview-actions">{open ? <><button onClick={() => setOpen(false)}>Hide preview</button>{status === 'failed' && <button disabled={request.isPending} onClick={() => request.mutate()}>Retry preview</button>}</> : <button disabled={request.isPending} onClick={() => request.mutate()}>{status === 'failed' ? 'Retry preview' : 'Preview file'}</button>}</div>
     {(request.error || (open && preview.error)) && <p role="alert">{userError(request.error || preview.error)} {open && <button onClick={() => preview.refetch()}>Retry loading preview</button>}</p>}
     {open && preview.isPending && <p role="status">Loading preview…</p>}
     {open && status === 'pending' && <p role="status">Preparing private preview…</p>}

@@ -58,12 +58,16 @@ func Search(ctx context.Context, w, id, term, cursor string) (schema.ChatTimelin
 	if _, err = Access(ctx, w, id); err != nil {
 		return out, err
 	}
+	names, err := senderNames(ctx, w, cfg)
+	if err != nil {
+		return out, err
+	}
 	for _, hit := range response.Categories.Events.Results {
 		e := hit.Result
 		if e.RoomID != room.MatrixRoomID || e.Type != "m.room.message" || e.Content.Body == "" {
 			continue
 		}
-		out.Items = append(out.Items, schema.ChatMessage{ID: e.ID, Sender: e.Sender, Body: e.Content.Body, Timestamp: int(e.Timestamp)})
+		out.Items = append(out.Items, schema.ChatMessage{ID: e.ID, Sender: e.Sender, SenderName: names[e.Sender], Body: e.Content.Body, Timestamp: int(e.Timestamp)})
 	}
 	if response.Categories.Events.Next != "" {
 		out.Next = &response.Categories.Events.Next

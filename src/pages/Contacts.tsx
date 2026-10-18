@@ -1,9 +1,10 @@
+import { AppSidebar } from '../components/AppSidebar'
 import { Navigate } from '@tanstack/react-router'
 import { AppPageHeader, NewAction } from '../components/AppPageHeader'
 import { confirmAction } from '../components/ConfirmationHost'
 import { useCompactScreen } from '../components/CompactDisclosure'
 import { WorkspaceDialog } from '../components/WorkspaceDialog'
-import { Search, Mail, MessageCircle, Orbit, Pencil, Trash2, MoreHorizontal } from 'lucide-react'
+import { Search, Mail, MessageCircle, Orbit, Pencil, Trash2, MoreHorizontal, Users } from 'lucide-react'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { api, validators, type Contact, type ContactInput } from '@lidza/client'
@@ -37,7 +38,7 @@ export function ContactBook({ workspaceId, onEmail, onChat, onCorrespondence, ha
   }
   const visible = contacts.isError ? [] : [...new Map(contacts.data?.pages.flatMap(page => page.items).map(item => [item.id, item]) ?? []).values()]
   return <><AppPageHeader title="Contacts" action={<NewAction label="New contact" onClick={() => setAdding(true)} />} /><div className="contacts-browser">
-    <aside aria-label="Contacts tools" className="contacts-toolbar">{search === undefined && <label><Search size={18} aria-hidden="true" /><input aria-label="Search contacts" placeholder="Search contacts" value={query} onChange={e => setQuery(e.target.value)} /></label>}<span className="app-sidebar-caption">Directory</span><span className="app-sidebar-current">All contacts</span></aside><div className="contacts-content">
+    <AppSidebar title="Directory" label="Contacts tools" className="contacts-toolbar">{search === undefined && <label><Search size={18} aria-hidden="true" /><input aria-label="Search contacts" placeholder="Search contacts" value={query} onChange={e => setQuery(e.target.value)} /></label>}<span className="app-sidebar-current"><Users size={18} aria-hidden="true" />All contacts</span></AppSidebar><div className="contacts-content">
     {(adding || edit) && <WorkspaceDialog title={edit ? 'Edit contact' : 'New contact'} onClose={() => { setAdding(false); setEdit(null); setForm(emptyContact); setError(''); save.reset() }}><form onSubmit={submit} className="contact-editor">
       {(['name', 'email', 'company', 'phone'] as const).map(field => <label className="block capitalize" key={field}>{field === 'company' ? 'Organization (optional)' : field[0].toUpperCase() + field.slice(1)}<input className="block w-full rounded border p-2" value={form[field] ?? ''} required={field === 'name' || field === 'email'} type={field === 'email' ? 'email' : 'text'} onChange={e => setForm({ ...form, [field]: e.target.value })} /></label>)}
       <label className="flex gap-2"><input type="checkbox" checked={form.favorite} onChange={e => setForm({ ...form, favorite: e.target.checked })} />Favorite</label>

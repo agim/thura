@@ -8,6 +8,11 @@ export async function chooseOption(control: Locator, choice: string | { label?: 
 export async function openSettings(page: Page, section?: 'mail' | 'calendar') {
   await page.getByRole('button', { name: 'Account menu', exact: true }).click()
   await page.getByRole('link', { name: 'Settings', exact: true }).click()
-  if (section) await page.getByRole('complementary', { name: 'Settings categories' }).getByRole('link', { name: section === 'mail' ? 'Mail' : 'Calendar', exact: true }).click()
+  if (section) {
+    const sidebar = page.getByRole('complementary', { name:'Settings categories' })
+    await expect(page.getByRole('heading', { name:'Settings', exact:true })).toBeVisible()
+    if ((page.viewportSize()?.width ?? 1280) < 1000) await page.getByRole('button', {name:'Browse',exact:true}).click()
+    await sidebar.getByRole('link', { name: section === 'mail' ? 'Mail' : 'Calendar', exact: true }).click()
+  }
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
 }

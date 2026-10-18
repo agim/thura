@@ -3152,12 +3152,13 @@ func (v ChatSendInput) Validate() error {
 
 // ChatMessage is an API type.
 type ChatMessage struct {
-	ID        string           `json:"id"`
-	Sender    string           `json:"sender"`
-	Body      string           `json:"body"`
-	Timestamp int              `json:"timestamp"`
-	File      *ChatMessageFile `json:"file"`
-	ReplyTo   *string          `json:"replyTo"`
+	ID         string           `json:"id"`
+	SenderName *string          `json:"senderName"`
+	Sender     string           `json:"sender"`
+	Body       string           `json:"body"`
+	Timestamp  int              `json:"timestamp"`
+	File       *ChatMessageFile `json:"file"`
+	ReplyTo    *string          `json:"replyTo"`
 }
 
 // Validate applies the rules of ChatMessage from schema.lidza.

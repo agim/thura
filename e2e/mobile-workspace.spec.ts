@@ -24,7 +24,12 @@ for (const width of [320, 390, 768, 1024, 1440]) {
       await expectNoSidewaysScroll(page)
     }
     await nav.getByRole('link', { name: 'Calendar', exact: true }).click()
+    if (width < 1000) await page.getByRole('button', {name:'Browse',exact:true}).click()
     await expect(page.getByLabel('Calendar', { exact: true })).toHaveText('My calendar · Personal · Default')
+    if (width < 1000) {
+      await expect(page.getByLabel('Calendar', {exact:true})).toBeVisible()
+      await page.getByRole('button', {name:'Close Calendars',exact:true}).click()
+    }
     if (width <= 760) {
       await expect(page.getByLabel('New calendar name', { exact: true })).toBeHidden()
       await expect(page.getByRole('button', { name: 'New event', exact: true })).toBeInViewport()

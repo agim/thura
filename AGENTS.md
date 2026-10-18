@@ -57,3 +57,6 @@ never in an agent's local memory.
 
 - 2026-10-18: App landing headers must reuse `AppPageHeader` and `NewAction` (visible "+ New", contextual accessible name). Main menu order is Inbox, Calendar, Contacts, Loop, Drive, Chat, Meet.
 - 2026-10-18: Display dates in readable English (Oct 19, 2026) and times with AM/PM. Use the shared custom DateTimeControl and displayDate helper; ISO values belong at API boundaries, not in visible date fields.
+- 2026-10-18: Date and time entry must be separate fields: reuse DateControl for the readable calendar date, TimeControl for the AM/PM menu, and DateTimeControl to compose the pair in every date/time workflow.
+- 2026-10-18: App sidebars share the same 1000px breakpoint. Below it use compact app controls; do not leave Mail's desktop folder sidebar visible while the other apps collapse.
+- 2026-10-18: All workspace app sidebars, including Settings, use AppSidebar. It owns the frame, captions, navigation spacing and a visible Browse button below 1000px; Browse opens the full local menu in the shared dialog. Keep primary content available outside that menu.

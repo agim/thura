@@ -1,3 +1,4 @@
+import { AppSidebar } from './AppSidebar'
 import { DetailBack } from './DetailBack'
 import { AppPageHeader, NewAction } from './AppPageHeader'
 import { DateTimeControl } from './DateTimeControl'
@@ -52,7 +53,7 @@ function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, quer
   return <div id="orbit-mail-vibrant" className={selected ? 'has-message' : ''}><AppPageHeader title={folder[0].toUpperCase() + folder.slice(1)} action={<NewAction label="New message" disabled={compose.isPending} onClick={() => compose.mutate()} />} />
     {(failure || readerError) && <p role="alert" className="inlinepanel">{failure?.message || readerError}</p>}
     <div className="layout">
-      <aside className="folders">{(['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as MailFolder[]).map(f => <button className={`folder-button ${folder === f ? 'on' : ''}`} key={f} onClick={() => { setFolder(f); setSelected(''); setEditing(null) }}>{(() => { const Icon = folderIcons[f]; return <Icon size={16} aria-hidden="true" /> })()}{f[0].toUpperCase() + f.slice(1)}</button>)}<MailLabelFilter scope={{ workspaceId, mailboxId }} value={labelId} onChange={setLabelId} /></aside>
+      <AppSidebar title="Folders" label="Mail navigation" className="folders">{(['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as MailFolder[]).map(f => <button className={`folder-button ${folder === f ? 'on' : ''}`} key={f} onClick={() => { setFolder(f); setSelected(''); setEditing(null) }}>{(() => { const Icon = folderIcons[f]; return <Icon size={16} aria-hidden="true" /> })()}{f[0].toUpperCase() + f.slice(1)}</button>)}<MailLabelFilter scope={{ workspaceId, mailboxId }} value={labelId} onChange={setLabelId} /></AppSidebar>
       <section className="list" aria-label="Messages">
         {list.isPending && <p role="status" className="empty">Loading messages…</p>}
         {list.data && visible.length === 0 && <p className="empty">No messages in this view.</p>}
@@ -128,7 +129,7 @@ function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorP
     <label>Message<textarea disabled={send.isPending} aria-label="Message" value={input.text ?? ''} onChange={e => change('text', e.target.value)} /></label>
     <button type="button" className="attach-action" disabled={busy} onClick={() => attachmentInput.current?.click()}><Paperclip size={16} />Attach file</button><label className="visually-hidden">Attachments<input ref={attachmentInput} type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
     <ul>{detail.data?.attachments.map(a => <li key={a.id}>{a.name} <button type="button" aria-label={`Remove ${a.name}`} disabled={busy} onClick={() => removeAttachment.mutate(a.id)}><X size={14} aria-hidden="true" /></button></li>)}</ul>
-    <ModalAction label="Schedule send"><label>Schedule send<DateTimeControl type="datetime-local" value={schedule} onChange={e => setSchedule(e.target.value)} /></label></ModalAction>
+    <ModalAction label="Schedule send"><DateTimeControl label="Send" type="datetime-local" value={schedule} onChange={e => setSchedule(e.target.value)} /></ModalAction>
     {(failure || error) && <p role="alert">{failure?.message || error}</p>}
     <div className="row composer-actions"><button type="button" disabled={busy} onClick={() => save.mutate()}>Save draft</button><button className="mainaction" disabled={busy}>Send</button></div>
     <p role="status" className="small quiet">{state}. Changes save automatically. Sending has a ten-second undo window.</p>
