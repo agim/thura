@@ -1,0 +1,9 @@
+Training/evaluation design references the AWS sample:
+https://github.com/aws-samples/sample-fine-tuned-llama-phishing-classifier-optimized-for-on-device
+Revision 9e53b98240177b5ca47fdf23b8bd0f722d0ade26, MIT No Attribution (MIT-0).
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+This independent local adaptation does not include Meta weights, AWS trained
+weights (none were published), or raw third-party email datasets. Dataset grants
+and the Llama 3.2 Community License/AUP remain separate. Original synthetic data
+in hard-negatives.json is explicitly Apache-2.0, Thura contributors, 2026.

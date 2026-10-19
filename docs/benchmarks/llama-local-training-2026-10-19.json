@@ -1,0 +1,1427 @@
+{
+  "date": "2026-10-19",
+  "hardware": {
+    "chip": "Apple M5",
+    "unified_memory_bytes": 17179869184,
+    "logical_cpus": 10
+  },
+  "assessment": {
+    "decision": "reject; do not integrate",
+    "quality_acceptance": false,
+    "production_enabled": false,
+    "authorized_latency_preference_seconds": 30,
+    "p95_within_30_second_preference": true,
+    "longer_screening_allowed_if_quality_improves": true,
+    "original_run_performance_gate_seconds": 5,
+    "original_gate_result_preserved": false,
+    "fresh_real_legitimate_holdout_available": false
+  },
+  "timing_pilot": {
+    "exit_code": 0,
+    "wall_seconds": 64.82240891701076,
+    "max_child_rss_bytes": 1206878208,
+    "config_sha256": "2944a66803c6f37bc03e09e7fbe6174e41a6fb04bf3c342a7acce39eafb2d9cb",
+    "log_sha256": "8e51f008bd3196edfcde283a06439aa72ee3be34fe8b2d30f0a22cc790c02368",
+    "platform": "darwin",
+    "production_enabled": false,
+    "peak_metal_bytes": 3891442552
+  },
+  "preliminary_encoding_pilot": {
+    "exit_code": 0,
+    "wall_seconds": 76.28585012501571,
+    "max_child_rss_bytes": 541425664,
+    "config_sha256": "2944a66803c6f37bc03e09e7fbe6174e41a6fb04bf3c342a7acce39eafb2d9cb",
+    "log_sha256": "b73f632af5b4df2e56c9bf29a596ae241c8dcc0e80717fc8ef624de6f847bf18",
+    "platform": "darwin",
+    "production_enabled": false
+  },
+  "training": {
+    "exit_code": 0,
+    "wall_seconds": 473.6740132080158,
+    "max_child_rss_bytes": 1189052416,
+    "config_sha256": "66b0fbd4a9b42e18e164842d5d4ba45799474fbe5c4a7d004939f7d070a2ba1b",
+    "log_sha256": "22eb8969fb87d74988ea6052f96a31373dd791b48a47b7c60537317bea0d5f80",
+    "platform": "darwin",
+    "production_enabled": false,
+    "base_revision": "08231374eeacb049a0eade7922910865b8fce912",
+    "data_manifest_sha256": "a5b229d4e81213975ac5fe094b5b9fc6541baabdf8af9dc8668b32719a4b3ef1",
+    "steps": 600,
+    "peak_metal_bytes": 3989698716
+  },
+  "dataset": {
+    "prompt_sha256": "16dfe50d8bbe6bf29bf74b575ad6d1c23da9dcc3c377493ed475f8cd6d6ca1d3",
+    "parent_manifest_sha256": "e53e1b7fbdb6db08a0a7a0a1bf4a6a192de5384c3e540c76d8e293879cb02ec5",
+    "additions_sha256": "9c6282427592484f59a2e1b16edc7ed6066c3ec58a324befb658ab011a7f4766",
+    "additions_license": "Apache-2.0",
+    "maximum_tokens": 4096,
+    "test_used_for_selection": false,
+    "real_legitimate_holdout_available": false,
+    "rejected": [
+      {
+        "group": "a6ff3d636e45ee88409a168883e34e74896d2936f1e9f0099d5ac2e1ef98d5b6",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "2769e52a3add9b514600a3aa23833b47e55eadd2d4af613ceebb5016d4f2ab7e",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "14601097c231bf87c83038d313e356cf80e5541f8b7d546375631f47129decf5",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "490820a9bb47349cfb4d863752e4a26dfc103dd5a4403254505b0480b818d536",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "b33588308acfc32422514085ff3741aa8784082f034782c2984cd75880a481d1",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "f5ea5c80840f8a0fa2a8274e6f319d11958d440144991cfc7b31daaf738ba1b7",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "dcd9584a48d565cb93dfe6c67a4a45a7f98608f473d5f60b467cc2c5f3c2732a",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "b444b544493079b0c38b5624487694d55df1bca3b010edd5a9e4659297635092",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "a1e949c7eb810d56bc1de82bfcd1392525cab40ae1ca14fcf16650383185bab3",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "84c468ad6b0fca091a7334976037efa4a5fc2526583321bc27a3b58894300eb2",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "4df9314bde95baac165b3d03e9920a30a43519af3653c04bf9385ad61d2d99df",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "bf1782c4973cd8e060e6eeaad4bb0fd4656070a7143d2add10b61c69253aab9e",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "568d9d153737197d94d0251900a265b73f19477703bf16140e0486cb9c3668c7",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "b11486835cbc8cfd7118f91e014225b64f72e378d0e939707daa32259e0fc886",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      },
+      {
+        "group": "774a87535e9198ce19436d7bd21aafcef3237f80f748aa9c08b36d78cbb52cf3",
+        "reason": "overlong evidence; no truncation",
+        "label": "phishing"
+      }
+    ],
+    "splits": {
+      "train": {
+        "rows": 7497,
+        "labels": {
+          "phishing": 2499,
+          "legitimate": 2499,
+          "spam": 2499
+        },
+        "max_tokens": 4004,
+        "sha256": "88f070b6c857bdfc9f2628fe18c2af470a59b6e03b673708f1d5e2446d5f5434"
+      },
+      "validation": {
+        "rows": 970,
+        "labels": {
+          "legitimate": 218,
+          "phishing": 700,
+          "spam": 52
+        },
+        "max_tokens": 3913,
+        "sha256": "de9b8d644d30e16a93e3ced740e3c4f342475f6ace0ce470cf1115e320c365c9"
+      }
+    }
+  },
+  "unique_training": {
+    "unique_rows": 3671,
+    "labels": {
+      "phishing": 2499,
+      "legitimate": 1075,
+      "spam": 97
+    }
+  },
+  "original_acceptance": {
+    "selected_model": "Llama 3.2 1B Instruct",
+    "training": "600 fixed steps, fresh initialization, no checkpoint selection by regression score",
+    "phishing_recall_minimum": 0.95,
+    "legitimate_false_positive_or_hold_rate_maximum": 0.02,
+    "spam_recall_minimum": 0.9,
+    "spam_called_phishing_rate_maximum": 0.05,
+    "invalid_or_unknown_outputs_maximum": 0,
+    "instruction_recall_minimum": 0.95,
+    "tail_recall_minimum": 0.95,
+    "p95_seconds_maximum": 5,
+    "sequential_emails_per_minute_minimum": 5,
+    "cpu_quota": 2,
+    "memory_bytes": 2147483648,
+    "swap_bytes": 0,
+    "context_tokens": 4096,
+    "fresh_representative_legitimate_mail_holdout_required_for_production": true,
+    "production_enabled": false
+  },
+  "user_updated_acceptance": {
+    "selected_model": "Llama 3.2 1B Instruct",
+    "training": "600 fixed steps, fresh initialization, no checkpoint selection by regression score",
+    "phishing_recall_minimum": 0.95,
+    "legitimate_false_positive_or_hold_rate_maximum": 0.02,
+    "spam_recall_minimum": 0.9,
+    "spam_called_phishing_rate_maximum": 0.05,
+    "invalid_or_unknown_outputs_maximum": 0,
+    "instruction_recall_minimum": 0.95,
+    "tail_recall_minimum": 0.95,
+    "p95_seconds_maximum": 30,
+    "sequential_emails_per_minute_minimum": 5,
+    "cpu_quota": 2,
+    "memory_bytes": 2147483648,
+    "swap_bytes": 0,
+    "context_tokens": 4096,
+    "fresh_representative_legitimate_mail_holdout_required_for_production": true,
+    "production_enabled": false,
+    "change_authorization": "User explicitly allows 10\u201330 second email screening during the benchmark; quality gates unchanged.",
+    "latency_is_preference_not_quality_override": true,
+    "longer_screening_acceptable_if_accuracy_improves": true
+  },
+  "native_smoke": [
+    {
+      "expected": "legitimate",
+      "response": "{\"label\":\"phishing\"}",
+      "seconds": 0.438988458015956
+    },
+    {
+      "expected": "spam",
+      "response": "{\"label\":\"phishing\"}",
+      "seconds": 0.15110191609710455
+    },
+    {
+      "expected": "phishing",
+      "response": "{\"label\":\"phishing\"}",
+      "seconds": 0.15435370802879333
+    }
+  ],
+  "cpu_run_original_assessment": {
+    "status": "rejected",
+    "model": "Llama-Thura-mail-1B Q4_K_M",
+    "model_sha256": "664969993a8808c4bf6985775962dfed00f9b1a73acc2e118f14d7cd40623746",
+    "model_bytes": 807694048,
+    "corpus_sha256": "b132a9b8d7c4f9200f163c6c62cadd185795cc0a85fa6e94b58d054ad70a083f",
+    "client_sha256": "b31d18947c602fa9a8b3fb7d06859678768a08f86b291ca54c67c0e9a778cde2",
+    "limits": {
+      "cpus": 2,
+      "memory_bytes": 2147483648,
+      "swap_bytes": 0
+    },
+    "phase": "trained model: exposed regression plus validation spam pilot",
+    "production_acceptance": false,
+    "training_provenance": {
+      "kind": "locally-fine-tuned",
+      "name": "Llama-Thura-mail-1B",
+      "model_sha256": "664969993a8808c4bf6985775962dfed00f9b1a73acc2e118f14d7cd40623746",
+      "model_bytes": 807694048,
+      "adapter_sha256": "7a885675995ada395d9c8e940bd6ec2f5a8db9a6a637eb70977a6ac9b3cdbc34",
+      "data_manifest_sha256": "a5b229d4e81213975ac5fe094b5b9fc6541baabdf8af9dc8668b32719a4b3ef1",
+      "acceptance_sha256": "2e4ee1c03e65e9e91cba0ac22977de1794851367f6041ef48f228afcb6549384",
+      "training_report": {
+        "exit_code": 0,
+        "wall_seconds": 473.6740132080158,
+        "max_child_rss_bytes": 1189052416,
+        "config_sha256": "66b0fbd4a9b42e18e164842d5d4ba45799474fbe5c4a7d004939f7d070a2ba1b",
+        "log_sha256": "22eb8969fb87d74988ea6052f96a31373dd791b48a47b7c60537317bea0d5f80",
+        "platform": "darwin",
+        "production_enabled": false,
+        "base_revision": "08231374eeacb049a0eade7922910865b8fce912",
+        "data_manifest_sha256": "a5b229d4e81213975ac5fe094b5b9fc6541baabdf8af9dc8668b32719a4b3ef1",
+        "steps": 600,
+        "peak_metal_bytes": 3989698716
+      },
+      "base_manifest": {
+        "repository": "mlx-community/Llama-3.2-1B-Instruct-4bit",
+        "revision": "08231374eeacb049a0eade7922910865b8fce912",
+        "license": "Llama-3.2 Community License and Acceptable Use Policy",
+        "upstream_base": "meta-llama/Llama-3.2-1B-Instruct",
+        "quantization": "MLX 4-bit group size 64",
+        "files": {
+          "model.safetensors": {
+            "bytes": 695283921,
+            "sha256": "35e396644bca888eec399f9c0f843ec7fa78b8f8c5e06841661be62b4edf96dd"
+          },
+          "tokenizer_config.json": {
+            "bytes": 54558,
+            "sha256": "022d5ae3df4737998ab97d8f31ac2bcb4c06dd8ebe5a8aba2b4aceef1e5ea7d3"
+          },
+          "special_tokens_map.json": {
+            "bytes": 296,
+            "sha256": "6f38c73729248f6c127296386e3cdde96e254636cc58b4169d3fd32328d9a8ec"
+          },
+          "config.json": {
+            "bytes": 1121,
+            "sha256": "73bfb89e5a43c76ada2d7a9609862139578a71cfbb43e30bf5d4571026dd3741"
+          },
+          "tokenizer.json": {
+            "bytes": 17209920,
+            "sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b"
+          },
+          "README.md": {
+            "bytes": 16310,
+            "sha256": "8db4458a4a0a0c9d442232406bc5c642489ac5def6cf82f2c9df62f6f4c8d661"
+          },
+          ".gitattributes": {
+            "bytes": 1570,
+            "sha256": "34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930"
+          },
+          "model.safetensors.index.json": {
+            "bytes": 26159,
+            "sha256": "437f66af94c5f921f4fbe465341bdee4dc6a37ab8f29bbb12fd7caad577dedd7"
+          }
+        }
+      },
+      "converter_revision": "31288c9c66e59377f7788d920678a565bb89dd37",
+      "runtime_image": "ghcr.io/ggml-org/llama.cpp:server@sha256:143926008cbbbab8fae8fd87809875af3e42d3d676c30c11c55c0f3f683a5a07",
+      "quantization": "QLoRA trained on MLX 4bit; dequantized fusion then Q4_K_M",
+      "license": "Llama-3.2 Community License and Acceptable Use Policy",
+      "production_enabled": false
+    },
+    "image_id": "sha256:143926008cbbbab8fae8fd87809875af3e42d3d676c30c11c55c0f3f683a5a07",
+    "startup_seconds": 2.238662208081223,
+    "container_state": {
+      "Status": "running",
+      "Running": true,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,
+      "Dead": false,
+      "Pid": 72931,
+      "ExitCode": 0,
+      "Error": "",
+      "StartedAt": "2026-10-19T21:45:18.587406222Z",
+      "FinishedAt": "0001-01-01T00:00:00Z",
+      "Health": {
+        "Status": "healthy",
+        "FailingStreak": 0,
+        "Log": [
+          {
+            "Start": "2026-10-19T17:47:48.761502585-04:00",
+            "End": "2026-10-19T17:47:48.807718644-04:00",
+            "ExitCode": 0,
+            "Output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\r  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\r100    15  100    15    0     0  20026      0 --:--:-- --:--:-- --:--:-- 15000\n{\"status\":\"ok\"}"
+          },
+          {
+            "Start": "2026-10-19T17:48:18.80963785-04:00",
+            "End": "2026-10-19T17:48:18.834854931-04:00",
+            "ExitCode": 0,
+            "Output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\r  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\r100    15  100    15    0     0  30120      0 --:--:-- --:--:-- --:--:-- 15000\n{\"status\":\"ok\"}"
+          },
+          {
+            "Start": "2026-10-19T17:48:48.835506761-04:00",
+            "End": "2026-10-19T17:48:48.86228265-04:00",
+            "ExitCode": 0,
+            "Output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\r  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\r100    15  100    15    0     0  19157      0 --:--{\"status\":\"ok\"}:-- --:--:-- --:--:-- 15000\n"
+          },
+          {
+            "Start": "2026-10-19T17:49:18.86321668-04:00",
+            "End": "2026-10-19T17:49:18.888272692-04:00",
+            "ExitCode": 0,
+            "Output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\r  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\r100    15  100    15    0     0  15974      0 --:-{\"status\":\"ok\"}-:-- --:--:-- --:--:-- 15000\n"
+          },
+          {
+            "Start": "2026-10-19T17:49:48.88858107-04:00",
+            "End": "2026-10-19T17:49:48.917259692-04:00",
+            "ExitCode": 0,
+            "Output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\r  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0{\"status\":\"ok\"}\r100    15  100    15    0     0  37974      0 --:--:-- --:--:-- --:--:-- 15000\n"
+          }
+        ]
+      }
+    },
+    "cgroup": {
+      "cpu.max": "200000 100000",
+      "cpu.stat": "usage_usec 577158914\nuser_usec 575652345\nsystem_usec 1506569\ncore_sched.force_idle_usec 0\nnr_periods 2911\nnr_throttled 671\nthrottled_usec 786606\nnr_bursts 0\nburst_usec 0",
+      "memory.events": "low 0\nhigh 0\nmax 2783\noom 0\noom_kill 0\noom_group_kill 0",
+      "memory.max": "2147483648",
+      "memory.peak": "2147487744",
+      "memory.swap.max": "0"
+    },
+    "llm_pack": "github.com/agim/lidza/packs/llm@v0.1.123",
+    "prompt_sha256": "16dfe50d8bbe6bf29bf74b575ad6d1c23da9dcc3c377493ed475f8cd6d6ca1d3",
+    "prompt_version": "thura-generic-mail-three-class-v1",
+    "results": [
+      {
+        "id": "24d3f79ba8e983beee6dee08fb0e57f9a571fa20de9a5f44a232b994c7a1386e",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "spam",
+        "millis": 7441.3,
+        "input_tokens": 1095,
+        "output_tokens": 6
+      },
+      {
+        "id": "authored-phishing-27",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 362.285,
+        "input_tokens": 256,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-30",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 325.087,
+        "input_tokens": 252,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-09",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 475.397,
+        "input_tokens": 247,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-01",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 458.955,
+        "input_tokens": 265,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-26",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 299.494,
+        "input_tokens": 247,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-01",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 292.134,
+        "input_tokens": 246,
+        "output_tokens": 7
+      },
+      {
+        "id": "challenge-instruction-04",
+        "label": "phishing",
+        "source": "instruction",
+        "prediction": "phishing",
+        "millis": 515.925,
+        "input_tokens": 280,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-15",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 336.097,
+        "input_tokens": 253,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-28",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 391.881,
+        "input_tokens": 261,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-31",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 341.188,
+        "input_tokens": 255,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-10",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 314.348,
+        "input_tokens": 250,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-20",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 328.201,
+        "input_tokens": 252,
+        "output_tokens": 7
+      },
+      {
+        "id": "challenge-tail-02",
+        "label": "phishing",
+        "source": "tail",
+        "prediction": "phishing",
+        "millis": 12147.535,
+        "input_tokens": 1691,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-19",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 403.062,
+        "input_tokens": 257,
+        "output_tokens": 7
+      },
+      {
+        "id": "357d33bed3f67aafd9656ab1e34c201e92e2667eb6b370f247588f5d51ddb1d8",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "spam",
+        "millis": 19084.337,
+        "input_tokens": 2378,
+        "output_tokens": 6
+      },
+      {
+        "id": "authored-phishing-17",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 370.317,
+        "input_tokens": 251,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-09",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 405.909,
+        "input_tokens": 258,
+        "output_tokens": 7
+      },
+      {
+        "id": "challenge-instruction-01",
+        "label": "phishing",
+        "source": "instruction",
+        "prediction": "phishing",
+        "millis": 585.515,
+        "input_tokens": 283,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-30",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 307.649,
+        "input_tokens": 245,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-23",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 373.449,
+        "input_tokens": 253,
+        "output_tokens": 7
+      },
+      {
+        "id": "challenge-tail-00",
+        "label": "phishing",
+        "source": "tail",
+        "prediction": "phishing",
+        "millis": 13010.435,
+        "input_tokens": 1695,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-13",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 414.144,
+        "input_tokens": 254,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-00",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 467.491,
+        "input_tokens": 261,
+        "output_tokens": 7
+      },
+      {
+        "id": "1a2b5c022b60cbb4a698c03031f7e54a26739f2a98439d1746d15b97d3496e4c",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "spam",
+        "millis": 39916.093,
+        "input_tokens": 3580,
+        "output_tokens": 6
+      },
+      {
+        "id": "challenge-instruction-03",
+        "label": "phishing",
+        "source": "instruction",
+        "prediction": "phishing",
+        "millis": 812.942,
+        "input_tokens": 280,
+        "output_tokens": 7
+      },
+      {
+        "id": "3bb3106c70a2894785634295aa3578508aaa3343562f8fe5c5f1af78c021d7fd",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "spam",
+        "millis": 13551.828,
+        "input_tokens": 1544,
+        "output_tokens": 6
+      },
+      {
+        "id": "authored-safe-08",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 425.241,
+        "input_tokens": 246,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-05",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 504.662,
+        "input_tokens": 259,
+        "output_tokens": 7
+      },
+      {
+        "id": "076dacba37dd487f0c8038b7c5b411f2e82c7008c90585fa7f74eba6f2c981ef",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 4256.151,
+        "input_tokens": 649,
+        "output_tokens": 7
+      },
+      {
+        "id": "1965daecd1cb4c032f180f01125c3ea89d72d85796947beb945d237940501a46",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 1274.135,
+        "input_tokens": 345,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-15",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 493.415,
+        "input_tokens": 257,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-12",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 464.404,
+        "input_tokens": 253,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-10",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 488.834,
+        "input_tokens": 255,
+        "output_tokens": 7
+      },
+      {
+        "id": "3fc3087144369e377094a151437b299959ca6692d58d15233231cff7256b8ac1",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "spam",
+        "millis": 35178.792,
+        "input_tokens": 3124,
+        "output_tokens": 6
+      },
+      {
+        "id": "authored-phishing-18",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 449.609,
+        "input_tokens": 250,
+        "output_tokens": 7
+      },
+      {
+        "id": "1ed85ad6e75ecb4ef9bfd957ef6055c643a1dcce40897f08350076a4300f033a",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 2121.338,
+        "input_tokens": 437,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-12",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 453.145,
+        "input_tokens": 253,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-04",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 545.134,
+        "input_tokens": 262,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-23",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 466.464,
+        "input_tokens": 250,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-07",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 472.339,
+        "input_tokens": 253,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-08",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 447.716,
+        "input_tokens": 249,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-18",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 488.228,
+        "input_tokens": 252,
+        "output_tokens": 7
+      },
+      {
+        "id": "0ef0296ae2e3129f9e2ddc9130b56c2345f9f21a5b2d0732f05a89b81cb0d9d2",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 1328.22,
+        "input_tokens": 345,
+        "output_tokens": 7
+      },
+      {
+        "id": "challenge-instruction-06",
+        "label": "phishing",
+        "source": "instruction",
+        "prediction": "phishing",
+        "millis": 643.078,
+        "input_tokens": 276,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-24",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 468.45,
+        "input_tokens": 256,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-07",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 383.16,
+        "input_tokens": 247,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-02",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 461.885,
+        "input_tokens": 255,
+        "output_tokens": 7
+      },
+      {
+        "id": "18d9053d7f15d2392e5e50bfd0539bba09426013afae9c65e5582904f8c3ac9c",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 2311.555,
+        "input_tokens": 463,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-14",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 463.722,
+        "input_tokens": 254,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-02",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 508.979,
+        "input_tokens": 260,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-16",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 403.381,
+        "input_tokens": 248,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-06",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 559,
+        "input_tokens": 258,
+        "output_tokens": 7
+      },
+      {
+        "id": "challenge-instruction-02",
+        "label": "phishing",
+        "source": "instruction",
+        "prediction": "phishing",
+        "millis": 673.277,
+        "input_tokens": 273,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-22",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 448.78,
+        "input_tokens": 251,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-26",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 476.117,
+        "input_tokens": 253,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-24",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 421.613,
+        "input_tokens": 248,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-05",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 398.414,
+        "input_tokens": 247,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-06",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 438.125,
+        "input_tokens": 250,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-21",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 388.945,
+        "input_tokens": 245,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-16",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 494.2,
+        "input_tokens": 257,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-29",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 463.12,
+        "input_tokens": 255,
+        "output_tokens": 7
+      },
+      {
+        "id": "32903fe09b59ae02888faabf8a8760ad2331817395e5fe113fef67c89f6d15f1",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 2283.971,
+        "input_tokens": 461,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-19",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 464.769,
+        "input_tokens": 254,
+        "output_tokens": 7
+      },
+      {
+        "id": "challenge-tail-01",
+        "label": "phishing",
+        "source": "tail",
+        "prediction": "phishing",
+        "millis": 15337.435,
+        "input_tokens": 1700,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-11",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 499.998,
+        "input_tokens": 256,
+        "output_tokens": 7
+      },
+      {
+        "id": "2098140d6f070476f0153b04b4508cae2206332c7180fe185df6cecbb1935899",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 3115.181,
+        "input_tokens": 543,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-20",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 417.945,
+        "input_tokens": 249,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-00",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 586.984,
+        "input_tokens": 254,
+        "output_tokens": 7
+      },
+      {
+        "id": "3be4da99153524f037e7981b8f0a7693f69698f634a1c6b4b6a626965c630729",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 4932.904,
+        "input_tokens": 722,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-25",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 458.811,
+        "input_tokens": 249,
+        "output_tokens": 7
+      },
+      {
+        "id": "369b68f8c71f89cf34a56721e187d221a7e866886d79f389b4c66ab11ab5b07e",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "spam",
+        "millis": 37350.603,
+        "input_tokens": 3296,
+        "output_tokens": 6
+      },
+      {
+        "id": "authored-phishing-21",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 488.318,
+        "input_tokens": 254,
+        "output_tokens": 7
+      },
+      {
+        "id": "2f790db7d5d8122492c95bed07aa72afd418b3988d96115a7a1565cd6dcbbe69",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 2664.597,
+        "input_tokens": 507,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-25",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 362.567,
+        "input_tokens": 242,
+        "output_tokens": 7
+      },
+      {
+        "id": "challenge-instruction-07",
+        "label": "phishing",
+        "source": "instruction",
+        "prediction": "phishing",
+        "millis": 603.964,
+        "input_tokens": 271,
+        "output_tokens": 7
+      },
+      {
+        "id": "459d733cc32e39b8dc75974912799463f64327f7b2aabada1546d8d7160aae05",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "spam",
+        "millis": 7030.598,
+        "input_tokens": 963,
+        "output_tokens": 6
+      },
+      {
+        "id": "challenge-instruction-00",
+        "label": "phishing",
+        "source": "instruction",
+        "prediction": "phishing",
+        "millis": 656.516,
+        "input_tokens": 279,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-29",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 416.581,
+        "input_tokens": 251,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-27",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 469.616,
+        "input_tokens": 255,
+        "output_tokens": 7
+      },
+      {
+        "id": "25754ae1cf76114a0d425bc4b62a5adf61466905e6c254b84758193ad75ccd07",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 1521.175,
+        "input_tokens": 375,
+        "output_tokens": 7
+      },
+      {
+        "id": "3d4bd76a4424d0c9dc5e4fa8feecd04661fd2fc1d739a448a01d024a36c1bc73",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "phishing",
+        "millis": 2505.421,
+        "input_tokens": 493,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-04",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 451.041,
+        "input_tokens": 255,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-22",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 462.287,
+        "input_tokens": 254,
+        "output_tokens": 7
+      },
+      {
+        "id": "challenge-tail-03",
+        "label": "phishing",
+        "source": "tail",
+        "prediction": "phishing",
+        "millis": 15381.398,
+        "input_tokens": 1697,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-11",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 465.695,
+        "input_tokens": 248,
+        "output_tokens": 7
+      },
+      {
+        "id": "challenge-instruction-05",
+        "label": "phishing",
+        "source": "instruction",
+        "prediction": "phishing",
+        "millis": 658.828,
+        "input_tokens": 277,
+        "output_tokens": 7
+      },
+      {
+        "id": "2b36bfd56e493d8eeaadb65c3ea9401546144f50733bddc65a0e72886ec2748f",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "spam",
+        "millis": 5245.917,
+        "input_tokens": 785,
+        "output_tokens": 6
+      },
+      {
+        "id": "authored-safe-13",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 414.265,
+        "input_tokens": 249,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-17",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 437.419,
+        "input_tokens": 250,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-28",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 393.931,
+        "input_tokens": 246,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-31",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 372.283,
+        "input_tokens": 244,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-phishing-03",
+        "label": "phishing",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 540.66,
+        "input_tokens": 262,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-03",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 463.91,
+        "input_tokens": 254,
+        "output_tokens": 7
+      },
+      {
+        "id": "authored-safe-14",
+        "label": "legitimate",
+        "source": "authored",
+        "prediction": "phishing",
+        "millis": 501.501,
+        "input_tokens": 258,
+        "output_tokens": 7
+      },
+      {
+        "id": "1c00b095e431b8d51a5d55b2a31f91dde2ab491511b1df3b9833cf6726bd8b05",
+        "label": "spam",
+        "source": "guenter-spam-2024",
+        "prediction": "spam",
+        "millis": 7444.105,
+        "input_tokens": 1011,
+        "output_tokens": 6
+      }
+    ],
+    "constraints_verified": true,
+    "resource_acceptance": false,
+    "metrics": {
+      "count": 96,
+      "counts": {
+        "legitimate": 32,
+        "spam": 20,
+        "phishing": 44
+      },
+      "confusion": {
+        "legitimate": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 32,
+          "error": 0
+        },
+        "spam": {
+          "legitimate": 0,
+          "spam": 9,
+          "phishing": 11,
+          "error": 0
+        },
+        "phishing": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 44,
+          "error": 0
+        }
+      },
+      "phishing_recall": 1.0,
+      "spam_recall": 0.45,
+      "legitimate_false_positive_rate": 1.0,
+      "spam_as_phishing_rate": 0.55,
+      "errors": 0,
+      "accuracy": 0.5520833333333334
+    },
+    "cohorts": {
+      "authored": {
+        "count": 64,
+        "counts": {
+          "legitimate": 32,
+          "spam": 0,
+          "phishing": 32
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 32,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 32,
+            "error": 0
+          }
+        },
+        "phishing_recall": 1.0,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": 1.0,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 0.5
+      },
+      "guenter-spam-2024": {
+        "count": 20,
+        "counts": {
+          "legitimate": 0,
+          "spam": 20,
+          "phishing": 0
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 9,
+            "phishing": 11,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          }
+        },
+        "phishing_recall": null,
+        "spam_recall": 0.45,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": 0.55,
+        "errors": 0,
+        "accuracy": 0.45
+      },
+      "instruction": {
+        "count": 8,
+        "counts": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 8
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 8,
+            "error": 0
+          }
+        },
+        "phishing_recall": 1.0,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 1.0
+      },
+      "tail": {
+        "count": 4,
+        "counts": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 4
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 4,
+            "error": 0
+          }
+        },
+        "phishing_recall": 1.0,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 1.0
+      }
+    },
+    "latency_ms": {
+      "p50": 469.616,
+      "p95": 15381.398,
+      "max": 39916.093
+    },
+    "sequential_emails_per_minute": 19.9033980283611,
+    "performance_acceptance": false,
+    "numerical_acceptance": false,
+    "challenge_acceptance": true,
+    "context_tokens": 4096,
+    "context_shift": false,
+    "decoding": {
+      "temperature": 0,
+      "seed": 42,
+      "max_output_tokens": 32,
+      "parallel_slots": 1
+    }
+  }
+}

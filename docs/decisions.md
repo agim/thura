@@ -387,3 +387,7 @@ The user requires a separate incoming-mail classifier with no paid API/training 
 ## 2026-10-19: Keep local mail models disabled after quality failures
 
 Why: Licensed three-class training and AntiSpamInstitute evaluation fit their measured resource limits but fail spam separation, legitimate-mail false positives or phishing challenge gates. Preserve the workspace toggle and assistant separation; do not activate candidates based on aggregate accuracy or memory fit. See docs/local-mail-training-evaluation.md and docs/antispaminstitute-evaluation.md.
+
+## 2026-10-19: Reject the locally fine-tuned Llama 1B checkpoint after constrained CPU evaluation
+
+Why: The user authorized local Mac training and 2-vCPU/2-GiB serving tests, with accuracy prioritized over screening latency. The corrected three-class MLX QLoRA pipeline completed 100-step timing pilots and a fixed 600-step run, but the exported Q4 checkpoint falsely flagged all 32 legitimate controls and separated only 9/20 ordinary spam cases despite detecting 44/44 phishing cases. Retain the Mail toggle and assistant separation; do not activate or bundle this artifact. Preserve original timings and the explicitly relaxed latency preference. See docs/llama-local-training-evaluation.md.

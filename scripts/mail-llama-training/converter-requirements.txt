@@ -1,0 +1,5 @@
+torch==2.14.1
+transformers==5.20.2
+numpy==2.5.4
+sentencepiece==0.2.1
+gguf @ git+https://github.com/ggml-org/llama.cpp.git@31288c9c66e59377f7788d920678a565bb89dd37#subdirectory=gguf-py

@@ -1,0 +1,41 @@
+{
+  "repository": "mlx-community/Llama-3.2-1B-Instruct-4bit",
+  "revision": "08231374eeacb049a0eade7922910865b8fce912",
+  "license": "Llama-3.2 Community License and Acceptable Use Policy",
+  "upstream_base": "meta-llama/Llama-3.2-1B-Instruct",
+  "quantization": "MLX 4-bit group size 64",
+  "files": {
+    "model.safetensors": {
+      "bytes": 695283921,
+      "sha256": "35e396644bca888eec399f9c0f843ec7fa78b8f8c5e06841661be62b4edf96dd"
+    },
+    "tokenizer_config.json": {
+      "bytes": 54558,
+      "sha256": "022d5ae3df4737998ab97d8f31ac2bcb4c06dd8ebe5a8aba2b4aceef1e5ea7d3"
+    },
+    "special_tokens_map.json": {
+      "bytes": 296,
+      "sha256": "6f38c73729248f6c127296386e3cdde96e254636cc58b4169d3fd32328d9a8ec"
+    },
+    "config.json": {
+      "bytes": 1121,
+      "sha256": "73bfb89e5a43c76ada2d7a9609862139578a71cfbb43e30bf5d4571026dd3741"
+    },
+    "tokenizer.json": {
+      "bytes": 17209920,
+      "sha256": "6b9e4e7fb171f92fd137b777cc2714bf87d11576700a1dcd7a399e7bbe39537b"
+    },
+    "README.md": {
+      "bytes": 16310,
+      "sha256": "8db4458a4a0a0c9d442232406bc5c642489ac5def6cf82f2c9df62f6f4c8d661"
+    },
+    ".gitattributes": {
+      "bytes": 1570,
+      "sha256": "34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930"
+    },
+    "model.safetensors.index.json": {
+      "bytes": 26159,
+      "sha256": "437f66af94c5f921f4fbe465341bdee4dc6a37ab8f29bbb12fd7caad577dedd7"
+    }
+  }
+}
