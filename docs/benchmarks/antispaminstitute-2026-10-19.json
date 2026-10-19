@@ -167,5 +167,182 @@
       "predicted_class": 1
     }
   ],
-  "decision": "reject documented default on this validation workload; no integration"
+  "decision": "reject both candidates; no integration",
+  "phishing_int8_2gib_pilot": {
+    "candidate": {
+      "repository": "AntiSpamInstitute/bert-MoE-Phishing-detection-v2.4",
+      "revision": "1b3c6ff35bc29b810b71cc1fb5d3d1faa49a7aa0",
+      "candidate": "phishing",
+      "dynamic_padding": true,
+      "labels": [
+        "benign",
+        "phishing"
+      ],
+      "threshold": 0.5,
+      "pooling": "maximum positive-class probability across every overlapping window",
+      "files": {
+        "model.onnx": {
+          "bytes": 1340986740,
+          "sha256": "52ae58cf950ed15c9b5aa8608dc6a5b9c0a35aa44d2001b57946f7f5467e4f9b"
+        },
+        "model.safetensors": {
+          "bytes": 1340622760,
+          "sha256": "a4937fd984546f06cefa8964559a0695f95006a02e9880bd27fe2030653b30eb"
+        },
+        "config.json": {
+          "bytes": 861,
+          "sha256": "b9b8e666c0458c1ef9f9d6ad3c3209bdf1add0e2084963fab830729a197b5aa6"
+        },
+        "tokenizer.json": {
+          "bytes": 711649,
+          "sha256": "91f1def9b9391fdabe028cd3f3fcc4efd34e5d1f08c3bf2de513ebb5911a1854"
+        },
+        "README.md": {
+          "bytes": 24,
+          "sha256": "d8d7a46d41a1a37fe4f0a5f637bf55c649310185329127d8a2204632e480be17"
+        },
+        "model_int8.onnx": {
+          "bytes": 432227713,
+          "sha256": "3dc8dd8c57bac3f4d717c20403c90f0885230dfb4d4e97c55caf1e40c6503989"
+        }
+      }
+    },
+    "kind": "int8",
+    "corpus_sha256": "fd11a6f1bf1241ef48ca4391adff261a5e1f2cca4f8dcf9c0452b61370d60221",
+    "phase": "regression",
+    "startup_seconds": 2.1432171870001184,
+    "cohorts": {
+      "legitimate": {
+        "count": 32,
+        "flagged_as_phishing": 2
+      },
+      "spam": {
+        "count": 20,
+        "flagged_as_phishing": 18
+      },
+      "phishing": {
+        "count": 44,
+        "flagged_as_phishing": 25
+      }
+    },
+    "cgroup": {
+      "memory.max": "2147483648",
+      "memory.peak": "1155493888",
+      "memory.swap.max": "0",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "100000 100000"
+    },
+    "constraints_verified": true,
+    "resource_acceptance": true,
+    "status": "rejected",
+    "image_id": "sha256:4669ed8fad223bc5ecdb61d76780ffe0f75762e44319cc539a2006a418a25fc0",
+    "container_state": {
+      "Status": "exited",
+      "Running": false,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,
+      "Dead": false,
+      "Pid": 0,
+      "ExitCode": 0,
+      "Error": "",
+      "StartedAt": "2026-10-19T21:03:44.50469346Z",
+      "FinishedAt": "2026-10-19T21:05:30.868150414Z"
+    },
+    "limits": {
+      "cpus": 1,
+      "memory_bytes": 2147483648,
+      "swap_bytes": 0
+    },
+    "latency_ms": {
+      "p50": 106.89237499900628,
+      "p95": 5771.753431999969,
+      "max": 17775.845468000625
+    },
+    "performance_acceptance": false,
+    "binary_phishing_metrics": {
+      "phishing_recall": 0.5681818181818182,
+      "legitimate_false_positive_rate": 0.0625,
+      "spam_as_phishing_rate": 0.9
+    },
+    "pilot_numerical_acceptance": false
+  },
+  "phishing_fp32_2gib_startup": {
+    "status": "failed",
+    "kind": "fp32",
+    "candidate": "phishing",
+    "limits": {
+      "cpus": 1,
+      "memory_bytes": 2147483648,
+      "swap_bytes": 0
+    },
+    "container_state": {
+      "Status": "exited",
+      "Running": false,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": true,
+      "Dead": false,
+      "Pid": 0,
+      "ExitCode": 137,
+      "Error": "",
+      "StartedAt": "2026-10-19T21:03:45.864671132Z",
+      "FinishedAt": "2026-10-19T21:03:51.013562266Z"
+    },
+    "image_id": "sha256:4669ed8fad223bc5ecdb61d76780ffe0f75762e44319cc539a2006a418a25fc0",
+    "diagnostic": "{\"phase\": \"limits\", \"cgroup\": {\"memory.max\": \"2147483648\", \"memory.swap.max\": \"0\", \"cpu.max\": \"100000 100000\"}}\n\u001b[0;93m2026-10-19 21:03:46.081809439 [W:onnxruntime:Default, telemetry_1ds.cc:600 operator()] Failed to persist telemetry device ID; using an in-memory identifier\u001b[m\n"
+  },
+  "phishing_fp32_export_parity_probes": [
+    {
+      "cohort": "legitimate",
+      "sequence_tokens": 304,
+      "native_logits": [
+        [
+          5.770391464233398,
+          -4.656579971313477
+        ]
+      ],
+      "onnx_logits": [
+        [
+          5.770397663116455,
+          -4.656576156616211
+        ]
+      ],
+      "max_abs_error": 6.198883056640625e-06
+    },
+    {
+      "cohort": "spam",
+      "sequence_tokens": 476,
+      "native_logits": [
+        [
+          -3.8849525451660156,
+          4.1044769287109375
+        ]
+      ],
+      "onnx_logits": [
+        [
+          -3.884946584701538,
+          4.1044721603393555
+        ]
+      ],
+      "max_abs_error": 5.9604644775390625e-06
+    },
+    {
+      "cohort": "phishing",
+      "sequence_tokens": 321,
+      "native_logits": [
+        [
+          5.628777503967285,
+          -4.396684646606445
+        ]
+      ],
+      "onnx_logits": [
+        [
+          5.628776550292969,
+          -4.396684646606445
+        ]
+      ],
+      "max_abs_error": 9.5367431640625e-07
+    }
+  ]
 }

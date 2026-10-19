@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 import subprocess
 import uuid
+from common import acceptance
 
 MEMORY = 1024 ** 3
 
@@ -16,6 +17,8 @@ def regression_acceptance(report):
     if (measured['errors'] or (measured['phishing_recall'] or 0) < .95
             or measured['legitimate_false_positive_rate'] is None
             or measured['legitimate_false_positive_rate'] > .02):
+        return False
+    if measured['counts'].get('spam', 0) and not acceptance(measured):
         return False
     return all((value['phishing_recall'] or 0) >= .95
                for name, value in report['cohorts'].items()

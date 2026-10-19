@@ -1,0 +1,329 @@
+{
+  "status": "rejected",
+  "model": "Llama-3.2-1B-Instruct Q4_K_M",
+  "model_sha256": "84fffd9ce0ecc7e0a36ec7a3c3aa21bb888213f8bf3db9408d5520a26412f06e",
+  "model_bytes": 807694144,
+  "corpus_sha256": "b132a9b8d7c4f9200f163c6c62cadd185795cc0a85fa6e94b58d054ad70a083f",
+  "client_sha256": "026f2412c4e079bc85716edea6ab9b62e41ca6769ea4144d04f482efb66f856f",
+  "limits": {
+    "cpus": 1,
+    "memory_bytes": 2147483648,
+    "swap_bytes": 0
+  },
+  "phase": "known regression plus validation spam pilot",
+  "production_acceptance": false,
+  "image_id": "sha256:143926008cbbbab8fae8fd87809875af3e42d3d676c30c11c55c0f3f683a5a07",
+  "startup_seconds": 2.3026066250167787,
+  "container_state": {
+    "Status": "running",
+    "Running": true,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 71654,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-19T21:09:56.913839876Z",
+    "FinishedAt": "0001-01-01T00:00:00Z",
+    "Health": {
+      "Status": "healthy",
+      "FailingStreak": 0,
+      "Log": [
+        {
+          "Start": "2026-10-19T17:15:57.32383579-04:00",
+          "End": "2026-10-19T17:15:57.348808063-04:00",
+          "ExitCode": 0,
+          "Output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\r  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\r100    15  100    15    0     0  42372      0 --:--:-- --:--:-- --:--:-- 15000\n{\"status\":\"ok\"}"
+        },
+        {
+          "Start": "2026-10-19T17:16:27.350332204-04:00",
+          "End": "2026-10-19T17:16:27.372156294-04:00",
+          "ExitCode": 0,
+          "Output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\r  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\r100    15  100    15    0     0  48701      0 --:--:-- --:--:-- --:--:-- 15000\n{\"status\":\"ok\"}"
+        },
+        {
+          "Start": "2026-10-19T17:16:57.373046811-04:00",
+          "End": "2026-10-19T17:16:57.396390835-04:00",
+          "ExitCode": 0,
+          "Output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\r  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\r100    15  100    15    0     0  41322      0 --:--:-- --:--:-- --:--:-- 15000\n{\"status\":\"ok\"}"
+        },
+        {
+          "Start": "2026-10-19T17:17:27.402986091-04:00",
+          "End": "2026-10-19T17:17:27.468956552-04:00",
+          "ExitCode": 0,
+          "Output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\r  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\r100    15  100    15    0     0  34324      0 --:--:-- --:--:-- --:--:-- 15000\n{\"status\":\"ok\"}"
+        },
+        {
+          "Start": "2026-10-19T17:17:57.471274103-04:00",
+          "End": "2026-10-19T17:17:57.51248903-04:00",
+          "ExitCode": 0,
+          "Output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\r  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\r100    15  100    15    0     0   8731      0 --:--:-- --:--:-- --:--:-- 15000\n{\"status\":\"ok\"}"
+        }
+      ]
+    }
+  },
+  "cgroup": {
+    "cpu.max": "100000 100000",
+    "cpu.stat": "usage_usec 485589386\nuser_usec 483951022\nsystem_usec 1638363\ncore_sched.force_idle_usec 0\nnr_periods 4911\nnr_throttled 1802\nthrottled_usec 5033710\nnr_bursts 0\nburst_usec 0",
+    "memory.events": "low 0\nhigh 0\nmax 3984\noom 0\noom_kill 0\noom_group_kill 0",
+    "memory.max": "2147483648",
+    "memory.peak": "2147487744",
+    "memory.swap.max": "0"
+  },
+  "llm_pack": "github.com/agim/lidza/packs/llm@v0.1.123",
+  "prompt_sha256": "16dfe50d8bbe6bf29bf74b575ad6d1c23da9dcc3c377493ed475f8cd6d6ca1d3",
+  "prompt_version": "thura-generic-mail-three-class-v1",
+  "constraints_verified": true,
+  "resource_acceptance": false,
+  "metrics": {
+    "count": 96,
+    "counts": {
+      "legitimate": 32,
+      "spam": 20,
+      "phishing": 44
+    },
+    "confusion": {
+      "legitimate": {
+        "legitimate": 24,
+        "spam": 0,
+        "phishing": 0,
+        "error": 8
+      },
+      "spam": {
+        "legitimate": 19,
+        "spam": 0,
+        "phishing": 0,
+        "error": 1
+      },
+      "phishing": {
+        "legitimate": 36,
+        "spam": 2,
+        "phishing": 0,
+        "error": 6
+      }
+    },
+    "phishing_recall": 0.0,
+    "spam_recall": 0.0,
+    "legitimate_false_positive_rate": 0.25,
+    "spam_as_phishing_rate": 0.0,
+    "errors": 15,
+    "accuracy": 0.25
+  },
+  "cohorts": {
+    "authored": {
+      "count": 64,
+      "counts": {
+        "legitimate": 32,
+        "spam": 0,
+        "phishing": 32
+      },
+      "confusion": {
+        "legitimate": {
+          "legitimate": 24,
+          "spam": 0,
+          "phishing": 0,
+          "error": 8
+        },
+        "spam": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "phishing": {
+          "legitimate": 26,
+          "spam": 1,
+          "phishing": 0,
+          "error": 5
+        }
+      },
+      "phishing_recall": 0.0,
+      "spam_recall": null,
+      "legitimate_false_positive_rate": 0.25,
+      "spam_as_phishing_rate": null,
+      "errors": 13,
+      "accuracy": 0.375
+    },
+    "guenter-spam-2024": {
+      "count": 20,
+      "counts": {
+        "legitimate": 0,
+        "spam": 20,
+        "phishing": 0
+      },
+      "confusion": {
+        "legitimate": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "spam": {
+          "legitimate": 19,
+          "spam": 0,
+          "phishing": 0,
+          "error": 1
+        },
+        "phishing": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        }
+      },
+      "phishing_recall": null,
+      "spam_recall": 0.0,
+      "legitimate_false_positive_rate": null,
+      "spam_as_phishing_rate": 0.0,
+      "errors": 1,
+      "accuracy": 0.0
+    },
+    "instruction": {
+      "count": 8,
+      "counts": {
+        "legitimate": 0,
+        "spam": 0,
+        "phishing": 8
+      },
+      "confusion": {
+        "legitimate": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "spam": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "phishing": {
+          "legitimate": 7,
+          "spam": 0,
+          "phishing": 0,
+          "error": 1
+        }
+      },
+      "phishing_recall": 0.0,
+      "spam_recall": null,
+      "legitimate_false_positive_rate": null,
+      "spam_as_phishing_rate": null,
+      "errors": 1,
+      "accuracy": 0.0
+    },
+    "tail": {
+      "count": 4,
+      "counts": {
+        "legitimate": 0,
+        "spam": 0,
+        "phishing": 4
+      },
+      "confusion": {
+        "legitimate": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "spam": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "phishing": {
+          "legitimate": 3,
+          "spam": 1,
+          "phishing": 0,
+          "error": 0
+        }
+      },
+      "phishing_recall": 0.0,
+      "spam_recall": null,
+      "legitimate_false_positive_rate": null,
+      "spam_as_phishing_rate": null,
+      "errors": 0,
+      "accuracy": 0.0
+    }
+  },
+  "latency_ms": {
+    "p50": 772.275,
+    "p95": 25089.363,
+    "max": 83414.665
+  },
+  "sequential_emails_per_minute": 11.774952544181492,
+  "performance_acceptance": false,
+  "numerical_acceptance": false,
+  "challenge_acceptance": false,
+  "context_tokens": 8192,
+  "context_shift": false,
+  "decoding": {
+    "temperature": 0,
+    "seed": 42,
+    "max_output_tokens": 32,
+    "parallel_slots": 1
+  },
+  "prompt_probes": [
+    {
+      "case": 0,
+      "mode": "fixed_schema",
+      "output": "{\"label\": \"legitimate\"}",
+      "stop": "end"
+    },
+    {
+      "case": 0,
+      "mode": "short_schema",
+      "output": "{\n  \"label\": \"legitimate\"\n}",
+      "stop": "end"
+    },
+    {
+      "case": 0,
+      "mode": "short_plain",
+      "output": "Legitimate",
+      "stop": "end"
+    },
+    {
+      "case": 1,
+      "mode": "fixed_schema",
+      "output": "{\"label\": \"legitimate\"}",
+      "stop": "end"
+    },
+    {
+      "case": 1,
+      "mode": "short_schema",
+      "output": "{\n  \"label\": \"legitimate\"\n}",
+      "stop": "end"
+    },
+    {
+      "case": 1,
+      "mode": "short_plain",
+      "output": "Legitimate",
+      "stop": "end"
+    },
+    {
+      "case": 2,
+      "mode": "fixed_schema",
+      "output": "{\n  \"label\": \"spam\"\n}",
+      "stop": "end"
+    },
+    {
+      "case": 2,
+      "mode": "short_schema",
+      "output": "{\n  \"label\": \"spam\"\n}",
+      "stop": "end"
+    },
+    {
+      "case": 2,
+      "mode": "short_plain",
+      "output": "Legitimate",
+      "stop": "end"
+    }
+  ],
+  "gguf_template_verified": {
+    "name": "Llama 3.2 1B Instruct",
+    "chat_template_present": true,
+    "format": "Llama role/header tokens"
+  }
+}

@@ -1,0 +1,1913 @@
+{
+  "decision": "reject both local candidates; no integration",
+  "dataset": {
+    "version": "thura-mail-three-class-v1",
+    "labels": [
+      "legitimate",
+      "spam",
+      "phishing"
+    ],
+    "sources": {
+      "phishing-2022": {
+        "url": "https://monkey.org/~jose/phishing/phishing-2022",
+        "sha256": "a6291e2cb990204766fce425423949b403cce4ae6a660fc8d08812e40a063fa7",
+        "bytes": 4775954
+      },
+      "phishing-2023": {
+        "url": "https://monkey.org/~jose/phishing/phishing-2023",
+        "sha256": "5007f1c1dc91b15e93e988afa3a1cf402e15c88f765d3057be8bfec50dae1fe8",
+        "bytes": 7763704
+      },
+      "phishing-2024": {
+        "url": "https://monkey.org/~jose/phishing/phishing-2024",
+        "sha256": "60afa40a2757170093a2bde31ec9cda4e54d33992203ce04bfbbc86d2e5e5b99",
+        "bytes": 15457816
+      },
+      "phishing-2025": {
+        "url": "https://monkey.org/~jose/phishing/phishing-2025",
+        "sha256": "f1fa7e0fe35c9a16f36d9aa20ade7e1d3908d1d0c1d917b8c53c8aa799ec1c8f",
+        "bytes": 18769863
+      },
+      "nazario-README.txt": {
+        "url": "https://monkey.org/~jose/phishing/README.txt",
+        "sha256": "4589b63a4149bff0b65e82c2110baaebee36e5d9219009a31cc78bb6ab597fab",
+        "bytes": 961
+      },
+      "nazario-LICENSE.txt": {
+        "url": "https://monkey.org/~jose/phishing/LICENSE.txt",
+        "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+        "bytes": 18657
+      },
+      "spam-2024.7z": {
+        "url": "https://untroubled.org/spam/2024.7z",
+        "sha256": "1de672fd034cec6c34944da0fa68d02dc31254340b68696a9013e7ceeb74d238",
+        "bytes": 15080579
+      },
+      "spam-permission.html": {
+        "url": "https://untroubled.org/spam/",
+        "sha256": "5e0dc09ae3df333ca456330aaad029cfc2477fe70c2e7399cd290264e8bca426",
+        "bytes": 8425,
+        "snapshot_only": true
+      },
+      "GPT_Phishing_Email_dataset.csv": {
+        "url": "https://huggingface.co/datasets/Dizzzy0x00/LLMGen-Phishing-Email-Dataset/resolve/d717e5457b71cb44dd038dafe6a81cea5e0badab/GPT_Phishing_Email_dataset.csv",
+        "bytes": 5690445,
+        "sha256": "e3a335c8acacec09afaa4b9a14c7010195063310e4dcfbae38c1fa50b8d48dc3"
+      },
+      "README.md": {
+        "url": "https://huggingface.co/datasets/Dizzzy0x00/LLMGen-Phishing-Email-Dataset/resolve/d717e5457b71cb44dd038dafe6a81cea5e0badab/README.md",
+        "bytes": 2012,
+        "sha256": "d0a7b712aa837b47e7f1dc03cf908e29aa0069aa2d4552692dd536282a9d7e43"
+      },
+      "spam-2023.7z": {
+        "url": "https://untroubled.org/spam/2023.7z",
+        "bytes": 29183084,
+        "sha256": "6032850eff57eefec70208c5e568c73aa3ef1ab7e9d9122eaf67ce77ad4c29d6"
+      },
+      "spam-2025.7z": {
+        "url": "https://untroubled.org/spam/2025.7z",
+        "bytes": 18471207,
+        "sha256": "3d3ad01f6eb7f90bad6a51d653847e2a8f3818e7abdc17efac9d9da021b3860e"
+      },
+      "spam-2022.7z": {
+        "url": "https://untroubled.org/spam/2022.7z",
+        "bytes": 19533792,
+        "sha256": "171f343cc3d359357142374fe98d642f5d95017f07b3e8abe81ba8fe8bd1e1ec"
+      },
+      "spam-2026-01.7z": {
+        "url": "https://untroubled.org/spam/2026-01.7z",
+        "bytes": 2934205,
+        "sha256": "3cc7e8e3206c529c9f758d5f5f540d0a1d9412e0e457cf34a520571d321829c1"
+      },
+      "spam-2026-02.7z": {
+        "url": "https://untroubled.org/spam/2026-02.7z",
+        "bytes": 3042298,
+        "sha256": "e6c626379c902919f4f8f8e88aa77a458b43079280fa6f960de8f241093a0ef6"
+      },
+      "spam-2026-03.7z": {
+        "url": "https://untroubled.org/spam/2026-03.7z",
+        "bytes": 4094958,
+        "sha256": "2e11a746cf473bf3751ebe750cc971b86b25805481b9b3fc2a159a5bbe4569db"
+      },
+      "spam-2026-04.7z": {
+        "url": "https://untroubled.org/spam/2026-04.7z",
+        "bytes": 6627289,
+        "sha256": "85b91f9c853534f23032e310a6603bb016601acc330e1bb5546d280ccd7b2dab"
+      }
+    },
+    "exclusions": {
+      "nazario_insufficient_or_oversized_evidence": 55,
+      "spam_ambiguous_or_not_explicit_promotion": 56830,
+      "spam_insufficient_or_oversized_evidence": 2033,
+      "older_campaign_overlaps_later_partition": 108,
+      "exact_duplicate": 175
+    },
+    "splits": {
+      "train": {
+        "count": 3648,
+        "labels": {
+          "phishing": 2500,
+          "legitimate": 1059,
+          "spam": 89
+        },
+        "sha256": "29e36535f10daa08e5452d9adb487b76ad328db4439f3e0a0b64d9b1307fa4d1"
+      },
+      "validation": {
+        "count": 976,
+        "labels": {
+          "legitimate": 218,
+          "phishing": 706,
+          "spam": 52
+        },
+        "sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185"
+      },
+      "test": {
+        "count": 1041,
+        "labels": {
+          "phishing": 755,
+          "legitimate": 184,
+          "spam": 102
+        },
+        "sha256": "1978932899d4bc75ad3c7c34724d800e01f06afa1127be8c04cf57049e552ba6"
+      }
+    },
+    "license_map": {
+      "llmgen-english": "Apache-2.0",
+      "nazario": "CC-BY-4.0",
+      "guenter-spam": "LicenseRef-Guenter-Unrestricted",
+      "thura-original-contrasts": "Apache-2.0"
+    },
+    "limitations": "Legitimate mail is synthetic, and ordinary spam is conservatively filtered. Grouping detects exact and high-similarity copies, not all semantic campaigns. No raw redistribution.",
+    "augmentation": {
+      "source_sha256": "890cb9764ac2a5144ee67b6253b97c1948e45b6a91a8b0770cd5a9668c49f8fe",
+      "license": "Apache-2.0",
+      "creator": "Thura contributors, 2026",
+      "training_only": true,
+      "rows": 384,
+      "families": 24,
+      "parent_splits": {
+        "train": {
+          "count": 3264,
+          "labels": {
+            "phishing": 2308,
+            "legitimate": 867,
+            "spam": 89
+          },
+          "sha256": "af107ddeb3959bfd851bf785fc9a07bb291ead8d0d1f18b6904fe637a190f6fc"
+        },
+        "validation": {
+          "count": 976,
+          "labels": {
+            "legitimate": 218,
+            "phishing": 706,
+            "spam": 52
+          },
+          "sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185"
+        },
+        "test": {
+          "count": 1041,
+          "labels": {
+            "phishing": 755,
+            "legitimate": 184,
+            "spam": 102
+          },
+          "sha256": "1978932899d4bc75ad3c7c34724d800e01f06afa1127be8c04cf57049e552ba6"
+        }
+      }
+    }
+  },
+  "training": {
+    "version": "thura-mail-three-class-v1",
+    "labels": [
+      "legitimate",
+      "spam",
+      "phishing"
+    ],
+    "base": {
+      "repository": "distilbert/distilbert-base-uncased",
+      "revision": "12040accade4e8a0f71eabdb258fecc2e7e948be",
+      "license": "Apache-2.0",
+      "files": {
+        "model.safetensors": {
+          "bytes": 267954768,
+          "sha256": "5e3f1108e3cb34ee048634875d8482665b65ac713291a7e32396fb18f6ff0063"
+        },
+        "config.json": {
+          "bytes": 483,
+          "sha256": "69c94b0222d5d1f4b0ad027ca7416cdafb98378cbbb8305d0bf47c9365c60c83"
+        },
+        "tokenizer.json": {
+          "bytes": 466062,
+          "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98"
+        },
+        "tokenizer_config.json": {
+          "bytes": 48,
+          "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10"
+        },
+        "vocab.txt": {
+          "bytes": 231508,
+          "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+        },
+        "LICENSE": {
+          "bytes": 11356,
+          "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+        }
+      }
+    },
+    "dataset": {
+      "version": "thura-mail-three-class-v1",
+      "labels": [
+        "legitimate",
+        "spam",
+        "phishing"
+      ],
+      "sources": {
+        "phishing-2022": {
+          "url": "https://monkey.org/~jose/phishing/phishing-2022",
+          "sha256": "a6291e2cb990204766fce425423949b403cce4ae6a660fc8d08812e40a063fa7",
+          "bytes": 4775954
+        },
+        "phishing-2023": {
+          "url": "https://monkey.org/~jose/phishing/phishing-2023",
+          "sha256": "5007f1c1dc91b15e93e988afa3a1cf402e15c88f765d3057be8bfec50dae1fe8",
+          "bytes": 7763704
+        },
+        "phishing-2024": {
+          "url": "https://monkey.org/~jose/phishing/phishing-2024",
+          "sha256": "60afa40a2757170093a2bde31ec9cda4e54d33992203ce04bfbbc86d2e5e5b99",
+          "bytes": 15457816
+        },
+        "phishing-2025": {
+          "url": "https://monkey.org/~jose/phishing/phishing-2025",
+          "sha256": "f1fa7e0fe35c9a16f36d9aa20ade7e1d3908d1d0c1d917b8c53c8aa799ec1c8f",
+          "bytes": 18769863
+        },
+        "nazario-README.txt": {
+          "url": "https://monkey.org/~jose/phishing/README.txt",
+          "sha256": "4589b63a4149bff0b65e82c2110baaebee36e5d9219009a31cc78bb6ab597fab",
+          "bytes": 961
+        },
+        "nazario-LICENSE.txt": {
+          "url": "https://monkey.org/~jose/phishing/LICENSE.txt",
+          "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+          "bytes": 18657
+        },
+        "spam-2024.7z": {
+          "url": "https://untroubled.org/spam/2024.7z",
+          "sha256": "1de672fd034cec6c34944da0fa68d02dc31254340b68696a9013e7ceeb74d238",
+          "bytes": 15080579
+        },
+        "spam-permission.html": {
+          "url": "https://untroubled.org/spam/",
+          "sha256": "5e0dc09ae3df333ca456330aaad029cfc2477fe70c2e7399cd290264e8bca426",
+          "bytes": 8425,
+          "snapshot_only": true
+        },
+        "GPT_Phishing_Email_dataset.csv": {
+          "url": "https://huggingface.co/datasets/Dizzzy0x00/LLMGen-Phishing-Email-Dataset/resolve/d717e5457b71cb44dd038dafe6a81cea5e0badab/GPT_Phishing_Email_dataset.csv",
+          "bytes": 5690445,
+          "sha256": "e3a335c8acacec09afaa4b9a14c7010195063310e4dcfbae38c1fa50b8d48dc3"
+        },
+        "README.md": {
+          "url": "https://huggingface.co/datasets/Dizzzy0x00/LLMGen-Phishing-Email-Dataset/resolve/d717e5457b71cb44dd038dafe6a81cea5e0badab/README.md",
+          "bytes": 2012,
+          "sha256": "d0a7b712aa837b47e7f1dc03cf908e29aa0069aa2d4552692dd536282a9d7e43"
+        },
+        "spam-2023.7z": {
+          "url": "https://untroubled.org/spam/2023.7z",
+          "bytes": 29183084,
+          "sha256": "6032850eff57eefec70208c5e568c73aa3ef1ab7e9d9122eaf67ce77ad4c29d6"
+        },
+        "spam-2025.7z": {
+          "url": "https://untroubled.org/spam/2025.7z",
+          "bytes": 18471207,
+          "sha256": "3d3ad01f6eb7f90bad6a51d653847e2a8f3818e7abdc17efac9d9da021b3860e"
+        },
+        "spam-2022.7z": {
+          "url": "https://untroubled.org/spam/2022.7z",
+          "bytes": 19533792,
+          "sha256": "171f343cc3d359357142374fe98d642f5d95017f07b3e8abe81ba8fe8bd1e1ec"
+        },
+        "spam-2026-01.7z": {
+          "url": "https://untroubled.org/spam/2026-01.7z",
+          "bytes": 2934205,
+          "sha256": "3cc7e8e3206c529c9f758d5f5f540d0a1d9412e0e457cf34a520571d321829c1"
+        },
+        "spam-2026-02.7z": {
+          "url": "https://untroubled.org/spam/2026-02.7z",
+          "bytes": 3042298,
+          "sha256": "e6c626379c902919f4f8f8e88aa77a458b43079280fa6f960de8f241093a0ef6"
+        },
+        "spam-2026-03.7z": {
+          "url": "https://untroubled.org/spam/2026-03.7z",
+          "bytes": 4094958,
+          "sha256": "2e11a746cf473bf3751ebe750cc971b86b25805481b9b3fc2a159a5bbe4569db"
+        },
+        "spam-2026-04.7z": {
+          "url": "https://untroubled.org/spam/2026-04.7z",
+          "bytes": 6627289,
+          "sha256": "85b91f9c853534f23032e310a6603bb016601acc330e1bb5546d280ccd7b2dab"
+        }
+      },
+      "exclusions": {
+        "nazario_insufficient_or_oversized_evidence": 55,
+        "spam_ambiguous_or_not_explicit_promotion": 56830,
+        "spam_insufficient_or_oversized_evidence": 2033,
+        "older_campaign_overlaps_later_partition": 108,
+        "exact_duplicate": 175
+      },
+      "splits": {
+        "train": {
+          "count": 3648,
+          "labels": {
+            "phishing": 2500,
+            "legitimate": 1059,
+            "spam": 89
+          },
+          "sha256": "29e36535f10daa08e5452d9adb487b76ad328db4439f3e0a0b64d9b1307fa4d1"
+        },
+        "validation": {
+          "count": 976,
+          "labels": {
+            "legitimate": 218,
+            "phishing": 706,
+            "spam": 52
+          },
+          "sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185"
+        },
+        "test": {
+          "count": 1041,
+          "labels": {
+            "phishing": 755,
+            "legitimate": 184,
+            "spam": 102
+          },
+          "sha256": "1978932899d4bc75ad3c7c34724d800e01f06afa1127be8c04cf57049e552ba6"
+        }
+      },
+      "license_map": {
+        "llmgen-english": "Apache-2.0",
+        "nazario": "CC-BY-4.0",
+        "guenter-spam": "LicenseRef-Guenter-Unrestricted",
+        "thura-original-contrasts": "Apache-2.0"
+      },
+      "limitations": "Legitimate mail is synthetic, and ordinary spam is conservatively filtered. Grouping detects exact and high-similarity copies, not all semantic campaigns. No raw redistribution.",
+      "augmentation": {
+        "source_sha256": "890cb9764ac2a5144ee67b6253b97c1948e45b6a91a8b0770cd5a9668c49f8fe",
+        "license": "Apache-2.0",
+        "creator": "Thura contributors, 2026",
+        "training_only": true,
+        "rows": 384,
+        "families": 24,
+        "parent_splits": {
+          "train": {
+            "count": 3264,
+            "labels": {
+              "phishing": 2308,
+              "legitimate": 867,
+              "spam": 89
+            },
+            "sha256": "af107ddeb3959bfd851bf785fc9a07bb291ead8d0d1f18b6904fe637a190f6fc"
+          },
+          "validation": {
+            "count": 976,
+            "labels": {
+              "legitimate": 218,
+              "phishing": 706,
+              "spam": 52
+            },
+            "sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185"
+          },
+          "test": {
+            "count": 1041,
+            "labels": {
+              "phishing": 755,
+              "legitimate": 184,
+              "spam": 102
+            },
+            "sha256": "1978932899d4bc75ad3c7c34724d800e01f06afa1127be8c04cf57049e552ba6"
+          }
+        }
+      }
+    },
+    "device": "mps",
+    "torch": "2.14.1",
+    "epochs": 3,
+    "seed": 42,
+    "training_seconds": 1780.1060596660245,
+    "history": [
+      {
+        "epoch": 1,
+        "phishing_threshold": 0.99,
+        "spam_threshold": 0.5,
+        "metrics": {
+          "count": 976,
+          "counts": {
+            "legitimate": 218,
+            "spam": 52,
+            "phishing": 706
+          },
+          "confusion": {
+            "legitimate": {
+              "legitimate": 218,
+              "spam": 0,
+              "phishing": 0,
+              "error": 0
+            },
+            "spam": {
+              "legitimate": 8,
+              "spam": 39,
+              "phishing": 5,
+              "error": 0
+            },
+            "phishing": {
+              "legitimate": 11,
+              "spam": 1,
+              "phishing": 694,
+              "error": 0
+            }
+          },
+          "phishing_recall": 0.9830028328611898,
+          "spam_recall": 0.75,
+          "legitimate_false_positive_rate": 0.0,
+          "spam_as_phishing_rate": 0.09615384615384616,
+          "errors": 0,
+          "accuracy": 0.9743852459016393
+        },
+        "rank": [
+          false,
+          1.6368489867073435,
+          0.9743852459016393
+        ]
+      },
+      {
+        "epoch": 2,
+        "phishing_threshold": 0.95,
+        "spam_threshold": 0.5,
+        "metrics": {
+          "count": 976,
+          "counts": {
+            "legitimate": 218,
+            "spam": 52,
+            "phishing": 706
+          },
+          "confusion": {
+            "legitimate": {
+              "legitimate": 218,
+              "spam": 0,
+              "phishing": 0,
+              "error": 0
+            },
+            "spam": {
+              "legitimate": 5,
+              "spam": 36,
+              "phishing": 11,
+              "error": 0
+            },
+            "phishing": {
+              "legitimate": 1,
+              "spam": 1,
+              "phishing": 704,
+              "error": 0
+            }
+          },
+          "phishing_recall": 0.9971671388101983,
+          "spam_recall": 0.6923076923076923,
+          "legitimate_false_positive_rate": 0.0,
+          "spam_as_phishing_rate": 0.21153846153846154,
+          "errors": 0,
+          "accuracy": 0.9815573770491803
+        },
+        "rank": [
+          false,
+          1.4779363695794292,
+          0.9815573770491803
+        ]
+      },
+      {
+        "epoch": 3,
+        "phishing_threshold": 0.99,
+        "spam_threshold": 0.5,
+        "metrics": {
+          "count": 976,
+          "counts": {
+            "legitimate": 218,
+            "spam": 52,
+            "phishing": 706
+          },
+          "confusion": {
+            "legitimate": {
+              "legitimate": 218,
+              "spam": 0,
+              "phishing": 0,
+              "error": 0
+            },
+            "spam": {
+              "legitimate": 4,
+              "spam": 42,
+              "phishing": 6,
+              "error": 0
+            },
+            "phishing": {
+              "legitimate": 4,
+              "spam": 3,
+              "phishing": 699,
+              "error": 0
+            }
+          },
+          "phishing_recall": 0.990084985835694,
+          "spam_recall": 0.8076923076923077,
+          "legitimate_false_positive_rate": 0.0,
+          "spam_as_phishing_rate": 0.11538461538461539,
+          "errors": 0,
+          "accuracy": 0.9825819672131147
+        },
+        "rank": [
+          false,
+          1.6823926781433864,
+          0.9825819672131147
+        ]
+      }
+    ],
+    "pooling": "minimum legitimate logit, maximum spam/phishing logits over every overlapping window",
+    "test_data_read": false
+  },
+  "choice_before_test": {
+    "chosen": "baseline",
+    "reason": "Best validation-only rank; neural three-epoch best still fails spam recall and spam-as-phishing gates. No final test predictions read before this choice.",
+    "validation": {
+      "phishing_threshold": 0.7,
+      "spam_threshold": 0.5,
+      "metrics": {
+        "count": 976,
+        "counts": {
+          "legitimate": 218,
+          "spam": 52,
+          "phishing": 706
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 218,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 8,
+            "spam": 44,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 10,
+            "spam": 0,
+            "phishing": 696,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.9858356940509915,
+        "spam_recall": 0.8461538461538461,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 0.9815573770491803
+      },
+      "rank": [
+        false,
+        1.8319895402048376,
+        0.9815573770491803
+      ],
+      "model_fingerprint": "b9cadf3dbae3857c72cae25cfb4cfb9138fc1d8569b280831271fc1939f1035a",
+      "validation_sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185",
+      "kind": "baseline"
+    },
+    "neural_selection": {
+      "epoch": 3,
+      "phishing_threshold": 0.99,
+      "spam_threshold": 0.5,
+      "metrics": {
+        "count": 976,
+        "counts": {
+          "legitimate": 218,
+          "spam": 52,
+          "phishing": 706
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 218,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 4,
+            "spam": 42,
+            "phishing": 6,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 4,
+            "spam": 3,
+            "phishing": 699,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.990084985835694,
+        "spam_recall": 0.8076923076923077,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": 0.11538461538461539,
+        "errors": 0,
+        "accuracy": 0.9825819672131147
+      },
+      "rank": [
+        false,
+        1.6823926781433864,
+        0.9825819672131147
+      ]
+    },
+    "final_test_sha256": "1978932899d4bc75ad3c7c34724d800e01f06afa1127be8c04cf57049e552ba6"
+  },
+  "baseline-cpu-validation": {
+    "status": "measured",
+    "constraints_verified": true,
+    "limits": {
+      "cpus": 1,
+      "memory_bytes": 1073741824,
+      "swap_bytes": 0
+    },
+    "docker": {
+      "image_id": "sha256:4669ed8fad223bc5ecdb61d76780ffe0f75762e44319cc539a2006a418a25fc0",
+      "host_config": {
+        "NanoCpus": 1000000000,
+        "Memory": 1073741824,
+        "MemorySwap": 1073741824,
+        "NetworkMode": "none"
+      }
+    },
+    "container_state": {
+      "ExitCode": 0,
+      "OOMKilled": false,
+      "StartedAt": "2026-10-19T20:32:27.263985939Z",
+      "FinishedAt": "2026-10-19T20:32:31.986202786Z"
+    },
+    "phase": "validation",
+    "kind": "baseline",
+    "model_fingerprint": "b9cadf3dbae3857c72cae25cfb4cfb9138fc1d8569b280831271fc1939f1035a",
+    "startup_seconds": 1.9563647169998148,
+    "dataset_sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185",
+    "selection": {
+      "phishing_threshold": 0.7,
+      "spam_threshold": 0.5,
+      "metrics": {
+        "count": 976,
+        "counts": {
+          "legitimate": 218,
+          "spam": 52,
+          "phishing": 706
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 218,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 8,
+            "spam": 44,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 10,
+            "spam": 0,
+            "phishing": 696,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.9858356940509915,
+        "spam_recall": 0.8461538461538461,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 0.9815573770491803
+      },
+      "rank": [
+        false,
+        1.8319895402048376,
+        0.9815573770491803
+      ],
+      "model_fingerprint": "b9cadf3dbae3857c72cae25cfb4cfb9138fc1d8569b280831271fc1939f1035a",
+      "validation_sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185",
+      "kind": "baseline"
+    },
+    "metrics": {
+      "count": 976,
+      "counts": {
+        "legitimate": 218,
+        "spam": 52,
+        "phishing": 706
+      },
+      "confusion": {
+        "legitimate": {
+          "legitimate": 218,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "spam": {
+          "legitimate": 8,
+          "spam": 44,
+          "phishing": 0,
+          "error": 0
+        },
+        "phishing": {
+          "legitimate": 10,
+          "spam": 0,
+          "phishing": 696,
+          "error": 0
+        }
+      },
+      "phishing_recall": 0.9858356940509915,
+      "spam_recall": 0.8461538461538461,
+      "legitimate_false_positive_rate": 0.0,
+      "spam_as_phishing_rate": 0.0,
+      "errors": 0,
+      "accuracy": 0.9815573770491803
+    },
+    "cohorts": {
+      "guenter-spam-2024": {
+        "count": 52,
+        "counts": {
+          "legitimate": 0,
+          "spam": 52,
+          "phishing": 0
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 8,
+            "spam": 44,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          }
+        },
+        "phishing_recall": null,
+        "spam_recall": 0.8461538461538461,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 0.8461538461538461
+      },
+      "llmgen-english": {
+        "count": 591,
+        "counts": {
+          "legitimate": 218,
+          "spam": 0,
+          "phishing": 373
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 218,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 1,
+            "spam": 0,
+            "phishing": 372,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.9973190348525469,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 0.9983079526226735
+      },
+      "nazario-2024": {
+        "count": 333,
+        "counts": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 333
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 9,
+            "spam": 0,
+            "phishing": 324,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.972972972972973,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 0.972972972972973
+      }
+    },
+    "numerical_acceptance": false,
+    "cgroup": {
+      "memory.max": "1073741824",
+      "memory.peak": "103010304",
+      "memory.swap.max": "0",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "100000 100000",
+      "cpu.stat": "usage_usec 4143547\nuser_usec 2729678\nsystem_usec 1413869\ncore_sched.force_idle_usec 0\nnr_periods 43\nnr_throttled 4\nthrottled_usec 6478\nnr_bursts 0\nburst_usec 0"
+    },
+    "latency_ms": {
+      "p50": 1.650340997002786,
+      "p95": 3.664435000246158,
+      "max": 25.948426002287306
+    },
+    "sequential_emails_per_minute": 30070.44869929922,
+    "performance_acceptance": true
+  },
+  "baseline-final-test": {
+    "status": "passed",
+    "constraints_verified": true,
+    "limits": {
+      "cpus": 1,
+      "memory_bytes": 1073741824,
+      "swap_bytes": 0
+    },
+    "docker": {
+      "image_id": "sha256:4669ed8fad223bc5ecdb61d76780ffe0f75762e44319cc539a2006a418a25fc0",
+      "host_config": {
+        "NanoCpus": 1000000000,
+        "Memory": 1073741824,
+        "MemorySwap": 1073741824,
+        "NetworkMode": "none"
+      }
+    },
+    "container_state": {
+      "ExitCode": 0,
+      "OOMKilled": false,
+      "StartedAt": "2026-10-19T20:56:54.110745425Z",
+      "FinishedAt": "2026-10-19T20:56:57.374992194Z"
+    },
+    "phase": "test",
+    "kind": "baseline",
+    "model_fingerprint": "b9cadf3dbae3857c72cae25cfb4cfb9138fc1d8569b280831271fc1939f1035a",
+    "startup_seconds": 1.8970367349975277,
+    "dataset_sha256": "1978932899d4bc75ad3c7c34724d800e01f06afa1127be8c04cf57049e552ba6",
+    "selection": {
+      "phishing_threshold": 0.7,
+      "spam_threshold": 0.5,
+      "metrics": {
+        "count": 976,
+        "counts": {
+          "legitimate": 218,
+          "spam": 52,
+          "phishing": 706
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 218,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 8,
+            "spam": 44,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 10,
+            "spam": 0,
+            "phishing": 696,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.9858356940509915,
+        "spam_recall": 0.8461538461538461,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 0.9815573770491803
+      },
+      "rank": [
+        false,
+        1.8319895402048376,
+        0.9815573770491803
+      ],
+      "model_fingerprint": "b9cadf3dbae3857c72cae25cfb4cfb9138fc1d8569b280831271fc1939f1035a",
+      "validation_sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185",
+      "kind": "baseline"
+    },
+    "metrics": {
+      "count": 1041,
+      "counts": {
+        "legitimate": 184,
+        "spam": 102,
+        "phishing": 755
+      },
+      "confusion": {
+        "legitimate": {
+          "legitimate": 184,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "spam": {
+          "legitimate": 2,
+          "spam": 99,
+          "phishing": 1,
+          "error": 0
+        },
+        "phishing": {
+          "legitimate": 16,
+          "spam": 2,
+          "phishing": 737,
+          "error": 0
+        }
+      },
+      "phishing_recall": 0.976158940397351,
+      "spam_recall": 0.9705882352941176,
+      "legitimate_false_positive_rate": 0.0,
+      "spam_as_phishing_rate": 0.00980392156862745,
+      "errors": 0,
+      "accuracy": 0.9798270893371758
+    },
+    "cohorts": {
+      "guenter-spam-2025": {
+        "count": 82,
+        "counts": {
+          "legitimate": 0,
+          "spam": 82,
+          "phishing": 0
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 2,
+            "spam": 79,
+            "phishing": 1,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          }
+        },
+        "phishing_recall": null,
+        "spam_recall": 0.9634146341463414,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": 0.012195121951219513,
+        "errors": 0,
+        "accuracy": 0.9634146341463414
+      },
+      "guenter-spam-2026-01": {
+        "count": 2,
+        "counts": {
+          "legitimate": 0,
+          "spam": 2,
+          "phishing": 0
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 2,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          }
+        },
+        "phishing_recall": null,
+        "spam_recall": 1.0,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 1.0
+      },
+      "guenter-spam-2026-02": {
+        "count": 7,
+        "counts": {
+          "legitimate": 0,
+          "spam": 7,
+          "phishing": 0
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 7,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          }
+        },
+        "phishing_recall": null,
+        "spam_recall": 1.0,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 1.0
+      },
+      "guenter-spam-2026-03": {
+        "count": 7,
+        "counts": {
+          "legitimate": 0,
+          "spam": 7,
+          "phishing": 0
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 7,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          }
+        },
+        "phishing_recall": null,
+        "spam_recall": 1.0,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 1.0
+      },
+      "guenter-spam-2026-04": {
+        "count": 4,
+        "counts": {
+          "legitimate": 0,
+          "spam": 4,
+          "phishing": 0
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 4,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          }
+        },
+        "phishing_recall": null,
+        "spam_recall": 1.0,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 1.0
+      },
+      "llmgen-english": {
+        "count": 517,
+        "counts": {
+          "legitimate": 184,
+          "spam": 0,
+          "phishing": 333
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 184,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 1,
+            "spam": 0,
+            "phishing": 332,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.996996996996997,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 0.9980657640232108
+      },
+      "nazario-2025": {
+        "count": 422,
+        "counts": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 422
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 15,
+            "spam": 2,
+            "phishing": 405,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.9597156398104265,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 0.9597156398104265
+      }
+    },
+    "numerical_acceptance": true,
+    "cgroup": {
+      "memory.max": "1073741824",
+      "memory.peak": "103563264",
+      "memory.swap.max": "0",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "100000 100000",
+      "cpu.stat": "usage_usec 3098096\nuser_usec 1652651\nsystem_usec 1445444\ncore_sched.force_idle_usec 0\nnr_periods 31\nnr_throttled 7\nthrottled_usec 11964\nnr_bursts 0\nburst_usec 0"
+    },
+    "latency_ms": {
+      "p50": 0.9128150013566483,
+      "p95": 2.0593709996319376,
+      "max": 8.30483100071433
+    },
+    "sequential_emails_per_minute": 59445.755301030564,
+    "performance_acceptance": true
+  },
+  "baseline-regression": {
+    "status": "rejected",
+    "constraints_verified": true,
+    "limits": {
+      "cpus": 1,
+      "memory_bytes": 1073741824,
+      "swap_bytes": 0
+    },
+    "docker": {
+      "image_id": "sha256:4669ed8fad223bc5ecdb61d76780ffe0f75762e44319cc539a2006a418a25fc0",
+      "host_config": {
+        "NanoCpus": 1000000000,
+        "Memory": 1073741824,
+        "MemorySwap": 1073741824,
+        "NetworkMode": "none"
+      }
+    },
+    "container_state": {
+      "ExitCode": 0,
+      "OOMKilled": false,
+      "StartedAt": "2026-10-19T20:56:57.535602307Z",
+      "FinishedAt": "2026-10-19T20:56:58.519386193Z"
+    },
+    "phase": "regression",
+    "kind": "baseline",
+    "model_fingerprint": "b9cadf3dbae3857c72cae25cfb4cfb9138fc1d8569b280831271fc1939f1035a",
+    "startup_seconds": 0.8292437599993718,
+    "dataset_sha256": "995e55c88b0e5dcc30eb41c88ac351859320ed29d5c12c155dae06dcb42f4c9f",
+    "selection": {
+      "phishing_threshold": 0.7,
+      "spam_threshold": 0.5,
+      "metrics": {
+        "count": 976,
+        "counts": {
+          "legitimate": 218,
+          "spam": 52,
+          "phishing": 706
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 218,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 8,
+            "spam": 44,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 10,
+            "spam": 0,
+            "phishing": 696,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.9858356940509915,
+        "spam_recall": 0.8461538461538461,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 0.9815573770491803
+      },
+      "rank": [
+        false,
+        1.8319895402048376,
+        0.9815573770491803
+      ],
+      "model_fingerprint": "b9cadf3dbae3857c72cae25cfb4cfb9138fc1d8569b280831271fc1939f1035a",
+      "validation_sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185",
+      "kind": "baseline"
+    },
+    "metrics": {
+      "count": 76,
+      "counts": {
+        "legitimate": 32,
+        "spam": 0,
+        "phishing": 44
+      },
+      "confusion": {
+        "legitimate": {
+          "legitimate": 27,
+          "spam": 0,
+          "phishing": 5,
+          "error": 0
+        },
+        "spam": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "phishing": {
+          "legitimate": 3,
+          "spam": 0,
+          "phishing": 41,
+          "error": 0
+        }
+      },
+      "phishing_recall": 0.9318181818181818,
+      "spam_recall": null,
+      "legitimate_false_positive_rate": 0.15625,
+      "spam_as_phishing_rate": null,
+      "errors": 0,
+      "accuracy": 0.8947368421052632
+    },
+    "cohorts": {
+      "authored": {
+        "count": 64,
+        "counts": {
+          "legitimate": 32,
+          "spam": 0,
+          "phishing": 32
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 27,
+            "spam": 0,
+            "phishing": 5,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 2,
+            "spam": 0,
+            "phishing": 30,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.9375,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": 0.15625,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 0.890625
+      },
+      "instruction": {
+        "count": 8,
+        "counts": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 8
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 8,
+            "error": 0
+          }
+        },
+        "phishing_recall": 1.0,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 1.0
+      },
+      "tail": {
+        "count": 4,
+        "counts": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 4
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 1,
+            "spam": 0,
+            "phishing": 3,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.75,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 0.75
+      }
+    },
+    "numerical_acceptance": false,
+    "cgroup": {
+      "memory.max": "1073741824",
+      "memory.peak": "98643968",
+      "memory.swap.max": "0",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "100000 100000",
+      "cpu.stat": "usage_usec 897671\nuser_usec 476825\nsystem_usec 420846\ncore_sched.force_idle_usec 0\nnr_periods 9\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0"
+    },
+    "latency_ms": {
+      "p50": 0.3730340031324886,
+      "p95": 2.5440360004722606,
+      "max": 4.708288000983885
+    },
+    "sequential_emails_per_minute": 111502.22743287006,
+    "performance_acceptance": true
+  },
+  "neural-final-cpu-pilot": {
+    "status": "rejected",
+    "constraints_verified": true,
+    "limits": {
+      "cpus": 1,
+      "memory_bytes": 1073741824,
+      "swap_bytes": 0
+    },
+    "docker": {
+      "image_id": "sha256:4669ed8fad223bc5ecdb61d76780ffe0f75762e44319cc539a2006a418a25fc0",
+      "host_config": {
+        "NanoCpus": 1000000000,
+        "Memory": 1073741824,
+        "MemorySwap": 1073741824,
+        "NetworkMode": "none"
+      }
+    },
+    "container_state": {
+      "ExitCode": 0,
+      "OOMKilled": false,
+      "StartedAt": "2026-10-19T21:00:58.068744744Z",
+      "FinishedAt": "2026-10-19T21:01:28.742001466Z"
+    },
+    "phase": "regression",
+    "kind": "int8",
+    "model_fingerprint": "2a0c4c7271d5a9d5fcb65045645460b837c5b912b6c6f199b372a8cd473ac07e",
+    "startup_seconds": 0.8562567310000304,
+    "dataset_sha256": "1e86848a3df08cac01755f842cce4be5de450566758927c9fd76ddf94daccf79",
+    "selection": {
+      "epoch": 3,
+      "phishing_threshold": 0.99,
+      "spam_threshold": 0.5,
+      "metrics": {
+        "count": 976,
+        "counts": {
+          "legitimate": 218,
+          "spam": 52,
+          "phishing": 706
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 218,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 4,
+            "spam": 42,
+            "phishing": 6,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 4,
+            "spam": 3,
+            "phishing": 699,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.990084985835694,
+        "spam_recall": 0.8076923076923077,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": 0.11538461538461539,
+        "errors": 0,
+        "accuracy": 0.9825819672131147
+      },
+      "rank": [
+        false,
+        1.6823926781433864,
+        0.9825819672131147
+      ],
+      "model_fingerprint": "2a0c4c7271d5a9d5fcb65045645460b837c5b912b6c6f199b372a8cd473ac07e",
+      "validation_sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185",
+      "kind": "int8",
+      "threshold_source": "full native FP32 validation, before this CPU pilot"
+    },
+    "metrics": {
+      "count": 51,
+      "counts": {
+        "legitimate": 16,
+        "spam": 16,
+        "phishing": 19
+      },
+      "confusion": {
+        "legitimate": {
+          "legitimate": 16,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "spam": {
+          "legitimate": 4,
+          "spam": 12,
+          "phishing": 0,
+          "error": 0
+        },
+        "phishing": {
+          "legitimate": 1,
+          "spam": 0,
+          "phishing": 18,
+          "error": 0
+        }
+      },
+      "phishing_recall": 0.9473684210526315,
+      "spam_recall": 0.75,
+      "legitimate_false_positive_rate": 0.0,
+      "spam_as_phishing_rate": 0.0,
+      "errors": 0,
+      "accuracy": 0.9019607843137255
+    },
+    "cohorts": {
+      "guenter-spam-2024": {
+        "count": 16,
+        "counts": {
+          "legitimate": 0,
+          "spam": 16,
+          "phishing": 0
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 4,
+            "spam": 12,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          }
+        },
+        "phishing_recall": null,
+        "spam_recall": 0.75,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 0.75
+      },
+      "llmgen-english": {
+        "count": 21,
+        "counts": {
+          "legitimate": 16,
+          "spam": 0,
+          "phishing": 5
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 16,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 5,
+            "error": 0
+          }
+        },
+        "phishing_recall": 1.0,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 1.0
+      },
+      "nazario-2024": {
+        "count": 14,
+        "counts": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 14
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 1,
+            "spam": 0,
+            "phishing": 13,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.9285714285714286,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 0.9285714285714286
+      }
+    },
+    "numerical_acceptance": false,
+    "cgroup": {
+      "memory.max": "1073741824",
+      "memory.peak": "409653248",
+      "memory.swap.max": "0",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "100000 100000",
+      "cpu.stat": "usage_usec 30448187\nuser_usec 29880482\nsystem_usec 567705\ncore_sched.force_idle_usec 0\nnr_periods 306\nnr_throttled 47\nthrottled_usec 24687\nnr_bursts 0\nburst_usec 0"
+    },
+    "latency_ms": {
+      "p50": 315.2870049998455,
+      "p95": 1897.552080998139,
+      "max": 3154.0543480005
+    },
+    "sequential_emails_per_minute": 103.0515832933296,
+    "performance_acceptance": true
+  },
+  "smoke-cpu-validation": {
+    "status": "measured",
+    "constraints_verified": true,
+    "limits": {
+      "cpus": 1,
+      "memory_bytes": 1073741824,
+      "swap_bytes": 0
+    },
+    "docker": {
+      "image_id": "sha256:4669ed8fad223bc5ecdb61d76780ffe0f75762e44319cc539a2006a418a25fc0",
+      "host_config": {
+        "NanoCpus": 1000000000,
+        "Memory": 1073741824,
+        "MemorySwap": 1073741824,
+        "NetworkMode": "none"
+      }
+    },
+    "container_state": {
+      "ExitCode": 0,
+      "OOMKilled": false,
+      "StartedAt": "2026-10-19T20:40:00.768862316Z",
+      "FinishedAt": "2026-10-19T20:54:43.439634065Z"
+    },
+    "phase": "validation",
+    "kind": "int8",
+    "model_fingerprint": "62ca019dce9028fe5f68a4d0790b79ab5dba29e6e69ef71cec23d4e4c4c73d84",
+    "startup_seconds": 5.67967132099875,
+    "dataset_sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185",
+    "selection": {
+      "phishing_threshold": 0.99,
+      "spam_threshold": 0.5,
+      "metrics": {
+        "count": 976,
+        "counts": {
+          "legitimate": 218,
+          "spam": 52,
+          "phishing": 706
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 218,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 15,
+            "spam": 37,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 38,
+            "spam": 1,
+            "phishing": 667,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.9447592067988668,
+        "spam_recall": 0.7115384615384616,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 0.944672131147541
+      },
+      "rank": [
+        false,
+        1.6562976683373285,
+        0.944672131147541
+      ],
+      "model_fingerprint": "62ca019dce9028fe5f68a4d0790b79ab5dba29e6e69ef71cec23d4e4c4c73d84",
+      "validation_sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185",
+      "kind": "int8"
+    },
+    "metrics": {
+      "count": 976,
+      "counts": {
+        "legitimate": 218,
+        "spam": 52,
+        "phishing": 706
+      },
+      "confusion": {
+        "legitimate": {
+          "legitimate": 218,
+          "spam": 0,
+          "phishing": 0,
+          "error": 0
+        },
+        "spam": {
+          "legitimate": 15,
+          "spam": 37,
+          "phishing": 0,
+          "error": 0
+        },
+        "phishing": {
+          "legitimate": 38,
+          "spam": 1,
+          "phishing": 667,
+          "error": 0
+        }
+      },
+      "phishing_recall": 0.9447592067988668,
+      "spam_recall": 0.7115384615384616,
+      "legitimate_false_positive_rate": 0.0,
+      "spam_as_phishing_rate": 0.0,
+      "errors": 0,
+      "accuracy": 0.944672131147541
+    },
+    "cohorts": {
+      "guenter-spam-2024": {
+        "count": 52,
+        "counts": {
+          "legitimate": 0,
+          "spam": 52,
+          "phishing": 0
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 15,
+            "spam": 37,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          }
+        },
+        "phishing_recall": null,
+        "spam_recall": 0.7115384615384616,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": 0.0,
+        "errors": 0,
+        "accuracy": 0.7115384615384616
+      },
+      "llmgen-english": {
+        "count": 591,
+        "counts": {
+          "legitimate": 218,
+          "spam": 0,
+          "phishing": 373
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 218,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 5,
+            "spam": 0,
+            "phishing": 368,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.9865951742627346,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": 0.0,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 0.9915397631133672
+      },
+      "nazario-2024": {
+        "count": 333,
+        "counts": {
+          "legitimate": 0,
+          "spam": 0,
+          "phishing": 333
+        },
+        "confusion": {
+          "legitimate": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "spam": {
+            "legitimate": 0,
+            "spam": 0,
+            "phishing": 0,
+            "error": 0
+          },
+          "phishing": {
+            "legitimate": 33,
+            "spam": 1,
+            "phishing": 299,
+            "error": 0
+          }
+        },
+        "phishing_recall": 0.8978978978978979,
+        "spam_recall": null,
+        "legitimate_false_positive_rate": null,
+        "spam_as_phishing_rate": null,
+        "errors": 0,
+        "accuracy": 0.8978978978978979
+      }
+    },
+    "numerical_acceptance": false,
+    "cgroup": {
+      "memory.max": "1073741824",
+      "memory.peak": "430649344",
+      "memory.swap.max": "0",
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "cpu.max": "100000 100000",
+      "cpu.stat": "usage_usec 873570701\nuser_usec 866880000\nsystem_usec 6690701\ncore_sched.force_idle_usec 0\nnr_periods 8815\nnr_throttled 1941\nthrottled_usec 7680928\nnr_bursts 0\nburst_usec 0"
+    },
+    "latency_ms": {
+      "p50": 607.6656769982947,
+      "p95": 2251.01419999919,
+      "max": 12268.303281001863
+    },
+    "sequential_emails_per_minute": 66.89810530821548,
+    "performance_acceptance": true
+  }
+}

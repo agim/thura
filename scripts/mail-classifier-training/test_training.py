@@ -78,6 +78,12 @@ class TrainingTests(unittest.TestCase):
         report['cohorts']['tail'] = {**measured, 'phishing_recall': .75}
         self.assertFalse(regression_acceptance(report))
 
+    def test_three_class_pilot_cannot_ignore_spam_failure(self):
+        measured = common.metrics([{'label': 'legitimate', 'prediction': 'legitimate'},
+                                   {'label': 'phishing', 'prediction': 'phishing'},
+                                   {'label': 'spam', 'prediction': 'legitimate'}])
+        self.assertFalse(regression_acceptance({'metrics': measured, 'cohorts': {}}))
+
 
 if __name__ == '__main__':
     unittest.main()

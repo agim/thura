@@ -1,8 +1,8 @@
 # AntiSpamInstitute model assessment — October 19, 2026
 
 **Do not integrate these candidates as Thura's default mail filter.** The small
-spam candidate was actually evaluated; the large phishing candidate was inspected
-but not downloaded or benchmarked. No mail-intake settings, assistant settings
+spam candidate and the large phishing candidate were actually evaluated. The user
+authorized a separate 2 GiB budget for the latter. No mail-intake settings, assistant settings
 or production model were changed by this assessment.
 
 ## Small spam model: measured failure at the documented threshold
@@ -51,7 +51,7 @@ or broken-export explanation; they do not make the classifier production-safe.
 Native PyTorch inference over all 218 legitimate validation emails independently
 confirmed the same 205 flags, with zero native/ONNX decision mismatches.
 
-## Large phishing model: not verified within the budget
+## Large phishing model: rejected after the 2 GiB test
 
 [`bert-MoE-Phishing-detection-v2.4`](https://huggingface.co/AntiSpamInstitute/bert-MoE-Phishing-detection-v2.4)
 revision `1b3c6ff35bc29b810b71cc1fb5d3d1faa49a7aa0` declares MIT but has no
@@ -60,11 +60,39 @@ The [config](https://huggingface.co/AntiSpamInstitute/bert-MoE-Phishing-detectio
 describes standard BERT-large, 24 layers/1024 hidden units, with benign/phishing
 labels and the `ealvaradob/bert-finetuned-phishing` origin. Safetensors size is
 1,340,622,760 bytes (about 1.25 GiB), already greater than the whole 1 GiB memory
-budget before runtime overhead. Quantization could change feasibility, but no
-CPU/RAM/accuracy result has been established here. Do not describe it as fitting
-or failing after INT8 quantization without an actual measurement. The named
+budget before runtime overhead. The named
 upstream declares Apache-2.0, whose applicable notices must not be lost merely
 because this repository declares MIT.
+
+The FP32 ONNX runtime was OOM-killed (exit 137) with 1 CPU, 2,147,483,648 bytes
+memory and zero swap during a clean startup attempt. An earlier attempt completed
+inference but failed the memory-headroom gate; its predictions were not retained
+because of a reporting-harness bug and are not claimed as accuracy evidence.
+Reporting now preserves rejected-run measurements before applying any gate.
+
+INT8 quantization produced a 432,227,713-byte ONNX file. It completed all 96 pilot
+cases under those exact 1 CPU / 2 GiB limits, no network and no swap, peaking at
+1,155,493,888 bytes (1.08 GiB), with no OOM/error. Inference p50 was 107 ms, p95
+5.77 seconds and maximum 17.78 seconds. Short windows use dynamic padding; all
+overlapping windows, including tails, are included. Threshold is fixed at 0.5.
+
+| Pilot cohort | Result |
+| --- | --- |
+| 44 phishing messages | 25 identified (56.8%); 19 missed |
+| 32 legitimate messages | 2 falsely flagged (6.25%) |
+| 20 ordinary spam messages | 18 incorrectly called phishing (90%) |
+| Embedded-instruction phishing subset | 7/8 identified |
+| Long-tail phishing subset | 0/4 identified |
+
+This is the unchanged authored regression fixture plus the first 20 locked
+validation spam examples, shuffled with seed 42. It is a known regression/pilot,
+not representative held-out population accuracy. It is sufficient to reject the
+candidate for Thura's targets, and cannot establish production acceptance.
+
+Native PyTorch versus FP32 ONNX logits agree within 0.00001 on three separate
+validation probes of lengths 304, 476 and 321 tokens, with no label swapping.
+These spot checks validate the export path; they are not a full FP32-versus-INT8
+quality comparison. FP32's deployment memory failure is reported separately.
 
 Neither model alone separates legitimate email, ordinary spam and phishing.
 Combining two binary classifiers also requires a separately validated routing
@@ -86,3 +114,10 @@ run=.lidza/local-mail-training
 "$run/venv/bin/python" scripts/mail-classifier-training/antispam.py --models "$run/antispam-spam" --prepare
 python3 scripts/mail-classifier-training/antispam_run.py --root "$run" --output "$run/antispam-validation.json"
 ```
+
+For the phishing candidate, fetch the revision/files in `antispam-phishing.json`,
+then use `antispam.py --candidate phishing --prepare --quantize`. Run the same
+driver with `--candidate phishing --kind int8 --memory-gib 2 --phase regression`
+and the JSONL equivalent of `mail-llama-benchmark/prepare.py`'s 96-case pilot.
+Use `--kind fp32` to reproduce the separate memory-limit attempt. No failed run
+changes the resource or detection gates automatically.

@@ -1,0 +1,36 @@
+{
+  "repository": "AntiSpamInstitute/bert-MoE-Phishing-detection-v2.4",
+  "revision": "1b3c6ff35bc29b810b71cc1fb5d3d1faa49a7aa0",
+  "declared_license": "MIT",
+  "distribution_cleared": false,
+  "files": {
+    "README.md": {
+      "bytes": 24,
+      "sha256": "d8d7a46d41a1a37fe4f0a5f637bf55c649310185329127d8a2204632e480be17"
+    },
+    "config.json": {
+      "bytes": 861,
+      "sha256": "b9b8e666c0458c1ef9f9d6ad3c3209bdf1add0e2084963fab830729a197b5aa6"
+    },
+    "special_tokens_map.json": {
+      "bytes": 695,
+      "sha256": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a"
+    },
+    "tokenizer.json": {
+      "bytes": 711649,
+      "sha256": "91f1def9b9391fdabe028cd3f3fcc4efd34e5d1f08c3bf2de513ebb5911a1854"
+    },
+    "tokenizer_config.json": {
+      "bytes": 1190,
+      "sha256": "f62a57a75856b93282501c92a86f62b169997c81e93cf6f75b7cc15d6285968e"
+    },
+    "vocab.txt": {
+      "bytes": 231508,
+      "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3"
+    },
+    "model.safetensors": {
+      "bytes": 1340622760,
+      "sha256": "a4937fd984546f06cefa8964559a0695f95006a02e9880bd27fe2030653b30eb"
+    }
+  }
+}
