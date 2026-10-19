@@ -23,6 +23,7 @@ import (
 	"thura/internal/platform/objectstore"
 	"thura/internal/richtext"
 	"thura/internal/smipmail"
+	"thura/internal/tenancy"
 	"thura/internal/workspace"
 	"thura/schema"
 	"time"
@@ -37,12 +38,29 @@ func Provision(ctx context.Context, in schema.ProvisionMailboxInput) (schema.Mai
 	if prefix != "" && !prefixPattern.MatchString(prefix) {
 		return schema.Mailbox{}, router.Errorf(422, "configPrefix must be uppercase and end in an underscore")
 	}
-	q := queries.New(db.From(ctx))
+	tx, err := db.From(ctx).Begin(ctx)
+	if err != nil {
+		return schema.Mailbox{}, err
+	}
+	defer tx.Rollback(ctx)
+	q := queries.New(tx)
 	if _, err := q.LockWorkspace(ctx, in.WorkspaceID); err != nil {
 		return schema.Mailbox{}, err
 	}
+	_, domainName, _ := strings.Cut(strings.ToLower(in.Address), "@")
+	if err = tenancy.LockDomain(ctx, tx, domainName); err != nil {
+		return schema.Mailbox{}, err
+	}
+	if d, e := q.BoundTeamDomain(ctx, domainName); e == nil && d.WorkspaceID != in.WorkspaceID {
+		return schema.Mailbox{}, router.Errorf(409, "This email domain belongs to another team")
+	} else if e != nil && !errors.Is(e, pgx.ErrNoRows) {
+		return schema.Mailbox{}, e
+	}
 	m, err := q.CreateMailbox(ctx, queries.CreateMailboxParams{WorkspaceID: in.WorkspaceID, Name: strings.TrimSpace(in.Name), Address: strings.ToLower(in.Address), ConfigPrefix: prefix})
-	return ViewMailbox(m), err
+	if err != nil {
+		return schema.Mailbox{}, err
+	}
+	return ViewMailbox(m), tx.Commit(ctx)
 }
 
 func Access(ctx context.Context, workspaceID, mailboxID string) (queries.Mailbox, error) {
@@ -239,7 +257,10 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	cfg, err := Config(m)
+	cfg, managed, err := tenancy.ResolveMail(ctx, m)
+	if !managed && err == nil {
+		cfg, err = Config(m)
+	}
 	if err != nil {
 		return err
 	}
@@ -283,7 +304,7 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 		}
 		msg.Attachments = append(msg.Attachments, mail.Attachment{Name: a.Name, ContentType: a.ContentType, Data: b, ContentID: a.ContentID})
 	}
-	if smipmail.From(ctx).Enabled() {
+	if managed || smipmail.From(ctx).Enabled() {
 		transmission, err := smipmail.Prepare(ctx, tx, m, i, msg, cfg)
 		if err != nil {
 			return err

@@ -29,7 +29,11 @@ type frozen struct {
 }
 
 func Prepare(ctx context.Context, tx pgx.Tx, mailbox q.Mailbox, item q.MailItem, msg mail.Message, cfg mail.Config) (q.MailTransmission, error) {
-	g := From(ctx)
+	_, senderDomain, _ := strings.Cut(strings.ToLower(mailbox.Address), "@")
+	g, resolveErr := forDomain(ctx, mailbox.WorkspaceID, senderDomain)
+	if resolveErr != nil {
+		return q.MailTransmission{}, resolveErr
+	}
 	queries := q.New(tx)
 	if _, err := queries.LockWorkspace(ctx, mailbox.WorkspaceID); err != nil {
 		return q.MailTransmission{}, err
@@ -155,7 +159,11 @@ func (g *Gateway) plan(ctx context.Context, initial q.MailTransmission) error {
 		if candidate.Route != "pending" || lidza.Now(ctx).Before(candidate.NextAttempt) {
 			continue
 		}
-		peer, resolveErr := g.Resolve(ctx, candidate.Domain, false)
+		var peer Peer
+		resolveErr := ErrUnsupported
+		if !g.providerOnly {
+			peer, resolveErr = g.Resolve(ctx, candidate.Domain, false)
+		}
 		tx, queries, row, err := lock(ctx, initial.ID)
 		if err != nil {
 			return err
@@ -199,6 +207,11 @@ func (g *Gateway) plan(ctx context.Context, initial q.MailTransmission) error {
 			current.Route, current.Packet, current.PeerDocument, current.Reason = "smip", string(encoded), string(document), "verified_domain"
 			current.NextAttempt = lidza.Now(ctx)
 		} else if errors.Is(resolveErr, ErrUnsupported) {
+			if g.providerOnly {
+				if err = queries.EnsureTeamProviderPolicy(ctx, q.EnsureTeamProviderPolicyParams{Origin: g.domain, Domain: current.Domain}); err != nil {
+					return errors.Join(err, tx.Rollback(ctx))
+				}
+			}
 			capability, err := queries.LockSmipMailDomain(ctx, q.LockSmipMailDomainParams{Origin: g.domain, Domain: current.Domain})
 			if err != nil {
 				return errors.Join(err, tx.Rollback(ctx))
@@ -239,8 +252,8 @@ func (g *Gateway) plan(ctx context.Context, initial q.MailTransmission) error {
 	return tx.Commit(ctx)
 }
 func eligible(ctx context.Context, queries *q.Queries, row q.MailTransmission) (bool, error) {
-	g := From(ctx)
-	if !g.Enabled() || row.Origin != g.domain {
+	g, identityErr := forDomain(ctx, row.WorkspaceID, row.Origin)
+	if identityErr != nil || !g.Enabled() || row.Origin != g.domain {
 		return false, nil
 	}
 	return queries.IsWorkspaceMember(ctx, q.IsWorkspaceMemberParams{Scope: row.WorkspaceID, Subject: row.AuthorID})
@@ -262,8 +275,8 @@ func Dispatch(ctx context.Context, raw json.RawMessage) error {
 	if row.State == "accepted" || row.State == "blocked" {
 		return nil
 	}
-	g := From(ctx)
-	if !g.Enabled() || row.Origin != g.domain {
+	g, identityErr := forDomain(ctx, row.WorkspaceID, row.Origin)
+	if identityErr != nil || !g.Enabled() || row.Origin != g.domain {
 		return nil
 	} // Disabling never enters the old provider sender.
 	if row.State == "planning" {
@@ -301,11 +314,7 @@ func Job(id string) json.RawMessage {
 	return b
 }
 func Reconcile(ctx context.Context, _ json.RawMessage) error {
-	g := From(ctx)
-	if !g.Enabled() {
-		return nil
-	}
-	rows, err := q.New(db.From(ctx)).DueMailTransmissions(ctx, g.domain)
+	rows, err := q.New(db.From(ctx)).DueAllMailTransmissions(ctx)
 	if err != nil {
 		return err
 	}
@@ -385,6 +394,7 @@ func (g *Gateway) sendProviderGroup(ctx context.Context, initial q.MailTransmiss
 	sort.Slice(group, func(i, j int) bool { return group[i].Domain < group[j].Domain })
 	permitted := group[:0]
 	for _, recipient := range group {
+
 		capability, err := queries.LockSmipMailDomain(ctx, q.LockSmipMailDomainParams{Origin: g.domain, Domain: recipient.Domain})
 		if err != nil {
 			return false, err

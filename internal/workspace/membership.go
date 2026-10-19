@@ -22,6 +22,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	queries "thura/db/queries/gen"
 	"thura/internal/serverpolicy"
+	"thura/internal/teammail"
+	"thura/internal/tenancy"
 	"thura/schema"
 )
 
@@ -102,7 +104,7 @@ func Invite(ctx context.Context, id string, in schema.InviteInput) (schema.Invit
 	if err != nil {
 		return schema.InviteView{}, err
 	}
-	_, err = mail.From(ctx).SendTx(ctx, tx, mail.Message{To: in.Email, Subject: "Invitation to " + w.Name, Text: "You have been invited to " + w.Name + " on Thura.\n\n" + mail.From(ctx).Link("/invite?token="+token) + "\n\nThis invitation expires in 72 hours. If you did not expect it, ignore this email."})
+	_, err = teammail.SendTx(ctx, tx, id, auth.CurrentUser(ctx).ID, mail.Message{To: in.Email, Subject: "Invitation to " + w.Name, Text: "You have been invited to " + w.Name + " on Thura.\n\n" + tenancy.Link(ctx, id, "/invite?token="+token) + "\n\nThis invitation expires in 72 hours. If you did not expect it, ignore this email."})
 	if err != nil {
 		return schema.InviteView{}, err
 	}
@@ -127,6 +129,9 @@ func Accept(ctx context.Context, in schema.AcceptInviteInput) (schema.Workspace,
 	}
 	if err != nil {
 		return schema.Workspace{}, err
+	}
+	if !tenancy.Allows(ctx, snapshot.WorkspaceID) {
+		return schema.Workspace{}, gone
 	}
 	tx, err := pool.Begin(ctx)
 	if err != nil {

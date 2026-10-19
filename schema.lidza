@@ -1468,3 +1468,113 @@ type MailAIClassification {
  category string @max(40)
  explanation string @max(1000)
 }
+
+// Team-owned configuration is independent of deployment/operator bootstrap.
+model TeamDomain {
+  id uuid @id @default(uuid())
+  workspaceId uuid @ref(Workspace) @index
+  name string @max(253)
+  challenge string @max(120)
+  verification string @default("dns")
+  status string @default("pending")
+  web bool @default(false)
+  mail bool @default(false)
+  verifiedAt time?
+  checkedAt time?
+  validUntil time?
+  createdAt time @default(now())
+  @@unique(workspaceId, name)
+}
+model TeamDomainBinding {
+  id uuid @id @default(uuid())
+  name string @unique @max(253)
+  workspaceId uuid @ref(Workspace) @index
+  domainId uuid @ref(TeamDomain) @unique
+}
+model TeamSetup {
+  workspaceId uuid @id @ref(Workspace)
+  primaryDomain string @default("")
+  status string @default("draft")
+  updatedAt time @default(now())
+}
+model TeamMailConfig {
+  domainId uuid @id @ref(TeamDomain)
+  workspaceId uuid @ref(Workspace) @index
+  provider string @max(30)
+  sealed text
+  enabled bool @default(false)
+  smip bool @default(false)
+  postfix bool @default(false)
+  updatedAt time @default(now())
+}
+type TeamDomainInput {
+  name string @min(3) @max(253)
+  web bool
+  mail bool
+}
+type TeamDomainView {
+  id uuid
+  name string
+  status string
+  web bool
+  mail bool
+  txtName string
+  txtValue string
+  verifiedAt time?
+  validUntil time?
+}
+type TeamMailInput {
+  provider string @max(30)
+  apiKey string? @max(4096)
+  region string @max(10)
+  smtpHost string? @max(253)
+  smtpPort int
+  smtpUsername string? @max(254)
+  smtpPassword string? @max(4096)
+  smtpSecurity string? @max(20)
+  enabled bool
+  smip bool
+  postfix bool
+  inboundSecret string? @max(4096)
+}
+type TeamMailView {
+  domainId uuid
+  provider string
+  region string
+  smtpHost string
+  smtpPort int
+  smtpUsername string
+  smtpSecurity string
+  hasApiKey bool
+  hasSmtpPassword bool
+  enabled bool
+  smip bool
+  postfix bool
+  publicKey string
+  keyId string
+  keyExpiresAt time?
+}
+type TeamSetupView {
+  workspaceId uuid
+  name string
+  status string
+  primaryDomain string
+  canManage bool
+  domains TeamDomainView[]
+  mail TeamMailView[]
+}
+type TeamPublishInput {
+  primaryDomain string @max(253)
+}
+type TeamMailboxInput {
+  name string @min(1) @max(120)
+  address string @email @max(254)
+}
+type TenantContext {
+  workspaceId string
+  name string
+  domain string
+}
+type NewTeamInput {
+  name string @min(1) @max(120)
+}

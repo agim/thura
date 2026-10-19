@@ -197,6 +197,7 @@ func (g *Gateway) fetch(ctx context.Context, domain string) (Peer, error) {
 	if err != nil {
 		return Peer{}, err
 	}
+	request.Header.Set("X-Thura-SMIP-Domain", domain)
 	response, err := client.Do(request)
 	if err != nil {
 		return Peer{}, ErrDiscovery

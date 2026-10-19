@@ -69,6 +69,9 @@ func (g *Gateway) hold(ctx context.Context, initial q.MailTransmission, delivery
 	return tx.Commit(ctx)
 }
 func (g *Gateway) sendSecure(ctx context.Context, initial q.MailTransmission, delivery q.MailDelivery) error {
+	if g.providerOnly {
+		return g.hold(ctx, initial, delivery, "secure_transport_disabled_no_fallback", false)
+	}
 	if delivery.State == "accepted" || delivery.State == "blocked" || lidza.Now(ctx).Before(delivery.NextAttempt) {
 		return nil
 	}
@@ -103,6 +106,7 @@ func (g *Gateway) sendSecure(ctx context.Context, initial q.MailTransmission, de
 		return err
 	}
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Thura-SMIP-Domain", delivery.Domain)
 	tx, queries, row, err := lock(ctx, initial.ID)
 	if err != nil {
 		return err

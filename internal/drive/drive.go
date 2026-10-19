@@ -25,6 +25,7 @@ import (
 	"thura/internal/platform/objectgc"
 	"thura/internal/platform/objectstore"
 	"thura/internal/serverpolicy"
+	"thura/internal/tenancy"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -426,6 +427,9 @@ func Open(ctx context.Context, token string) (schema.FileContent, error) {
 	f, err := queries.GetSharedFile(ctx, g.FileID)
 	if err != nil {
 		return schema.FileContent{}, err
+	}
+	if !tenancy.Allows(ctx, f.WorkspaceID) {
+		return schema.FileContent{}, router.Errorf(404, "share not found")
 	}
 	return Content(ctx, f, 0)
 }

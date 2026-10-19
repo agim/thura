@@ -133,5 +133,10 @@
     "title": "AI settings \u00b7 Thura",
     "description": "Manage your Thura model service and AI preferences.",
     "noIndex": true
+  },
+  "/app/settings/team": {
+    "title": "Teams and domains \u00b7 Thura",
+    "description": "Configure teams, web domains and email delivery.",
+    "noIndex": true
   }
 }

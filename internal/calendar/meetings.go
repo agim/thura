@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/packs/mail"
 	"github.com/agim/lidza/pkg/router"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
 	"thura/internal/meet"
+	"thura/internal/tenancy"
 	"thura/schema"
 )
 
@@ -59,10 +59,10 @@ func exportWorkspaceICS(ctx context.Context, queries *q.Queries, w string, event
 	links := map[string]string{}
 	for _, event := range events {
 		if event.MeetingID != nil {
-			links[event.ID] = mail.From(ctx).Link("/app?workspace=" + w + "&meeting=" + *event.MeetingID)
+			links[event.ID] = tenancy.Link(ctx, w, "/app?workspace="+w+"&meeting="+*event.MeetingID)
 			invite, err := queries.MeetingInviteByEvent(ctx, event.ID)
 			if err == nil && invite.MeetingID == *event.MeetingID {
-				link, _, xerr := meet.InviteLink(ctx, invite)
+				link, _, xerr := meet.InviteLink(ctx, invite, queries)
 				if xerr != nil {
 					return nil, xerr
 				}

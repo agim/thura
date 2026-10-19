@@ -9,6 +9,7 @@ import (
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/pkg/router"
 	queries "thura/db/queries/gen"
+	"thura/internal/tenancy"
 )
 
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -22,7 +23,7 @@ func RequireMember(ctx context.Context, id string) error {
 	if u == nil {
 		return router.Errorf(http.StatusUnauthorized, "sign in required")
 	}
-	if !ValidID(id) {
+	if !ValidID(id) || !tenancy.Allows(ctx, id) {
 		return router.Errorf(http.StatusNotFound, "workspace not found")
 	}
 	ok, err := queries.New(db.From(ctx)).IsWorkspaceMember(ctx, queries.IsWorkspaceMemberParams{Scope: id, Subject: u.ID})

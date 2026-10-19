@@ -27,6 +27,7 @@ import (
 	"thura/internal/mailabuse"
 	"thura/internal/platform/objectstore"
 	"thura/internal/smipmail"
+	"thura/internal/tenancy"
 	"time"
 )
 
@@ -160,6 +161,9 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 	if err != nil {
 		return queries.MailItem{}, router.Errorf(404, "mailbox not found")
 	}
+	if !tenancy.Allows(ctx, m.WorkspaceID) {
+		return queries.MailItem{}, router.Errorf(404, "mailbox not found")
+	}
 	if len(deliveryID) < 1 || len(deliveryID) > 200 {
 		return queries.MailItem{}, router.Errorf(400, "delivery id required")
 	}
@@ -168,6 +172,13 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 		return queries.MailItem{}, err
 	}
 	secret := values[m.ConfigPrefix+"MAIL_INBOUND_SECRET"]
+	teamSecret, managed, teamErr := tenancy.InboundSecret(ctx, m)
+	if teamErr != nil {
+		return queries.MailItem{}, teamErr
+	}
+	if managed {
+		secret = teamSecret
+	}
 	if len(secret) < 32 {
 		return queries.MailItem{}, router.Errorf(503, "inbound connector is not configured")
 	}

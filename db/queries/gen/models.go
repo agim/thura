@@ -867,6 +867,46 @@ type SmipOutbox struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+type TeamDomain struct {
+	ID           string     `json:"id"`
+	WorkspaceID  string     `json:"workspace_id"`
+	Name         string     `json:"name"`
+	Challenge    string     `json:"challenge"`
+	Verification string     `json:"verification"`
+	Status       string     `json:"status"`
+	Web          bool       `json:"web"`
+	Mail         bool       `json:"mail"`
+	VerifiedAt   *time.Time `json:"verified_at"`
+	CheckedAt    *time.Time `json:"checked_at"`
+	ValidUntil   *time.Time `json:"valid_until"`
+	CreatedAt    time.Time  `json:"created_at"`
+}
+
+type TeamDomainBinding struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	WorkspaceID string `json:"workspace_id"`
+	DomainID    string `json:"domain_id"`
+}
+
+type TeamMailConfig struct {
+	DomainID    string    `json:"domain_id"`
+	WorkspaceID string    `json:"workspace_id"`
+	Provider    string    `json:"provider"`
+	Sealed      string    `json:"sealed"`
+	Enabled     bool      `json:"enabled"`
+	Smip        bool      `json:"smip"`
+	Postfix     bool      `json:"postfix"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type TeamSetup struct {
+	WorkspaceID   string    `json:"workspace_id"`
+	PrimaryDomain string    `json:"primary_domain"`
+	Status        string    `json:"status"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
 type UploadChunk struct {
 	ID        string `json:"id"`
 	SessionID string `json:"session_id"`

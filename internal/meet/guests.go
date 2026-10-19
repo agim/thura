@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/agim/lidza/packs/db"
-	"github.com/agim/lidza/packs/mail"
 	"github.com/agim/lidza/pkg/credentials"
 	"github.com/agim/lidza/pkg/router"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
 	provider "thura/internal/providers/livekit"
+	"thura/internal/tenancy"
 	"thura/schema"
 )
 
@@ -59,7 +59,7 @@ func NewInvite(ctx context.Context, queries *q.Queries, meetingID, eventID strin
 	}
 	return q.MeetingInvite{}, router.Errorf(503, "could not allocate a meeting ID; try again")
 }
-func InviteLink(ctx context.Context, invite q.MeetingInvite) (string, string, error) {
+func InviteLink(ctx context.Context, invite q.MeetingInvite, transactionQueries ...*q.Queries) (string, string, error) {
 	key, err := credentials.Key(".")
 	if err != nil {
 		return "", "", err
@@ -68,15 +68,23 @@ func InviteLink(ctx context.Context, invite q.MeetingInvite) (string, string, er
 	if err != nil {
 		return "", "", err
 	}
+	queries := q.New(db.From(ctx))
+	if len(transactionQueries) > 0 {
+		queries = transactionQueries[0]
+	}
+	meeting, err := queries.FindMeeting(ctx, invite.MeetingID)
+	if err != nil {
+		return "", "", err
+	}
 	// Fragments keep the PIN out of HTTP request URLs and Referer headers.
-	return mail.From(ctx).Link("/meet?room=" + invite.Code + "#pin=" + string(pin)), string(pin), nil
+	return tenancy.Link(ctx, meeting.WorkspaceID, "/meet?room="+invite.Code+"#pin="+string(pin)), string(pin), nil
 }
-func InviteInstructions(ctx context.Context, invite q.MeetingInvite) (string, error) {
-	link, pin, err := InviteLink(ctx, invite)
+func InviteInstructions(ctx context.Context, invite q.MeetingInvite, transactionQueries ...*q.Queries) (string, error) {
+	link, pin, err := InviteLink(ctx, invite, transactionQueries...)
 	if err != nil {
 		return "", err
 	}
-	return "[Thura Meet]\nJoin meeting: " + link + "\n\nIf the link does not work, open " + mail.From(ctx).Link("/meet") + " and enter:\nMeeting ID: " + invite.Code + "\nPIN: " + pin + "\nEnter your name, then choose Join meeting. Your microphone and camera start off.\nAnyone with this invitation can join this meeting only. Keep the link and PIN private.\n[/Thura Meet]", nil
+	return "[Thura Meet]\nJoin meeting: " + link + "\n\nIf the link does not work, open " + strings.SplitN(link, "/meet?", 2)[0] + "/meet" + " and enter:\nMeeting ID: " + invite.Code + "\nPIN: " + pin + "\nEnter your name, then choose Join meeting. Your microphone and camera start off.\nAnyone with this invitation can join this meeting only. Keep the link and PIN private.\n[/Thura Meet]", nil
 }
 func JoinGuest(ctx context.Context, in schema.GuestMeetingInput) (schema.GuestMeetingAccess, error) {
 	out := schema.GuestMeetingAccess{}
@@ -115,6 +123,9 @@ func JoinGuest(ctx context.Context, in schema.GuestMeetingInput) (schema.GuestMe
 	m, err := queries.FindMeeting(ctx, invite.MeetingID)
 	if err != nil {
 		return out, err
+	}
+	if !tenancy.Allows(ctx, m.WorkspaceID) {
+		return out, router.Errorf(404, "meeting ID or PIN is incorrect")
 	}
 	m, err = queries.LockMeeting(ctx, q.LockMeetingParams{WorkspaceID: m.WorkspaceID, ID: m.ID})
 	if err != nil {

@@ -866,3 +866,47 @@ CREATE TABLE mail_intake_rate (
 CREATE INDEX mail_intake_rate_bucket_idx ON mail_intake_rate (bucket);
 CREATE UNIQUE INDEX mail_intake_rate_workspace_id_key_bucket_key ON mail_intake_rate (workspace_id, key, bucket);
 
+CREATE TABLE team_domain (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  name varchar(253) NOT NULL,
+  challenge varchar(120) NOT NULL,
+  verification text NOT NULL DEFAULT 'dns',
+  status text NOT NULL DEFAULT 'pending',
+  web boolean NOT NULL DEFAULT false,
+  mail boolean NOT NULL DEFAULT false,
+  verified_at timestamptz,
+  checked_at timestamptz,
+  valid_until timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX team_domain_workspace_id_idx ON team_domain (workspace_id);
+CREATE UNIQUE INDEX team_domain_workspace_id_name_key ON team_domain (workspace_id, name);
+
+CREATE TABLE team_domain_binding (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name varchar(253) NOT NULL UNIQUE,
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  domain_id uuid NOT NULL UNIQUE REFERENCES team_domain(id)
+);
+CREATE INDEX team_domain_binding_workspace_id_idx ON team_domain_binding (workspace_id);
+
+CREATE TABLE team_setup (
+  workspace_id uuid PRIMARY KEY REFERENCES workspace(id),
+  primary_domain text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT 'draft',
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE team_mail_config (
+  domain_id uuid PRIMARY KEY REFERENCES team_domain(id),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  provider varchar(30) NOT NULL,
+  sealed text NOT NULL,
+  enabled boolean NOT NULL DEFAULT false,
+  smip boolean NOT NULL DEFAULT false,
+  postfix boolean NOT NULL DEFAULT false,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX team_mail_config_workspace_id_idx ON team_mail_config (workspace_id);
+

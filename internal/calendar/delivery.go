@@ -15,6 +15,8 @@ import (
 	"strings"
 	q "thura/db/queries/gen"
 	"thura/internal/meet"
+	"thura/internal/teammail"
+	"thura/internal/tenancy"
 	"thura/schema"
 	"time"
 )
@@ -34,7 +36,7 @@ func Captured() bool {
 // Invitations are explicitly sent, separately from saving or importing events.
 // The event lock serializes sends, edits, and replies. Mail and grants commit together.
 func Invite(ctx context.Context, w, c, id string, in schema.CalendarInviteInput) (schema.CalendarDispatchResult, error) {
-	out := schema.CalendarDispatchResult{Captured: Captured()}
+	out := schema.CalendarDispatchResult{Captured: Captured() && !teammail.Configured(ctx, w)}
 	if in.InstanceKey != nil && *in.InstanceKey != "" {
 		return out, router.Errorf(422, "invitations currently apply to the whole series")
 	}
@@ -54,7 +56,7 @@ func Invite(ctx context.Context, w, c, id string, in schema.CalendarInviteInput)
 }
 
 func inviteTx(ctx context.Context, tx pgx.Tx, queries *q.Queries, w string, e q.CalendarEvent) (schema.CalendarDispatchResult, error) {
-	out := schema.CalendarDispatchResult{Captured: Captured()}
+	out := schema.CalendarDispatchResult{Captured: Captured() && !teammail.Configured(ctx, w)}
 	id := e.ID
 	dispatch, err := queries.GetCalendarDispatch(ctx, q.GetCalendarDispatchParams{EventID: id, Sequence: e.Sequence})
 	if err == nil && time.Since(dispatch.CreatedAt) < 30*24*time.Hour {
@@ -94,7 +96,7 @@ func inviteTx(ctx context.Context, tx pgx.Tx, queries *q.Queries, w string, e q.
 		if e.MeetingID != nil {
 			invite, xerr := queries.MeetingInviteByEvent(ctx, e.ID)
 			if xerr == nil && invite.MeetingID == *e.MeetingID {
-				instructions, xerr := meet.InviteInstructions(ctx, invite)
+				instructions, xerr := meet.InviteInstructions(ctx, invite, queries)
 				if xerr != nil {
 					return out, xerr
 				}
@@ -102,7 +104,7 @@ func inviteTx(ctx context.Context, tx pgx.Tx, queries *q.Queries, w string, e q.
 			} else if xerr != nil && !errors.Is(xerr, pgx.ErrNoRows) {
 				return out, xerr
 			} else {
-				text += "\n\nMeeting: " + mail.From(ctx).Link("/app?workspace="+w+"&meeting="+*e.MeetingID) + "\nOnly current workspace members can join."
+				text += "\n\nMeeting: " + tenancy.Link(ctx, w, "/app?workspace="+w+"&meeting="+*e.MeetingID) + "\nOnly current workspace members can join."
 			}
 		}
 		if !e.Cancelled {
@@ -118,9 +120,9 @@ func inviteTx(ctx context.Context, tx pgx.Tx, queries *q.Queries, w string, e q.
 			if err != nil {
 				return out, err
 			}
-			text += "\n\nReply for " + a.Email + ": " + mail.From(ctx).Link("/rsvp#"+token) + "\nThis link grants access to this event only and expires in 30 days."
+			text += "\n\nReply for " + a.Email + ": " + tenancy.Link(ctx, w, "/rsvp#"+token) + "\nThis link grants access to this event only and expires in 30 days."
 		}
-		_, err = mail.From(ctx).SendTx(ctx, tx, mail.Message{To: a.Email, ReplyTo: e.Organizer, Subject: subject, Text: text, Attachments: []mail.Attachment{{Name: "event.ics", ContentType: "text/calendar; method=" + method + "; charset=utf-8", Data: content}}})
+		_, err = teammail.SendTx(ctx, tx, w, auth.CurrentUser(ctx).ID, mail.Message{To: a.Email, ReplyTo: e.Organizer, Subject: subject, Text: text, Attachments: []mail.Attachment{{Name: "event.ics", ContentType: "text/calendar; method=" + method + "; charset=utf-8", Data: content}}})
 		if err != nil {
 			return out, err
 		}
@@ -147,6 +149,13 @@ func replyGrant(ctx context.Context, queries *q.Queries, token string) (q.GetCal
 	e, err = queries.GetReplyEvent(ctx, g.AttendeeID)
 	if err != nil {
 		return g, e, err
+	}
+	calendarWorkspace, calendarErr := queries.CalendarWorkspaceForGrant(ctx, e.CalendarID)
+	if calendarErr != nil {
+		return g, e, calendarErr
+	}
+	if !tenancy.Allows(ctx, calendarWorkspace) {
+		return g, e, router.Errorf(404, "reply link not found")
 	}
 	if !time.Now().Before(g.ExpiresAt) {
 		return g, e, router.Errorf(410, "reply link expired")

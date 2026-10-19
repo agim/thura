@@ -2228,6 +2228,125 @@ func (v MailIntakeRate) Validate() error {
 	return errs.Result()
 }
 
+// TeamDomain is a row of the team_domain table.
+type TeamDomain struct {
+	ID           string     `json:"id" db:"id"`
+	WorkspaceID  string     `json:"workspaceId" db:"workspace_id"`
+	Name         string     `json:"name" db:"name"`
+	Challenge    string     `json:"challenge" db:"challenge"`
+	Verification string     `json:"verification" db:"verification"`
+	Status       string     `json:"status" db:"status"`
+	Web          bool       `json:"web" db:"web"`
+	Mail         bool       `json:"mail" db:"mail"`
+	VerifiedAt   *time.Time `json:"verifiedAt" db:"verified_at"`
+	CheckedAt    *time.Time `json:"checkedAt" db:"checked_at"`
+	ValidUntil   *time.Time `json:"validUntil" db:"valid_until"`
+	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of TeamDomain from schema.lidza.
+func (v TeamDomain) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) > 253 {
+		errs.Add("name", "max", "at most 253 character(s)")
+	}
+	if v.Challenge == "" {
+		errs.Add("challenge", "required", "required")
+	}
+	if len(v.Challenge) > 120 {
+		errs.Add("challenge", "max", "at most 120 character(s)")
+	}
+	if v.Verification == "" {
+		errs.Add("verification", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	return errs.Result()
+}
+
+// TeamDomainBinding is a row of the team_domain_binding table.
+type TeamDomainBinding struct {
+	ID          string `json:"id" db:"id"`
+	Name        string `json:"name" db:"name"`
+	WorkspaceID string `json:"workspaceId" db:"workspace_id"`
+	DomainID    string `json:"domainId" db:"domain_id"`
+}
+
+// Validate applies the rules of TeamDomainBinding from schema.lidza.
+func (v TeamDomainBinding) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) > 253 {
+		errs.Add("name", "max", "at most 253 character(s)")
+	}
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.DomainID == "" {
+		errs.Add("domainId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// TeamSetup is a row of the team_setup table.
+type TeamSetup struct {
+	WorkspaceID   string    `json:"workspaceId" db:"workspace_id"`
+	PrimaryDomain string    `json:"primaryDomain" db:"primary_domain"`
+	Status        string    `json:"status" db:"status"`
+	UpdatedAt     time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of TeamSetup from schema.lidza.
+func (v TeamSetup) Validate() error {
+	var errs validate.Errors
+	if v.PrimaryDomain == "" {
+		errs.Add("primaryDomain", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	return errs.Result()
+}
+
+// TeamMailConfig is a row of the team_mail_config table.
+type TeamMailConfig struct {
+	DomainID    string    `json:"domainId" db:"domain_id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	Provider    string    `json:"provider" db:"provider"`
+	Sealed      string    `json:"sealed" db:"sealed"`
+	Enabled     bool      `json:"enabled" db:"enabled"`
+	Smip        bool      `json:"smip" db:"smip"`
+	Postfix     bool      `json:"postfix" db:"postfix"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of TeamMailConfig from schema.lidza.
+func (v TeamMailConfig) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if len(v.Provider) > 30 {
+		errs.Add("provider", "max", "at most 30 character(s)")
+	}
+	if v.Sealed == "" {
+		errs.Add("sealed", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -5058,6 +5177,311 @@ func (v MailAIClassification) Validate() error {
 	}
 	if len(v.Explanation) > 1000 {
 		errs.Add("explanation", "max", "at most 1000 character(s)")
+	}
+	return errs.Result()
+}
+
+// TeamDomainInput is an API type.
+type TeamDomainInput struct {
+	Name string `json:"name"`
+	Web  bool   `json:"web"`
+	Mail bool   `json:"mail"`
+}
+
+// Validate applies the rules of TeamDomainInput from schema.lidza.
+func (v TeamDomainInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 3 {
+		errs.Add("name", "min", "at least 3 character(s)")
+	}
+	if len(v.Name) > 253 {
+		errs.Add("name", "max", "at most 253 character(s)")
+	}
+	return errs.Result()
+}
+
+// TeamDomainView is an API type.
+type TeamDomainView struct {
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Status     string     `json:"status"`
+	Web        bool       `json:"web"`
+	Mail       bool       `json:"mail"`
+	TxtName    string     `json:"txtName"`
+	TxtValue   string     `json:"txtValue"`
+	VerifiedAt *time.Time `json:"verifiedAt"`
+	ValidUntil *time.Time `json:"validUntil"`
+}
+
+// Validate applies the rules of TeamDomainView from schema.lidza.
+func (v TeamDomainView) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	if v.TxtName == "" {
+		errs.Add("txtName", "required", "required")
+	}
+	if v.TxtValue == "" {
+		errs.Add("txtValue", "required", "required")
+	}
+	return errs.Result()
+}
+
+// TeamMailInput is an API type.
+type TeamMailInput struct {
+	Provider      string  `json:"provider"`
+	APIKey        *string `json:"apiKey"`
+	Region        string  `json:"region"`
+	SmtpHost      *string `json:"smtpHost"`
+	SmtpPort      int     `json:"smtpPort"`
+	SmtpUsername  *string `json:"smtpUsername"`
+	SmtpPassword  *string `json:"smtpPassword"`
+	SmtpSecurity  *string `json:"smtpSecurity"`
+	Enabled       bool    `json:"enabled"`
+	Smip          bool    `json:"smip"`
+	Postfix       bool    `json:"postfix"`
+	InboundSecret *string `json:"inboundSecret"`
+}
+
+// Validate applies the rules of TeamMailInput from schema.lidza.
+func (v TeamMailInput) Validate() error {
+	var errs validate.Errors
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if len(v.Provider) > 30 {
+		errs.Add("provider", "max", "at most 30 character(s)")
+	}
+	if v.APIKey != nil {
+		x := *v.APIKey
+		if len(x) > 4096 {
+			errs.Add("apiKey", "max", "at most 4096 character(s)")
+		}
+	}
+	if v.Region == "" {
+		errs.Add("region", "required", "required")
+	}
+	if len(v.Region) > 10 {
+		errs.Add("region", "max", "at most 10 character(s)")
+	}
+	if v.SmtpHost != nil {
+		x := *v.SmtpHost
+		if len(x) > 253 {
+			errs.Add("smtpHost", "max", "at most 253 character(s)")
+		}
+	}
+	if v.SmtpUsername != nil {
+		x := *v.SmtpUsername
+		if len(x) > 254 {
+			errs.Add("smtpUsername", "max", "at most 254 character(s)")
+		}
+	}
+	if v.SmtpPassword != nil {
+		x := *v.SmtpPassword
+		if len(x) > 4096 {
+			errs.Add("smtpPassword", "max", "at most 4096 character(s)")
+		}
+	}
+	if v.SmtpSecurity != nil {
+		x := *v.SmtpSecurity
+		if len(x) > 20 {
+			errs.Add("smtpSecurity", "max", "at most 20 character(s)")
+		}
+	}
+	if v.InboundSecret != nil {
+		x := *v.InboundSecret
+		if len(x) > 4096 {
+			errs.Add("inboundSecret", "max", "at most 4096 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// TeamMailView is an API type.
+type TeamMailView struct {
+	DomainID        string     `json:"domainId"`
+	Provider        string     `json:"provider"`
+	Region          string     `json:"region"`
+	SmtpHost        string     `json:"smtpHost"`
+	SmtpPort        int        `json:"smtpPort"`
+	SmtpUsername    string     `json:"smtpUsername"`
+	SmtpSecurity    string     `json:"smtpSecurity"`
+	HasAPIKey       bool       `json:"hasApiKey"`
+	HasSmtpPassword bool       `json:"hasSmtpPassword"`
+	Enabled         bool       `json:"enabled"`
+	Smip            bool       `json:"smip"`
+	Postfix         bool       `json:"postfix"`
+	PublicKey       string     `json:"publicKey"`
+	KeyID           string     `json:"keyId"`
+	KeyExpiresAt    *time.Time `json:"keyExpiresAt"`
+}
+
+// Validate applies the rules of TeamMailView from schema.lidza.
+func (v TeamMailView) Validate() error {
+	var errs validate.Errors
+	if v.DomainID == "" {
+		errs.Add("domainId", "required", "required")
+	}
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if v.Region == "" {
+		errs.Add("region", "required", "required")
+	}
+	if v.SmtpHost == "" {
+		errs.Add("smtpHost", "required", "required")
+	}
+	if v.SmtpUsername == "" {
+		errs.Add("smtpUsername", "required", "required")
+	}
+	if v.SmtpSecurity == "" {
+		errs.Add("smtpSecurity", "required", "required")
+	}
+	if v.PublicKey == "" {
+		errs.Add("publicKey", "required", "required")
+	}
+	if v.KeyID == "" {
+		errs.Add("keyId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// TeamSetupView is an API type.
+type TeamSetupView struct {
+	WorkspaceID   string           `json:"workspaceId"`
+	Name          string           `json:"name"`
+	Status        string           `json:"status"`
+	PrimaryDomain string           `json:"primaryDomain"`
+	CanManage     bool             `json:"canManage"`
+	Domains       []TeamDomainView `json:"domains"`
+	Mail          []TeamMailView   `json:"mail"`
+}
+
+// Validate applies the rules of TeamSetupView from schema.lidza.
+func (v TeamSetupView) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	if v.PrimaryDomain == "" {
+		errs.Add("primaryDomain", "required", "required")
+	}
+	for _, x := range v.Domains {
+		if err := x.Validate(); err != nil {
+			errs.Add("domains", "nested", err.Error())
+			break
+		}
+	}
+	for _, x := range v.Mail {
+		if err := x.Validate(); err != nil {
+			errs.Add("mail", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// TeamPublishInput is an API type.
+type TeamPublishInput struct {
+	PrimaryDomain string `json:"primaryDomain"`
+}
+
+// Validate applies the rules of TeamPublishInput from schema.lidza.
+func (v TeamPublishInput) Validate() error {
+	var errs validate.Errors
+	if v.PrimaryDomain == "" {
+		errs.Add("primaryDomain", "required", "required")
+	}
+	if len(v.PrimaryDomain) > 253 {
+		errs.Add("primaryDomain", "max", "at most 253 character(s)")
+	}
+	return errs.Result()
+}
+
+// TeamMailboxInput is an API type.
+type TeamMailboxInput struct {
+	Name    string `json:"name"`
+	Address string `json:"address"`
+}
+
+// Validate applies the rules of TeamMailboxInput from schema.lidza.
+func (v TeamMailboxInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 120 {
+		errs.Add("name", "max", "at most 120 character(s)")
+	}
+	if v.Address == "" {
+		errs.Add("address", "required", "required")
+	}
+	if len(v.Address) > 254 {
+		errs.Add("address", "max", "at most 254 character(s)")
+	}
+	if v.Address != "" && !validate.Email(v.Address) {
+		errs.Add("address", "email", "not an email address")
+	}
+	return errs.Result()
+}
+
+// TenantContext is an API type.
+type TenantContext struct {
+	WorkspaceID string `json:"workspaceId"`
+	Name        string `json:"name"`
+	Domain      string `json:"domain"`
+}
+
+// Validate applies the rules of TenantContext from schema.lidza.
+func (v TenantContext) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	return errs.Result()
+}
+
+// NewTeamInput is an API type.
+type NewTeamInput struct {
+	Name string `json:"name"`
+}
+
+// Validate applies the rules of NewTeamInput from schema.lidza.
+func (v NewTeamInput) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 120 {
+		errs.Add("name", "max", "at most 120 character(s)")
 	}
 	return errs.Result()
 }

@@ -62,6 +62,10 @@ func (g *Gateway) receive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mailbox := mailboxes[0]
+	if g.teamID != "" && mailbox.WorkspaceID != g.teamID {
+		http.Error(w, "Recipient not accepted", http.StatusForbidden)
+		return
+	}
 	peer, err := g.Resolve(r.Context(), envelope.From, false)
 	if err != nil {
 		http.Error(w, "Sender domain cannot be verified", http.StatusServiceUnavailable)

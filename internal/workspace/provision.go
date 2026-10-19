@@ -15,6 +15,14 @@ import (
 // The owner must already have a provisioned account. Workspace creation and
 // ownership are committed together, so a workspace never has no owner.
 func Create(ctx context.Context, in schema.CreateWorkspaceInput) (schema.Workspace, error) {
+	return create(ctx, in, false)
+}
+
+// CreateManaged provisions centrally configured teams without inheriting deployment mail.
+func CreateManaged(ctx context.Context, in schema.CreateWorkspaceInput) (schema.Workspace, error) {
+	return create(ctx, in, true)
+}
+func create(ctx context.Context, in schema.CreateWorkspaceInput, managed bool) (schema.Workspace, error) {
 	in.Name = strings.TrimSpace(in.Name)
 	if err := in.Validate(); err != nil {
 		return schema.Workspace{}, err
@@ -35,6 +43,11 @@ func Create(ctx context.Context, in schema.CreateWorkspaceInput) (schema.Workspa
 	}
 	if err = q.GrantWorkspaceOwner(ctx, queries.GrantWorkspaceOwnerParams{Subject: p.Subject, Scope: row.ID}); err != nil {
 		return schema.Workspace{}, err
+	}
+	if managed {
+		if err = q.EnsureTeamSetup(ctx, row.ID); err != nil {
+			return schema.Workspace{}, err
+		}
 	}
 	if err = audit.From(ctx).RecordTx(audit.System(ctx, "workspace-provision"), tx, audit.Event{Action: "workspace.create", Scope: row.ID, Resource: "workspace/" + row.ID, Meta: map[string]string{"owner_subject": p.Subject}}); err != nil {
 		return schema.Workspace{}, err

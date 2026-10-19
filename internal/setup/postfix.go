@@ -16,6 +16,7 @@ import (
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/pkg/env"
 	q "thura/db/queries/gen"
+	"thura/internal/tenancy"
 )
 
 var mailHostname = regexp.MustCompile(`^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
@@ -121,7 +122,7 @@ func PostfixConfig(w http.ResponseWriter, r *http.Request) {
 		if result.Enabled {
 			result.Hostname = v["THURA_POSTFIX_HOSTNAME"]
 		}
-		if v["THURA_MAIL_INBOUND"] == "postfix" {
+		if v["THURA_MAIL_INBOUND"] == "postfix" || len(os.Getenv("THURA_POSTFIX_TOKEN")) >= 32 {
 			// Use the node's activated settings, including mailbox-specific prefixes.
 			values, err := env.Values(".")
 			if err != nil {
@@ -138,6 +139,15 @@ func PostfixConfig(w http.ResponseWriter, r *http.Request) {
 				if mailbox.ConfigPrefix == "" {
 					secret = v["MAIL_INBOUND_SECRET"]
 				}
+				teamSecret, managed, teamErr := tenancy.PostfixSecret(r.Context(), mailbox)
+				if managed {
+					if teamErr != nil {
+						continue
+					}
+					secret = teamSecret
+				} else if v["THURA_MAIL_INBOUND"] != "postfix" {
+					continue
+				}
 				if !postfixAddress(mailbox.Address) || len(secret) < 32 || len(secret) > 4096 {
 					http.Error(w, "A mailbox requires a canonical address and inbound signing secret", http.StatusServiceUnavailable)
 					return
@@ -150,6 +160,12 @@ func PostfixConfig(w http.ResponseWriter, r *http.Request) {
 			}
 			if len(result.Config.Mailboxes) > 0 {
 				result.Listen = "25"
+				result.Enabled = true
+				if !mailHostname.MatchString(v["THURA_POSTFIX_HOSTNAME"]) {
+					http.Error(w, "Configure the deployment Postfix hostname before team receiving", http.StatusServiceUnavailable)
+					return
+				}
+				result.Hostname = v["THURA_POSTFIX_HOSTNAME"]
 			}
 		}
 	}

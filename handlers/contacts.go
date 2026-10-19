@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	queries "thura/db/queries/gen"
 	"thura/internal/platform/paging"
+	"thura/internal/tenancy"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -21,6 +22,9 @@ func ListWorkspaces(ctx context.Context, req *router.Request[router.None]) (sche
 	rows, err := queries.New(db.From(ctx)).ListWorkspaces(ctx, auth.CurrentUser(ctx).ID)
 	result := schema.WorkspaceList{Items: []schema.Workspace{}}
 	for _, w := range rows {
+		if !tenancy.Allows(ctx, w.ID) {
+			continue
+		}
 		result.Items = append(result.Items, schema.Workspace{ID: w.ID, Name: w.Name, CreatedAt: w.CreatedAt})
 	}
 	return result, err

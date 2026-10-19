@@ -1,0 +1,16 @@
+.team-setup { max-width: 820px; min-width: 0; }
+.team-steps { display: flex; gap: 8px; overflow-x: auto; margin-block: 20px; padding-block: 4px; }
+.team-steps button { white-space: nowrap; flex-shrink: 0; }
+#orbit-workspace.zero-workspace .team-steps .app-action[aria-current="step"] { background: var(--tealsoft); color: var(--teal); }
+.team-setup .settings-form { margin-block: 20px; }
+.team-setup .settings-list-row > div { min-width: 0; }
+.team-setup small { display: block; }
+.team-dns { overflow-wrap: anywhere; }
+.team-setup input:not([type="checkbox"]), .team-setup label { min-width: 0; max-width: 100%; }
+
+#orbit-workspace.zero-workspace .team-selection { align-items: flex-end; }
+#orbit-workspace.zero-workspace .team-selection > label { display: grid; gap: 6px; margin: 0; }
+#orbit-workspace.zero-workspace .team-selection .select-control > button { height: 44px; min-height: 44px; box-sizing: border-box; }
+#orbit-workspace.zero-workspace .team-selection > .app-action { margin: 0; align-self: flex-end; }
+
+@media (max-width:640px) { #orbit-workspace.zero-workspace .team-steps { gap:4px; } #orbit-workspace.zero-workspace .team-steps .app-action { padding-inline:8px; font-size:12px; } }

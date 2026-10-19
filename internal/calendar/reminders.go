@@ -9,6 +9,8 @@ import (
 	"github.com/agim/lidza/packs/mail"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/teammail"
+	"thura/internal/tenancy"
 	"time"
 )
 
@@ -108,7 +110,7 @@ func remindOne(ctx context.Context, r q.ListReminderSubscriptionsRow, now time.T
 		if inserted == 0 {
 			continue
 		}
-		_, err = mail.From(ctx).SendTx(ctx, tx, mail.Message{To: email, Subject: "Reminder: " + i.Title, Text: fmt.Sprintf("%s\nStarts: %s (%s)\nLocation: %s\n\n%s", i.Title, start.In(mustLocation(e.TimeZone)).Format(time.RFC3339), e.TimeZone, e.Location, mail.From(ctx).Link("/app"))})
+		_, err = teammail.SendTx(ctx, tx, r.WorkspaceID, r.Subject, mail.Message{To: email, Subject: "Reminder: " + i.Title, Text: fmt.Sprintf("%s\nStarts: %s (%s)\nLocation: %s\n\n%s", i.Title, start.In(mustLocation(e.TimeZone)).Format(time.RFC3339), e.TimeZone, e.Location, tenancy.Link(ctx, r.WorkspaceID, "/app"))})
 		if err != nil {
 			return err
 		}

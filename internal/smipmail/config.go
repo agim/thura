@@ -41,6 +41,8 @@ type Config struct {
 type Ingest func(context.Context, pgx.Tx, string, Payload, string) (string, error)
 type Gateway struct {
 	domain           string
+	teamID           string
+	providerOnly     bool
 	signer           smip.SigningKey
 	keys             map[string]smip.Key
 	origins          map[string]string
@@ -60,7 +62,7 @@ func Configure(s *lidza.Services, ingest Ingest) error {
 	if err := env.Load(".", &settings); err != nil {
 		return err
 	}
-	gateway := &Gateway{ingest: ingest}
+	gateway := &Gateway{ingest: ingest, resolver: net.DefaultResolver, slots: make(chan struct{}, 2), admissions: make(chan struct{}, 2), origins: map[string]string{}, keys: map[string]smip.Key{}}
 	if settings.Enabled {
 		var cfg Config
 		decoder := json.NewDecoder(strings.NewReader(settings.Config))
@@ -138,5 +140,13 @@ func (g *Gateway) Domain() string       { return g.domain }
 func (g *Gateway) tlsConfig() *tls.Config {
 	return &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: g.roots}
 }
-func Capabilities(w http.ResponseWriter, r *http.Request) { From(r.Context()).capabilities(w, r) }
-func Receive(w http.ResponseWriter, r *http.Request)      { From(r.Context()).receive(w, r) }
+func Capabilities(w http.ResponseWriter, r *http.Request) {
+	if g, ok := requestGateway(w, r); ok {
+		g.capabilities(w, r)
+	}
+}
+func Receive(w http.ResponseWriter, r *http.Request) {
+	if g, ok := requestGateway(w, r); ok {
+		g.receive(w, r)
+	}
+}

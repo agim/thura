@@ -19,6 +19,8 @@ services:
       THURA_POSTFIX_TOKEN: ${THURA_POSTFIX_TOKEN:?Run scripts/init-compose.py}
       DB_MIGRATE: "true"
       LIDZA_ADDR: 0.0.0.0:3000
+      THURA_PUBLIC_HOSTS: ${THURA_PUBLIC_HOSTS:-}
+      THURA_TENANT_SMTP_HOSTS: ${THURA_TENANT_SMTP_HOSTS:-}
       STORAGE_PROVIDER: local
       MAIL_CLAMD_ADDRESS: clamav:3310
       STORAGE_DIR: storage

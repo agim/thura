@@ -98,11 +98,11 @@ func prepareMeeting(ctx context.Context, queries *q.Queries, w string, e q.Calen
 	if err = queries.UpdateMeetingInviteExpiry(ctx, q.UpdateMeetingInviteExpiryParams{ID: invite.ID, ExpiresAt: expires}); err != nil {
 		return e, err
 	}
-	instructions, err := meet.InviteInstructions(ctx, invite)
+	instructions, err := meet.InviteInstructions(ctx, invite, queries)
 	if err != nil {
 		return e, err
 	}
-	link, _, err := meet.InviteLink(ctx, invite)
+	link, _, err := meet.InviteLink(ctx, invite, queries)
 	if err != nil {
 		return e, err
 	}

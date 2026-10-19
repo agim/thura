@@ -23,6 +23,7 @@ import (
 	livekit "thura/internal/providers/livekit"
 	"thura/internal/setup"
 	"thura/internal/smipmail"
+	"thura/internal/tenancy"
 )
 
 // onStart runs after the packs have started and before the app listens:
@@ -30,6 +31,11 @@ import (
 // cache, lidza.Provide a service the packs do not. main.go is generated
 // once and left alone; this file is the app's.
 func onStart(ctx context.Context, s *lidza.Services) error {
+	tenancy.Configure(s, setup.Allow)
+	jobs.FromServices(s).Handle(tenancy.RecheckJob, tenancy.Recheck, jobs.Concurrency(1))
+	if err := jobs.FromServices(s).Schedule(tenancy.RecheckJob, jobs.Every(time.Hour), nil); err != nil {
+		return err
+	}
 	if err := setup.Activate(lidza.WithServices(ctx, s), s); err != nil {
 		return err
 	}
@@ -88,9 +94,9 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 // Middleware for the API only goes on the router (r.Use in routes.go).
 func appMiddleware() []middleware.Middleware {
 	if os.Getenv("LIDZA_MODE") == "dev" {
-		return []middleware.Middleware{setup.Gate}
+		return []middleware.Middleware{setup.Gate, tenancy.Middleware}
 	}
-	return []middleware.Middleware{setup.Gate, func(next http.Handler) http.Handler {
+	return []middleware.Middleware{setup.Gate, tenancy.Middleware, func(next http.Handler) http.Handler {
 		var once sync.Once
 		var handler http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
