@@ -35,7 +35,7 @@ def run(args):
     provenance = json.loads(Path(args.provenance).read_text())
     model_sha = provenance['model_sha256']
     corpus = Path(args.corpus).resolve()
-    client = root / 'llama1b-client'
+    client = Path(args.client).resolve() if args.client else root / 'llama1b-client'
     if sha(model) != model_sha or not provenance.get('adapter_sha256'):
         raise ValueError('trained artifact differs from frozen provenance')
     name = 'thura-trained-llama-' + uuid.uuid4().hex[:12]
@@ -45,6 +45,9 @@ def run(args):
               'production_acceptance': False, 'training_provenance': provenance}
     report['latency_budget_seconds'] = args.latency_budget_seconds
     try:
+        grammar_args = ['--grammar', 'root ::= "A" | "B" | "C"'] if args.class_decision else []
+        if args.class_decision and provenance.get('objective') != 'class-decision':
+            raise ValueError('decision serving requires matching trained objective')
         docker('create', '--name', name, '--cpus', '2', '--memory', str(MEMORY), '--memory-swap', str(MEMORY),
                '--pids-limit', '128', '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
                '--network', 'none', '--tmpfs', '/tmp:size=32m,mode=1777', '--user', '65532:65532',
@@ -52,7 +55,7 @@ def run(args):
                '--mount', f'type=bind,src={client},dst=/bench,readonly',
                IMAGE, '--model', '/models/model.gguf', '--alias', 'thura-mail-llama1b', '--host', '127.0.0.1', '--port', '8080',
                '--ctx-size', '4096', '--parallel', '1', '--threads', '2', '--threads-batch', '2', '--n-gpu-layers', '0',
-               '--batch-size', '128', '--ubatch-size', '128', '--fit', 'off', '--no-context-shift', '--no-webui', '--jinja', '--seed', '42')
+               '--batch-size', '128', '--ubatch-size', '128', '--fit', 'off', '--no-context-shift', '--no-webui', '--jinja', '--seed', '42', *grammar_args)
         inspection = json.loads(docker('inspect', name).stdout)[0]
         host = inspection['HostConfig']
         if host['NanoCpus'] != 2000000000 or host['Memory'] != MEMORY or host['MemorySwap'] != MEMORY or host['NetworkMode'] != 'none':
@@ -82,6 +85,8 @@ def run(args):
             report.update(reason='Inference failed under requested limits', diagnostic=response.stderr[-3000:])
             return report
         report.update(json.loads(response.stdout))
+        if args.class_decision and report['prompt_sha256'] != provenance['prompt_sha256']:
+            raise ValueError('benchmark client differs from the trained contract')
         group = report['cgroup']
         quota, period = map(int, group['cpu.max'].split())
         events = dict(line.split() for line in group['memory.events'].splitlines())
@@ -99,10 +104,12 @@ def run(args):
         report['performance_acceptance'] = report['latency_ms']['p95'] <= args.latency_budget_seconds * 1000 and report['sequential_emails_per_minute'] >= 5
         report['numerical_acceptance'] = acceptance(measured)
         report['challenge_acceptance'] = all((report['cohorts'][source]['phishing_recall'] or 0) >= .95 for source in ['instruction', 'tail'])
-        report['status'] = 'pilot_pass_only' if report['resource_acceptance'] and report['numerical_acceptance'] and report['performance_acceptance'] and report['challenge_acceptance'] else 'rejected'
+        # Latency is a planning measurement: the user explicitly prioritizes accuracy.
+        report['status'] = 'pilot_pass_only' if report['resource_acceptance'] and report['numerical_acceptance'] and report['challenge_acceptance'] else 'rejected'
         report['context_tokens'] = 4096
         report['context_shift'] = False
-        report['decoding'] = {'temperature': 0, 'seed': 42, 'max_output_tokens': 32, 'parallel_slots': 1}
+        report['decoding'] = {'temperature': 0, 'seed': 42, 'max_output_tokens': 8 if args.class_decision else 32, 'parallel_slots': 1,
+                              'class_decision_only': args.class_decision}
         return report
     finally:
         docker('rm', '--force', name, check=False)
@@ -113,6 +120,8 @@ if __name__ == '__main__':
     parser.add_argument('--root', required=True)
     parser.add_argument('--model', required=True)
     parser.add_argument('--provenance', required=True)
+    parser.add_argument('--client')
+    parser.add_argument('--class-decision', action='store_true')
     parser.add_argument('--latency-budget-seconds', type=float, default=30)
     parser.add_argument('--corpus', required=True)
     parser.add_argument('--output', required=True)

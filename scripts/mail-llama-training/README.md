@@ -7,6 +7,63 @@ The user selected **Llama 3.2 1B**, and CPU deployment evaluation is fixed at
 **2 vCPU / 2 GiB with no swap**. Training uses the existing Apple Silicon GPU;
 the serving budget is not a training-memory limit. No paid service is used.
 
+## Classification objective v2
+
+`decision.py` replaces completion-token loss with **one three-way class decision
+per example**. The frozen codebook is A=legitimate, B=spam, C=phishing, each exactly
+one tokenizer token. The only loss is cross-entropy over those three logits at
+the prompt-end position. JSON syntax and end-of-turn tokens have zero loss weight.
+Gold completions are replaced by padding before the forward pass; only the loss
+reads the expected class. Gradient tests verify that no other position or
+vocabulary entry contributes. An actual base-model probe confirmed that projecting
+only the selected hidden state matches the normal full forward scores exactly.
+
+This also avoids constructing sequence-length by whole-vocabulary logits during
+training. It does not change the frozen base model, email evidence, source labels,
+partitions or class resampling. `prepare_decision.py` verifies parent hashes and
+one-token targets. The rewritten prompt and codebook are in
+`decisionbench/prompt.json`. Each retained message is still checked against 4096
+tokens, with no silent truncation. Run guards reject a data/objective mismatch.
+
+The Go decision client uses the official Līdza LLM pack and a private server with
+the exact grammar `root ::= "A" | "B" | "C"`. The server restricts output to the
+same three tokens; the client strictly maps them back to the three named classes.
+The runtime does not need to learn JSON or write an explanation. Invalid output,
+timeouts and malformed requests do not become safe classifications. A separate
+one-request engineering smoke check verified this protocol using an older model;
+that smoke check is not counted as a quality measurement for the new model.
+
+Training uses `decision-train.yaml`: 1200 fixed steps, batch size 2, rank 16,
+scale 8, learning rate 0.00002, all 16 layers and seed 42, fresh from the same
+4-bit base. Checkpoints cannot be chosen or tuned by regression scores. The
+100-step batch-2 timing pilot took 131.27 seconds and 2.45 GiB peak MLX allocation;
+a 50-step batch-4 probe took 254.26 seconds and 8.27 GiB. Batch 2 was chosen for
+its measured efficiency and memory use. Pilot development predictions were
+29/32 legitimate, 32/32 spam and 25/32 phishing correct: evidence of learning
+separate classes, but still below the acceptance thresholds.
+
+Reproduce the v2 experiment in the existing pinned native environment:
+
+```sh
+python scripts/mail-llama-training/prepare_decision.py --source .lidza/llama-training/data --model .lidza/llama-training/base --output .lidza/llama-decision/data
+python -m unittest discover -s scripts/mail-llama-training -v
+python scripts/mail-llama-training/run.py --objective class-decision --config scripts/mail-llama-training/decision-pilot.yaml --output .lidza/llama-decision/pilot.json
+python scripts/mail-llama-training/run.py --objective class-decision --config scripts/mail-llama-training/decision-train.yaml --output .lidza/llama-decision/training.json
+python scripts/mail-llama-training/evaluate_decision.py --model .lidza/llama-training/base --adapters .lidza/llama-decision/trained-adapters --data .lidza/llama-decision/data/valid.jsonl --per-class 32 --output .lidza/llama-decision/final-validation.json
+python scripts/mail-llama-training/export.py --root .lidza/llama-decision --base .lidza/llama-training/base --converter-source .lidza/llama-training/llama.cpp --expected-steps 1200 --converter-python <cpu-conversion-python>
+```
+
+Before export, freeze `acceptance-before-test.json` in the run directory, including
+the schedule, quality thresholds and resource limits. Build the isolated client
+with `CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o .lidza/llama-decision/decision-client ./scripts/mail-llama-training/decisionbench`.
+Run `benchmark.py` with the usual model/provenance/corpus/output flags plus
+`--class-decision --client .lidza/llama-decision/decision-client` to enforce the
+matching contract. The 2-vCPU/2-GiB/no-swap CPU result is authoritative for serving;
+native development scores are not substituted for it. Nothing enables integration.
+
+The following original JSON-completion procedure remains available to reproduce
+the earlier failed checkpoint; do not mix its data, prompt or objective with v2.
+
 ## Corrected AWS approach
 
 The AWS sample at revision `9e53b98240177b5ca47fdf23b8bd0f722d0ade26`

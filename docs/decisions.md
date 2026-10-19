@@ -391,3 +391,7 @@ Why: Licensed three-class training and AntiSpamInstitute evaluation fit their me
 ## 2026-10-19: Reject the locally fine-tuned Llama 1B checkpoint after constrained CPU evaluation
 
 Why: The user authorized local Mac training and 2-vCPU/2-GiB serving tests, with accuracy prioritized over screening latency. The corrected three-class MLX QLoRA pipeline completed 100-step timing pilots and a fixed 600-step run, but the exported Q4 checkpoint falsely flagged all 32 legitimate controls and separated only 9/20 ordinary spam cases despite detecting 44/44 phishing cases. Retain the Mail toggle and assistant separation; do not activate or bundle this artifact. Preserve original timings and the explicitly relaxed latency preference. See docs/llama-local-training-evaluation.md.
+
+## 2026-10-19: Keep class-only Llama v2 disabled after constrained CPU regression
+
+Why: The corrected one-decision three-class objective trained successfully and eliminated legitimate-mail false positives on this fixture, but the Q4 CPU service detected only 22/44 phishing cases and failed instruction/tail gates and conservative memory headroom. Native same-corpus scoring reached 41/44, below target, and fusion probes preserved native predictions; export/runtime parity remains unresolved. Retain the Mail toggle and assistant separation, preserve the unchanged quality gates, and do not activate or redistribute weights. See docs/llama-classification-v2.md.
