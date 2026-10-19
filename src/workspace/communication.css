@@ -1094,7 +1094,7 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 .rich-editor-frame:focus-within { outline:2px solid var(--teal); outline-offset:2px; }
 .rich-toolbar.app-action-row { gap:2px; padding:4px; border-bottom:1px solid var(--line); background:var(--paper); margin:0; }
 :is(#orbit-workspace.zero-workspace,.workspace-dialog) .rich-toolbar button.app-action { width:36px; min-width:36px; height:36px; min-height:36px; padding:8px; border-color:transparent; background:transparent; }
-:is(#orbit-workspace.zero-workspace,.workspace-dialog) .rich-toolbar button.app-action[aria-pressed=true] { background:var(--tint,#e8f0fe); color:var(--teal); }
+:is(#orbit-workspace.zero-workspace,.workspace-dialog) .rich-toolbar button.app-action[aria-pressed=true] { background:var(--tealsoft,#e8f0fe); color:var(--teal); }
 .rich-editor-content { min-height:180px; padding:14px; outline:none; overflow-wrap:anywhere; font-size:14px; line-height:1.6; }
 .rich-editor-content > :first-child,.rich-content > :first-child { margin-top:0; }
 .rich-editor-content > :last-child,.rich-content > :last-child { margin-bottom:0; }
@@ -1127,7 +1127,7 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 }
 
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .rich-toolbar button.app-action { width:36px; min-width:36px; height:36px; min-height:36px; padding:8px; border-color:transparent; background:transparent; }
-#orbit-workspace.zero-workspace #orbit-mail-vibrant .rich-toolbar button.app-action[aria-pressed=true] { background:var(--tint,#e8f0fe); color:var(--teal); }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .rich-toolbar button.app-action[aria-pressed=true] { background:var(--tealsoft,#e8f0fe); color:var(--teal); }
 
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .composer-recipient-row .recipient-toggle { align-self:flex-start; margin-top:0; }
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .recipient-inline .recipient-control > input[data-empty=true] { flex:1 1 10px; min-width:10px; width:10px; padding:3px 0; }
