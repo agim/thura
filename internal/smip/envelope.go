@@ -12,12 +12,17 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	stdmail "net/mail"
 	"regexp"
+	"strings"
 	"time"
 	"unicode/utf8"
 )
 
 const Version = "smip/0.1"
+const MailVersion = "smip/0.2"
+const MailMessagePath = "/api/v1/smip/v0.2/mail"
+const DiscoveryPath = "/api/v1/smip/v0.2/capabilities"
 const MaxPayload = 16 << 20
 const MaxChat = 64 << 10
 const MaxWire = ((MaxPayload + 2) / 3 * 4) + 4096
@@ -85,7 +90,12 @@ func decode(value string, max int) ([]byte, error) {
 	return b, nil
 }
 func (e Envelope) Validate() error {
-	if e.Version != Version || !tokenPattern.MatchString(e.ID) || !validDomain(e.From) || !validDomain(e.To) || !addressAt(e.Sender, e.From) || !addressAt(e.Recipient, e.To) || !tokenPattern.MatchString(e.Stream) {
+	mailProfile := e.Version == MailVersion && e.Kind == "mail" && e.Stream == "mail" && e.Name == ""
+	senderOK, recipientOK := addressAt(e.Sender, e.From), addressAt(e.Recipient, e.To)
+	if mailProfile {
+		senderOK, recipientOK = MailAddressAt(e.Sender, e.From), MailAddressAt(e.Recipient, e.To)
+	}
+	if (!mailProfile && e.Version != Version) || !tokenPattern.MatchString(e.ID) || !validDomain(e.From) || !validDomain(e.To) || !senderOK || !recipientOK || !tokenPattern.MatchString(e.Stream) {
 		return errors.New("invalid envelope identity")
 	}
 	if e.Created <= 0 || e.Expires <= e.Created || e.Expires-e.Created > int64(MaxLifetime/time.Second) || e.Created >= 1<<53 || e.Expires >= 1<<53 {
@@ -103,7 +113,7 @@ func (e Envelope) Validate() error {
 		if e.Name != "" {
 			return errors.New("chat cannot carry file name")
 		}
-	} else if e.Kind != "file" {
+	} else if e.Kind != "file" && !mailProfile {
 		return errors.New("unsupported message kind")
 	}
 	payload, err := decode(e.Payload, size)
@@ -182,4 +192,23 @@ func canonical(prefix string, fields []any) []byte {
 		panic(fmt.Errorf("SMIP canonical field encoding: %w", err))
 	}
 	return append([]byte(prefix+"\n"), b...)
+}
+
+// MailAddressAt accepts plain RFC addresses while keeping the signed domain exact.
+func MailAddressAt(address, domain string) bool {
+	parsed, err := stdmail.ParseAddress(address)
+	local, host, ok := strings.Cut(address, "@")
+	return err == nil && parsed.Address == address && ok && local != "" && len(local) <= 64 && host == domain && validDomain(domain) && !strings.ContainsAny(address, "\r\n\x00")
+}
+func ValidDomain(domain string) bool                                 { return validDomain(domain) }
+func NewReceipt(p Packet, key ed25519.PrivateKey, now int64) Receipt { return receiptFor(p, key, now) }
+func DecodePacket(raw []byte) (Packet, error) {
+	var packet Packet
+	err := strictJSON(raw, &packet)
+	return packet, err
+}
+func DecodeReceipt(raw []byte) (Receipt, error) {
+	var receipt Receipt
+	err := strictJSON(raw, &receipt)
+	return receipt, err
 }

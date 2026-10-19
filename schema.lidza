@@ -208,6 +208,7 @@ type MailDetail {
   item MailItem
   attachments AttachmentView[]
   labels MailLabel[]
+  deliveries MailDeliveryView[]
 }
 type DraftInput {
   forwardId uuid?
@@ -1277,4 +1278,78 @@ model AuthInvite @table("auth_invite") {
   revokedAt  time?
   createdAt  time   @default(now())
   @@index(workspace)
+}
+
+
+// Domain capabilities are local-origin scoped, sticky after first verification.
+model SmipMailDomain {
+ id uuid @id @default(uuid())
+ origin string
+ domain string
+ state string @default("unknown")
+ everVerified bool @default(false)
+ endpoint string @default("")
+ document text @default("")
+ reason string @default("")
+ checkedAt time
+ expiresAt time
+ @@unique(origin, domain)
+}
+model MailTransmission {
+ id uuid @id @default(uuid())
+ origin string
+ workspaceId uuid @ref(Workspace) @index
+ mailboxId uuid @ref(Mailbox)
+ itemId uuid @ref(MailItem) @unique
+ authorId string
+ payload text
+ providerConfig text
+ originKey text
+ state string @default("planning")
+ apiState string @default("pending")
+ apiAttemptId string @default("")
+ apiResult string @default("")
+ createdAt time
+ updatedAt time
+}
+model MailDelivery {
+ id uuid @id @default(uuid())
+ transmissionId uuid @ref(MailTransmission) @index
+ recipient string
+ domain string
+ route string @default("pending")
+ state string @default("pending")
+ reason string @default("")
+ packet text @default("")
+ peerDocument text @default("")
+ receipt text @default("")
+ attempts int @default(0)
+ attemptId string @default("")
+ nextAttempt time
+ updatedAt time
+ @@unique(transmissionId, recipient)
+}
+model SmipMailReceipt {
+ id uuid @id @default(uuid())
+ domain string
+ origin string
+ messageId string
+ recipient string
+ digest string
+ receipt text
+ itemId uuid
+ acceptedAt time
+ @@unique(domain, origin, messageId)
+}
+type MailDeliveryView {
+ id uuid
+ recipient string
+ transport string
+ state string
+ reason string
+ attempts int
+ updatedAt time
+}
+type MailDeliveryList {
+ items MailDeliveryView[]
 }

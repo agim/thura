@@ -12,7 +12,7 @@ import { DateTimeControl } from './DateTimeControl'
 import { ModalAction } from './ModalAction'
 import { useEffect, useState, useRef, type FormEvent } from 'react'
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, type MailItem, type MailFolder, type DraftInput } from '@lidza/client'
+import { api, ApiError, type MailItem, type MailFolder, type DraftInput } from '@lidza/client'
 import { downloadContent } from '../lib/download'
 import { RecipientInput } from './RecipientInput'
 import { DraftAutosave } from '../lib/draft-autosave'
@@ -20,6 +20,8 @@ import { Reply, ReplyAll, Forward, Undo2, X, Inbox, FilePenLine, Send, Archive, 
 const folderIcons = { inbox: Inbox, drafts: FilePenLine, sent: Send, archive: Archive, spam: ShieldAlert, trash: Trash2 }
 import { MailReader } from './MailReader'
 import { MailLabelFilter, MailConversation } from './MailTools'
+
+function deliveryStatus(status: string) { return ({delivery_pending: 'Delivery pending · secure verification or receipt required', delivery_uncertain: 'Provider outcome unknown · automatic retry stopped', delivery_blocked: 'Delivery held · attention required', captured: 'Captured locally · not delivered'} as Record<string,string>)[status] ?? status }
 
 export function LiveMail({ workspaceId, initialDraft, initialMessage, search, mailboxId: chosenMailbox, folder, onFolderChange, resetToken }: { workspaceId: string; search: string; mailboxId: string; folder: MailFolder; onFolderChange: (folder: MailFolder) => void; resetToken: number; initialDraft?: MailItem; initialMessage?: { id: string; mailboxId: string } }) {
   const boxes = useQuery({ queryKey: ['mailboxes', workspaceId], queryFn: () => api.listMailboxes({ workspaceId }) })
@@ -42,12 +44,13 @@ function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, quer
   const [notice, setNotice] = useState('')
   const [readerError, setReaderError] = useState('')
   const list = useInfiniteQuery({ queryKey: ['mail', mailboxId, folder, query, labelId], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listMail({ workspaceId, mailboxId }, { query: { folder, labelId, search: query, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined, refetchInterval: 5000 })
-  const detail = useQuery({ queryKey: ['mail-detail', selected], queryFn: () => api.getMail({ workspaceId, mailboxId, id: selected }), enabled: !!selected })
+  const detail = useQuery({ queryKey: ['mail-detail', selected], queryFn: () => api.getMail({ workspaceId, mailboxId, id: selected }), enabled: !!selected, refetchInterval: query => ['queued', 'delivery_pending'].includes(query.state.data?.item.status ?? '') ? 5000 : false })
   const refresh = async () => { await client.invalidateQueries({ queryKey: ['mail', mailboxId] }); await client.invalidateQueries({ queryKey: ['mail-detail', selected] }) }
   const compose = useMutation({ mutationFn: () => api.createMailDraft({ workspaceId, mailboxId }, {}), onSuccess: async i => { setEditing(i); setSelected(i.id); setFolder('drafts'); await refresh() } })
   const flags = useMutation({ mutationFn: ({ id, values }: { id: string; values: { folder?: MailFolder; starred?: boolean; unread?: boolean } }) => api.updateMailFlags({ workspaceId, mailboxId, id }, values), onSuccess: refresh })
   const undo = useMutation({ mutationFn: (id: string) => api.undoMail({ workspaceId, mailboxId, id }), onSuccess: async i => { setEditing(i); setNotice('Sending cancelled. Draft restored.'); await refresh() } })
-  const current = detail.isError ? undefined : detail.data?.item
+  const accessLost = detail.error instanceof ApiError && detail.error.status >= 400 && detail.error.status < 500 && detail.error.status !== 429
+  const current = accessLost ? undefined : detail.data?.item
   const visible = list.isError ? [] : [...new Map(list.data?.pages.flatMap(page => page.items).map(item => [item.id, item]) ?? []).values()]
   const failure = list.error ?? detail.error ?? compose.error ?? flags.error ?? undo.error
   async function download(id: string) { try { downloadContent(await api.downloadMailAttachment({ workspaceId, mailboxId, id: selected, attachmentId: id })) } catch(e) { setReaderError(String(e)) } }
@@ -72,7 +75,7 @@ function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, quer
       <section className="list" aria-label="Messages">
         {list.isPending && <p role="status" className="empty">Loading messages…</p>}
         {list.data && visible.length === 0 && <p className="empty">No messages in this view.</p>}
-        {visible.map(i => <button onContextMenu={e=>contextMenu.show(e,messageCommands(i))} onKeyDown={e=>{if(e.key==='ContextMenu' || e.key==='F10'&&e.shiftKey)contextMenu.show(e,messageCommands(i))}} className={`mailrow ${i.unread ? 'unread' : ''} ${selected === i.id ? 'selected' : ''}`} key={i.id} onClick={() => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null); setReaderError(''); if (i.unread) flags.mutate({ id: i.id, values: { unread: false } }) }}><span className="mail-avatar" aria-hidden="true">{(folder === 'inbox' ? i.fromAddress : i.toAddress || 'D').slice(0, 1).toUpperCase()}</span><span className="sendername">{folder === 'inbox' ? i.fromAddress : i.toAddress || 'No recipients'}</span><span className="subject"><span>{i.subject || '(No subject)'}</span><small className="mail-snippet">{i.textBody.slice(0, 160)}</small></span><time className="mail-date" dateTime={i.updatedAt}>{new Date(i.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time><span className="small quiet">{i.status === 'captured' ? 'Captured locally · not delivered' : i.status}{i.starred ? ' · ★' : ''}</span></button>)}
+        {visible.map(i => <button onContextMenu={e=>contextMenu.show(e,messageCommands(i))} onKeyDown={e=>{if(e.key==='ContextMenu' || e.key==='F10'&&e.shiftKey)contextMenu.show(e,messageCommands(i))}} className={`mailrow ${i.unread ? 'unread' : ''} ${selected === i.id ? 'selected' : ''}`} key={i.id} onClick={() => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null); setReaderError(''); if (i.unread) flags.mutate({ id: i.id, values: { unread: false } }) }}><span className="mail-avatar" aria-hidden="true">{(folder === 'inbox' ? i.fromAddress : i.toAddress || 'D').slice(0, 1).toUpperCase()}</span><span className="sendername">{folder === 'inbox' ? i.fromAddress : i.toAddress || 'No recipients'}</span><span className="subject"><span>{i.subject || '(No subject)'}</span><small className="mail-snippet">{i.textBody.slice(0, 160)}</small></span><time className="mail-date" dateTime={i.updatedAt}>{new Date(i.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time><span className="small quiet">{deliveryStatus(i.status)}{i.starred ? ' · ★' : ''}</span></button>)}
         {list.hasNextPage && <ActionButton disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>Load more messages</ActionButton>}
         <p className="mail-count">{visible.length} {visible.length === 1 ? 'message' : 'messages'}{list.hasNextPage ? ' loaded' : ''}</p>
       </section>
@@ -80,7 +83,8 @@ function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, quer
         {editing ? <DraftEditor key={editing.id} item={editing} workspaceId={workspaceId} mailboxId={mailboxId} saved={async i => { setEditing(i.status === 'draft' ? i : null); setNotice(i.status === 'queued' ? 'Queued · undo is available until the scheduled send time.' : 'Draft saved.'); await refresh() }} /> : current ? <>
           <ActionRow label="Message tools" className="toolbar"><DetailBack onClick={() => { setSelected(''); setEditing(null) }}>Back to messages</DetailBack><ResourceLabels workspaceId={workspaceId} source="mail" id={current.id} /><ActionButton aria-label={current.starred ? 'Unstar' : 'Star'} disabled={flags.isPending} onClick={() => flags.mutate({ id: current.id, values: { starred: !current.starred } })}><Star size={18} fill={current.starred ? 'currentColor' : 'none'} /></ActionButton><ActionButton disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'archive' } })} aria-label="Archive"><Archive size={18} aria-hidden="true" /><span className="action-label">Archive</span></ActionButton><ActionButton disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'trash' } })} aria-label="Trash"><Trash2 size={18} aria-hidden="true" /><span className="action-label">Trash</span></ActionButton>{current.folder === 'trash' && <ActionButton onClick={() => flags.mutate({ id: current.id, values: { folder: current.status === 'draft' ? 'drafts' : current.status === 'received' ? 'inbox' : 'sent' } })} aria-label="Restore"><Undo2 size={18} aria-hidden="true" /><span className="action-label">Restore</span></ActionButton>}</ActionRow>
           <h3 className="title">{current.subject || '(No subject)'}</h3><p className="small quiet">From {current.fromAddress} · To {current.toAddress}</p>
-          <p className="small quiet">{current.status === 'captured' ? 'Captured by the development provider. This message was not delivered.' : current.status}</p>
+          <p className="small quiet">{deliveryStatus(current.status)}</p>
+          {!!detail.data?.deliveries?.length && <details className="mail-delivery"><summary>Delivery by recipient</summary><ul>{detail.data.deliveries.map(d => <li key={d.id}><strong>{d.recipient}</strong> · {d.transport === 'smip' ? 'Verified SMIP' : d.transport === 'provider' ? 'Configured provider' : 'Verifying domain'} · {deliveryStatus(d.state)}<small className="quiet"> · {d.reason.replaceAll('_', ' ')}</small></li>)}</ul></details>}
           {current.status === 'queued' && <ActionButton disabled={undo.isPending} onClick={() => undo.mutate(current.id)}>Undo send</ActionButton>}
           <MailReader key={`reader:${current.id}`} workspaceId={workspaceId} mailboxId={mailboxId} id={current.id} html={current.htmlBody} text={current.textBody} attachments={detail.data?.attachments || []} />
           {detail.data?.attachments.map(a => <ActionButton className="attachment" key={a.id} onClick={() => void download(a.id)}>Download {a.name} · {Math.ceil(a.size / 1024)} KB</ActionButton>)}

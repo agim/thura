@@ -11,6 +11,7 @@ import (
 	"thura/internal/meet"
 	"thura/internal/providers/collabora"
 	"thura/internal/setup"
+	"thura/internal/smipmail"
 	"thura/internal/wopi"
 
 	"thura/schema"
@@ -22,6 +23,8 @@ import (
 // from these types, so the frontend cannot drift from the API.
 func routes(r *router.Router) {
 	mountAdmin(r)
+	r.HandleFunc("GET /api/v1/smip/v0.2/capabilities", smipmail.Capabilities)
+	r.HandleFunc("POST /api/v1/smip/v0.2/mail", smipmail.Receive)
 	r.HandleFunc("GET /api/v1/setup/postfix", setup.PostfixConfig)
 	router.Route(r, "GET /api/v1/setup/status", handlers.SetupStatus, auth.Optional())
 	router.Route(r, "POST /api/v1/setup/claim", handlers.ClaimSetup, auth.Throttle())

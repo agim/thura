@@ -14,6 +14,7 @@ import (
 	queries "thura/db/queries/gen"
 	"thura/internal/mailbox"
 	"thura/internal/platform/paging"
+	"thura/internal/smipmail"
 	"thura/internal/workspace"
 	"thura/schema"
 	"time"
@@ -93,7 +94,7 @@ func GetMail(ctx context.Context, r *router.Request[router.None]) (schema.MailDe
 		return schema.MailDetail{}, err
 	}
 	rows, err := queries.New(db.From(ctx)).ListMailAttachments(ctx, i.ID)
-	out := schema.MailDetail{Item: mailbox.View(i), Attachments: []schema.AttachmentView{}, Labels: []schema.MailLabel{}}
+	out := schema.MailDetail{Item: mailbox.View(i), Attachments: []schema.AttachmentView{}, Labels: []schema.MailLabel{}, Deliveries: []schema.MailDeliveryView{}}
 	for _, a := range rows {
 		out.Attachments = append(out.Attachments, mailbox.Attachment(a))
 	}
@@ -103,6 +104,13 @@ func GetMail(ctx context.Context, r *router.Request[router.None]) (schema.MailDe
 	labels, err := queries.New(db.From(ctx)).ListItemLabels(ctx, i.ID)
 	for _, label := range labels {
 		out.Labels = append(out.Labels, mailbox.LabelView(label))
+	}
+	if err != nil {
+		return out, err
+	}
+	deliveries, err := smipmail.Deliveries(ctx, i.ID)
+	for _, d := range deliveries {
+		out.Deliveries = append(out.Deliveries, schema.MailDeliveryView{ID: d.ID, Recipient: d.Recipient, Transport: d.Route, State: d.State, Reason: d.Reason, Attempts: int(d.Attempts), UpdatedAt: d.UpdatedAt})
 	}
 	return out, err
 }

@@ -40,6 +40,8 @@ func Catalog() []Step {
 			field("MAIL_SMTP_USERNAME", "SMTP username", "text", "", "Leave both username/password empty for a trusted local relay."),
 			field("MAIL_SMTP_PASSWORD", "SMTP password", "secret", "", "Blank preserves the saved password."),
 			field("MAIL_INBOUND_SECRET", "Inbound relay signing secret", "secret", "", "At least 32 characters. Automatically generated for managed Postfix. For an external relay, configure the same secret there."),
+			field("SMIP_MAIL_ENABLED", "Prefer verified SMIP email", "select", "false", "Verified domains use authenticated SMIP. Unadvertised domains use the configured provider; verification failures hold delivery.", "false", "true"),
+			field("SMIP_MAIL_CONFIG", "SMIP email identity JSON", "secret", "", "Domain, private signing seed and validity interval; optional private origins and required domains. See docs/smip-mail.md. Stored encrypted."),
 		}},
 		{ID: "storage", Title: "Private file storage", Fields: []Field{
 			field("STORAGE_PROVIDER", "Storage backend", "select", "local", "Private local disk or an S3-compatible backend.", "local", "s3"),

@@ -519,6 +519,23 @@ type MailAttachment struct {
 	ContentID   string `json:"content_id"`
 }
 
+type MailDelivery struct {
+	ID             string    `json:"id"`
+	TransmissionID string    `json:"transmission_id"`
+	Recipient      string    `json:"recipient"`
+	Domain         string    `json:"domain"`
+	Route          string    `json:"route"`
+	State          string    `json:"state"`
+	Reason         string    `json:"reason"`
+	Packet         string    `json:"packet"`
+	PeerDocument   string    `json:"peer_document"`
+	Receipt        string    `json:"receipt"`
+	Attempts       int32     `json:"attempts"`
+	AttemptID      string    `json:"attempt_id"`
+	NextAttempt    time.Time `json:"next_attempt"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
 type MailItem struct {
 	ID               string     `json:"id"`
 	MailboxID        string     `json:"mailbox_id"`
@@ -578,6 +595,24 @@ type MailTag struct {
 	ID      string `json:"id"`
 	ItemID  string `json:"item_id"`
 	LabelID string `json:"label_id"`
+}
+
+type MailTransmission struct {
+	ID             string    `json:"id"`
+	Origin         string    `json:"origin"`
+	WorkspaceID    string    `json:"workspace_id"`
+	MailboxID      string    `json:"mailbox_id"`
+	ItemID         string    `json:"item_id"`
+	AuthorID       string    `json:"author_id"`
+	Payload        string    `json:"payload"`
+	ProviderConfig string    `json:"provider_config"`
+	OriginKey      string    `json:"origin_key"`
+	State          string    `json:"state"`
+	APIState       string    `json:"api_state"`
+	APIAttemptID   string    `json:"api_attempt_id"`
+	APIResult      string    `json:"api_result"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type Mailbox struct {
@@ -719,6 +754,31 @@ type SmipInbox struct {
 	ImportedFileID *string    `json:"imported_file_id"`
 	ImportedAt     *time.Time `json:"imported_at"`
 	AcceptedAt     time.Time  `json:"accepted_at"`
+}
+
+type SmipMailDomain struct {
+	ID           string    `json:"id"`
+	Origin       string    `json:"origin"`
+	Domain       string    `json:"domain"`
+	State        string    `json:"state"`
+	EverVerified bool      `json:"ever_verified"`
+	Endpoint     string    `json:"endpoint"`
+	Document     string    `json:"document"`
+	Reason       string    `json:"reason"`
+	CheckedAt    time.Time `json:"checked_at"`
+	ExpiresAt    time.Time `json:"expires_at"`
+}
+
+type SmipMailReceipt struct {
+	ID         string    `json:"id"`
+	Domain     string    `json:"domain"`
+	Origin     string    `json:"origin"`
+	MessageID  string    `json:"message_id"`
+	Recipient  string    `json:"recipient"`
+	Digest     string    `json:"digest"`
+	Receipt    string    `json:"receipt"`
+	ItemID     string    `json:"item_id"`
+	AcceptedAt time.Time `json:"accepted_at"`
 }
 
 type SmipOutbox struct {

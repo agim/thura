@@ -1309,3 +1309,8 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 /* A failed metadata read must not resize the active document or lose its draft. */
 #orbit-workspace .drive-fullscreen .office-editor { position:relative; }
 #orbit-workspace .drive-fullscreen .office-editor > .office-editor-error { position:absolute; z-index:2; top:8px; right:12px; max-width:min(38ch,calc(100% - 24px)); padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--paper); box-shadow:0 2px 8px #0002; }
+
+#orbit-mail-vibrant .mail-delivery { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-block: 12px; overflow-wrap: anywhere; }
+#orbit-mail-vibrant .mail-delivery summary { cursor: pointer; }
+#orbit-mail-vibrant .mail-delivery ul { padding-inline-start: 20px; margin-block: 12px 0; }
+#orbit-mail-vibrant .mail-delivery li + li { margin-top: 8px; }

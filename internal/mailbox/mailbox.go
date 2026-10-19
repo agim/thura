@@ -21,6 +21,7 @@ import (
 	queries "thura/db/queries/gen"
 	"thura/internal/platform/objectstore"
 	"thura/internal/richtext"
+	"thura/internal/smipmail"
 	"thura/internal/workspace"
 	"thura/schema"
 	"time"
@@ -217,6 +218,16 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 	if err != nil {
 		return err
 	}
+	existing, existingErr := q.GetMailTransmission(ctx, i.ID)
+	if existingErr == nil {
+		if err = tx.Rollback(ctx); err != nil {
+			return err
+		}
+		return smipmail.Dispatch(ctx, smipmail.Job(existing.ID))
+	}
+	if !errors.Is(existingErr, pgx.ErrNoRows) {
+		return existingErr
+	}
 	if i.Status != "queued" && i.Status != "failed" {
 		return nil
 	}
@@ -228,10 +239,6 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 		return err
 	}
 	cfg, err := Config(m)
-	if err != nil {
-		return err
-	}
-	transport, err := mail.New(cfg, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -271,6 +278,20 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 			return errors.New("attachments exceed ten megabytes")
 		}
 		msg.Attachments = append(msg.Attachments, mail.Attachment{Name: a.Name, ContentType: a.ContentType, Data: b, ContentID: a.ContentID})
+	}
+	if smipmail.From(ctx).Enabled() {
+		transmission, err := smipmail.Prepare(ctx, tx, m, i, msg, cfg)
+		if err != nil {
+			return err
+		}
+		if err = tx.Commit(ctx); err != nil {
+			return err
+		}
+		return smipmail.Dispatch(ctx, smipmail.Job(transmission.ID))
+	}
+	transport, err := mail.New(cfg, nil, nil)
+	if err != nil {
+		return err
 	}
 	providerID, deliveryErr := transport.Send(ctx, msg)
 	status, folder := "sent", queries.MailFolderSent

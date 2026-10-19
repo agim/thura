@@ -1876,6 +1876,199 @@ func (v AuthInvite) Validate() error {
 	return errs.Result()
 }
 
+// SmipMailDomain is a row of the smip_mail_domain table.
+type SmipMailDomain struct {
+	ID           string    `json:"id" db:"id"`
+	Origin       string    `json:"origin" db:"origin"`
+	Domain       string    `json:"domain" db:"domain"`
+	State        string    `json:"state" db:"state"`
+	EverVerified bool      `json:"everVerified" db:"ever_verified"`
+	Endpoint     string    `json:"endpoint" db:"endpoint"`
+	Document     string    `json:"document" db:"document"`
+	Reason       string    `json:"reason" db:"reason"`
+	CheckedAt    time.Time `json:"checkedAt" db:"checked_at"`
+	ExpiresAt    time.Time `json:"expiresAt" db:"expires_at"`
+}
+
+// Validate applies the rules of SmipMailDomain from schema.lidza.
+func (v SmipMailDomain) Validate() error {
+	var errs validate.Errors
+	if v.Origin == "" {
+		errs.Add("origin", "required", "required")
+	}
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.Endpoint == "" {
+		errs.Add("endpoint", "required", "required")
+	}
+	if v.Document == "" {
+		errs.Add("document", "required", "required")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailTransmission is a row of the mail_transmission table.
+type MailTransmission struct {
+	ID             string    `json:"id" db:"id"`
+	Origin         string    `json:"origin" db:"origin"`
+	WorkspaceID    string    `json:"workspaceId" db:"workspace_id"`
+	MailboxID      string    `json:"mailboxId" db:"mailbox_id"`
+	ItemID         string    `json:"itemId" db:"item_id"`
+	AuthorID       string    `json:"authorId" db:"author_id"`
+	Payload        string    `json:"payload" db:"payload"`
+	ProviderConfig string    `json:"providerConfig" db:"provider_config"`
+	OriginKey      string    `json:"originKey" db:"origin_key"`
+	State          string    `json:"state" db:"state"`
+	APIState       string    `json:"apiState" db:"api_state"`
+	APIAttemptID   string    `json:"apiAttemptId" db:"api_attempt_id"`
+	APIResult      string    `json:"apiResult" db:"api_result"`
+	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of MailTransmission from schema.lidza.
+func (v MailTransmission) Validate() error {
+	var errs validate.Errors
+	if v.Origin == "" {
+		errs.Add("origin", "required", "required")
+	}
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.MailboxID == "" {
+		errs.Add("mailboxId", "required", "required")
+	}
+	if v.ItemID == "" {
+		errs.Add("itemId", "required", "required")
+	}
+	if v.AuthorID == "" {
+		errs.Add("authorId", "required", "required")
+	}
+	if v.Payload == "" {
+		errs.Add("payload", "required", "required")
+	}
+	if v.ProviderConfig == "" {
+		errs.Add("providerConfig", "required", "required")
+	}
+	if v.OriginKey == "" {
+		errs.Add("originKey", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.APIState == "" {
+		errs.Add("apiState", "required", "required")
+	}
+	if v.APIAttemptID == "" {
+		errs.Add("apiAttemptId", "required", "required")
+	}
+	if v.APIResult == "" {
+		errs.Add("apiResult", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailDelivery is a row of the mail_delivery table.
+type MailDelivery struct {
+	ID             string    `json:"id" db:"id"`
+	TransmissionID string    `json:"transmissionId" db:"transmission_id"`
+	Recipient      string    `json:"recipient" db:"recipient"`
+	Domain         string    `json:"domain" db:"domain"`
+	Route          string    `json:"route" db:"route"`
+	State          string    `json:"state" db:"state"`
+	Reason         string    `json:"reason" db:"reason"`
+	Packet         string    `json:"packet" db:"packet"`
+	PeerDocument   string    `json:"peerDocument" db:"peer_document"`
+	Receipt        string    `json:"receipt" db:"receipt"`
+	Attempts       int       `json:"attempts" db:"attempts"`
+	AttemptID      string    `json:"attemptId" db:"attempt_id"`
+	NextAttempt    time.Time `json:"nextAttempt" db:"next_attempt"`
+	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of MailDelivery from schema.lidza.
+func (v MailDelivery) Validate() error {
+	var errs validate.Errors
+	if v.TransmissionID == "" {
+		errs.Add("transmissionId", "required", "required")
+	}
+	if v.Recipient == "" {
+		errs.Add("recipient", "required", "required")
+	}
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	if v.Route == "" {
+		errs.Add("route", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
+	}
+	if v.Packet == "" {
+		errs.Add("packet", "required", "required")
+	}
+	if v.PeerDocument == "" {
+		errs.Add("peerDocument", "required", "required")
+	}
+	if v.Receipt == "" {
+		errs.Add("receipt", "required", "required")
+	}
+	if v.AttemptID == "" {
+		errs.Add("attemptId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipMailReceipt is a row of the smip_mail_receipt table.
+type SmipMailReceipt struct {
+	ID         string    `json:"id" db:"id"`
+	Domain     string    `json:"domain" db:"domain"`
+	Origin     string    `json:"origin" db:"origin"`
+	MessageID  string    `json:"messageId" db:"message_id"`
+	Recipient  string    `json:"recipient" db:"recipient"`
+	Digest     string    `json:"digest" db:"digest"`
+	Receipt    string    `json:"receipt" db:"receipt"`
+	ItemID     string    `json:"itemId" db:"item_id"`
+	AcceptedAt time.Time `json:"acceptedAt" db:"accepted_at"`
+}
+
+// Validate applies the rules of SmipMailReceipt from schema.lidza.
+func (v SmipMailReceipt) Validate() error {
+	var errs validate.Errors
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	if v.Origin == "" {
+		errs.Add("origin", "required", "required")
+	}
+	if v.MessageID == "" {
+		errs.Add("messageId", "required", "required")
+	}
+	if v.Recipient == "" {
+		errs.Add("recipient", "required", "required")
+	}
+	if v.Digest == "" {
+		errs.Add("digest", "required", "required")
+	}
+	if v.Receipt == "" {
+		errs.Add("receipt", "required", "required")
+	}
+	if v.ItemID == "" {
+		errs.Add("itemId", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -2400,9 +2593,10 @@ func (v AttachmentView) Validate() error {
 
 // MailDetail is an API type.
 type MailDetail struct {
-	Item        MailItem         `json:"item"`
-	Attachments []AttachmentView `json:"attachments"`
-	Labels      []MailLabel      `json:"labels"`
+	Item        MailItem           `json:"item"`
+	Attachments []AttachmentView   `json:"attachments"`
+	Labels      []MailLabel        `json:"labels"`
+	Deliveries  []MailDeliveryView `json:"deliveries"`
 }
 
 // Validate applies the rules of MailDetail from schema.lidza.
@@ -2420,6 +2614,12 @@ func (v MailDetail) Validate() error {
 	for _, x := range v.Labels {
 		if err := x.Validate(); err != nil {
 			errs.Add("labels", "nested", err.Error())
+			break
+		}
+	}
+	for _, x := range v.Deliveries {
+		if err := x.Validate(); err != nil {
+			errs.Add("deliveries", "nested", err.Error())
 			break
 		}
 	}
@@ -4458,6 +4658,55 @@ func (v AISettingsInput) Validate() error {
 	}
 	if v.MaxTokens > 4096 {
 		errs.Add("maxTokens", "max", "at most 4096")
+	}
+	return errs.Result()
+}
+
+// MailDeliveryView is an API type.
+type MailDeliveryView struct {
+	ID        string    `json:"id"`
+	Recipient string    `json:"recipient"`
+	Transport string    `json:"transport"`
+	State     string    `json:"state"`
+	Reason    string    `json:"reason"`
+	Attempts  int       `json:"attempts"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// Validate applies the rules of MailDeliveryView from schema.lidza.
+func (v MailDeliveryView) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.Recipient == "" {
+		errs.Add("recipient", "required", "required")
+	}
+	if v.Transport == "" {
+		errs.Add("transport", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailDeliveryList is an API type.
+type MailDeliveryList struct {
+	Items []MailDeliveryView `json:"items"`
+}
+
+// Validate applies the rules of MailDeliveryList from schema.lidza.
+func (v MailDeliveryList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
 	}
 	return errs.Result()
 }

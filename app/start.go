@@ -21,6 +21,7 @@ import (
 	"thura/internal/platform/objectstore"
 	livekit "thura/internal/providers/livekit"
 	"thura/internal/setup"
+	"thura/internal/smipmail"
 )
 
 // onStart runs after the packs have started and before the app listens:
@@ -32,6 +33,14 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 		return err
 	}
 	if err := objectstore.Configure(lidza.WithServices(ctx, s), s); err != nil {
+		return err
+	}
+	if err := smipmail.Configure(s, mailbox.ReceiveSMIP); err != nil {
+		return err
+	}
+	jobs.FromServices(s).Handle(smipmail.DispatchJob, smipmail.Dispatch, jobs.Concurrency(2))
+	jobs.FromServices(s).Handle(smipmail.ReconcileJob, smipmail.Reconcile, jobs.Concurrency(1))
+	if err := jobs.FromServices(s).Schedule(smipmail.ReconcileJob, jobs.Every(time.Minute), nil); err != nil {
 		return err
 	}
 	if err := federation.Configure(s); err != nil {

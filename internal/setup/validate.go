@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"thura/internal/federation"
+	"thura/internal/smipmail"
 	"time"
 )
 
@@ -148,6 +149,17 @@ func validate(v map[string]string) error {
 		}
 		if _, e := federation.NewGateway(cfg); e != nil {
 			return errors.New("invalid SMIP pairing configuration")
+		}
+	}
+	if v["SMIP_MAIL_ENABLED"] == "true" {
+		var cfg smipmail.Config
+		d := json.NewDecoder(strings.NewReader(v["SMIP_MAIL_CONFIG"]))
+		d.DisallowUnknownFields()
+		if d.Decode(&cfg) != nil || d.Decode(new(any)) != io.EOF {
+			return errors.New("invalid SMIP mail identity JSON")
+		}
+		if _, err := smipmail.NewGateway(cfg, nil); err != nil {
+			return errors.New("invalid SMIP mail identity configuration")
 		}
 	}
 	return nil

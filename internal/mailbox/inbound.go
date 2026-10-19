@@ -25,6 +25,7 @@ import (
 	"strings"
 	queries "thura/db/queries/gen"
 	"thura/internal/platform/objectstore"
+	"thura/internal/smipmail"
 	"time"
 )
 
@@ -193,11 +194,32 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 		return queries.MailItem{}, err
 	}
 	defer tx.Rollback(ctx)
-	tq := queries.New(tx)
-	if _, err = tq.LockMailbox(ctx, m.ID); err != nil {
+	item, err := persistInbound(ctx, tx, m.ID, parsed, raw, deliveryID)
+	if err != nil {
 		return queries.MailItem{}, err
 	}
-	existing, err := tq.FindInboundMail(ctx, queries.FindInboundMailParams{MailboxID: m.ID, ExternalID: &deliveryID})
+	return item, tx.Commit(ctx)
+}
+
+func ReceiveSMIP(ctx context.Context, tx pgx.Tx, mailboxID string, payload smipmail.Payload, deliveryID string) (string, error) {
+	raw, err := payload.MIME()
+	if err != nil {
+		return "", err
+	}
+	parsed, err := Parse(raw)
+	if err != nil {
+		return "", err
+	}
+	item, err := persistInbound(ctx, tx, mailboxID, parsed, raw, deliveryID)
+	return item.ID, err
+}
+func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed ParsedMail, raw []byte, deliveryID string) (queries.MailItem, error) {
+	var err error
+	tq := queries.New(tx)
+	if _, err = tq.LockMailbox(ctx, mailboxID); err != nil {
+		return queries.MailItem{}, err
+	}
+	existing, err := tq.FindInboundMail(ctx, queries.FindInboundMailParams{MailboxID: mailboxID, ExternalID: &deliveryID})
 	if err == nil {
 		return existing, nil
 	}
@@ -205,7 +227,7 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 		return queries.MailItem{}, err
 	}
 	if parsed.InReplyTo != "" {
-		parent, parentErr := tq.FindMailThreadParent(ctx, queries.FindMailThreadParentParams{MailboxID: m.ID, MessageID: parsed.InReplyTo})
+		parent, parentErr := tq.FindMailThreadParent(ctx, queries.FindMailThreadParentParams{MailboxID: mailboxID, MessageID: parsed.InReplyTo})
 		if parentErr == nil && parent.ThreadID != "" {
 			parsed.Thread = parent.ThreadID
 		}
@@ -214,16 +236,16 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 		}
 	}
 	digest := sha256.Sum256(raw)
-	rawKey := "mail/" + m.ID + "/raw/" + hex.EncodeToString(digest[:]) + ".eml"
+	rawKey := "mail/" + mailboxID + "/raw/" + hex.EncodeToString(digest[:]) + ".eml"
 	if _, err = objectstore.Put(ctx, rawKey, bytes.NewReader(raw), storage.PutOptions{ContentType: "message/rfc822"}); err != nil {
 		return queries.MailItem{}, err
 	}
-	item, err := tq.InsertInboundMail(ctx, queries.InsertInboundMailParams{MailboxID: m.ID, FromAddress: parsed.From, ToAddress: parsed.To, Cc: parsed.Cc, Subject: parsed.Subject, TextBody: parsed.Text, HTMLBody: parsed.HTML, RawKey: rawKey, ExternalID: &deliveryID, ThreadID: parsed.Thread, MessageID: parsed.MessageID, InReplyTo: parsed.InReplyTo, ReferencesHeader: parsed.References})
+	item, err := tq.InsertInboundMail(ctx, queries.InsertInboundMailParams{MailboxID: mailboxID, FromAddress: parsed.From, ToAddress: parsed.To, Cc: parsed.Cc, Subject: parsed.Subject, TextBody: parsed.Text, HTMLBody: parsed.HTML, RawKey: rawKey, ExternalID: &deliveryID, ThreadID: parsed.Thread, MessageID: parsed.MessageID, InReplyTo: parsed.InReplyTo, ReferencesHeader: parsed.References})
 	if err != nil {
 		return queries.MailItem{}, err
 	}
 	for n, a := range parsed.Attachments {
-		key := "mail/" + m.ID + "/" + item.ID + "/inbound-" + strconv.Itoa(n)
+		key := "mail/" + mailboxID + "/" + item.ID + "/inbound-" + strconv.Itoa(n)
 		if _, err = objectstore.Put(ctx, key, bytes.NewReader(a.Data), storage.PutOptions{ContentType: a.ContentType}); err != nil {
 			return queries.MailItem{}, err
 		}
@@ -231,5 +253,5 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 			return queries.MailItem{}, err
 		}
 	}
-	return item, tx.Commit(ctx)
+	return item, nil
 }

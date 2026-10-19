@@ -202,3 +202,7 @@ migrations. Do not restart on a migration failure. Existing
 published settings remain valid; a new publication requires successful checks
 for its saved providers. Storage location changes require a planned offline
 migration; the wizard permits credential changes for the same location.
+
+## Domain-discovered SMIP email
+
+The separately enabled [SMIP mail profile](smip-mail.md) adds DNS/HTTPS domain verification, frozen per-recipient routes and durable signed receipts to Mail. Prefer verified SMIP, then the configured provider only for a never-verified domain with no advertisement. Verification failures and uncertain sends never switch transport. Configure the identity through Server setup and provision direct TLS 1.3; the registry appears under Administration → SMIP email domains. Read the guide's first-contact DNS, mixed-route headers and system-notification boundaries before enabling it.
