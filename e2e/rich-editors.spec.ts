@@ -64,7 +64,7 @@ test('Drive document formatting saves immutable versions and reopens with tables
   const name = `Project notes ${Date.now()}`
   await page.getByLabel('Document name', { exact: true }).fill(name)
   await page.getByRole('button', { name: 'Create document', exact: true }).click()
-  await page.getByRole('button', { name: 'Edit document', exact: true }).click()
+  await openViewedFile(page)
   expect((await page.getByRole('textbox', { name: 'Document', exact: true }).boundingBox())!.width).toBeGreaterThan(700)
   expect((await page.getByRole('textbox', { name: 'Document', exact: true }).boundingBox())!.y).toBeLessThan(350)
   await page.getByRole('textbox', { name: 'Document', exact: true }).fill('Team planning')
@@ -76,14 +76,14 @@ test('Drive document formatting saves immutable versions and reopens with tables
   await page.getByRole('button', { name: 'Insert table', exact: true }).click()
   await page.getByRole('button', { name: 'Save document', exact: true }).click()
   await expect(page.getByText('Saved version 2', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Close editor', exact: true }).click()
-  await page.getByRole('button', { name: 'Edit document', exact: true }).click()
+  await page.getByRole('button', { name: 'Back to Drive', exact: true }).click()
+  await page.getByRole('button', { name: `${name}.html`, exact: true }).dblclick()
   await expect(page.getByRole('textbox', { name: 'Document', exact: true }).locator('strong')).toHaveText('Team planning')
   await expect(page.getByRole('textbox', { name: 'Document', exact: true }).locator('table')).toHaveCount(1)
   await page.getByRole('textbox', { name: 'Document', exact: true }).fill('Recovered notes')
   await page.reload()
   await page.getByRole('button', { name: `${name}.html`, exact: true }).click()
-  await page.getByRole('button', { name: 'Edit document', exact: true }).click()
+  await page.getByRole('button', { name: `${name}.html`, exact: true }).dblclick()
   await expect(page.getByRole('textbox', { name: 'Document', exact: true })).toHaveText('Recovered notes')
   await expect(page.getByText('Recovered unsaved changes', { exact: true })).toBeVisible()
   await page.route('**/drive/uploads', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic document storage unavailable' }) }))
@@ -94,6 +94,8 @@ test('Drive document formatting saves immutable versions and reopens with tables
   await page.getByRole('button', { name: 'Save document', exact: true }).click()
   await expect(page.getByText('Saved version 3', { exact: true })).toBeVisible()
 
+  await page.getByRole('button', { name: 'Back to Drive', exact: true }).click()
+  await page.getByRole('button', { name: `${name}.html`, exact: true }).click()
   await page.getByRole('button', { name: 'Version history', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Download version 1', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Download version 2', exact: true })).toBeVisible()
@@ -126,3 +128,9 @@ for (const width of [1440, 390]) test(`calendar descriptions keep rich formattin
   await expect(dialog.getByRole('textbox', { name: 'Description', exact: true }).locator('strong')).toHaveText('Review the launch plan')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
+
+async function openViewedFile(page: import('@playwright/test').Page) {
+  const name = await page.getByRole('complementary', { name: 'File details', exact: true }).locator('header h3').innerText()
+  await page.getByRole('button', { name: 'Close file details', exact: true }).click()
+  await page.getByRole('button', { name, exact: true }).dblclick()
+}

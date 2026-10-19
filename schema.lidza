@@ -540,6 +540,20 @@ type OfficeCallback {
 type OfficeResult {
  error int
 }
+type OfficeConversionInput {
+ target string @min(3) @max(4)
+}
+type OfficeConversion {
+ status string
+ percent int
+ name string
+ contentType string
+ data string
+}
+type WordCopyInput {
+ text string @min(1) @max(65536)
+ sourceVersion int @min(1)
+}
 
 model Calendar {
  id uuid @id @default(uuid())

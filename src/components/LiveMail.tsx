@@ -1,3 +1,4 @@
+import { useResourceContextMenu, type ContextCommand } from './ResourceContextMenu'
 import { AssistantAction, InlineWritingAssistant } from './AssistantAction'
 import { plainToHTML, richHTMLText } from './RichTextEditor'
 import { RichTextEditor } from './RichTextEditor'
@@ -32,6 +33,7 @@ export function LiveMail({ workspaceId, initialDraft, initialMessage, search, ma
 
 function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, query, folder, setFolder, resetToken }: { workspaceId: string; query: string; folder: MailFolder; setFolder: (folder: MailFolder) => void; resetToken: number; mailboxId: string; initialDraft?: MailItem; initialMessageId?: string }) {
   const client = useQueryClient()
+  const contextMenu = useResourceContextMenu()
   const [labelId, setLabelId] = useState('')
   const [selected, setSelected] = useState(initialMessageId ?? initialDraft?.id ?? '')
   const [editing, setEditing] = useState<MailItem | null>(initialDraft ?? null)
@@ -56,14 +58,21 @@ function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, quer
       setEditing(i); setSelected(i.id); setFolder('drafts'); await refresh()
     } catch (e) { setReaderError(String(e)) }
   }
-  return <div id="orbit-mail-vibrant" className={selected ? 'has-message' : ''}><AppPageHeader title={folder[0].toUpperCase() + folder.slice(1)} action={<><AssistantAction workspaceId={workspaceId} source="mail" contextOnly priority={0} contextLabel={`${folder} · visible messages`} content={visible.map(message => `${message.subject}\nFrom: ${message.fromAddress}\n${message.textBody.slice(0, 1500)}`).join("\n\n")} /><NewAction label="New message" disabled={compose.isPending} onClick={() => compose.mutate()} /></>} />
+  function messageCommands(item:MailItem):ContextCommand[] { return [
+    {label:'Open message',icon:<Inbox size={16}/>,run:()=>{setSelected(item.id);setEditing(item.status==='draft'?item:null);if(item.unread)flags.mutate({id:item.id,values:{unread:false}})}},
+    {label:item.unread?'Mark as read':'Mark as unread',icon:<Inbox size={16}/>,disabled:flags.isPending,run:()=>flags.mutate({id:item.id,values:{unread:!item.unread}})},
+    {label:item.starred?'Unstar':'Star',icon:<Star size={16}/>,disabled:flags.isPending,run:()=>flags.mutate({id:item.id,values:{starred:!item.starred}})},
+    {label:'Archive',icon:<Archive size={16}/>,disabled:flags.isPending || item.status==='queued',run:()=>flags.mutate({id:item.id,values:{folder:'archive'}})},
+    {label:'Trash',icon:<Trash2 size={16}/>,danger:true,disabled:flags.isPending || item.status==='queued',run:()=>flags.mutate({id:item.id,values:{folder:'trash'}})},
+  ] }
+  return <div id="orbit-mail-vibrant" className={selected ? 'has-message' : ''}>{contextMenu.menu}<AppPageHeader title={folder[0].toUpperCase() + folder.slice(1)} action={<><AssistantAction workspaceId={workspaceId} source="mail" contextOnly priority={0} contextLabel={`${folder} · visible messages`} content={visible.map(message => `${message.subject}\nFrom: ${message.fromAddress}\n${message.textBody.slice(0, 1500)}`).join("\n\n")} /><NewAction label="New message" disabled={compose.isPending} onClick={() => compose.mutate()} /></>} />
     {(failure || readerError) && <p role="alert" className="inlinepanel">{failure?.message || readerError}</p>}
     <div className="layout">
       <AppSidebar title="Folders" label="Mail navigation" className="folders">{(['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as MailFolder[]).map(f => <button className={`folder-button ${folder === f ? 'on' : ''}`} key={f} onClick={() => { setFolder(f); setSelected(''); setEditing(null) }}>{(() => { const Icon = folderIcons[f]; return <Icon size={16} aria-hidden="true" /> })()}{f[0].toUpperCase() + f.slice(1)}</button>)}<MailLabelFilter scope={{ workspaceId, mailboxId }} value={labelId} onChange={setLabelId} /></AppSidebar>
       <section className="list" aria-label="Messages">
         {list.isPending && <p role="status" className="empty">Loading messages…</p>}
         {list.data && visible.length === 0 && <p className="empty">No messages in this view.</p>}
-        {visible.map(i => <button className={`mailrow ${i.unread ? 'unread' : ''} ${selected === i.id ? 'selected' : ''}`} key={i.id} onClick={() => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null); setReaderError(''); if (i.unread) flags.mutate({ id: i.id, values: { unread: false } }) }}><span className="mail-avatar" aria-hidden="true">{(folder === 'inbox' ? i.fromAddress : i.toAddress || 'D').slice(0, 1).toUpperCase()}</span><span className="sendername">{folder === 'inbox' ? i.fromAddress : i.toAddress || 'No recipients'}</span><span className="subject"><span>{i.subject || '(No subject)'}</span><small className="mail-snippet">{i.textBody.slice(0, 160)}</small></span><time className="mail-date" dateTime={i.updatedAt}>{new Date(i.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time><span className="small quiet">{i.status === 'captured' ? 'Captured locally · not delivered' : i.status}{i.starred ? ' · ★' : ''}</span></button>)}
+        {visible.map(i => <button onContextMenu={e=>contextMenu.show(e,messageCommands(i))} onKeyDown={e=>{if(e.key==='ContextMenu' || e.key==='F10'&&e.shiftKey)contextMenu.show(e,messageCommands(i))}} className={`mailrow ${i.unread ? 'unread' : ''} ${selected === i.id ? 'selected' : ''}`} key={i.id} onClick={() => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null); setReaderError(''); if (i.unread) flags.mutate({ id: i.id, values: { unread: false } }) }}><span className="mail-avatar" aria-hidden="true">{(folder === 'inbox' ? i.fromAddress : i.toAddress || 'D').slice(0, 1).toUpperCase()}</span><span className="sendername">{folder === 'inbox' ? i.fromAddress : i.toAddress || 'No recipients'}</span><span className="subject"><span>{i.subject || '(No subject)'}</span><small className="mail-snippet">{i.textBody.slice(0, 160)}</small></span><time className="mail-date" dateTime={i.updatedAt}>{new Date(i.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time><span className="small quiet">{i.status === 'captured' ? 'Captured locally · not delivered' : i.status}{i.starred ? ' · ★' : ''}</span></button>)}
         {list.hasNextPage && <ActionButton disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>Load more messages</ActionButton>}
         <p className="mail-count">{visible.length} {visible.length === 1 ? 'message' : 'messages'}{list.hasNextPage ? ' loaded' : ''}</p>
       </section>

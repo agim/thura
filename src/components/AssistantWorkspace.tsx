@@ -1,15 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Sparkles, X } from 'lucide-react'
 import { ActionButton } from './ActionButton'
 import { AssistantPanel } from './AssistantPanel'
 
 export type AssistantSource = 'mail' | 'calendar' | 'contacts' | 'loop' | 'drive' | 'chat' | 'meet'
 export type AssistantTarget = { id: string; workspaceId: string; source: AssistantSource; content: string; contextVersion?: string; initialAction?: string; onUse?: (text: string) => void | Promise<void>; useLabel?: string; contextLabel?: string; priority?: number }
-type AssistantContextValue = { target: AssistantTarget | null; open: (target: AssistantTarget) => void; update: (target: AssistantTarget) => void; release: (id: string) => void; close: () => void; offer: (target: AssistantTarget) => void; withdraw: (id: string) => void; launch: (target: AssistantTarget) => void }
+type AssistantContextValue = { dockHost:HTMLElement|null; setDockHost:(host:HTMLElement|null)=>void; target: AssistantTarget | null; open: (target: AssistantTarget) => void; update: (target: AssistantTarget) => void; release: (id: string) => void; close: () => void; offer: (target: AssistantTarget) => void; withdraw: (id: string) => void; launch: (target: AssistantTarget) => void }
 const AssistantContext = createContext<AssistantContextValue | null>(null)
 export function useAssistant() { const value = useContext(AssistantContext); if (!value) throw new Error('Assistant requires a workspace'); return value }
 
 export function AssistantProvider({ children, workspaceId, source }: { children: ReactNode; workspaceId: string; source: AssistantSource | null }) {
+  const [dockHost,setDockHost]=useState<HTMLElement|null>(null)
   const [selection, setSelection] = useState<AssistantTarget | null>(null)
   const trigger = useRef<HTMLElement | null>(null)
   const contexts = useRef(new Map<string, AssistantTarget>())
@@ -35,7 +37,7 @@ export function AssistantProvider({ children, workspaceId, source }: { children:
     setSelection(previous => previous?.id === id ? previous.source === 'contacts' ? { ...previous, onUse: undefined, priority: -1 } : preferred() : previous)
   }, [preferred])
   const launch = useCallback(() => { open(preferred()) }, [open, preferred])
-  const value = useMemo(() => ({ target, open, update, release, close, offer, withdraw, launch }), [target, open, update, release, close, offer, withdraw, launch])
+  const value = useMemo(() => ({ dockHost,setDockHost,target, open, update, release, close, offer, withdraw, launch }), [dockHost,target, open, update, release, close, offer, withdraw, launch])
   return <AssistantContext.Provider value={value}>{children}</AssistantContext.Provider>
 }
 export function AssistantLauncher({ workspaceId, source }: { workspaceId: string; source: AssistantSource }) {
@@ -43,7 +45,7 @@ export function AssistantLauncher({ workspaceId, source }: { workspaceId: string
   return <ActionButton type="button" className="assistant-launcher" aria-label="Toggle AI assistant" aria-expanded={!!target} aria-controls="workspace-assistant" onClick={() => target ? close() : launch({ id: 'workspace', workspaceId, source, content: '', contextLabel: 'Your instructions', initialAction: 'ask' })}><Sparkles size={20} /></ActionButton>
 }
 export function AssistantDock() {
-  const { target, close } = useAssistant()
+  const { target, close, dockHost } = useAssistant()
   const dock = useRef<HTMLElement>(null)
   useEffect(() => {
     if (!target) return
@@ -52,5 +54,6 @@ export function AssistantDock() {
     return () => document.removeEventListener('keydown', escape)
   }, [target, close])
   if (!target) return null
-  return <aside ref={dock} id="workspace-assistant" className="assistant-dock" aria-label="AI assistant"><header className="assistant-heading"><div><Sparkles size={18} /><h2>Thura AI</h2></div><ActionButton type="button" aria-label="Close AI assistant" onClick={close}><X size={18} /></ActionButton></header><AssistantPanel key={JSON.stringify([target.source, target.id, target.contextLabel, target.content, target.contextVersion])} target={target} onInserted={() => { if (window.matchMedia("(max-width:1279px)").matches) close() }} /></aside>
+  const content = <aside ref={dock} id="workspace-assistant" className="assistant-dock" aria-label="AI assistant"><header className="assistant-heading"><div><Sparkles size={18} /><h2>Thura AI</h2></div><ActionButton type="button" aria-label="Close AI assistant" onClick={close}><X size={18} /></ActionButton></header><AssistantPanel key={JSON.stringify([target.source, target.id, target.contextLabel, target.content, target.contextVersion])} target={target} onInserted={() => { if (window.matchMedia("(max-width:1279px)").matches) close() }} /></aside>
+  return dockHost ? createPortal(content,dockHost) : content
 }

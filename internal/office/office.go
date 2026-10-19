@@ -41,6 +41,12 @@ func authorized(ctx context.Context, queries *q.Queries, s q.OfficeSession, f q.
 	return nil
 }
 func Open(ctx context.Context, w, id string) (schema.OfficeConfig, error) {
+	return OpenTheme(ctx, w, id, "")
+}
+func OpenTheme(ctx context.Context, w, id, theme string) (schema.OfficeConfig, error) {
+	return OpenMode(ctx, w, id, theme, false)
+}
+func OpenMode(ctx context.Context, w, id, theme string, readOnly bool) (schema.OfficeConfig, error) {
 	f, err := drive.Get(ctx, w, id)
 	if err != nil {
 		return schema.OfficeConfig{}, err
@@ -49,11 +55,10 @@ func Open(ctx context.Context, w, id string) (schema.OfficeConfig, error) {
 		return schema.OfficeConfig{}, router.Errorf(409, "restore the file before editing")
 	}
 	ext := strings.ToLower(strings.TrimPrefix(path.Ext(f.Name), "."))
-	kind := "word"
-	if ext == "xlsx" {
-		kind = "cell"
-	} else if ext != "docx" {
-		return schema.OfficeConfig{}, router.Errorf(422, "editing supports DOCX and XLSX files")
+	kind, _, editable := Format(ext)
+	editable = editable && !readOnly
+	if kind == "" {
+		return schema.OfficeConfig{}, router.Errorf(422, "This format is not supported by the document editor")
 	}
 	cfg, err := provider.Load()
 	if err != nil {
@@ -68,14 +73,30 @@ func Open(ctx context.Context, w, id string) (schema.OfficeConfig, error) {
 	if err != nil {
 		return schema.OfficeConfig{}, err
 	}
-	config := jwt.MapClaims{"exp": s.ExpiresAt.Unix(), "documentType": kind, "document": map[string]any{"fileType": ext, "key": key, "title": f.Name, "url": cfg.AppURL + "/api/v1/office/source?ticket=" + ticket, "permissions": map[string]bool{"edit": true, "download": true, "print": false}}, "editorConfig": map[string]any{"mode": "edit", "callbackUrl": cfg.AppURL + "/api/v1/office/callback/" + s.ID, "user": map[string]string{"id": s.Subject, "name": "Workspace member"}, "customization": map[string]any{"forcesave": true}}, "type": "desktop"}
+	uiTheme := "default"
+	if theme == "dark" {
+		uiTheme = "theme-dark"
+	}
+	if theme == "light" {
+		uiTheme = "theme-light"
+	}
+	mode := "view"
+	if editable {
+		mode = "edit"
+	}
+	config := jwt.MapClaims{"exp": s.ExpiresAt.Unix(), "documentType": kind, "document": map[string]any{"fileType": ext, "key": key, "title": f.Name, "url": cfg.AppURL + "/api/v1/office/source?ticket=" + ticket, "permissions": map[string]bool{"edit": editable, "download": true, "print": false}}, "editorConfig": map[string]any{"mode": mode, "callbackUrl": cfg.AppURL + "/api/v1/office/callback/" + s.ID, "user": map[string]string{"id": s.Subject, "name": "Workspace member"}, "customization": map[string]any{"forcesave": true, "zoom": 100, "macros": false, "uiTheme": uiTheme}}, "type": "desktop"}
+	if readOnly {
+		config["editorConfig"].(map[string]any)["customization"].(map[string]any)["zoom"] = -2
+		config["type"] = "embedded"
+		config["editorConfig"].(map[string]any)["embedded"] = map[string]any{"toolbarDocked": "top"}
+	}
 	token, err := cfg.Sign(config)
 	if err != nil {
 		return schema.OfficeConfig{}, err
 	}
 	config["token"] = token
 	raw, err := json.Marshal(config)
-	return schema.OfficeConfig{ScriptURL: cfg.ServerURL + "/web-apps/apps/api/documents/api.js", Config: raw}, err
+	return schema.OfficeConfig{ScriptURL: "/api/v1/office/editor/web-apps/apps/api/documents/api.js", Config: raw}, err
 }
 func Source(w http.ResponseWriter, r *http.Request) {
 	cfg, err := provider.Load()
@@ -190,6 +211,9 @@ func Save(ctx context.Context, id string, in schema.OfficeCallback, header strin
 	}
 	if in.Status != 2 && in.Status != 6 {
 		return schema.OfficeResult{}, nil
+	}
+	if _, _, editable := Format(path.Ext(preFile.Name)); !editable {
+		return fail, router.Errorf(422, "Create an editable copy before saving this format")
 	}
 	b, err := cfg.Download(ctx, address)
 	if err != nil {

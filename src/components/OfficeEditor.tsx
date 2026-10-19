@@ -1,8 +1,7 @@
-import { ActionButton } from './ActionButton'
-import { Pencil, X } from 'lucide-react'
+import { officeFormat } from './OfficeConversion'
 import { createPortal } from 'react-dom'
-import { useEffect, useId, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useId, useRef, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@lidza/client'
 import { userError } from '../lib/errors'
 
@@ -18,27 +17,36 @@ function loadEditor(url: string) {
   })
   return scriptPromise
 }
-export function OfficeEditor({ workspaceId, fileId, contentTarget }: { workspaceId: string; fileId: string; contentTarget: HTMLElement | null }) {
+export function OfficeEditor({ workspaceId, fileId, fileName, contentTarget, readOnly }: { workspaceId: string; fileId: string; fileName: string; contentTarget: HTMLElement | null; readOnly: boolean }) {
+  const editable = officeFormat(fileName)?.editable && !readOnly
   const id = `office-${useId().replace(/[^a-z0-9]/gi, '')}`
+  const host = useRef<HTMLDivElement>(null)
   const [opened, setOpened] = useState(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const client = useQueryClient()
-  const open = useMutation({ mutationFn: () => api.openOfficeDocument({ workspaceId, id: fileId }), onSuccess: () => { setOpened(true); setError(''); setNotice('Connecting to document editor…') } })
+  // Refresh Drive's metadata without recreating the editor or losing its draft.
+  const metadata=useQuery({ queryKey: ['drive', workspaceId, 'file', fileId], queryFn: () => api.getDriveFile({ workspaceId, id:fileId }), enabled:opened, retry:false, refetchInterval:opened ? 3000:false })
+  const open = useMutation({ mutationFn: () => api.openOfficeDocument({ workspaceId, id: fileId }, { query: { theme: document.documentElement.style.colorScheme, mode: readOnly ? 'view' : 'edit' } }), onSuccess: () => { setOpened(true); setError(''); setNotice('Connecting to document editor…') } })
+  const started = useRef(false)
+  useEffect(() => { if (!started.current && contentTarget) { started.current = true; open.mutate() } }, [contentTarget, open])
   useEffect(() => {
     if (!opened || !open.data) return
+    const mount = host.current
+    if (!mount) return
     let disposed = false
     let editor: Editor | undefined
     const data = open.data
     void loadEditor(data.scriptUrl).then(() => {
       if (disposed) return
       if (!window.DocsAPI || !data.config || typeof data.config !== 'object' || Array.isArray(data.config)) throw new Error('Invalid document service configuration.')
-      editor = new window.DocsAPI.DocEditor(id, { ...data.config, height: '700px', width: '100%', events: {
-        onDocumentReady: () => setNotice('Editor connected. Use Save to store a new version in Drive.'),
+      const placeholder = document.createElement('div'); placeholder.id = id; mount.replaceChildren(placeholder)
+      editor = new window.DocsAPI.DocEditor(id, { ...data.config, height: '100%', width: '100%', events: {
+        onDocumentReady: () => setNotice(editable ? 'Connected. Save creates a new Drive version.' : readOnly ? 'View only' : 'Read-only. Use Manage file in Drive to convert an editable copy.'),
         onError: () => setError('The editor reported a problem. Keep your recoverable copy before closing.'),
       } })
     }).catch(e => { if (!disposed) setError(userError(e)) })
-    return () => { disposed = true; editor?.destroyEditor(); void client.invalidateQueries({ queryKey: ['drive', workspaceId] }) }
-  }, [opened, open.data, id, client, workspaceId])
-  return <><ActionButton type="button" aria-label={opened ? 'Close editor' : 'Edit document'} disabled={!contentTarget || open.isPending} onClick={() => opened ? setOpened(false) : open.mutate()}>{opened ? <X size={16} /> : <Pencil size={16} />}<span className="action-label">{opened ? 'Close editor' : 'Edit document'}</span></ActionButton>{contentTarget && (opened || open.error || error) && createPortal(<div className="office-editor"><h4>Document editor</h4>{(open.error || error) && <p role="alert">{error || userError(open.error)}</p>}{opened && <><p role="status">{notice}</p><p>Saving creates immutable Drive versions. If another upload changes this file, the save is refused; preserve the editor copy and reopen the current version.</p><div id={id} /></>}</div>, contentTarget)}</>
+    return () => { disposed = true; editor?.destroyEditor(); mount.replaceChildren(); void client.invalidateQueries({ queryKey: ['drive', workspaceId] }) }
+  }, [opened, open.data, id, client, workspaceId, editable, readOnly])
+  return <>{contentTarget && createPortal(<div className="office-editor" aria-label="Office editor">{metadata.error && <p role="alert">{userError(metadata.error)}</p>}{(open.error || error) && <p role="alert">{error || userError(open.error)}</p>}{opened && <>{notice === 'Connecting to document editor…' && <p role="status">{notice}</p>}<div className="office-editor-host" ref={host} /></>}</div>, contentTarget)}</>
 }

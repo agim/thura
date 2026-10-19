@@ -155,7 +155,7 @@ test('AI appends to a Drive document without removing existing formatting or sav
   await page.getByRole('button', { name: 'New document', exact: true }).click()
   await page.getByLabel('Document name', { exact: true }).fill(`AI draft ${Date.now()}`)
   await page.getByRole('button', { name: 'Create document', exact: true }).click()
-  await page.getByRole('button', { name: 'Edit document', exact: true }).click()
+  await openViewedFile(page)
   const editor = page.getByRole('textbox', { name: 'Document', exact: true })
   await editor.fill('Existing planning')
   await editor.press('ControlOrMeta+a')
@@ -166,7 +166,7 @@ test('AI appends to a Drive document without removing existing formatting or sav
   await page.getByRole('button', { name: 'Insert table', exact: true }).click()
   await page.getByRole('button', { name: 'AI assistant for drive', exact: true }).click()
   const dialog = page.getByRole('complementary', { name: 'AI assistant', exact: true })
-  const actions = page.getByRole('group', { name: 'File actions', exact: true })
+  const actions = page.getByRole('group', { name: 'Document actions', exact: true })
   const row = (await actions.boundingBox())!
   for (const button of await actions.getByRole('button').all()) {
     const box = (await button.boundingBox())!
@@ -344,3 +344,9 @@ test('sidebar follows chat selection and inserts only into the current composer'
   await page.getByLabel('Chat room', { exact: true }).getByRole('button', { name: /First conversation/ }).click()
   await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toHaveValue('')
 })
+
+async function openViewedFile(page: import('@playwright/test').Page) {
+  const name = await page.getByRole('complementary', { name: 'File details', exact: true }).locator('header h3').innerText()
+  await page.getByRole('button', { name: 'Close file details', exact: true }).click()
+  await page.getByRole('button', { name, exact: true }).dblclick()
+}

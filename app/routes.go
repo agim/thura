@@ -10,6 +10,7 @@ import (
 	"thura/internal/federation"
 	"thura/internal/meet"
 	"thura/internal/office"
+	officeprovider "thura/internal/providers/onlyoffice"
 
 	"thura/schema"
 )
@@ -28,6 +29,7 @@ func routes(r *router.Router) {
 	r.HandleFunc("GET /api/v1/office/source", office.Source)
 	r.HandleFunc("POST /api/v1/office/callback/{id}", office.Callback)
 	auth.Mount(r, auth.Options{NoRegister: true, Providers: []auth.Provider{}, Title: "Thura"})
+	r.Group("/api/v1/office/editor", auth.Require()).HandleFunc("/api/v1/office/editor/", officeprovider.Proxy)
 	router.Route(r, "GET /api/v1/hello/{name}", hello)
 	router.Route(r, "POST /api/v1/inbound/{mailboxId}", handlers.ReceiveMail, router.UploadLimit(12<<20))
 	router.Route(r.Group("/api/v1/invitations", auth.Optional()), "POST /api/v1/invitations/accept", handlers.AcceptInvite, auth.Throttle())
@@ -132,6 +134,9 @@ func routes(r *router.Router) {
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares", handlers.ListDriveShares)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares/{shareId}", handlers.RevokeDriveShare)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/office", handlers.OpenOfficeDocument)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/convert", handlers.ConvertOfficeDocument)
+	router.Route(ai, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/ocr", handlers.RequestDriveOCR)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/word", handlers.ReconstructWordDocument)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars", handlers.ListCalendars)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/calendars", handlers.CreateCalendar)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events", handlers.ListCalendarEvents)

@@ -2890,6 +2890,77 @@ func (v OfficeResult) Validate() error {
 	return errs.Result()
 }
 
+// OfficeConversionInput is an API type.
+type OfficeConversionInput struct {
+	Target string `json:"target"`
+}
+
+// Validate applies the rules of OfficeConversionInput from schema.lidza.
+func (v OfficeConversionInput) Validate() error {
+	var errs validate.Errors
+	if v.Target == "" {
+		errs.Add("target", "required", "required")
+	}
+	if len(v.Target) < 3 {
+		errs.Add("target", "min", "at least 3 character(s)")
+	}
+	if len(v.Target) > 4 {
+		errs.Add("target", "max", "at most 4 character(s)")
+	}
+	return errs.Result()
+}
+
+// OfficeConversion is an API type.
+type OfficeConversion struct {
+	Status      string `json:"status"`
+	Percent     int    `json:"percent"`
+	Name        string `json:"name"`
+	ContentType string `json:"contentType"`
+	Data        string `json:"data"`
+}
+
+// Validate applies the rules of OfficeConversion from schema.lidza.
+func (v OfficeConversion) Validate() error {
+	var errs validate.Errors
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.ContentType == "" {
+		errs.Add("contentType", "required", "required")
+	}
+	if v.Data == "" {
+		errs.Add("data", "required", "required")
+	}
+	return errs.Result()
+}
+
+// WordCopyInput is an API type.
+type WordCopyInput struct {
+	Text          string `json:"text"`
+	SourceVersion int    `json:"sourceVersion"`
+}
+
+// Validate applies the rules of WordCopyInput from schema.lidza.
+func (v WordCopyInput) Validate() error {
+	var errs validate.Errors
+	if v.Text == "" {
+		errs.Add("text", "required", "required")
+	}
+	if len(v.Text) < 1 {
+		errs.Add("text", "min", "at least 1 character(s)")
+	}
+	if len(v.Text) > 65536 {
+		errs.Add("text", "max", "at most 65536 character(s)")
+	}
+	if v.SourceVersion < 1 {
+		errs.Add("sourceVersion", "min", "at least 1")
+	}
+	return errs.Result()
+}
+
 // CalendarList is an API type.
 type CalendarList struct {
 	DefaultCalendarID string     `json:"defaultCalendarId"`

@@ -28,7 +28,8 @@ for (const width of [1280, 1440, 1600, 1920, 390]) test(`Drive preserves readabl
     expect(color).toBe('rgb(23, 78, 166)')
   }
   await readable()
-  await page.getByRole('button', { name: file.name, exact: true }).click()
+  await page.getByRole('button', { name: file.name, exact: true }).click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'File details', exact: true }).click()
   const details = page.getByRole('complementary', { name: 'File details', exact: true })
   await expect(details).toBeVisible()
   await page.getByRole('button', { name: 'Toggle AI assistant', exact: true }).click()

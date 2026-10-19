@@ -45,6 +45,33 @@ func (q *Queries) CreateOfficeSession(ctx context.Context, arg CreateOfficeSessi
 	return i, err
 }
 
+const findOfficeSourceSession = `-- name: FindOfficeSourceSession :one
+SELECT id, file_id, subject, source_version, base_version, document_key, last_checksum, expires_at, created_at FROM office_session WHERE file_id=$1 AND subject=$2 AND source_version=$3 AND expires_at>now() ORDER BY created_at DESC LIMIT 1
+`
+
+type FindOfficeSourceSessionParams struct {
+	FileID        string `json:"file_id"`
+	Subject       string `json:"subject"`
+	SourceVersion int32  `json:"source_version"`
+}
+
+func (q *Queries) FindOfficeSourceSession(ctx context.Context, arg FindOfficeSourceSessionParams) (OfficeSession, error) {
+	row := q.db.QueryRow(ctx, findOfficeSourceSession, arg.FileID, arg.Subject, arg.SourceVersion)
+	var i OfficeSession
+	err := row.Scan(
+		&i.ID,
+		&i.FileID,
+		&i.Subject,
+		&i.SourceVersion,
+		&i.BaseVersion,
+		&i.DocumentKey,
+		&i.LastChecksum,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getOfficeSession = `-- name: GetOfficeSession :one
 SELECT id, file_id, subject, source_version, base_version, document_key, last_checksum, expires_at, created_at FROM office_session WHERE id=$1
 `

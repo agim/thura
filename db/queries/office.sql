@@ -6,3 +6,5 @@ SELECT * FROM office_session WHERE id=$1;
 SELECT * FROM office_session WHERE id=$1 FOR UPDATE;
 -- name: SaveOfficeSession :exec
 UPDATE office_session SET base_version=$2,last_checksum=$3 WHERE id=$1;
+-- name: FindOfficeSourceSession :one
+SELECT * FROM office_session WHERE file_id=$1 AND subject=$2 AND source_version=$3 AND expires_at>now() ORDER BY created_at DESC LIMIT 1;
