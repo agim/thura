@@ -188,18 +188,23 @@ func (q *Queries) CreateMailbox(ctx context.Context, arg CreateMailboxParams) (M
 }
 
 const createMailboxLabel = `-- name: CreateMailboxLabel :one
-INSERT INTO mail_label(mailbox_id,name) VALUES($1,$2) RETURNING id, mailbox_id, name
+INSERT INTO mail_label(mailbox_id,name) VALUES($1,$2) RETURNING id, workspace_id, mailbox_id, name
 `
 
 type CreateMailboxLabelParams struct {
-	MailboxID string `json:"mailbox_id"`
-	Name      string `json:"name"`
+	MailboxID *string `json:"mailbox_id"`
+	Name      string  `json:"name"`
 }
 
 func (q *Queries) CreateMailboxLabel(ctx context.Context, arg CreateMailboxLabelParams) (MailLabel, error) {
 	row := q.db.QueryRow(ctx, createMailboxLabel, arg.MailboxID, arg.Name)
 	var i MailLabel
-	err := row.Scan(&i.ID, &i.MailboxID, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.MailboxID,
+		&i.Name,
+	)
 	return i, err
 }
 
@@ -230,7 +235,7 @@ func (q *Queries) DeleteMailAttachment(ctx context.Context, arg DeleteMailAttach
 }
 
 const deleteMailboxLabel = `-- name: DeleteMailboxLabel :exec
-DELETE FROM mail_label WHERE id=$1 AND mailbox_id=$2
+DELETE FROM mail_label l WHERE l.id=$1 AND COALESCE(l.workspace_id,(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=l.mailbox_id))=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=$2)
 `
 
 type DeleteMailboxLabelParams struct {
@@ -400,7 +405,8 @@ func (q *Queries) GetMailbox(ctx context.Context, id string) (Mailbox, error) {
 }
 
 const getMailboxLabel = `-- name: GetMailboxLabel :one
-SELECT id, mailbox_id, name FROM mail_label WHERE id=$1 AND mailbox_id=$2
+SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id WHERE l.id=$1
+AND COALESCE(l.workspace_id,b.workspace_id)=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=$2)
 `
 
 type GetMailboxLabelParams struct {
@@ -411,7 +417,12 @@ type GetMailboxLabelParams struct {
 func (q *Queries) GetMailboxLabel(ctx context.Context, arg GetMailboxLabelParams) (MailLabel, error) {
 	row := q.db.QueryRow(ctx, getMailboxLabel, arg.ID, arg.MailboxID)
 	var i MailLabel
-	err := row.Scan(&i.ID, &i.MailboxID, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.MailboxID,
+		&i.Name,
+	)
 	return i, err
 }
 
@@ -484,7 +495,7 @@ func (q *Queries) InsertInboundMail(ctx context.Context, arg InsertInboundMailPa
 }
 
 const listItemLabels = `-- name: ListItemLabels :many
-SELECT l.id, l.mailbox_id, l.name FROM mail_label l JOIN mail_tag t ON t.label_id=l.id WHERE t.item_id=$1 ORDER BY l.name,l.id
+SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l JOIN mail_tag t ON t.label_id=l.id WHERE t.item_id=$1 ORDER BY l.name,l.id
 `
 
 func (q *Queries) ListItemLabels(ctx context.Context, itemID string) ([]MailLabel, error) {
@@ -496,7 +507,12 @@ func (q *Queries) ListItemLabels(ctx context.Context, itemID string) ([]MailLabe
 	var items []MailLabel
 	for rows.Next() {
 		var i MailLabel
-		if err := rows.Scan(&i.ID, &i.MailboxID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.MailboxID,
+			&i.Name,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -733,11 +749,12 @@ func (q *Queries) ListMailThreadPage(ctx context.Context, arg ListMailThreadPage
 }
 
 const listMailboxLabels = `-- name: ListMailboxLabels :many
-SELECT id, mailbox_id, name FROM mail_label WHERE mailbox_id=$1 ORDER BY name,id
+SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id
+WHERE COALESCE(l.workspace_id,b.workspace_id)=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=$1) ORDER BY l.name,l.id
 `
 
-func (q *Queries) ListMailboxLabels(ctx context.Context, mailboxID string) ([]MailLabel, error) {
-	rows, err := q.db.Query(ctx, listMailboxLabels, mailboxID)
+func (q *Queries) ListMailboxLabels(ctx context.Context, id string) ([]MailLabel, error) {
+	rows, err := q.db.Query(ctx, listMailboxLabels, id)
 	if err != nil {
 		return nil, err
 	}
@@ -745,7 +762,12 @@ func (q *Queries) ListMailboxLabels(ctx context.Context, mailboxID string) ([]Ma
 	var items []MailLabel
 	for rows.Next() {
 		var i MailLabel
-		if err := rows.Scan(&i.ID, &i.MailboxID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.MailboxID,
+			&i.Name,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

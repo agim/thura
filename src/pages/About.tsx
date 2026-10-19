@@ -6,7 +6,7 @@ export function About() {
         Thura brings mail, contacts, files, calendars, chat and meetings into an invite-only workspace.
         Each workspace owns its data, and its owner manages who can join.
       </p>
-      <p>Explore the sample workspace to try the interface with data saved in your browser. Sign in to work with your team's real data.</p>
+      <p>Sign in with your account or accept an invitation from your workspace owner to get started.</p>
       <p>Your organization chooses where Thura runs and which domains it uses. Document editing, federated chat and meetings become available when the corresponding services are connected.</p>
     </div>
   )

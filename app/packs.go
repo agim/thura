@@ -9,6 +9,7 @@ import (
 	auth "github.com/agim/lidza/packs/auth"
 	db "github.com/agim/lidza/packs/db"
 	jobs "github.com/agim/lidza/packs/jobs"
+	llm "github.com/agim/lidza/packs/llm"
 	mail "github.com/agim/lidza/packs/mail"
 	storage "github.com/agim/lidza/packs/storage"
 )
@@ -22,5 +23,6 @@ func packs() []lidza.Pack {
 		mail.Pack(),
 		storage.Pack(),
 		audit.Pack(),
+		llm.Pack(),
 	}
 }

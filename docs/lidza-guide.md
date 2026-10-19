@@ -72,6 +72,9 @@ import package `main`. Preserve its tests and behavior during the move:
    lidza.App` in `app/app.go`.
 2. `main.go` keeps the embed and runs it:
    `func main() { lidza.Run(app.New(lidza.Sub(dist, "dist"))) }`.
+   A build served from disk instead of embedded goes through
+   `lidza.DirFS(dir)`, never `os.DirFS`: it refuses a symlink or path
+   that leads out of the directory.
 3. Add `"appDir": "app"` to `lidza.json` and run `lidza gen`: `packs.go`
    is generated into `app/` (delete the root one). `lidza gen resource`
    registers routes in `app/routes.go` and `lidza mcp` reads
@@ -92,10 +95,11 @@ import package `main`. Preserve its tests and behavior during the move:
 | `lidza context` | writes `.lidza/context.json`: routes, handler signatures, Rust exports. |
 | `lidza mcp` | MCP server on stdio; see "Agent interface". |
 | `lidza gen resource <Model> [--public \| --shared]` | queries, `Create/Update/<Model>List` types, `handlers/<table>.go` with list, get, create, patch, delete under `/api/v1/<plural>` (the list with search, filters, a date range, sorting and pages through `list.Read`: recipe "Add a paginated, filterable list"), registered in `app/routes.go` (in `appDir` when set) behind `auth.Require()`. An owned model (`ownerId`, or a field with `@ref(User)`) is scoped to the signed-in user. `--public` marks the model `@public`: open routes, no owner. `--shared` marks it `@shared`: behind sign-in, rows not scoped. Needs the `db` and `auth` packs (`auth` not with `--public`). |
-| `lidza update [--migrate]` | brings the app's branch and the framework up to date together: a branch behind its upstream is pulled first when that is a clean fast-forward (nothing uncommitted, no local commits the upstream lacks), otherwise the update stops and says what to run (`--no-pull` stops instead of pulling); then the CLI and this app's framework module move to the newest release (never back to an older one; `--to <commit>` takes a release not tagged yet), it regenerates, refreshes the deployment files, then runs `lidza install`. It stops when the files it rewrites have uncommitted changes (`git stash push` sets them aside); `--commit` commits the update when done. In a team, one person makes the update and merges it; the others `git pull`, then `lidza update --cli-only`. |
+| `lidza update [--migrate]` | brings the app's branch and the framework up to date together: a branch behind its upstream is pulled first when that is a clean fast-forward (nothing uncommitted, no local commits the upstream lacks), otherwise the update stops and says what to run (`--no-pull` stops instead of pulling); then the CLI and this app's framework module move to the newest release (never back to an older one; `--to <commit>` takes a release not tagged yet), it regenerates, refreshes the deployment files, then runs `lidza install`. It stops when the files it rewrites have uncommitted changes (`git stash push` sets them aside); `--commit` commits the update when done. In a team, one person makes the update and merges it; the others `git pull`, then `lidza update --cli-only` (`--to <go.mod's version>` when the app is behind the newest). While the CLI and `go.mod` differ, gen, dev and install leave the agent files alone and say so, and `lidza verify` fails. |
 | `lidza gen deploy [--force]` | the `Dockerfile`, `.dockerignore` and `deploy/thura.service` from the current templates; a file the app changed is kept and named unless `--force`. |
-| `lidza pack add <name>` | enables an official pack: `db`, `auth`, `jobs`, `mail`, `llm`, `storage`, `cache`, `i18n`, `realtime`, `analytics`, `geo`, `media`. |
-| `lidza credentials set NAME=value` | seals a secret into `config/credentials.yml.enc` with `config/master.key`; `list` (names), `show` (every value, decrypted) or `show NAME`, `edit` (the whole file in `$EDITOR`), `unset`, `init`. |
+| `lidza pack add <name>` | enables an official pack: `db`, `auth`, `jobs`, `mail`, `llm`, `storage`, `cache`, `i18n`, `realtime`, `analytics`, `audit`, `hooks`, `billing`, `geo`, `media`. |
+| `lidza settings set NAME=value` | saves app settings (keys, providers, addresses) in the app's database, sealed with the master key: `list` (where each comes from, names only), `get NAME`, `unset NAME`, `import` (the app settings in `.env`, `deploy/production.env`, the credentials file and the environment, into the database); `--production` for production's database. Infrastructure settings are refused: they are the environment's. |
+| `lidza credentials set NAME=value` | the development seed: seals a value into `config/credentials.yml.enc` with `config/master.key` (`dev.NAME` for one mode); `list` (names), `show` (every value, decrypted) or `show NAME`, `edit` (the whole file in `$EDITOR`), `unset`, `init`. |
 | `lidza admin add EMAIL...` | lets these users (emails or ids) open `/admin` besides the first account: `ADMIN_USERS` in the sealed credentials, read within seconds; in production after a commit and deploy of `config/credentials.yml.enc`. Admins added on the Users page, in the file and in the environment all count. `remove`, `list`. |
 | `lidza admin owner status\|rotate [--production]` | with `AUTH_OWNER_CLAIM=true`: whether the app waits for its owner and where the one-time token file is (never the token); `rotate` replaces an unclaimed token at once on every node. |
 | `lidza brief [--all] [--list]` | the kickoff interview in a terminal: the open questions of `docs/brief.md` one by one, each with suggestions to pick by number or your own answer; `--all` goes through every question, `--list` prints them. `lidza brief answer <id> "..."` records one; `lidza brief skip [id...]` skips questions for good (no ids: every open one), and `s` or `S` in the interview skips one or the rest. |
@@ -106,7 +110,7 @@ import package `main`. Preserve its tests and behavior during the move:
 | `lidza ship [--domains a.example.com] [--email ops@example.com] [--no-e2e]` | before a deploy: `lidza verify`, the browser suite against the built binary, the production build, `deploy/production.env`; stops at the first failure. Then it names the settings the enabled packs need in production that neither the credentials nor `deploy.env` hold, or hold with a development-only value (`CACHE_URL`, `APP_URL`, `LLM_PROVIDER=fake`). The app's production settings that are not secrets (`MAIL_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_PREFIX`) go in `lidza.json` under `deploy.env`, which ship writes into `deploy/production.env` on every run; a name that looks like a secret there is refused. |
 | `lidza verify [--json] [--no-test] [--allow-test-changes]` | before a commit: regenerates and requires the generated files to be staged, refuses staged changes that weaken the tests, runs the checks, runs the Go tests. The pre-commit hook in `.githooks/` runs it (`git commit --no-verify` skips once; `lidza verify --install-hook` sets it up again). The test guard compares the staged changes with `HEAD` and names each file and line that deletes a test file (`*_test.go`, `*.spec.ts`, `*.test.ts(x)`), adds `t.Skip`, `t.Skipf`, `t.SkipNow`, `test.skip`, `it.skip`, `describe.skip`, `.only` or `.fixme`, or removes more assertions (`t.Error`, `t.Fatal`, `expect(`, `assert.`) from a file than it adds, or swaps an assertion's matcher for a looser one (`toBe` to `toBeTruthy`, `assert.Equal` to `assert.NotNil`). An assertion whose expected text changes and nothing else (a copy update: `'Security'` to `'Sign-in security'`) passes, and the verify report lists each one, old and new, for the developer to see. A deliberate change is confirmed with `LIDZA_ALLOW_TEST_CHANGES=1 git commit ...` (or `lidza verify --allow-test-changes`); one skip with a stated reason passes with a `// lidza:allow-skip <reason>` comment on its line or the line above. A test is never weakened to make it pass: if it is wrong, the agent says so and the developer confirms. |
 | `lidza gen llms [--force]` | writes a starting `llms.txt` (llmstxt.org) for visiting agents: the app's name as the H1, a summary to write, a link per page the last build prerendered by its title. It goes in `public/` (`app/static/` in the htmx template) and is served at `/llms.txt` as text. It is public content: what an agent needs to use the site, never the guides, handlers, routes or configuration. Without it `/llms.txt` is a 404. |
-| `lidza audit layout [--viewport 1440x900,390x844] [--theme light,dark] [--routes /a,/b] [--max-scroll -1] [--stability 6s [--trigger JS] [--allow SELECTORS]] [--base-url URL] [--storage-state FILE \| --login FILE] [--json]` | builds and starts the app on the test database (as `lidza test --e2e`), visits every page the build prerenders plus `--routes`, signed in as a throwaway user when the auth pack runs, at each viewport and theme, and reports what scrolls: sideways is a fault (the elements past the edge are named), down is a fault past `--max-scroll` pixels (`-1`, the default, only reports it; an app whose design says no page scrolls sets `0`). Containers that scroll on their own (a wide table in its wrapper) are listed with their sizes, never a fault. `--stability 6s` scrolls them, runs `--trigger` (a refresh call) or waits, and faults one a re-render reset or that lost the focus inside it; a log that follows its tail on purpose is named in `--allow` or carries `data-audit-follow`. `--base-url` audits an app already running (any Go app with Playwright in `node_modules`), signed in with `--storage-state` (a Playwright storage state) or `--login` (a module whose default export, `async (page, baseURL)`, signs in). A hash route is a same-document navigation, without an HTTP status. Exits non-zero on a fault. The same checks for specs: `expectNoSidewaysScroll(page)` and `expectFitsViewport(page)` from `e2e/layout.ts`. |
+| `lidza audit layout [--viewport 1440x900,390x844] [--theme light,dark] [--routes /a,/b] [--max-scroll -1] [--stability 6s [--trigger JS] [--allow SELECTORS]] [--base-url URL] [--storage-state FILE \| --login FILE] [--json]` | builds and starts the app on the test database (as `lidza test --e2e`), visits every page the build prerenders plus `--routes`, signed in as a throwaway user when the auth pack runs, at each viewport and theme, and reports what scrolls: sideways is a fault (the elements past the edge are named), down is a fault past `--max-scroll` pixels (`-1`, the default, only reports it; an app whose design says no page scrolls sets `0`). Containers that scroll on their own (a wide table in its wrapper) are listed with their sizes, never a fault. `--stability 6s`, on every page, scrolls the document and those containers part way, focuses a control without scrolling to it, runs `--trigger` (a refresh call) once or waits, and faults a container a re-render reset, a document whose reading anchor (the element at the reader's eye line) moved or vanished, and lost focus; an update that keeps the anchor in place passes even when the offset changes. A log that follows its tail on purpose is named in `--allow` or carries `data-audit-follow` (on `body` for the document). `--base-url` audits an app already running (any Go app with Playwright in `node_modules`), signed in with `--storage-state` (a Playwright storage state) or `--login` (a module whose default export, `async (page, baseURL)`, signs in). A hash route is a same-document navigation, without an HTTP status. Exits non-zero on a fault. The same checks for specs: `expectNoSidewaysScroll(page)` and `expectFitsViewport(page)` from `e2e/layout.ts`. |
 | `lidza audit performance [--samples 3] [--budget lcp=2500,js=300kb] [--routes /a] [--base-url URL] [--json]` | builds and starts the app and loads every prerendered page plus `--routes` cold on a throttled phone (Lighthouse's mobile settings), `--samples` times, reporting the median FCP, LCP, CLS and TBT, the bytes downloaded by kind and the JavaScript that does not run on load. A page over a budget is a fault: sizes and layout shift by default (`cls=0.1`, `js=300kb`, `css=100kb`, `images=1000kb`, `total=1600kb`), timings only when set (`--budget fcp=1800,lcp=2500,tbt=200`, in ms), since they vary between machines; the advice is not: uncompressed text, assets cached briefly, images larger than drawn ("Add a responsive image") or without a size, a lazy LCP image, a missing title, `lang`, viewport or description, and an `llms.txt` served as HTML. Gate on timings with more `--samples`, and set budgets for the app's own pages. A hydrating page's TBT falls to zero as a static page ("Add a page"). |
 | `lidza doctor` | toolchain, services, `node_modules`, pack builds, e2e browser; each missing item with its fix. |
 | `lidza pack scaffold <name>` | creates `packs/<name>` with a crate and an example capability; `lidza pack build` compiles it. |
@@ -505,9 +509,25 @@ OAuth flow.
    `authReset`. While `me.verified` is false, a banner offers
    `authVerifyResend()`: a new link to the signed-in user's address
    (nothing is sent once it is verified, or with `NoVerifyEmail`).
+   Two-factor endpoints are mounted too: start enrollment with
+   `authTwoFactorSetup`, show its local `qrCodeDataUrl` for scanning and keep
+   `otpauthUrl` and `secret` as fallbacks, then confirm with
+   `authTwoFactorEnable({code})`, and show the returned recovery codes
+   exactly once. Status is `authTwoFactorStatus`; disabling or regenerating
+   recovery codes requires a current code. Once enabled, password login
+   sends the current code in `X-Lidza-OTP`; provider sign-in relies on the
+   provider's own second factor. Factors need `LIDZA_MASTER_KEY` so their
+   secrets are sealed in the database.
+   For a credential or other sensitive value, post `{code, purpose, target}`
+   to `authStepUp`; the grant is bound to this account and browser session,
+   that exact purpose and target, for at most 15 minutes. The server route
+   must call `auth.AuthorizeStepUp(ctx, req.Raw, purpose, target)` immediately
+   before returning the value. Its `OnEvent` entries
+   (`EventStepUpGranted`, `EventStepUpAuthorized`, `EventStepUpRejected`)
+   carry purpose and target, never the value.
 3. Providers: `AUTH_PROVIDERS=google,github` in `.env` or on the admin
    pages (section "Sign-in providers"); the client id and secret in the
-   credentials: `lidza credentials set AUTH_GOOGLE_CLIENT_ID=...
+   app's settings: `lidza settings set AUTH_GOOGLE_CLIENT_ID=...
    AUTH_GOOGLE_CLIENT_SECRET=...`. Register the callback
    `<APP_URL>/api/v1/auth/google/callback` with the provider. Microsoft
    takes `AUTH_MICROSOFT_TENANT`; another OIDC issuer takes
@@ -831,7 +851,10 @@ mail pack, never through a vendor SDK.
 1. `lidza pack add mail` (MCP: `lidza_pack_add`; after `db`, and `jobs`
    for background delivery);
    set `MAIL_FROM` and, in production, `MAIL_PROVIDER` with its key in
-   `.env`. `.env.test` gets `MAIL_PROVIDER=outbox`.
+   `.env`. `.env.test` gets `MAIL_PROVIDER=outbox`. Click and open
+   tracking stay off on Mailgun, SendGrid and Postmark whatever the
+   account says (a verification link is never rewritten to a tracker);
+   `MAIL_TRACKING=true` hands it back to the account.
 2. Write the bodies as Go templates: `mail/<name>.txt.tmpl` (always) and
    `mail/<name>.html.tmpl` (optional), over the `Data` you pass. Other
    languages: `mail/<name>.<lang>.txt.tmpl` (`verify.de.txt.tmpl`,
@@ -1014,7 +1037,20 @@ the page subscribes and refetches.
    a dependency) with `lidzatest.Bearer`'s header on
    `ws://.../api/v1/realtime?topics=...`, make the change through the
    API, read one message. A signed-out dial must be refused.
-7. `lidza check`, then `lidza test`.
+7. **Live-update acceptance gate:** add regression fixtures for repeated updates,
+   slow and failed reads, short and sustained reconnects, and pause/resume.
+   Preserve current values during background reads, coalesce notifications
+   without repeatedly cancelling a slow read, and keep stable DOM identity,
+   panel order and reserved geometry, chart series identity/colors, scroll,
+   focused input and editor drafts. New data must actually appear; initial
+   loading and genuine failures remain visible. Keep query scopes separate.
+   Render on both desktop and phone and observe the whole refresh interval for
+   transient fetch/reconnect text; a successful refresh or final screenshot
+   alone is not sufficient. Check the socket after the ordinary API deadline.
+8. `lidza check`, `lidza test`, and `lidza test --e2e` with these fixtures before
+   calling the live UI ready. Respect explicit browser restrictions: when
+   rendered checks cannot run, record and report them as unverified. Nonbrowser
+   checks can proceed, but do not silently waive this acceptance gate.
 
 ### Add an LLM feature
 
@@ -1032,7 +1068,7 @@ app's tools. The llm pack speaks the providers; the app never does.
    `EMBED_MODEL` and `EMBED_BASE_URL` as needed. Anthropic has no
    embedding model, so an Anthropic app that embeds sets it;
    `EMBED_PROVIDER=none` turns embeddings off. Keys go in the
-   credentials (`lidza credentials set EMBED_API_KEY=...`).
+   app's settings (`lidza settings set EMBED_API_KEY=...`).
 2. Declare the output in `schema.lidza` when the reply is data, not
    prose:
 
@@ -1133,6 +1169,24 @@ pack, with the app deciding who may read them.
    checks access and streams `Get`), or hand the browser a
    `PresignGet` URL for a minute; never a permanent public URL for a
    private file. Delete the object when the row goes.
+   Public files (served through a CDN) go in a store of their own, so
+   they never share a bucket and prefix with private ones:
+   `STORAGE_STORES=media`, `STORAGE_MEDIA_BUCKET`, `STORAGE_MEDIA_PUBLIC_URL`
+   (the CDN's address), and only the settings that differ from the main
+   store (`STORAGE_MEDIA_REGION`, `_ACCESS_KEY`, ...). In code,
+   `storage.Named(ctx, "media")` has the same methods; `URL(key)` is the
+   CDN address. After replacing public files, empty the CDN's cache:
+   `storage.Named(ctx, "media").Purge(ctx, "sites/42/")` (a trailing
+   slash purges the folder) with `STORAGE_MEDIA_CDN=digitalocean`,
+   `STORAGE_MEDIA_CDN_ENDPOINT_ID` and `STORAGE_CDN_TOKEN` in the
+   credentials; the local provider ignores it. `PresignDelete` hands a
+   worker outside the app a URL that deletes one object. Before trusting
+   a bucket with private files (backups, exports), check it:
+   `storage.From(ctx).Privacy(ctx, key)` asks, with no credentials,
+   for the object, a listing and the public URL, and reports each check
+   as `denied`, `public` or `inconclusive` (`Private` only when all are
+   denied); `PrivacyProbe(ctx, "backups/probe.dump")` does it with a
+   temporary object named like the real ones.
 4. Test with the local provider: `.env.test` sets `STORAGE_PROVIDER=local`
    and a `STORAGE_DIR`; upload through the API, read it back, delete the
    row and check `Stat` returns `storage.ErrNotFound`. The snippet
@@ -1161,7 +1215,10 @@ verified.
    r.Handle("POST /api/v1/webhooks/mail", webhook.Mailgun("MAIL_WEBHOOK_SIGNING_KEY", handlers.MailEvent))
    ```
 
-   Other providers: `webhook.HMAC("NAME", "X-Hub-Signature-256", h,
+   Other providers: `webhook.Standard("NAME", h)` for the Standard
+   Webhooks headers (`webhook-id`, `webhook-timestamp`,
+   `webhook-signature`, a `whsec_` secret) that Svix, Resend and another
+   Līdza app's hooks pack send; `webhook.HMAC("NAME", "X-Hub-Signature-256", h,
    webhook.Prefix("sha256="), webhook.IDHeader("X-GitHub-Delivery"))`
    for an HMAC-SHA256 of the body in a header (`webhook.Base64()` when
    it is base64); `webhook.Token("NAME", "Authorization", h,
@@ -1244,6 +1301,47 @@ verified.
    --forward-to 127.0.0.1:3000/api/v1/webhooks/payments`) prints the
    secret to seal as `dev.PAYMENTS_WEBHOOK_SECRET`.
 7. `lidza check`, then `lidza test`.
+
+### Send webhooks
+
+Let the app's users (or other systems) subscribe a URL to its events:
+each event POSTed there, signed, retried until it lands, with a log.
+
+1. `lidza pack add hooks` (MCP: `lidza_pack_add`; after `db` and
+   `jobs`), then `lidza gen` and `lidza db migrate` (`hook_endpoint`,
+   `hook_delivery`). Endpoint secrets are sealed with the master key.
+2. Send from a handler or a job, once the change is made:
+   `n, err := hooks.From(ctx).Send(ctx, owner, "order.paid", order)`,
+   or `SendTx(ctx, tx, owner, "order.paid", order)` inside the change's
+   transaction, so a rolled-back change sends nothing. `owner` is whose
+   endpoints receive it: the workspace (`auth.WorkspaceID(ctx)`), the
+   user, or `""` for the app's own. Event names are lower case with
+   dots (`order.paid`); the body is `{"type", "timestamp", "data"}`,
+   the same bytes on every attempt.
+3. Let users manage their endpoints: `hooks.Mount(r, hooks.Options{})`
+   in `app/routes.go` serves `/api/v1/hooks` (create, list, change,
+   delete, reveal and rotate the secret, ping, the deliveries, replay),
+   owned by the request's workspace, else the user;
+   `Options{Guard: auth.RequireWorkspace()}` or a permission
+   (`roles.Require("hooks.manage", ...)`) to restrict it. The client
+   gets `api.hooksList`, `api.hookCreate` (its reply carries the secret
+   once), `api.hookPing`, `api.hookDeliveries`, `api.hookReplay`. An
+   endpoint takes every event, or the ones it names (`order.*`).
+4. Delivery: signed with Standard Webhooks headers (`webhook-id`,
+   `webhook-timestamp`, `webhook-signature`), which receivers verify with
+   any Standard Webhooks library or, in a Līdza app,
+   `webhook.Standard("THEIR_SECRET", handler)`; retried at 5 s, 30 s, 2
+   min, 10 min, 30 min, 1 h, 3 h and 6 h; redirects not followed; after
+   `HOOKS_DISABLE_AFTER` deliveries that all failed, the endpoint is
+   disabled until its owner or the admin pages enable it. URLs on
+   internal addresses (loopback, private ranges, link-local, the cloud
+   metadata address) are refused when saved and at each connection;
+   `HOOKS_ALLOW_PRIVATE=true` allows them for development only.
+5. The admin pages' Webhooks list every endpoint and the latest
+   deliveries, with Replay and Enable.
+6. Test with an `httptest` receiver: set `HOOKS_ALLOW_PRIVATE=true` in
+   `.env.test`, create an endpoint for its URL, send, and check what it
+   received and verified.
 
 ### Connect an external account
 
@@ -1343,7 +1441,21 @@ shows an endless table.
    its field, the filters in one row), `FilterSelect` ("Status: Draft"),
    `SortHead` and `Pager` ("51–100 of 230") draw it. A list already in
    the browser pages with `pageRows(rows, state)`.
-4. Test the route with `lidzatest`: a search, a filter, a range, a sort
+4. Full-text search: mark the fields to search `@search` in
+   `schema.lidza` (`title string @search`, `body text? @search`, and
+   `@@search("english")` for stemming) and run `lidza gen`: the
+   migration adds a GIN index on their weighted text. `lidza gen
+   resource` then searches with it instead of `position()`: words in any
+   form ("running" finds "run"), `"quoted phrases"`, `or`, `-excluded`
+   (websearch syntax); a search without a chosen sort is ranked by
+   relevance (`sort=relevance`), title matches before body matches; and
+   the reply's `highlights` (`[{id, parts: [{text, hit}]}]`, for the
+   page's rows) mark the matched words. Show them with `<Highlight
+   parts={highlightOf(posts.data, post.id)} fallback={post.title} />`
+   from `src/list.tsx`: the hits in `<mark>`, everything escaped. For a
+   query of your own, use the model's expression from the generated
+   `db/queries/<table>.sql` unchanged, or the index is not used.
+5. Test the route with `lidzatest`: a search, a filter, a range, a sort
    both ways and the last page, and a 422 for an unknown sort.
 
 ### Dates and time zones
@@ -1446,6 +1558,174 @@ role, and in which team, is in the auth pack's `auth_member` table.
    app from before roles; then `lidza db migrate`. Test each role
    against each route with `lidzatest`: a viewer cannot write, an editor
    cannot manage members, another team's admin gets 403.
+
+### Add teams and invitations
+
+Let people work together in workspaces: create one, invite others by
+email, give them roles, switch between workspaces. The workspace routes,
+the invitation mail and the membership checks are the auth pack's
+(`auth.Teams`, on `auth.Roles`); the app adds its pages and scopes its
+data to the workspace.
+
+1. Define the roles, with the permissions the workspace routes ask for
+   (`members.read`, `members.invite`, `members.manage`,
+   `workspace.update`, `workspace.delete`) next to the app's own:
+
+   ```go
+   var roles = auth.Roles{
+   	"owner":  {"*"},
+   	"admin":  {"members.*", "workspace.update", "projects.*"},
+   	"member": {"members.read", "projects.*"},
+   }
+   var teams = auth.Teams{Roles: roles, Title: "thura"}
+   ```
+
+   The creator of a workspace gets `owner` (`Teams.Owner` to name
+   another). Nobody grants a role with permissions they do not hold,
+   and the last owner cannot leave, be removed or demoted.
+2. In `app/routes.go`, after `auth.Mount`: `teams.Mount(r)`. Run `lidza
+   gen` (the `AuthWorkspace` and `AuthInvite` models), then `lidza db
+   migrate`. The client gets `api.workspacesList`, `api.workspaceCreate`,
+   `api.workspaceSwitch`, `api.workspaceMembers`, `api.workspaceInvite`,
+   `api.workspaceSetRole`, `api.workspaceRemoveMember`,
+   `api.invitePreview` and `api.inviteAccept`.
+3. An invitation is an email with a one-time link to the app's
+   `/invite?token=...` page (`Teams.InvitePath`), valid 7 days
+   (`InviteTTL`), bound to the invited address. The page, signed in
+   (send the visitor to sign-in or sign-up first, back to the same
+   link), shows `api.invitePreview({ token })` (the workspace's name and
+   the role) and accepts with `api.inviteAccept({ token })`; a different
+   address is a 403 `invite_address`, a used, revoked or expired link a
+   410 `invite_gone`. Never put the token in the page's path: the
+   request log records paths. `mail/auth_invite.txt.tmpl` (and `.html`)
+   replaces the plain text (`.App`, `.Link`, `.Workspace`, `.Inviter`,
+   `.Email`, `.Role`).
+4. Scope the app's rows to the workspace: a model with `workspaceId uuid
+   @index` gets, from `lidza gen resource`, queries that all take it and
+   routes behind `auth.RequireWorkspace()`, which reads the workspace
+   from the `X-Workspace` header or the cookie `api.workspaceSwitch`
+   sets, answers 400 when none is chosen and 404 for one the user is not
+   in. A handler of its own reads `auth.WorkspaceID(ctx)` behind the same
+   middleware, and checks finer permissions with `roles.Check(ctx,
+   auth.WorkspaceID(ctx), "projects.delete")`.
+5. Deleting a workspace removes its memberships and invitations;
+   `Teams.OnDelete(ctx, tx, id)` deletes the app's own rows in the same
+   transaction. `Teams.OnEvent` reports each change (created, invited,
+   joined, role changed, removed, left, deleted) for an audit log
+   (`audit.Record`). The admin pages list the workspaces.
+6. Test it with two accounts: invite, accept, a stranger's 404, a
+   member's 403 on an admin route. `lidza test`, then `lidza test --e2e`.
+
+### Add payments
+
+Sell subscriptions: plans in code, Stripe Checkout to subscribe, Stripe's
+portal to manage, and the app checking what a plan includes.
+
+1. `lidza pack add billing` (MCP: `lidza_pack_add`; after `db`), then
+   `lidza gen` and `lidza db migrate` (`billing_customer`,
+   `billing_subscription`). The keys go in the credentials: `lidza
+   settings set STRIPE_SECRET_KEY=sk_test_...
+   STRIPE_WEBHOOK_SECRET=whsec_...` (test mode in development, the live
+   keys in `production.`). `APP_URL` is where Stripe sends customers
+   back.
+2. Define the plans once, in the app package; each paid plan names its
+   Stripe price, and `billing.FreePlan` ("free") what an owner without a
+   subscription gets:
+
+   ```go
+   var plans = billing.Plans{
+   	billing.FreePlan: {Name: "Free", Features: []string{"projects:3"}},
+   	"pro":            {Name: "Pro", Price: "price_...", Features: []string{"projects:50", "exports"}},
+   }
+   ```
+
+3. In `app/routes.go`: `plans.Mount(r, billing.Options{})`. It serves
+   `GET /api/v1/billing` (the plan, its status and renewal, the
+   features, the plans to choose from), `POST /api/v1/billing/checkout
+   {plan}` and `POST /api/v1/billing/portal` (each returns a Stripe URL
+   to send the browser to), and Stripe's `POST /api/v1/billing/webhook`.
+   Who is billed is the request's workspace (`auth.WorkspaceID`), else
+   the signed-in user; `Options{Guard: auth.RequireWorkspace()}` or a
+   permission (`roles.Require("billing.manage", ...)`) to restrict who
+   may pay. The client gets `api.billingAccount`, `api.billingCheckout`
+   and `api.billingPortal`.
+4. In Stripe's dashboard: a webhook endpoint at
+   `https://<app>/api/v1/billing/webhook` for
+   `checkout.session.completed` and `customer.subscription.created`,
+   `.updated` and `.deleted`; its signing secret is
+   `STRIPE_WEBHOOK_SECRET`. Locally, `stripe listen --forward-to
+   localhost:3000/api/v1/billing/webhook` prints a secret for
+   development. Events update `billing_subscription`; an older event
+   never overwrites a newer one.
+5. Check in handlers, never by calling Stripe: `ok, err :=
+   plans.Has(ctx, owner, "exports")`, or `plans.Require(ctx, owner,
+   "exports")` (a 402 with code `upgrade` the page turns into an upgrade
+   prompt). Active, trialing and past-due subscriptions grant their plan;
+   canceled and unpaid ones fall back to the free plan.
+6. Test with a fake Stripe (`STRIPE_API_URL` points the pack at an
+   `httptest` server) and events signed with
+   `webhook.StripeSignature(secret, time, body)`: checkout, the
+   completed event, an upgrade, a cancellation, a forged event's 401.
+
+### Sell a feature to teams
+
+A feature a workspace pays for and all its members use: teams, billing
+and a model together. The pieces are the recipes "Add teams and
+invitations", "Add payments" and "Add an LLM feature"; this is how they
+meet.
+
+1. Packs: `db`, `auth`, `mail` (invitations), `billing`, `llm`, then
+   `lidza gen` and `lidza db migrate`. Workspaces come from `auth.Teams`
+   with a role that may use the feature:
+
+   ```go
+   var teams = &auth.Teams{Roles: auth.Roles{"owner": {"*"}, "member": {"summaries.create"}}}
+   var plans = billing.Plans{
+   	billing.FreePlan: {Name: "Free"},
+   	"team":           {Name: "Team", Price: "price_...", Features: []string{"ai"}},
+   }
+   ```
+
+2. Routes in `app/routes.go`: the workspace routes, billing guarded by
+   the workspace (so the workspace, not the user, is the customer), and
+   the feature in a group that needs a workspace:
+
+   ```go
+   teams.Mount(r)
+   plans.Mount(r, billing.Options{Guard: auth.RequireWorkspace()})
+   ai := r.Group("/api/v1/summaries", auth.RequireWorkspace())
+   router.Route(ai, "POST /api/v1/summaries", summarize)
+   ```
+
+3. The handler checks the plan first, then calls the model, labelled
+   so the admin pages' usage shows what the feature costs:
+
+   ```go
+   func summarize(ctx context.Context, req *router.Request[schema.SummaryInput]) (schema.Summary, error) {
+   	if err := plans.Require(ctx, auth.WorkspaceID(ctx), "ai"); err != nil {
+   		return schema.Summary{}, err // 402 "upgrade": the page offers checkout
+   	}
+   	res, err := llm.From(ctx).Chat(ctx, llm.Request{
+   		System:   "Summarize in one sentence.",
+   		Messages: []llm.Message{{Role: llm.User, Content: req.Body.Text}},
+   		Label:    "summary",
+   	})
+   	return schema.Summary{Text: res.Text}, err
+   }
+   ```
+
+   A long call goes to a job instead (`jobs.From(ctx).Enqueue`, with
+   the workspace id in the payload) and the page listens with `useLive`.
+4. The page sends the workspace with every call (`X-Workspace`, or the
+   current workspace the switch route stores), shows `api.billingAccount`
+   to owners, and on a 402 with code `upgrade` offers
+   `api.billingCheckout({plan: "team"})`.
+5. Test the whole flow with the fake model and a fake Stripe: an owner
+   creates a workspace and invites a member (the token from the outbox
+   mail), the member gets 402, a signed `checkout.session.completed`
+   for the workspace makes it 200, another workspace still gets 402 and
+   a stranger sending Acme's id gets 403. The framework's own version of
+   this test is `packs/billing/teamflow_test.go`.
 
 ### Record an audit event
 
@@ -1803,7 +2083,9 @@ Official Go packs, configured from `.env` (see `.env.example` after
   transactions (recipe "Add sign-in"). Sessions slide: when
   a browser's access token has expired, `Require` and `Optional` renew
   it from the refresh cookie on that request and set both cookies again,
-  so a tab stays signed in for `AUTH_REFRESH_TTL` without a refresh
+  so a tab stays signed in for `AUTH_REFRESH_TTL` after its last use
+  (requests racing on an expired token rotate the session once; a
+  database error is a 503 that keeps the cookies) without a refresh
   route or client code; a bearer client refreshes through a route of the
   app that calls `auth.From(ctx).Refresh`. Without "remember me":
   `auth.From(ctx).LoginWith(ctx, userID, claims,
@@ -2034,29 +2316,36 @@ microphone=(), geolocation=()`. `lidza.App` in `main.go` sets the rest:
   every subdomain too: only when the app owns the whole domain.
   `middleware.NoHSTS` sends none.
 
-## Secrets
+## Settings and secrets
 
-Anything secret (API keys, SMTP URLs, storage keys, `AUTH_SECRET` in
-production) lives in `config/credentials.yml.enc`, sealed with
-AES-256-GCM under `config/master.key`, which git ignores. `lidza
-credentials set MAIL_API_KEY=...` (MCP: `lidza_credentials_set`) seals a
-value; `list` shows the names, `show` every value (`show NAME` one),
-`edit` the whole file in `$EDITOR`. Every pack reads the credentials by the same names as
-`.env`, between the `.env` files and the process environment, so nothing
-in the code changes. A value for one mode only goes in that mode's
-section: `lidza credentials set dev.STRIPE_SECRET_KEY=sk_test_...
-production.STRIPE_SECRET_KEY=sk_live_...` keeps the sandbox key for
-`lidza dev` and the live one for production in the same file; a mode
-reads the plain values and its section, which wins. The CLI reads as
-`dev` (`lidza test` as `test`), so a production value never reaches a
-development command. In production the key travels as
-`LIDZA_MASTER_KEY` (the file's contents) and the sealed file is deployed
-with the binary. A key, a token or a database URL with its password pasted into the Go or frontend source fails `lidza check` (L010). The admin pages save changes to the database, sealed
-with the same key, and the mail, llm and storage packs pick them up
-without a restart; settings a pack refuses are not kept. Saved values
-win over the file: `list` and `show` include them, and `unset NAME`
-clears one there too, the way out when a saved setting stops the app
-from starting (the start error names them).
+An app setting (API keys, the providers and models it uses, `APP_URL`,
+`MAIL_FROM`, buckets, `ADMIN_USERS`) can come from the environment, the
+sealed credentials file or the app's own database, and the environment
+wins. Kept in the database, sealed with the master key, a setting is
+switched on the admin pages (the pack pages and Settings) with no
+restart and no server login, reaches every node, and moves with the
+database; `lidza settings set NAME=value` (MCP: `lidza_settings_set`)
+does it from a terminal, `lidza settings list` says where each value
+comes from (never the value), and `lidza settings import` copies the
+values the environment and the files hold into the database (with
+`--production`, production's). The deployment's own settings (the
+database, the master key, addresses, logging, tracing, tuning) stay in
+the environment; `docs/configuration.md` marks each setting `app` or
+`infra`. `AUTH_SECRET` is generated on the app's first start and kept
+in the database, the same on every node.
+
+Development is seeded by `config/credentials.yml.enc`, sealed with
+AES-256-GCM under `config/master.key`, which git ignores: `lidza
+credentials set dev.STRIPE_SECRET_KEY=sk_test_...` (MCP:
+`lidza_credentials_set`) keeps a sandbox key for `lidza dev` without a
+database round; `list` shows the names, `show` every value, `edit` the
+file in `$EDITOR`. Values saved in the database win over the file, and
+`lidza credentials unset NAME` clears one there too, the way out when a
+saved setting stops the app from starting (the start error names them).
+Development has defaults for `APP_URL` (`http://` and `LIDZA_ADDR`) and
+`MAIL_FROM` (`dev@localhost`); `.env.test` carries the test suite's
+fixtures. A key, a token or a database URL with its password pasted
+into the Go or frontend source fails `lidza check` (L010).
 
 ## Models and migrations
 
@@ -2071,8 +2360,12 @@ attributes: `@id`, `@default(uuid())` / `@default(now())` /
 model's id (`categoryId int @ref(Category)` when `Category` has
 `id int @id`; `@ref(Model, cascade)` deletes the row with the
 referenced one, `@ref(Model, setnull)` clears an optional field), `@min(n)` / `@max(n)` (length or value), `@email`,
-`@url`, `@pattern("re")`, `@timezone` (an IANA zone name). Block attributes inside a model:
-`@@unique(a, b)`, `@@index(a, b)`; `@table("name")` after the model name.
+`@url`, `@pattern("re")`, `@timezone` (an IANA zone name), `@search`
+(the field is part of the model's full-text search; `@search(A)` to
+`@search(D)` weigh it, else by position). Block attributes inside a model:
+`@@unique(a, b)`, `@@index(a, b)`, `@@search("english")` (the search's
+language: stemming, stop words; `simple`, the default, matches words as
+they are); `@table("name")` after the model name.
 
 Numbered rows and exact amounts:
 
@@ -2145,7 +2438,13 @@ twice (`UPDATE post SET slug = ... WHERE slug IS NULL`).
 The binary serves `/healthz` (liveness), `/readyz` (503 while a pack's
 check fails: database ping, bus) and `/metrics` (Prometheus: requests by
 route pattern, durations, pool and connection gauges). In dev,
-`/debug/pprof/` too. `lidza check` has rules of its own: package-level
+`/debug/pprof/` too. Tracing is OpenTelemetry, on when
+`OTEL_EXPORTER_OTLP_ENDPOINT` is set: spans for requests, queries (by
+sqlc name), jobs (continuing the enqueuing request's trace), mail, LLM
+calls and `lidza.HTTPClient(ctx)` calls; log with `slog.InfoContext(ctx,
+...)` (or `lidza.Log(ctx)`) so a line carries `trace_id`. Give a slow
+piece of your own a span with `tracing.Span(ctx, "name")` and
+`tracing.End(span, err)` (`github.com/agim/lidza/pkg/tracing`). `lidza check` has rules of its own: package-level
 maps or slices (L001) and goroutines started in handlers (L002), because
 state belongs in Postgres or Valkey and background work in a bounded
 worker or the jobs pack; hand-written `fetch` of `/api` (L003); imports
@@ -2157,12 +2456,24 @@ to a buffer or a hash are exempt); and a run of at least 8 statements
 that repeats another in the app, names and literals aside (L017: reuse
 the first or extract a function both call). `// lidza:ignore L016` on
 the line, or the line before, exempts one call; above a function,
-`// lidza:ignore L017` exempts the function.
+`// lidza:ignore L017` exempts the function. A form whose `action` or
+`formaction` is `mailto:`, `http:` or another non-https scheme warns
+(L022): an https page reports it as mixed content on load. An email
+form submits to a same-origin handler that sends with the mail pack (or
+keeps a same-origin action and handles the submit in script); a
+`mailto:` link is fine. `lidza audit performance` checks the rendered
+forms the same way, and over https reports the browser's own
+mixed-content issues.
 Rate limit a route group with `r.Use(middleware.RateLimit(middleware.RateLimitOptions{RPS: 10, Burst: 20}))`
 (per node; a limit across nodes counts with the cache pack's `Incr`);
 guard an outbound dependency with `resilience.New(...)`.
 
 ## Deployment
+
+Managed deploys from a portal: [Līdza Deploy](https://github.com/agim/lidza-deploy)
+deploys this app from GitHub on push to a server it manages (HTTPS,
+health checks, logs, rollback, team roles); behind its proxy, set
+`LIDZA_TRUSTED_PROXIES=loopback`. To run the binary yourself:
 
 `lidza build` makes `bin/thura`: the frontend embedded, no Node at
 runtime (except `LIDZA_SSR=1`), with a Brotli and a gzip copy of each
@@ -2174,8 +2485,16 @@ image that runs as a non-root user on port 3000 (the binary, `db/`,
 `LIDZA_MASTER_KEY` in the environment, and the local storage provider
 needs a volume at `STORAGE_DIR`, so production uses `s3`); `deploy/thura.service`
 runs the binary under systemd from `/opt/thura` (install commands in
-its header). Migrations ship as files in `db/`: apply them with `lidza db
-migrate --production` in the deploy step or `DB_MIGRATE=true` at start. `lidza ship
+its header); `lidza gen deploy --k8s` adds Kubernetes manifests
+(`deploy/k8s/thura.yaml`: Deployment, Service, PodDisruptionBudget). Migrations ship as files in `db/`: apply them with `lidza db
+migrate --production` in the deploy step or `DB_MIGRATE=true` at start.
+They run while the app serves: statements wait at most
+`DB_MIGRATE_LOCK_TIMEOUT` (5s) for a lock and retry; `lidza gen` builds
+indexes and validates constraints on existing tables in a second,
+`-- lidza:no-transaction` migration that runs outside a transaction;
+`lidza check` warns (L021) on a new migration that renames, changes a
+type, drops what the running version reads, or locks a table for a
+scan, and names the expand-and-contract steps. `lidza ship
 --domains app.example.com` records the domain in `lidza.json` and writes
 `deploy/production.env`, the environment of the deployed process
 (plus `DATABASE_URL` and `LIDZA_MASTER_KEY`). TLS: with
@@ -2192,8 +2511,14 @@ minute), so a host it stops approving is refused and never renewed. An
 approved host reaches the whole app: serve its paths with `r.Mount`
 (outside `/api`) and keep the rest to the app's domains with a
 middleware on `r.Host`. The admin overview lists the certificates and
-the latest refusals. Or put a TLS-terminating proxy in front and forward
-`X-Forwarded-For`. Point the orchestrator at `/healthz` and `/readyz`,
+the latest refusals. A terminator in front that issues certificates on
+demand (Caddy's `ask`) asks `GET /tls-allow?domain=<host>`: 200 when
+`App.TLSHosts` approves, 404 when not, same cache. Or put a TLS-terminating proxy in front, forward
+`X-Forwarded-For`, and name it in `LIDZA_TRUSTED_PROXIES` (`loopback`
+for a proxy on the same host, else its addresses or CIDRs): only then is
+the forwarded client trusted, and the rate limits, the sign-in throttle,
+`middleware.ClientIP` and the request log's `client_ip` see each visitor
+instead of the proxy. Never read `X-Forwarded-For` by hand. Point the orchestrator at `/healthz` and `/readyz`,
 scrape `/metrics`. Production settings: `LIDZA_MODE` unset,
 `LIDZA_LOG=json`, `AUTH_SECRET` the same on every node. The framework's
 `docs/deploy.md` has the details.
@@ -2203,6 +2528,7 @@ scrape `/metrics`. Production settings: `LIDZA_MODE` unset,
 | Variable | Meaning | Default |
 |---|---|---|
 | `LIDZA_ADDR` | listen address (ignored when TLS is on) | `127.0.0.1:3000` |
+| `LIDZA_TRUSTED_PROXIES` | the proxies in front whose `X-Forwarded-For` counts: IPs, CIDRs, `loopback`, `private`; `middleware.ClientIP`, the rate limits, the sign-in throttle and the request log's `client_ip` resolve the visitor through them | unset (the connection's address; no forwarded header trusted) |
 | `AUTH_PROVIDERS` | sign-in providers `auth.Mount` serves: `google`, `github`, `microsoft`, or a name with `AUTH_<NAME>_ISSUER`; each with `AUTH_<NAME>_CLIENT_ID` and `AUTH_<NAME>_CLIENT_SECRET` in the credentials | unset |
 | `APP_URL` | the public origin: mail links and the providers' callback URL; `https://` also sends Strict-Transport-Security (`App.HSTS`) | from `LIDZA_TLS_DOMAINS`, else the request |
 | `SECURITY_CONTACT` | where to report a vulnerability, served as `/.well-known/security.txt` (RFC 9116, with `Expires` kept ahead): emails or `https://`/`tel:` URLs, comma-separated; unset serves the build's own `.well-known/security.txt`, if any | unset |

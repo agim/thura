@@ -1,24 +1,19 @@
+import { ActionButton } from '../components/ActionButton'
+import { RecipientInput } from '../components/RecipientInput'
+import { confirmAction } from '../components/ConfirmationHost'
+import { SelectControl } from '../components/SelectControl'
 import { useState, type FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type WorkspaceRole } from '@lidza/client'
-import { SignIn } from '../components/SignIn'
+import { Navigate } from '@tanstack/react-router'
+import { ModalAction } from '../components/ModalAction'
+import { Trash2 } from 'lucide-react'
 import { WorkspaceHistory } from '../components/WorkspaceHistory'
 
-export function Members() {
+export function Members() { return <Navigate to="/app/settings/members" replace /> }
+export function WorkspaceMemberSettings({ workspaceId }: { workspaceId: string }) {
   const session = useQuery({ queryKey: ['session'], queryFn: () => api.authSession() })
-  const spaces = useQuery({ queryKey: ['workspaces'], queryFn: () => api.listWorkspaces(), enabled: !!session.data?.user })
-  const [selected, setSelected] = useState('')
-  const id = spaces.data?.items.find(w => w.id === selected)?.id ?? spaces.data?.items[0]?.id
-  if (session.isPending) return <p role="status">Loading account…</p>
-  if (session.isError) return <p role="alert">{session.error.message}</p>
-  if (!session.data.user) return <SignIn />
-  return <div className="space-y-5">
-    <h1 className="text-3xl font-semibold">Workspace members</h1>
-    {spaces.isError && <p role="alert">{spaces.error.message}</p>}
-    {spaces.isPending && <p role="status">Loading workspaces…</p>}
-    {spaces.data?.items.length === 0 && <p>No workspace memberships.</p>}
-    {id && <><label>Workspace<select className="ml-3 border rounded p-2" value={id} onChange={e => setSelected(e.target.value)}>{spaces.data?.items.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label><Membership key={id} workspaceId={id} subject={session.data.user.subject} /></>}
-  </div>
+  return session.data?.user ? <Membership workspaceId={workspaceId} subject={session.data.user.subject} /> : <p role="status">Loading members…</p>
 }
 
 function Membership({ workspaceId, subject }: { workspaceId: string; subject: string }) {
@@ -37,27 +32,27 @@ function Membership({ workspaceId, subject }: { workspaceId: string; subject: st
   const busy = invite.isPending || change.isPending || remove.isPending || revoke.isPending
   const failure = members.error ?? invites.error ?? invite.error ?? change.error ?? remove.error ?? revoke.error
   function submit(e: FormEvent) { e.preventDefault(); invite.mutate() }
-  return <div className="space-y-5">
+  return <div className="member-settings"><h3>Workspace members</h3>
     {failure && <p role="alert">{failure.message}</p>}
     {members.isPending && <p role="status">Loading members…</p>}
-    <ul className="space-y-3">{!members.isError && members.data?.items.map(m => <li className="rounded border p-3 flex flex-wrap items-center gap-3" key={`${m.subject}:${m.role}`}>
-      <span className="flex-1">{m.name || m.email} · {m.email}</span>
+    <ul className="member-list">{!members.isError && members.data?.items.map(m => <li className="member-list-row" key={`${m.subject}:${m.role}`}>
+      <span className="contact-avatar" aria-hidden="true">{(m.name || m.email).split(/\s+/).slice(0,2).map(part => part[0]).join('').toUpperCase()}</span><div className="member-identity"><strong>{m.name || m.email}</strong><small>{m.email}</small></div>
       {manager && (own?.role === 'owner' || m.role === 'member') ? <>
-        <label>Role for {m.name || m.email}<select className="ml-2 border rounded p-1" disabled={busy || own?.role !== 'owner'} value={m.role} onChange={e => change.mutate({ target: m.subject, role: e.target.value as WorkspaceRole })}>{['member', 'admin', 'owner'].map(r => <option key={r}>{r}</option>)}</select></label>
-        <button type="button" disabled={busy} onClick={() => { if (window.confirm(`Remove ${m.email} from this workspace?`)) remove.mutate(m.subject) }}>Remove {m.name || m.email}</button>
+        <label className="member-role"><span className="visually-hidden">Role for {m.name || m.email}</span><SelectControl aria-label={`Role for ${m.name || m.email}`} disabled={busy || own?.role !== 'owner'} value={m.role} onChange={e => change.mutate({ target: m.subject, role: e.target.value as WorkspaceRole })}>{['member', 'admin', 'owner'].map(r => <option key={r} value={r}>{r[0].toUpperCase() + r.slice(1)}</option>)}</SelectControl></label>
+        <ActionButton className="member-remove" type="button" aria-label={`Remove ${m.name || m.email}`} title={`Remove ${m.name || m.email}`} disabled={busy} onClick={async () => { if (await confirmAction(`Remove ${m.email} from this workspace?`)) remove.mutate(m.subject) }}><Trash2 size={18} /></ActionButton>
       </> : <span>{m.role}</span>}
     </li>)}</ul>
     {manager && <>
-      <form className="rounded border p-4 space-y-3" onSubmit={submit}>
-        <h2 className="text-xl font-medium">Invite a member</h2>
-        <label className="block">Invite email<input className="block w-full rounded border p-2" type="email" required value={email} onChange={e => setEmail(e.target.value)} /></label>
-        <label>Invitation role<select className="ml-3 border rounded p-2" value={role} onChange={e => setRole(e.target.value as WorkspaceRole)}>{(own?.role === 'owner' ? ['member', 'admin', 'owner'] : ['member']).map(r => <option key={r}>{r}</option>)}</select></label>
-        <button className="block rounded bg-brand text-white p-2" disabled={busy}>Send invitation</button>
-        {invite.isSuccess && <p role="status">Invitation queued for delivery.</p>}
-      </form>
-      <h2 className="text-xl font-medium">Invitations</h2>
-      <ul className="space-y-2">{!invites.isError && invites.data?.items.map(i => <li key={i.id} className="rounded border p-3">{i.email} · {i.role} · {i.acceptedAt ? 'Accepted' : i.revokedAt ? 'Revoked' : new Date(i.expiresAt) <= new Date() ? 'Expired' : 'Pending'}
-        {!i.acceptedAt && !i.revokedAt && <button type="button" disabled={busy} className="ml-4" onClick={() => revoke.mutate(i.id)}>Revoke {i.email}</button>}
+      <ModalAction label="Invite a member" completion={invite.isSuccess ? invite.submittedAt : 0}><form className="settings-form" onSubmit={submit}>
+
+        <RecipientInput workspaceId={workspaceId} label="Invite email" multiple={false} required value={email} onChange={setEmail} />
+        <label>Invitation role<SelectControl className="ml-3 border rounded p-2" value={role} onChange={e => setRole(e.target.value as WorkspaceRole)}>{(own?.role === 'owner' ? ['member', 'admin', 'owner'] : ['member']).map(r => <option key={r} value={r}>{r[0].toUpperCase() + r.slice(1)}</option>)}</SelectControl></label>
+        {invite.isError && <p role="alert">{invite.error.message}</p>}<ActionButton className="primary-action" disabled={busy}>Send invitation</ActionButton>
+      </form></ModalAction>
+      {invite.isSuccess && <p role="status">Invitation queued for delivery.</p>}
+      <h3 className="member-invitations-title">Invitations</h3>
+      <ul className="invitation-list">{!invites.isError && invites.data?.items.map(i => <li key={i.id} className="settings-list-row"><span>{i.email} · {i.role} · {i.acceptedAt ? 'Accepted' : i.revokedAt ? 'Revoked' : new Date(i.expiresAt) <= new Date() ? 'Expired' : 'Pending'}</span>
+        {!i.acceptedAt && !i.revokedAt && <ActionButton type="button" disabled={busy} className="ml-4" aria-label={`Revoke ${i.email}`} onClick={() => revoke.mutate(i.id)}>Revoke</ActionButton>}
       </li>)}</ul>
       <WorkspaceHistory workspaceId={workspaceId} members={members.data?.items ?? []} />
     </>}

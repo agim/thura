@@ -15,7 +15,7 @@ the resumable provider/configuration wizard, run its checks and restart every
 node after publishing. Operator MCP provisioning remains available.
 
 The six live apps are available at `/app`. Optional integrations need separate
-services: [ONLYOFFICE](office.md), [Matrix](chat.md), and [LiveKit](meet.md).
+services: [Collabora](collabora.md), [Matrix](chat.md), and [LiveKit](meet.md).
 Use their exact configuration requirements, including private document storage,
 Matrix application-service namespaces, and LiveKit `room.auto_create: false`.
 The tested service versions are compatibility pins, not a claim that these are
@@ -121,7 +121,7 @@ Integration state is an additional backup set:
 - Matrix: homeserver database, media store, signing keys, application-service
   registration/token and homeserver configuration. Restore the same server
   identity and domain; app metadata alone cannot recover room history or copies.
-- ONLYOFFICE: JWT configuration and any unsaved recovery/cache state required by
+- Collabora: WOPI signing configuration and any unsaved recovery/cache state required by
   its operation. Finish saves before the snapshot. Committed versions live in
   Thura storage; an unsaved editor buffer is not a durable Thura version.
 - LiveKit: server/API keys, webhook and TURN configuration. Active media rooms

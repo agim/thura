@@ -5,7 +5,8 @@ binary. `docs/lidza-guide.md` is the guide, `docs/decisions.md` says why
 the app is built the way it is.
 
 The first implementation integrates the supplied six-app prototype at
-`/workspace` and provides persistent Mail, Contacts, Drive, Calendar, Matrix Chat, and LiveKit Meet at `/app`, with optional ONLYOFFICE editing.
+`/workspace` and provides persistent Mail, Contacts, Drive, Calendar, Matrix Chat, and LiveKit Meet at `/app`, with self-hosted Collabora document editing.
+[Loop](docs/loop.md) adds internal, person-first timelines across mail, chats, documents, meetings, and calendar events, with source filters, manual links, and optional organization rollups.
 Mail defaults to Debian Postfix with operator-selected hosts and domains; see [Postfix deployment](docs/postfix.md). Drafts autosave, and Mail/Contacts search and paging cover the full collection.
 See [implementation status](docs/implementation-status.md) for account
 provisioning and validation; [operations](docs/operations.md) covers quotas, recovery, and deployment gates.

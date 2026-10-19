@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -28,7 +28,7 @@ func TestSetupRoutingRequiresBootstrapThenConfiguration(t *testing.T) {
 			t.Fatalf("%s: got %d location %q cache %q", path, r.StatusCode, r.Header.Get("Location"), r.Header.Get("Cache-Control"))
 		}
 	}
-	for _, path := range []string{"/", "/app", "/about", "/forgot", "/invite", "/admin", "/admin/setup", "/assets/../app"} {
+	for _, path := range []string{"/", "/app", "/about", "/forgot", "/invite", "/admin", "/admin/setup", "/admin/setup/controls.js", "/assets/../app"} {
 		redirect(path, "/setup")
 	}
 	if r := s.JSON(t, "GET", "/api/v1/workspaces", nil, nil); r.StatusCode != 503 {
@@ -54,6 +54,15 @@ func TestSetupRoutingRequiresBootstrapThenConfiguration(t *testing.T) {
 			t.Fatalf("wizard got %d", r.StatusCode)
 		}
 	}
+	if response, err := client.Get(s.URL + "/admin/setup/controls.js"); err != nil {
+		t.Fatal(err)
+	} else {
+		body, readErr := io.ReadAll(response.Body)
+		response.Body.Close()
+		if readErr != nil || response.StatusCode != 200 || response.Header.Get("Content-Type") != "text/javascript; charset=utf-8" || response.Header.Get("X-Content-Type-Options") != "nosniff" || !strings.Contains(string(body), "setup-select") {
+			t.Fatal("administrator setup controls unavailable or unsafe content type")
+		}
+	}
 	var status schema.SetupStatus
 	if r := s.JSON(t, "GET", "/api/v1/setup/status", nil, &status); r.StatusCode != 200 || !status.Administrator || status.Published {
 		t.Fatal("administrator setup status incorrect")
@@ -65,6 +74,7 @@ func TestSetupRoutingRequiresBootstrapThenConfiguration(t *testing.T) {
 		t.Fatal("logout failed")
 	}
 	redirect("/admin/setup", "/setup")
+	redirect("/admin/setup/controls.js", "/setup")
 	ordinary, err := auth.From(s.Context()).CreateUser(s.Context(), "ordinary-routing@setup.example", "Ordinary", "ordinary private oak river 88333")
 	if err != nil {
 		t.Fatal(err)
@@ -84,6 +94,15 @@ func TestSetupRoutingRequiresBootstrapThenConfiguration(t *testing.T) {
 			t.Fatalf("ordinary wizard got %d", r.StatusCode)
 		}
 	}
+	if response, err := client.Get(s.URL + "/admin/setup/controls.js"); err != nil {
+		t.Fatal(err)
+	} else {
+		response.Body.Close()
+		if response.StatusCode != 403 {
+			t.Fatalf("ordinary setup controls got %d", response.StatusCode)
+		}
+	}
+
 }
 
 func TestSetupRoutingPublicationAndDraftRestart(t *testing.T) {
@@ -104,24 +123,24 @@ func TestSetupRoutingPublicationAndDraftRestart(t *testing.T) {
 	if r := s.JSON(t, "GET", "/api/v1/workspaces", nil, nil); r.StatusCode != 200 {
 		t.Fatal("published installation remained blocked")
 	}
-	// Office callbacks use the document provider's bearer token, not a Thura
-	// session. The setup gate must leave that verification to the provider.
-	request, err := http.NewRequest("POST", s.URL+"/api/v1/office/callback/unknown", strings.NewReader(`{"status":2}`))
+	// WOPI owns bearer verification; the active setup gate must not reinterpret it as a Thura session.
+	t.Setenv("COLLABORA_SERVER_URL", "https://documents.example")
+	t.Setenv("COLLABORA_APP_URL", "https://setup.example")
+	t.Setenv("COLLABORA_TOKEN_SECRET", "test-wopi-routing-secret-maple-816293")
+	request, err := http.NewRequest("POST", s.URL+"/api/v1/wopi/files/unknown?access_token=invalid", strings.NewReader(""))
 	if err != nil {
 		t.Fatal(err)
 	}
-	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer PUBLIC-provider-token-not-a-Thura-session")
 	response, err := s.Client().Do(request)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var callback schema.OfficeResult
-	err = json.NewDecoder(response.Body).Decode(&callback)
-	response.Body.Close()
-	if err != nil || response.StatusCode != 200 || callback.Error != 1 {
-		t.Fatal("setup gate intercepted document-provider authentication")
+	if response.StatusCode != 401 {
+		t.Fatal("setup gate intercepted WOPI authentication")
 	}
+	response.Body.Close()
+
 	revision, _, _ = setupRow(t, s)
 	r = setupForm(t, s, "restart", url.Values{"revision": {strconv.Itoa(revision)}, "confirm": {"restart"}, "step": {"server"}})
 	if strings.Contains(r.Header.Get("Location"), "error=") {

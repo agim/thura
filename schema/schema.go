@@ -595,6 +595,7 @@ type Job struct {
 	LastError   *string         `json:"lastError" db:"last_error"`
 	CreatedAt   time.Time       `json:"createdAt" db:"created_at"`
 	UniqueKey   *string         `json:"uniqueKey" db:"unique_key"`
+	TraceParent *string         `json:"traceParent" db:"trace_parent"`
 }
 
 // Validate applies the rules of Job from schema.lidza.
@@ -848,9 +849,7 @@ type OfficeSession struct {
 	FileID        string    `json:"fileId" db:"file_id"`
 	Subject       string    `json:"subject" db:"subject"`
 	SourceVersion int       `json:"sourceVersion" db:"source_version"`
-	BaseVersion   int       `json:"baseVersion" db:"base_version"`
 	DocumentKey   string    `json:"documentKey" db:"document_key"`
-	LastChecksum  string    `json:"lastChecksum" db:"last_checksum"`
 	ExpiresAt     time.Time `json:"expiresAt" db:"expires_at"`
 	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
 }
@@ -867,8 +866,26 @@ func (v OfficeSession) Validate() error {
 	if v.DocumentKey == "" {
 		errs.Add("documentKey", "required", "required")
 	}
-	if v.LastChecksum == "" {
-		errs.Add("lastChecksum", "required", "required")
+	return errs.Result()
+}
+
+// WopiLock is a row of the wopi_lock table.
+type WopiLock struct {
+	ID          string    `json:"id" db:"id"`
+	FileID      string    `json:"fileId" db:"file_id"`
+	LockID      string    `json:"lockId" db:"lock_id"`
+	BaseVersion int       `json:"baseVersion" db:"base_version"`
+	ExpiresAt   time.Time `json:"expiresAt" db:"expires_at"`
+}
+
+// Validate applies the rules of WopiLock from schema.lidza.
+func (v WopiLock) Validate() error {
+	var errs validate.Errors
+	if v.FileID == "" {
+		errs.Add("fileId", "required", "required")
+	}
+	if v.LockID == "" {
+		errs.Add("lockId", "required", "required")
 	}
 	return errs.Result()
 }
@@ -906,25 +923,26 @@ func (v Calendar) Validate() error {
 
 // CalendarEvent is a row of the calendar_event table.
 type CalendarEvent struct {
-	MeetingID   *string    `json:"meetingId" db:"meeting_id"`
-	ID          string     `json:"id" db:"id"`
-	CalendarID  string     `json:"calendarId" db:"calendar_id"`
-	Uid         string     `json:"uid" db:"uid"`
-	Organizer   string     `json:"organizer" db:"organizer"`
-	Title       string     `json:"title" db:"title"`
-	Description string     `json:"description" db:"description"`
-	Location    string     `json:"location" db:"location"`
-	AllDay      bool       `json:"allDay" db:"all_day"`
-	StartDate   string     `json:"startDate" db:"start_date"`
-	EndDate     string     `json:"endDate" db:"end_date"`
-	StartsAt    *time.Time `json:"startsAt" db:"starts_at"`
-	EndsAt      *time.Time `json:"endsAt" db:"ends_at"`
-	TimeZone    string     `json:"timeZone" db:"time_zone"`
-	Rrule       string     `json:"rrule" db:"rrule"`
-	Sequence    int        `json:"sequence" db:"sequence"`
-	Cancelled   bool       `json:"cancelled" db:"cancelled"`
-	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time  `json:"updatedAt" db:"updated_at"`
+	MeetingID       *string    `json:"meetingId" db:"meeting_id"`
+	ID              string     `json:"id" db:"id"`
+	CalendarID      string     `json:"calendarId" db:"calendar_id"`
+	Uid             string     `json:"uid" db:"uid"`
+	Organizer       string     `json:"organizer" db:"organizer"`
+	Title           string     `json:"title" db:"title"`
+	Description     string     `json:"description" db:"description"`
+	DescriptionHTML string     `json:"descriptionHtml" db:"description_html"`
+	Location        string     `json:"location" db:"location"`
+	AllDay          bool       `json:"allDay" db:"all_day"`
+	StartDate       string     `json:"startDate" db:"start_date"`
+	EndDate         string     `json:"endDate" db:"end_date"`
+	StartsAt        *time.Time `json:"startsAt" db:"starts_at"`
+	EndsAt          *time.Time `json:"endsAt" db:"ends_at"`
+	TimeZone        string     `json:"timeZone" db:"time_zone"`
+	Rrule           string     `json:"rrule" db:"rrule"`
+	Sequence        int        `json:"sequence" db:"sequence"`
+	Cancelled       bool       `json:"cancelled" db:"cancelled"`
+	CreatedAt       time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt       time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 // Validate applies the rules of CalendarEvent from schema.lidza.
@@ -950,6 +968,9 @@ func (v CalendarEvent) Validate() error {
 	}
 	if v.Description == "" {
 		errs.Add("description", "required", "required")
+	}
+	if v.DescriptionHTML == "" {
+		errs.Add("descriptionHtml", "required", "required")
 	}
 	if v.Location == "" {
 		errs.Add("location", "required", "required")
@@ -1205,8 +1226,41 @@ func (v Meeting) Validate() error {
 	return errs.Result()
 }
 
+// MeetingInvite is a row of the meeting_invite table.
+type MeetingInvite struct {
+	ID        string    `json:"id" db:"id"`
+	MeetingID string    `json:"meetingId" db:"meeting_id"`
+	EventID   string    `json:"eventId" db:"event_id"`
+	Code      string    `json:"code" db:"code"`
+	PinHash   string    `json:"pinHash" db:"pin_hash"`
+	PinSealed string    `json:"pinSealed" db:"pin_sealed"`
+	ExpiresAt time.Time `json:"expiresAt" db:"expires_at"`
+}
+
+// Validate applies the rules of MeetingInvite from schema.lidza.
+func (v MeetingInvite) Validate() error {
+	var errs validate.Errors
+	if v.MeetingID == "" {
+		errs.Add("meetingId", "required", "required")
+	}
+	if v.EventID == "" {
+		errs.Add("eventId", "required", "required")
+	}
+	if v.Code == "" {
+		errs.Add("code", "required", "required")
+	}
+	if v.PinHash == "" {
+		errs.Add("pinHash", "required", "required")
+	}
+	if v.PinSealed == "" {
+		errs.Add("pinSealed", "required", "required")
+	}
+	return errs.Result()
+}
+
 // MeetingParticipant is a row of the meeting_participant table.
 type MeetingParticipant struct {
+	GuestInviteID  *string   `json:"guestInviteId" db:"guest_invite_id"`
 	ID             string    `json:"id" db:"id"`
 	MeetingID      string    `json:"meetingId" db:"meeting_id"`
 	Subject        string    `json:"subject" db:"subject"`
@@ -1253,17 +1307,15 @@ func (v MeetingWebhook) Validate() error {
 
 // MailLabel is a row of the mail_label table.
 type MailLabel struct {
-	ID        string `json:"id" db:"id"`
-	MailboxID string `json:"mailboxId" db:"mailbox_id"`
-	Name      string `json:"name" db:"name"`
+	ID          string  `json:"id" db:"id"`
+	WorkspaceID *string `json:"workspaceId" db:"workspace_id"`
+	MailboxID   *string `json:"mailboxId" db:"mailbox_id"`
+	Name        string  `json:"name" db:"name"`
 }
 
 // Validate applies the rules of MailLabel from schema.lidza.
 func (v MailLabel) Validate() error {
 	var errs validate.Errors
-	if v.MailboxID == "" {
-		errs.Add("mailboxId", "required", "required")
-	}
 	if v.Name == "" {
 		errs.Add("name", "required", "required")
 	}
@@ -1590,6 +1642,236 @@ func (v SetupProbe) Validate() error {
 	}
 	if v.State == "" {
 		errs.Add("state", "required", "required")
+	}
+	return errs.Result()
+}
+
+// CorrespondenceLink is a row of the correspondence_link table.
+type CorrespondenceLink struct {
+	ID        string    `json:"id" db:"id"`
+	ContactID string    `json:"contactId" db:"contact_id"`
+	Source    string    `json:"source" db:"source"`
+	SourceID  string    `json:"sourceId" db:"source_id"`
+	CreatedBy string    `json:"createdBy" db:"created_by"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of CorrespondenceLink from schema.lidza.
+func (v CorrespondenceLink) Validate() error {
+	var errs validate.Errors
+	if v.ContactID == "" {
+		errs.Add("contactId", "required", "required")
+	}
+	if v.Source == "" {
+		errs.Add("source", "required", "required")
+	}
+	if v.Source != "" && !validate.Pattern("^(chat|document|meeting|calendar)$", v.Source) {
+		errs.Add("source", "pattern", "does not match ^(chat|document|meeting|calendar)$")
+	}
+	if v.SourceID == "" {
+		errs.Add("sourceId", "required", "required")
+	}
+	if v.CreatedBy == "" {
+		errs.Add("createdBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// ResourceLabel is a row of the resource_label table.
+type ResourceLabel struct {
+	ID       string `json:"id" db:"id"`
+	LabelID  string `json:"labelId" db:"label_id"`
+	Source   string `json:"source" db:"source"`
+	SourceID string `json:"sourceId" db:"source_id"`
+}
+
+// Validate applies the rules of ResourceLabel from schema.lidza.
+func (v ResourceLabel) Validate() error {
+	var errs validate.Errors
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
+	}
+	if v.Source == "" {
+		errs.Add("source", "required", "required")
+	}
+	if len(v.Source) > 20 {
+		errs.Add("source", "max", "at most 20 character(s)")
+	}
+	if v.SourceID == "" {
+		errs.Add("sourceId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// LLMUsage is a row of the llm_usage table.
+type LLMUsage struct {
+	ID       string    `json:"id" db:"id"`
+	At       time.Time `json:"at" db:"at"`
+	Provider string    `json:"provider" db:"provider"`
+	Model    string    `json:"model" db:"model"`
+	Label    string    `json:"label" db:"label"`
+	Input    int       `json:"input" db:"input"`
+	Output   int       `json:"output" db:"output"`
+	Ms       int       `json:"ms" db:"ms"`
+	Status   string    `json:"status" db:"status"`
+	Error    *string   `json:"error" db:"error"`
+}
+
+// Validate applies the rules of LLMUsage from schema.lidza.
+func (v LLMUsage) Validate() error {
+	var errs validate.Errors
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if v.Model == "" {
+		errs.Add("model", "required", "required")
+	}
+	if v.Label == "" {
+		errs.Add("label", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AssistantCache is a row of the assistant_cache table.
+type AssistantCache struct {
+	ID          string    `json:"id" db:"id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	CacheKey    string    `json:"cacheKey" db:"cache_key"`
+	LeaseToken  *string   `json:"leaseToken" db:"lease_token"`
+	Text        string    `json:"text" db:"text"`
+	Model       string    `json:"model" db:"model"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	ExpiresAt   time.Time `json:"expiresAt" db:"expires_at"`
+}
+
+// Validate applies the rules of AssistantCache from schema.lidza.
+func (v AssistantCache) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.CacheKey == "" {
+		errs.Add("cacheKey", "required", "required")
+	}
+	if len(v.CacheKey) > 64 {
+		errs.Add("cacheKey", "max", "at most 64 character(s)")
+	}
+	if v.Text == "" {
+		errs.Add("text", "required", "required")
+	}
+	if v.Model == "" {
+		errs.Add("model", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthFactor is a row of the auth_factor table.
+type AuthFactor struct {
+	Subject      string     `json:"subject" db:"subject"`
+	SecretSealed string     `json:"secretSealed" db:"secret_sealed"`
+	LastStep     int64      `json:"lastStep" db:"last_step"`
+	BackupCodes  []string   `json:"backupCodes" db:"backup_codes"`
+	EnabledAt    *time.Time `json:"enabledAt" db:"enabled_at"`
+	FailedCount  int        `json:"failedCount" db:"failed_count"`
+	FailedAt     *time.Time `json:"failedAt" db:"failed_at"`
+	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of AuthFactor from schema.lidza.
+func (v AuthFactor) Validate() error {
+	var errs validate.Errors
+	if v.SecretSealed == "" {
+		errs.Add("secretSealed", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthStepUp is a row of the auth_step_up table.
+type AuthStepUp struct {
+	ID        string    `json:"id" db:"id"`
+	Subject   string    `json:"subject" db:"subject"`
+	SessionID string    `json:"sessionId" db:"session_id"`
+	Purpose   string    `json:"purpose" db:"purpose"`
+	Target    string    `json:"target" db:"target"`
+	ExpiresAt time.Time `json:"expiresAt" db:"expires_at"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of AuthStepUp from schema.lidza.
+func (v AuthStepUp) Validate() error {
+	var errs validate.Errors
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.SessionID == "" {
+		errs.Add("sessionId", "required", "required")
+	}
+	if v.Purpose == "" {
+		errs.Add("purpose", "required", "required")
+	}
+	if v.Target == "" {
+		errs.Add("target", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthWorkspace is a row of the auth_workspace table.
+type AuthWorkspace struct {
+	ID        string    `json:"id" db:"id"`
+	Name      string    `json:"name" db:"name"`
+	CreatedBy string    `json:"createdBy" db:"created_by"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of AuthWorkspace from schema.lidza.
+func (v AuthWorkspace) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.CreatedBy == "" {
+		errs.Add("createdBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthInvite is a row of the auth_invite table.
+type AuthInvite struct {
+	ID         string     `json:"id" db:"id"`
+	Workspace  string     `json:"workspace" db:"workspace"`
+	Email      string     `json:"email" db:"email"`
+	Role       string     `json:"role" db:"role"`
+	TokenHash  string     `json:"tokenHash" db:"token_hash"`
+	InvitedBy  string     `json:"invitedBy" db:"invited_by"`
+	ExpiresAt  time.Time  `json:"expiresAt" db:"expires_at"`
+	AcceptedAt *time.Time `json:"acceptedAt" db:"accepted_at"`
+	AcceptedBy *string    `json:"acceptedBy" db:"accepted_by"`
+	RevokedAt  *time.Time `json:"revokedAt" db:"revoked_at"`
+	CreatedAt  time.Time  `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of AuthInvite from schema.lidza.
+func (v AuthInvite) Validate() error {
+	var errs validate.Errors
+	if v.Workspace == "" {
+		errs.Add("workspace", "required", "required")
+	}
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if v.Role == "" {
+		errs.Add("role", "required", "required")
+	}
+	if v.TokenHash == "" {
+		errs.Add("tokenHash", "required", "required")
+	}
+	if v.InvitedBy == "" {
+		errs.Add("invitedBy", "required", "required")
 	}
 	return errs.Result()
 }
@@ -2301,8 +2583,9 @@ func (v FileContent) Validate() error {
 
 // DriveListing is an API type.
 type DriveListing struct {
-	Folders []DriveFolder `json:"folders"`
-	Files   []DriveFile   `json:"files"`
+	Folders []DriveFolder    `json:"folders"`
+	Files   []DriveFile      `json:"files"`
+	Labels  []DriveFileLabel `json:"labels"`
 }
 
 // Validate applies the rules of DriveListing from schema.lidza.
@@ -2319,6 +2602,34 @@ func (v DriveListing) Validate() error {
 			errs.Add("files", "nested", err.Error())
 			break
 		}
+	}
+	for _, x := range v.Labels {
+		if err := x.Validate(); err != nil {
+			errs.Add("labels", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// DriveFileLabel is an API type.
+type DriveFileLabel struct {
+	FileID  string `json:"fileId"`
+	LabelID string `json:"labelId"`
+	Name    string `json:"name"`
+}
+
+// Validate applies the rules of DriveFileLabel from schema.lidza.
+func (v DriveFileLabel) Validate() error {
+	var errs validate.Errors
+	if v.FileID == "" {
+		errs.Add("fileId", "required", "required")
+	}
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
 	}
 	return errs.Result()
 }
@@ -2552,57 +2863,125 @@ func (v OpenShareInput) Validate() error {
 	return errs.Result()
 }
 
+// OfficeCapabilities is an API type.
+type OfficeCapabilities struct {
+	Extensions   []string `json:"extensions"`
+	ContentTypes []string `json:"contentTypes"`
+}
+
+// Validate applies the rules of OfficeCapabilities from schema.lidza.
+func (v OfficeCapabilities) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
 // OfficeConfig is an API type.
 type OfficeConfig struct {
-	ScriptURL string          `json:"scriptUrl"`
-	Config    json.RawMessage `json:"config"`
+	Provider       string `json:"provider"`
+	EditorURL      string `json:"editorUrl"`
+	AccessToken    string `json:"accessToken"`
+	AccessTokenTTL int    `json:"accessTokenTTL"`
+	ReadOnly       bool   `json:"readOnly"`
 }
 
 // Validate applies the rules of OfficeConfig from schema.lidza.
 func (v OfficeConfig) Validate() error {
 	var errs validate.Errors
-	if v.ScriptURL == "" {
-		errs.Add("scriptUrl", "required", "required")
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if v.EditorURL == "" {
+		errs.Add("editorUrl", "required", "required")
+	}
+	if v.AccessToken == "" {
+		errs.Add("accessToken", "required", "required")
 	}
 	return errs.Result()
 }
 
-// OfficeCallback is an API type.
-type OfficeCallback struct {
-	Key    string  `json:"key"`
-	Status int     `json:"status"`
-	URL    *string `json:"url"`
-	Token  *string `json:"token"`
+// OfficeConversionInput is an API type.
+type OfficeConversionInput struct {
+	Target string `json:"target"`
 }
 
-// Validate applies the rules of OfficeCallback from schema.lidza.
-func (v OfficeCallback) Validate() error {
+// Validate applies the rules of OfficeConversionInput from schema.lidza.
+func (v OfficeConversionInput) Validate() error {
 	var errs validate.Errors
-	if v.Key == "" {
-		errs.Add("key", "required", "required")
+	if v.Target == "" {
+		errs.Add("target", "required", "required")
+	}
+	if len(v.Target) < 3 {
+		errs.Add("target", "min", "at least 3 character(s)")
+	}
+	if len(v.Target) > 4 {
+		errs.Add("target", "max", "at most 4 character(s)")
 	}
 	return errs.Result()
 }
 
-// OfficeResult is an API type.
-type OfficeResult struct {
-	Error int `json:"error"`
+// OfficeConversion is an API type.
+type OfficeConversion struct {
+	Status      string `json:"status"`
+	Percent     int    `json:"percent"`
+	Name        string `json:"name"`
+	ContentType string `json:"contentType"`
+	Data        string `json:"data"`
 }
 
-// Validate applies the rules of OfficeResult from schema.lidza.
-func (v OfficeResult) Validate() error {
+// Validate applies the rules of OfficeConversion from schema.lidza.
+func (v OfficeConversion) Validate() error {
 	var errs validate.Errors
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.ContentType == "" {
+		errs.Add("contentType", "required", "required")
+	}
+	if v.Data == "" {
+		errs.Add("data", "required", "required")
+	}
+	return errs.Result()
+}
+
+// WordCopyInput is an API type.
+type WordCopyInput struct {
+	Text          string `json:"text"`
+	SourceVersion int    `json:"sourceVersion"`
+}
+
+// Validate applies the rules of WordCopyInput from schema.lidza.
+func (v WordCopyInput) Validate() error {
+	var errs validate.Errors
+	if v.Text == "" {
+		errs.Add("text", "required", "required")
+	}
+	if len(v.Text) < 1 {
+		errs.Add("text", "min", "at least 1 character(s)")
+	}
+	if len(v.Text) > 65536 {
+		errs.Add("text", "max", "at most 65536 character(s)")
+	}
+	if v.SourceVersion < 1 {
+		errs.Add("sourceVersion", "min", "at least 1")
+	}
 	return errs.Result()
 }
 
 // CalendarList is an API type.
 type CalendarList struct {
-	Items []Calendar `json:"items"`
+	DefaultCalendarID string     `json:"defaultCalendarId"`
+	Items             []Calendar `json:"items"`
 }
 
 // Validate applies the rules of CalendarList from schema.lidza.
 func (v CalendarList) Validate() error {
 	var errs validate.Errors
+	if v.DefaultCalendarID == "" {
+		errs.Add("defaultCalendarId", "required", "required")
+	}
 	for _, x := range v.Items {
 		if err := x.Validate(); err != nil {
 			errs.Add("items", "nested", err.Error())
@@ -2642,9 +3021,12 @@ func (v CalendarInput) Validate() error {
 
 // EventInput is an API type.
 type EventInput struct {
+	CreateMeeting   *bool      `json:"createMeeting"`
+	SendInvitations *bool      `json:"sendInvitations"`
 	ResetExceptions bool       `json:"resetExceptions"`
 	Title           string     `json:"title"`
 	Description     *string    `json:"description"`
+	DescriptionHTML *string    `json:"descriptionHtml"`
 	Location        *string    `json:"location"`
 	AllDay          bool       `json:"allDay"`
 	StartDate       *string    `json:"startDate"`
@@ -2673,6 +3055,12 @@ func (v EventInput) Validate() error {
 		x := *v.Description
 		if len(x) > 20000 {
 			errs.Add("description", "max", "at most 20000 character(s)")
+		}
+	}
+	if v.DescriptionHTML != nil {
+		x := *v.DescriptionHTML
+		if len(x) > 100000 {
+			errs.Add("descriptionHtml", "max", "at most 100000 character(s)")
 		}
 	}
 	if v.Location != nil {
@@ -2704,14 +3092,21 @@ func (v EventInput) Validate() error {
 
 // EventDetail is an API type.
 type EventDetail struct {
-	Event      CalendarEvent    `json:"event"`
-	Attendees  []EventAttendee  `json:"attendees"`
-	Exceptions []EventException `json:"exceptions"`
+	Dispatch   *CalendarDispatchResult `json:"dispatch"`
+	Event      CalendarEvent           `json:"event"`
+	Attendees  []EventAttendee         `json:"attendees"`
+	Exceptions []EventException        `json:"exceptions"`
 }
 
 // Validate applies the rules of EventDetail from schema.lidza.
 func (v EventDetail) Validate() error {
 	var errs validate.Errors
+	if v.Dispatch != nil {
+		x := *v.Dispatch
+		if err := x.Validate(); err != nil {
+			errs.Add("dispatch", "nested", err.Error())
+		}
+	}
 	if err := v.Event.Validate(); err != nil {
 		errs.Add("event", "nested", err.Error())
 	}
@@ -3117,12 +3512,13 @@ func (v ChatSendInput) Validate() error {
 
 // ChatMessage is an API type.
 type ChatMessage struct {
-	ID        string           `json:"id"`
-	Sender    string           `json:"sender"`
-	Body      string           `json:"body"`
-	Timestamp int              `json:"timestamp"`
-	File      *ChatMessageFile `json:"file"`
-	ReplyTo   *string          `json:"replyTo"`
+	ID         string           `json:"id"`
+	SenderName *string          `json:"senderName"`
+	Sender     string           `json:"sender"`
+	Body       string           `json:"body"`
+	Timestamp  int              `json:"timestamp"`
+	File       *ChatMessageFile `json:"file"`
+	ReplyTo    *string          `json:"replyTo"`
 }
 
 // Validate applies the rules of ChatMessage from schema.lidza.
@@ -3245,6 +3641,69 @@ type ChatMessageFile struct {
 // Validate applies the rules of ChatMessageFile from schema.lidza.
 func (v ChatMessageFile) Validate() error {
 	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	return errs.Result()
+}
+
+// GuestMeetingInput is an API type.
+type GuestMeetingInput struct {
+	Code string `json:"code"`
+	Pin  string `json:"pin"`
+	Name string `json:"name"`
+}
+
+// Validate applies the rules of GuestMeetingInput from schema.lidza.
+func (v GuestMeetingInput) Validate() error {
+	var errs validate.Errors
+	if v.Code == "" {
+		errs.Add("code", "required", "required")
+	}
+	if len(v.Code) < 9 {
+		errs.Add("code", "min", "at least 9 character(s)")
+	}
+	if len(v.Code) > 9 {
+		errs.Add("code", "max", "at most 9 character(s)")
+	}
+	if v.Pin == "" {
+		errs.Add("pin", "required", "required")
+	}
+	if len(v.Pin) < 6 {
+		errs.Add("pin", "min", "at least 6 character(s)")
+	}
+	if len(v.Pin) > 6 {
+		errs.Add("pin", "max", "at most 6 character(s)")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) < 1 {
+		errs.Add("name", "min", "at least 1 character(s)")
+	}
+	if len(v.Name) > 80 {
+		errs.Add("name", "max", "at most 80 character(s)")
+	}
+	return errs.Result()
+}
+
+// GuestMeetingAccess is an API type.
+type GuestMeetingAccess struct {
+	Token     string    `json:"token"`
+	ServerURL string    `json:"serverUrl"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Name      string    `json:"name"`
+}
+
+// Validate applies the rules of GuestMeetingAccess from schema.lidza.
+func (v GuestMeetingAccess) Validate() error {
+	var errs validate.Errors
+	if v.Token == "" {
+		errs.Add("token", "required", "required")
+	}
+	if v.ServerURL == "" {
+		errs.Add("serverUrl", "required", "required")
+	}
 	if v.Name == "" {
 		errs.Add("name", "required", "required")
 	}
@@ -3741,6 +4200,264 @@ func (v SetupClaimInput) Validate() error {
 	}
 	if len(v.Password) > 1024 {
 		errs.Add("password", "max", "at most 1024 character(s)")
+	}
+	return errs.Result()
+}
+
+// CorrespondenceEntry is an API type.
+type CorrespondenceEntry struct {
+	ID          string    `json:"id"`
+	Source      string    `json:"source"`
+	ContainerID string    `json:"containerId"`
+	Reason      string    `json:"reason"`
+	Linked      bool      `json:"linked"`
+	MailboxID   string    `json:"mailboxId"`
+	Subject     string    `json:"subject"`
+	Preview     string    `json:"preview"`
+	FromAddress string    `json:"fromAddress"`
+	ToAddress   string    `json:"toAddress"`
+	Status      string    `json:"status"`
+	At          time.Time `json:"at"`
+}
+
+// Validate applies the rules of CorrespondenceEntry from schema.lidza.
+func (v CorrespondenceEntry) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.Source == "" {
+		errs.Add("source", "required", "required")
+	}
+	if v.ContainerID == "" {
+		errs.Add("containerId", "required", "required")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
+	}
+	if v.MailboxID == "" {
+		errs.Add("mailboxId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.Preview == "" {
+		errs.Add("preview", "required", "required")
+	}
+	if v.FromAddress == "" {
+		errs.Add("fromAddress", "required", "required")
+	}
+	if v.ToAddress == "" {
+		errs.Add("toAddress", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	return errs.Result()
+}
+
+// CorrespondenceTimeline is an API type.
+type CorrespondenceTimeline struct {
+	Notices    []string              `json:"notices"`
+	Contact    Contact               `json:"contact"`
+	Items      []CorrespondenceEntry `json:"items"`
+	NextCursor string                `json:"nextCursor"`
+}
+
+// Validate applies the rules of CorrespondenceTimeline from schema.lidza.
+func (v CorrespondenceTimeline) Validate() error {
+	var errs validate.Errors
+	if err := v.Contact.Validate(); err != nil {
+		errs.Add("contact", "nested", err.Error())
+	}
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	if v.NextCursor == "" {
+		errs.Add("nextCursor", "required", "required")
+	}
+	return errs.Result()
+}
+
+// CorrespondenceLinkInput is an API type.
+type CorrespondenceLinkInput struct {
+	Source   string `json:"source"`
+	SourceID string `json:"sourceId"`
+}
+
+// Validate applies the rules of CorrespondenceLinkInput from schema.lidza.
+func (v CorrespondenceLinkInput) Validate() error {
+	var errs validate.Errors
+	if v.Source == "" {
+		errs.Add("source", "required", "required")
+	}
+	if v.Source != "" && !validate.Pattern("^(chat|document|meeting|calendar)$", v.Source) {
+		errs.Add("source", "pattern", "does not match ^(chat|document|meeting|calendar)$")
+	}
+	if v.SourceID == "" {
+		errs.Add("sourceId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// ResourceLabelInput is an API type.
+type ResourceLabelInput struct {
+	LabelID string `json:"labelId"`
+	Applied bool   `json:"applied"`
+}
+
+// Validate applies the rules of ResourceLabelInput from schema.lidza.
+func (v ResourceLabelInput) Validate() error {
+	var errs validate.Errors
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AssistantInput is an API type.
+type AssistantInput struct {
+	Source         string  `json:"source"`
+	Action         string  `json:"action"`
+	Content        string  `json:"content"`
+	ContextVersion *string `json:"contextVersion"`
+	Instructions   *string `json:"instructions"`
+}
+
+// Validate applies the rules of AssistantInput from schema.lidza.
+func (v AssistantInput) Validate() error {
+	var errs validate.Errors
+	if v.Source == "" {
+		errs.Add("source", "required", "required")
+	}
+	if len(v.Source) < 1 {
+		errs.Add("source", "min", "at least 1 character(s)")
+	}
+	if len(v.Source) > 20 {
+		errs.Add("source", "max", "at most 20 character(s)")
+	}
+	if v.Action == "" {
+		errs.Add("action", "required", "required")
+	}
+	if len(v.Action) < 1 {
+		errs.Add("action", "min", "at least 1 character(s)")
+	}
+	if len(v.Action) > 30 {
+		errs.Add("action", "max", "at most 30 character(s)")
+	}
+	if v.Content == "" {
+		errs.Add("content", "required", "required")
+	}
+	if len(v.Content) > 20000 {
+		errs.Add("content", "max", "at most 20000 character(s)")
+	}
+	if v.ContextVersion != nil {
+		x := *v.ContextVersion
+		if len(x) > 200 {
+			errs.Add("contextVersion", "max", "at most 200 character(s)")
+		}
+	}
+	if v.Instructions != nil {
+		x := *v.Instructions
+		if len(x) > 2000 {
+			errs.Add("instructions", "max", "at most 2000 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// AssistantResult is an API type.
+type AssistantResult struct {
+	Text      string `json:"text"`
+	Model     string `json:"model"`
+	Truncated bool   `json:"truncated"`
+	Cached    bool   `json:"cached"`
+}
+
+// Validate applies the rules of AssistantResult from schema.lidza.
+func (v AssistantResult) Validate() error {
+	var errs validate.Errors
+	if v.Text == "" {
+		errs.Add("text", "required", "required")
+	}
+	if v.Model == "" {
+		errs.Add("model", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AISettings is an API type.
+type AISettings struct {
+	Enabled      bool   `json:"enabled"`
+	Ready        bool   `json:"ready"`
+	Provider     string `json:"provider"`
+	Model        string `json:"model"`
+	BaseURL      string `json:"baseUrl"`
+	HasKey       bool   `json:"hasKey"`
+	MaxTokens    int    `json:"maxTokens"`
+	CanConfigure bool   `json:"canConfigure"`
+}
+
+// Validate applies the rules of AISettings from schema.lidza.
+func (v AISettings) Validate() error {
+	var errs validate.Errors
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if v.Model == "" {
+		errs.Add("model", "required", "required")
+	}
+	if v.BaseURL == "" {
+		errs.Add("baseUrl", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AISettingsInput is an API type.
+type AISettingsInput struct {
+	Enabled   bool    `json:"enabled"`
+	Provider  string  `json:"provider"`
+	Model     string  `json:"model"`
+	BaseURL   *string `json:"baseUrl"`
+	APIKey    *string `json:"apiKey"`
+	MaxTokens int     `json:"maxTokens"`
+}
+
+// Validate applies the rules of AISettingsInput from schema.lidza.
+func (v AISettingsInput) Validate() error {
+	var errs validate.Errors
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if len(v.Provider) > 30 {
+		errs.Add("provider", "max", "at most 30 character(s)")
+	}
+	if v.Model == "" {
+		errs.Add("model", "required", "required")
+	}
+	if len(v.Model) > 120 {
+		errs.Add("model", "max", "at most 120 character(s)")
+	}
+	if v.BaseURL != nil {
+		x := *v.BaseURL
+		if len(x) > 500 {
+			errs.Add("baseUrl", "max", "at most 500 character(s)")
+		}
+	}
+	if v.APIKey != nil {
+		x := *v.APIKey
+		if len(x) > 5000 {
+			errs.Add("apiKey", "max", "at most 5000 character(s)")
+		}
+	}
+	if v.MaxTokens < 128 {
+		errs.Add("maxTokens", "min", "at least 128")
+	}
+	if v.MaxTokens > 4096 {
+		errs.Add("maxTokens", "max", "at most 4096")
 	}
 	return errs.Result()
 }

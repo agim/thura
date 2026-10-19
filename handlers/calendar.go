@@ -3,30 +3,18 @@ package handlers
 import (
 	"context"
 	"encoding/base64"
-	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/pkg/router"
 	"io"
 	"strconv"
 	q "thura/db/queries/gen"
 	"thura/internal/calendar"
-	"thura/internal/workspace"
 	"thura/schema"
 	"time"
 )
 
 func ListCalendars(ctx context.Context, r *router.Request[router.None]) (schema.CalendarList, error) {
-	w := r.Param("workspaceId")
-	if err := workspace.RequireMember(ctx, w); err != nil {
-		return schema.CalendarList{}, err
-	}
-	subject := auth.CurrentUser(ctx).ID
-	rows, err := q.New(db.From(ctx)).ListCalendars(ctx, q.ListCalendarsParams{WorkspaceID: w, OwnerSubject: &subject})
-	out := schema.CalendarList{Items: []schema.Calendar{}}
-	for _, c := range rows {
-		out.Items = append(out.Items, calendar.View(c))
-	}
-	return out, err
+	return calendar.List(ctx, r.Param("workspaceId"))
 }
 func CreateCalendar(ctx context.Context, r *router.Request[schema.CalendarInput]) (schema.Calendar, error) {
 	return calendar.Create(ctx, r.Param("workspaceId"), r.Body)

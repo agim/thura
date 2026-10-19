@@ -12,6 +12,7 @@ import (
 	"sync"
 	"testing"
 	"thura/app"
+	provider "thura/internal/providers/matrix"
 	"thura/internal/workspace"
 	"thura/schema"
 	"time"
@@ -22,6 +23,7 @@ func TestChatScopesPrivateRoomsAndIdempotentSends(t *testing.T) {
 	var mu sync.Mutex
 	created := 0
 	sent := map[string]string{}
+	sender := "@remote:elsewhere.test"
 	matrix := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer "+token {
 			t.Error("wrong service credential")
@@ -47,7 +49,7 @@ func TestChatScopesPrivateRoomsAndIdempotentSends(t *testing.T) {
 			}
 			json.NewEncoder(w).Encode(map[string]string{"event_id": sent[key]})
 		case strings.HasSuffix(r.URL.Path, "/messages"):
-			json.NewEncoder(w).Encode(map[string]any{"chunk": []any{map[string]any{"event_id": "$message1", "sender": "@remote:elsewhere.test", "type": "m.room.message", "origin_server_ts": 1760000000000, "content": map[string]string{"msgtype": "m.text", "body": "Remote message"}}}, "end": "older-cursor"})
+			json.NewEncoder(w).Encode(map[string]any{"chunk": []any{map[string]any{"event_id": "$message1", "sender": sender, "type": "m.room.message", "origin_server_ts": 1760000000000, "content": map[string]string{"msgtype": "m.text", "body": "Remote message"}}}, "end": "older-cursor"})
 		default:
 			json.NewEncoder(w).Encode(map[string]any{})
 		}
@@ -123,6 +125,16 @@ func TestChatScopesPrivateRoomsAndIdempotentSends(t *testing.T) {
 	status("GET", path+"/messages", nil, &timeline, 200)
 	if len(timeline.Items) != 1 || timeline.Items[0].Body != "Remote message" {
 		t.Fatal("timeline missing")
+	}
+	if timeline.Items[0].SenderName != nil {
+		t.Fatal("unknown remote sender must not acquire a workspace name")
+	}
+	mu.Lock()
+	sender = (provider.Config{ServerName: "matrix.test"}).User(owner.Subject)
+	mu.Unlock()
+	status("GET", path+"/messages", nil, &timeline, 200)
+	if len(timeline.Items) != 1 || timeline.Items[0].SenderName == nil || *timeline.Items[0].SenderName != "Owner" {
+		t.Fatal("workspace sender must resolve to their current name or email")
 	}
 	var first, repeat schema.ChatEventResult
 	send := schema.ChatSendInput{TransactionID: uuid.NewString(), Body: "Hello"}

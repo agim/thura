@@ -12,7 +12,8 @@
     "lidza/jobs",
     "lidza/mail",
     "lidza/storage",
-    "lidza/audit"
+    "lidza/audit",
+    "lidza/llm"
   ],
   "sdk": {},
   "deploy": {},

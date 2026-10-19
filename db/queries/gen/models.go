@@ -143,6 +143,17 @@ func (ns NullWorkspaceRole) Value() (driver.Value, error) {
 	return string(ns.WorkspaceRole), nil
 }
 
+type AssistantCache struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	CacheKey    string    `json:"cache_key"`
+	LeaseToken  *string   `json:"lease_token"`
+	Text        string    `json:"text"`
+	Model       string    `json:"model"`
+	CreatedAt   time.Time `json:"created_at"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
 type AuditEvent struct {
 	ID        string    `json:"id"`
 	At        time.Time `json:"at"`
@@ -179,6 +190,18 @@ type AuthConnection struct {
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
+type AuthFactor struct {
+	Subject      string     `json:"subject"`
+	SecretSealed string     `json:"secret_sealed"`
+	LastStep     int64      `json:"last_step"`
+	BackupCodes  []string   `json:"backup_codes"`
+	EnabledAt    *time.Time `json:"enabled_at"`
+	FailedCount  int32      `json:"failed_count"`
+	FailedAt     *time.Time `json:"failed_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
 type AuthIdentity struct {
 	ID              string    `json:"id"`
 	Provider        string    `json:"provider"`
@@ -188,6 +211,20 @@ type AuthIdentity struct {
 	Name            *string   `json:"name"`
 	CreatedAt       time.Time `json:"created_at"`
 	LastUsedAt      time.Time `json:"last_used_at"`
+}
+
+type AuthInvite struct {
+	ID         string     `json:"id"`
+	Workspace  string     `json:"workspace"`
+	Email      string     `json:"email"`
+	Role       string     `json:"role"`
+	TokenHash  string     `json:"token_hash"`
+	InvitedBy  string     `json:"invited_by"`
+	ExpiresAt  time.Time  `json:"expires_at"`
+	AcceptedAt *time.Time `json:"accepted_at"`
+	AcceptedBy *string    `json:"accepted_by"`
+	RevokedAt  *time.Time `json:"revoked_at"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
 
 type AuthMember struct {
@@ -220,6 +257,16 @@ type AuthSession struct {
 	CreatedAt       time.Time  `json:"created_at"`
 }
 
+type AuthStepUp struct {
+	ID        string    `json:"id"`
+	Subject   string    `json:"subject"`
+	SessionID string    `json:"session_id"`
+	Purpose   string    `json:"purpose"`
+	Target    string    `json:"target"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type AuthToken struct {
 	ID        string     `json:"id"`
 	Purpose   string     `json:"purpose"`
@@ -240,6 +287,14 @@ type AuthUser struct {
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
+type AuthWorkspace struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	CreatedBy string    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type Calendar struct {
 	ID           string    `json:"id"`
 	WorkspaceID  string    `json:"workspace_id"`
@@ -258,25 +313,26 @@ type CalendarDispatch struct {
 }
 
 type CalendarEvent struct {
-	MeetingID   *string    `json:"meeting_id"`
-	ID          string     `json:"id"`
-	CalendarID  string     `json:"calendar_id"`
-	Uid         string     `json:"uid"`
-	Organizer   string     `json:"organizer"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Location    string     `json:"location"`
-	AllDay      bool       `json:"all_day"`
-	StartDate   string     `json:"start_date"`
-	EndDate     string     `json:"end_date"`
-	StartsAt    *time.Time `json:"starts_at"`
-	EndsAt      *time.Time `json:"ends_at"`
-	TimeZone    string     `json:"time_zone"`
-	Rrule       string     `json:"rrule"`
-	Sequence    int32      `json:"sequence"`
-	Cancelled   bool       `json:"cancelled"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	MeetingID       *string    `json:"meeting_id"`
+	ID              string     `json:"id"`
+	CalendarID      string     `json:"calendar_id"`
+	Uid             string     `json:"uid"`
+	Organizer       string     `json:"organizer"`
+	Title           string     `json:"title"`
+	Description     string     `json:"description"`
+	DescriptionHTML string     `json:"description_html"`
+	Location        string     `json:"location"`
+	AllDay          bool       `json:"all_day"`
+	StartDate       string     `json:"start_date"`
+	EndDate         string     `json:"end_date"`
+	StartsAt        *time.Time `json:"starts_at"`
+	EndsAt          *time.Time `json:"ends_at"`
+	TimeZone        string     `json:"time_zone"`
+	Rrule           string     `json:"rrule"`
+	Sequence        int32      `json:"sequence"`
+	Cancelled       bool       `json:"cancelled"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 type CalendarReminder struct {
@@ -324,6 +380,15 @@ type Contact struct {
 	Phone       string    `json:"phone"`
 	Favorite    bool      `json:"favorite"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type CorrespondenceLink struct {
+	ID        string    `json:"id"`
+	ContactID string    `json:"contact_id"`
+	Source    string    `json:"source"`
+	SourceID  string    `json:"source_id"`
+	CreatedBy string    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type DriveFile struct {
@@ -419,6 +484,7 @@ type Job struct {
 	LastError   *string    `json:"last_error"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UniqueKey   *string    `json:"unique_key"`
+	TraceParent *string    `json:"trace_parent"`
 }
 
 type JobSchedule struct {
@@ -428,6 +494,19 @@ type JobSchedule struct {
 	LastRunAt *time.Time `json:"last_run_at"`
 	LastJobID *string    `json:"last_job_id"`
 	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+type LlmUsage struct {
+	ID       string    `json:"id"`
+	At       time.Time `json:"at"`
+	Provider string    `json:"provider"`
+	Model    string    `json:"model"`
+	Label    string    `json:"label"`
+	Input    int32     `json:"input"`
+	Output   int32     `json:"output"`
+	Ms       int32     `json:"ms"`
+	Status   string    `json:"status"`
+	Error    *string   `json:"error"`
 }
 
 type MailAttachment struct {
@@ -468,9 +547,10 @@ type MailItem struct {
 }
 
 type MailLabel struct {
-	ID        string `json:"id"`
-	MailboxID string `json:"mailbox_id"`
-	Name      string `json:"name"`
+	ID          string  `json:"id"`
+	WorkspaceID *string `json:"workspace_id"`
+	MailboxID   *string `json:"mailbox_id"`
+	Name        string  `json:"name"`
 }
 
 type MailMessage struct {
@@ -520,7 +600,18 @@ type Meeting struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
+type MeetingInvite struct {
+	ID        string    `json:"id"`
+	MeetingID string    `json:"meeting_id"`
+	EventID   string    `json:"event_id"`
+	Code      string    `json:"code"`
+	PinHash   string    `json:"pin_hash"`
+	PinSealed string    `json:"pin_sealed"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
 type MeetingParticipant struct {
+	GuestInviteID  *string   `json:"guest_invite_id"`
 	ID             string    `json:"id"`
 	MeetingID      string    `json:"meeting_id"`
 	Subject        string    `json:"subject"`
@@ -542,9 +633,7 @@ type OfficeSession struct {
 	FileID        string    `json:"file_id"`
 	Subject       string    `json:"subject"`
 	SourceVersion int32     `json:"source_version"`
-	BaseVersion   int32     `json:"base_version"`
 	DocumentKey   string    `json:"document_key"`
-	LastChecksum  string    `json:"last_checksum"`
 	ExpiresAt     time.Time `json:"expires_at"`
 	CreatedAt     time.Time `json:"created_at"`
 }
@@ -556,6 +645,13 @@ type ReminderNotice struct {
 	Sequence    int32     `json:"sequence"`
 	InstanceKey string    `json:"instance_key"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type ResourceLabel struct {
+	ID       string `json:"id"`
+	LabelID  string `json:"label_id"`
+	Source   string `json:"source"`
+	SourceID string `json:"source_id"`
 }
 
 type ServerSetup struct {
@@ -672,6 +768,14 @@ type UploadSession struct {
 	ExpiresAt    time.Time  `json:"expires_at"`
 	CompletedAt  *time.Time `json:"completed_at"`
 	CreatedAt    time.Time  `json:"created_at"`
+}
+
+type WopiLock struct {
+	ID          string    `json:"id"`
+	FileID      string    `json:"file_id"`
+	LockID      string    `json:"lock_id"`
+	BaseVersion int32     `json:"base_version"`
+	ExpiresAt   time.Time `json:"expires_at"`
 }
 
 type Workspace struct {

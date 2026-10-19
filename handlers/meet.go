@@ -19,3 +19,7 @@ func JoinMeeting(ctx context.Context, r *router.Request[router.None]) (schema.Me
 func EndMeeting(ctx context.Context, r *router.Request[router.None]) (schema.Meeting, error) {
 	return meet.End(ctx, r.Param("workspaceId"), r.Param("id"))
 }
+
+func JoinGuestMeeting(ctx context.Context, r *router.Request[schema.GuestMeetingInput]) (schema.GuestMeetingAccess, error) {
+	return meet.JoinGuest(ctx, r.Body)
+}

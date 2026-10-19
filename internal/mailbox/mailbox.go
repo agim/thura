@@ -19,6 +19,8 @@ import (
 	"regexp"
 	"strings"
 	queries "thura/db/queries/gen"
+	"thura/internal/platform/objectstore"
+	"thura/internal/richtext"
 	"thura/internal/workspace"
 	"thura/schema"
 	"time"
@@ -77,7 +79,11 @@ func ViewMailbox(m queries.Mailbox) schema.Mailbox {
 	return schema.Mailbox{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Signature: m.Signature, CreatedAt: m.CreatedAt}
 }
 func View(i queries.MailItem) schema.MailItem {
-	return schema.MailItem{ID: i.ID, MailboxID: i.MailboxID, AuthorID: i.AuthorID, Folder: schema.MailFolder(i.Folder), FromAddress: i.FromAddress, ToAddress: i.ToAddress, Cc: i.Cc, Bcc: i.Bcc, Subject: i.Subject, TextBody: i.TextBody, HTMLBody: ReaderHTML(i.HTMLBody), Status: i.Status, Starred: i.Starred, Unread: i.Unread, ProviderID: i.ProviderID, RawKey: i.RawKey, ExternalID: i.ExternalID, ThreadID: i.ThreadID, MessageID: i.MessageID, InReplyTo: i.InReplyTo, ReferencesHeader: i.ReferencesHeader, SendAt: i.SendAt, CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt}
+	formatted := ReaderHTML(i.HTMLBody)
+	if i.Folder == queries.MailFolderDrafts {
+		formatted = richtext.Clean(i.HTMLBody)
+	}
+	return schema.MailItem{ID: i.ID, MailboxID: i.MailboxID, AuthorID: i.AuthorID, Folder: schema.MailFolder(i.Folder), FromAddress: i.FromAddress, ToAddress: i.ToAddress, Cc: i.Cc, Bcc: i.Bcc, Subject: i.Subject, TextBody: i.TextBody, HTMLBody: formatted, Status: i.Status, Starred: i.Starred, Unread: i.Unread, ProviderID: i.ProviderID, RawKey: i.RawKey, ExternalID: i.ExternalID, ThreadID: i.ThreadID, MessageID: i.MessageID, InReplyTo: i.InReplyTo, ReferencesHeader: i.ReferencesHeader, SendAt: i.SendAt, CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt}
 }
 func Attachment(a queries.MailAttachment) schema.AttachmentView {
 	return schema.AttachmentView{ID: a.ID, Name: a.Name, ContentType: a.ContentType, Size: int(a.Size), ContentID: ContentID(a.ContentID)}
@@ -332,7 +338,7 @@ func SaveAttachment(ctx context.Context, workspaceID, mailboxID, itemID string, 
 		size += int64(a.Size)
 	}
 	key := fmt.Sprintf("mail/%s/%s/attachment-%d", mailboxID, itemID, time.Now().UnixNano())
-	object, err := storage.From(ctx).Put(ctx, key, file.Body, storage.PutOptions{ContentType: file.ContentType})
+	object, err := objectstore.Put(ctx, key, file.Body, storage.PutOptions{ContentType: file.ContentType})
 	if err != nil {
 		return schema.AttachmentView{}, err
 	}

@@ -5,7 +5,7 @@ async function compose(page: Page) {
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('button', { name: 'Compose', exact: true }).click()
+  await page.getByRole('button', { name: 'New message', exact: true }).click()
 }
 
 test('autosave serializes slow requests and persists the newest edits across reload', async ({ page }) => {
@@ -37,7 +37,7 @@ test('autosave serializes slow requests and persists the newest edits across rel
   await page.reload()
   await page.getByRole('button', { name: 'Drafts', exact: true }).click()
   await page.getByRole('button').filter({ has: page.getByText(subject, { exact: true }) }).click()
-  await expect(page.getByLabel('Message', { exact: true })).toHaveValue('Newest snapshot survives')
+  await expect(page.getByLabel('Message', { exact: true })).toHaveText('Newest snapshot survives')
 })
 
 test('failed autosave stays visibly unsaved and an explicit retry preserves the draft', async ({ page }) => {
@@ -55,12 +55,12 @@ test('failed autosave stays visibly unsaved and an explicit retry preserves the 
   await page.getByLabel('Message', { exact: true }).fill('Keep these unsaved edits')
   await expect(page.getByRole('status')).toContainText('Draft not saved')
   await expect(page.getByRole('alert')).toBeVisible()
-  await expect(page.getByLabel('Message', { exact: true })).toHaveValue('Keep these unsaved edits')
+  await expect(page.getByLabel('Message', { exact: true })).toHaveText('Keep these unsaved edits')
   await page.getByRole('button', { name: 'Save draft', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('Draft saved')
   await expect(page.getByRole('alert')).toHaveCount(0)
   await page.reload()
   await page.getByRole('button', { name: 'Drafts', exact: true }).click()
   await page.getByRole('button').filter({ has: page.getByText(subject, { exact: true }) }).click()
-  await expect(page.getByLabel('Message', { exact: true })).toHaveValue('Keep these unsaved edits')
+  await expect(page.getByLabel('Message', { exact: true })).toHaveText('Keep these unsaved edits')
 })

@@ -13,10 +13,10 @@ SELECT * FROM calendar_event WHERE calendar_id=$1 AND id=$2 FOR UPDATE;
 -- name: FindCalendarEventUID :one
 SELECT * FROM calendar_event WHERE calendar_id=$1 AND uid=$2;
 -- name: CreateCalendarEvent :one
-INSERT INTO calendar_event(calendar_id,uid,organizer,title,description,location,all_day,start_date,end_date,starts_at,ends_at,time_zone,rrule)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *;
+INSERT INTO calendar_event(calendar_id,uid,organizer,title,description,location,all_day,start_date,end_date,starts_at,ends_at,time_zone,rrule,description_html)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *;
 -- name: UpdateCalendarEvent :one
-UPDATE calendar_event SET title=$3,description=$4,location=$5,all_day=$6,start_date=$7,end_date=$8,starts_at=$9,ends_at=$10,time_zone=$11,rrule=$12,sequence=sequence+1,updated_at=now()
+UPDATE calendar_event SET title=$3,description=$4,location=$5,all_day=$6,start_date=$7,end_date=$8,starts_at=$9,ends_at=$10,time_zone=$11,rrule=$12,description_html=$13,sequence=sequence+1,updated_at=now()
 WHERE calendar_id=$1 AND id=$2 RETURNING *;
 -- name: BumpEventSequence :one
 UPDATE calendar_event SET sequence=sequence+1,updated_at=now() WHERE id=$1 RETURNING *;
@@ -44,7 +44,7 @@ SELECT COUNT(*) FROM calendar WHERE workspace_id=$1;
 -- name: CountWorkspaceEvents :one
 SELECT COUNT(*) FROM calendar_event e JOIN calendar c ON c.id=e.calendar_id WHERE c.workspace_id=$1;
 -- name: ImportCalendarEvent :one
-UPDATE calendar_event SET organizer=$3,title=$4,description=$5,location=$6,all_day=$7,start_date=$8,end_date=$9,starts_at=$10,ends_at=$11,time_zone=$12,rrule=$13,sequence=$14,cancelled=$15,updated_at=now() WHERE calendar_id=$1 AND id=$2 RETURNING *;
+UPDATE calendar_event SET organizer=$3,title=$4,description=$5,description_html='',location=$6,all_day=$7,start_date=$8,end_date=$9,starts_at=$10,ends_at=$11,time_zone=$12,rrule=$13,sequence=$14,cancelled=$15,updated_at=now() WHERE calendar_id=$1 AND id=$2 RETURNING *;
 -- name: SetImportedEventSequence :one
 UPDATE calendar_event SET sequence=$2,cancelled=$3 WHERE id=$1 RETURNING *;
 -- name: ListCalendarAttendees :many
@@ -54,3 +54,8 @@ SELECT x.* FROM event_exception x JOIN calendar_event e ON e.id=x.event_id WHERE
 
 -- name: BindCalendarMeeting :one
 UPDATE calendar_event SET meeting_id=$2, sequence=sequence+1, updated_at=now() WHERE id=$1 RETURNING *;
+
+-- name: EnsurePersonalCalendar :exec
+INSERT INTO calendar(id, workspace_id, name, color, owner_subject)
+VALUES($1, $2, 'My calendar', '#0066ff', $3)
+ON CONFLICT(id) DO NOTHING;

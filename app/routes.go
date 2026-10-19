@@ -9,7 +9,8 @@ import (
 	"thura/handlers"
 	"thura/internal/federation"
 	"thura/internal/meet"
-	"thura/internal/office"
+	"thura/internal/providers/collabora"
+	"thura/internal/wopi"
 
 	"thura/schema"
 )
@@ -25,9 +26,12 @@ func routes(r *router.Router) {
 	// Versioned peer wire endpoint; all application routes stay under /api.
 	r.HandleFunc("POST /api/v1/smip/v0.1/messages", federation.Receive)
 	r.HandleFunc("POST /api/v1/meet/webhook", meet.Webhook)
-	r.HandleFunc("GET /api/v1/office/source", office.Source)
-	r.HandleFunc("POST /api/v1/office/callback/{id}", office.Callback)
+	r.HandleFunc("GET /api/v1/wopi/files/{id}", wopi.Handler)
+	r.HandleFunc("POST /api/v1/wopi/files/{id}", wopi.Handler)
+	r.HandleFunc("GET /api/v1/wopi/files/{id}/contents", wopi.Handler)
+	r.HandleFunc("POST /api/v1/wopi/files/{id}/contents", wopi.Handler)
 	auth.Mount(r, auth.Options{NoRegister: true, Providers: []auth.Provider{}, Title: "Thura"})
+	r.Group("/api/v1/collabora", auth.Require()).HandleFunc("/api/v1/collabora/", collabora.Proxy)
 	router.Route(r, "GET /api/v1/hello/{name}", hello)
 	router.Route(r, "POST /api/v1/inbound/{mailboxId}", handlers.ReceiveMail, router.UploadLimit(12<<20))
 	router.Route(r.Group("/api/v1/invitations", auth.Optional()), "POST /api/v1/invitations/accept", handlers.AcceptInvite, auth.Throttle())
@@ -36,7 +40,13 @@ func routes(r *router.Router) {
 	router.Route(reply, "POST /api/v1/calendar-replies/open", handlers.OpenCalendarReply)
 	router.Route(reply, "POST /api/v1/calendar-replies/respond", handlers.ReplyCalendar)
 	router.Route(reply, "POST /api/v1/calendar-replies/ics", handlers.ReplyCalendarICS)
+	router.Route(r.Group("/api/v1/meeting-guests", auth.Optional(), middleware.RateLimit(middleware.RateLimitOptions{RPS: 1, Burst: 10})), "POST /api/v1/meeting-guests/join", handlers.JoinGuestMeeting)
 	g := r.Group("/api/v1", auth.Require())
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/ai/settings", handlers.GetAISettings)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/ai/settings", handlers.SaveAISettings)
+	ai := r.Group("/api/v1/workspaces", auth.Require(), middleware.RateLimit(middleware.RateLimitOptions{RPS: 0.2, Burst: 3}))
+	router.Route(ai, "POST /api/v1/workspaces/{workspaceId}/ai/assist", handlers.RunAssistant)
+	router.Route(ai, "POST /api/v1/workspaces/{workspaceId}/ai/test", handlers.TestAIConnection)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/smip/outbox", handlers.QueueSmipMessage)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/smip/outbox", handlers.ListSmipOutbox)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/smip/outbox/{id}/resume", handlers.ResumeSmipMessage)
@@ -56,6 +66,7 @@ func routes(r *router.Router) {
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/chat", handlers.ListChatRooms)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/chat", handlers.CreateChatRoom)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/chat/{id}/messages", handlers.ChatTimeline)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/chat/{id}/search", handlers.SearchChatMessages)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/chat/{id}/messages", handlers.SendChatMessage)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/chat/{id}/invitations", handlers.InviteChatRemote)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/chat/{id}/bans", handlers.BanChatRemote)
@@ -64,6 +75,15 @@ func routes(r *router.Router) {
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/chat/{id}/files", handlers.DownloadChatFile)
 
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts", handlers.ListContacts)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts/{id}/loop", handlers.GetLoop)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts/{id}/loop/sources", handlers.ListLoopSources)
+	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/contacts/{id}/loop/links", handlers.LinkLoop)
+	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/contacts/{id}/loop/links/{source}/{sourceId}", handlers.UnlinkLoop)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/files/{id}", handlers.GetDriveFile)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/chat/{id}", handlers.GetChatRoom)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/meet/{id}", handlers.GetMeeting)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars/{calendarId}", handlers.GetCalendar)
+
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/contacts", handlers.CreateContact)
 	router.Route(g, "PATCH /api/v1/workspaces/{workspaceId}/contacts/{id}", handlers.UpdateContact)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/contacts/{id}", handlers.DeleteContact)
@@ -75,6 +95,12 @@ func routes(r *router.Router) {
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/invitations/{id}", handlers.RevokeInvite)
 	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events/{id}/meeting", handlers.BindCalendarMeeting)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes", handlers.ListMailboxes)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/labels", handlers.ListWorkspaceLabels)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/labels", handlers.CreateWorkspaceLabel)
+	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/labels/{labelId}", handlers.DeleteWorkspaceLabel)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/resources/{source}/{id}/labels", handlers.ListResourceLabels)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/resources/{source}/{id}/labels", handlers.CreateResourceLabel)
+	router.Route(g, "PATCH /api/v1/workspaces/{workspaceId}/resources/{source}/{id}/labels", handlers.ChangeResourceLabel)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/labels", handlers.ListMailLabels)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/labels", handlers.CreateMailLabel)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/mailboxes/{mailboxId}/labels/{labelId}", handlers.DeleteMailLabel)
@@ -109,7 +135,11 @@ func routes(r *router.Router) {
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares", handlers.CreateDriveShare)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares", handlers.ListDriveShares)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares/{shareId}", handlers.RevokeDriveShare)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/office-capabilities", handlers.GetOfficeCapabilities)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/office", handlers.OpenOfficeDocument)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/convert", handlers.ConvertOfficeDocument)
+	router.Route(ai, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/ocr", handlers.RequestDriveOCR)
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/word", handlers.ReconstructWordDocument)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars", handlers.ListCalendars)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/calendars", handlers.CreateCalendar)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/calendars/{calendarId}/events", handlers.ListCalendarEvents)

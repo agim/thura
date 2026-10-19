@@ -1,3 +1,5 @@
+import { ActionRow } from './ActionRow'
+import { ActionButton } from './ActionButton'
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { api, type AttachmentView } from '@lidza/client'
@@ -43,10 +45,10 @@ export function MailReader({ workspaceId, mailboxId, id, html, text, attachments
   const clean = DOMPurify.sanitize(container.innerHTML, { FORBID_TAGS: ['style', 'svg', 'math', 'iframe', 'form', 'video', 'audio'], FORBID_ATTR: ['style', 'href', 'srcset', 'action'] })
   const srcDoc = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{font:14px/1.6 system-ui;overflow-wrap:anywhere}img{max-width:100%;height:auto}table{max-width:100%}pre{white-space:pre-wrap}</style>${clean}`
   return <div>
-    {text && html && <button onClick={() => setFormatted(value => !value)}>{formatted ? 'View plain text' : 'View formatted email'}</button>}
+    <ActionRow label="Email display actions">{text && html && <ActionButton onClick={() => setFormatted(value => !value)}>{formatted ? 'View plain text' : 'View formatted email'}</ActionButton>}
+    {formatted && embedded.length > 0 && <ActionButton disabled={load.isPending} onClick={() => load.mutate()}>{images.size ? 'Reload embedded images' : 'Show embedded images'}</ActionButton>}</ActionRow>
     {formatted ? <>
       <p className="small quiet">External images and links are blocked. Embedded images load only when requested.</p>
-      {embedded.length > 0 && <button disabled={load.isPending} onClick={() => load.mutate()}>{images.size ? 'Reload embedded images' : 'Show embedded images'}</button>}
       {load.isPending && <p role="status">Loading embedded images…</p>}
       {(load.error || imageError) && <p role="alert">{load.error ? userError(load.error) : imageError}</p>}
       <iframe title="Email body · external content blocked" sandbox="" referrerPolicy="no-referrer" srcDoc={srcDoc} className="safe-email" />

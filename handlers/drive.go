@@ -9,7 +9,9 @@ import (
 	"strconv"
 	q "thura/db/queries/gen"
 	"thura/internal/drive"
+	"thura/internal/office"
 	"thura/internal/platform/auditlog"
+	"thura/internal/wopi"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -25,7 +27,17 @@ func ListDrive(ctx context.Context, r *router.Request[router.None]) (schema.Driv
 		return schema.DriveListing{}, err
 	}
 	files, err := queries.ListDriveFiles(ctx, w)
-	out := schema.DriveListing{Folders: []schema.DriveFolder{}, Files: []schema.DriveFile{}}
+	out := schema.DriveListing{Folders: []schema.DriveFolder{}, Files: []schema.DriveFile{}, Labels: []schema.DriveFileLabel{}}
+	if err != nil {
+		return out, err
+	}
+	tags, err := queries.ListDriveFileLabels(ctx, w)
+	if err != nil {
+		return out, err
+	}
+	for _, tag := range tags {
+		out.Labels = append(out.Labels, schema.DriveFileLabel{FileID: tag.FileID, LabelID: tag.LabelID, Name: tag.Name})
+	}
 	for _, f := range folders {
 		out.Folders = append(out.Folders, drive.Folder(f))
 	}
@@ -170,4 +182,13 @@ func GetDrivePreview(ctx context.Context, r *router.Request[router.None]) (schem
 }
 func RequestDrivePreview(ctx context.Context, r *router.Request[router.None]) (schema.FilePreview, error) {
 	return drive.RequestPreview(ctx, r.Param("workspaceId"), r.Param("id"))
+}
+func RequestDriveOCR(ctx context.Context, r *router.Request[router.None]) (schema.FilePreview, error) {
+	return drive.RequestOCRPreview(ctx, r.Param("workspaceId"), r.Param("id"))
+}
+func ConvertOfficeDocument(ctx context.Context, r *router.Request[schema.OfficeConversionInput]) (schema.OfficeConversion, error) {
+	return wopi.Convert(ctx, r.Param("workspaceId"), r.Param("id"), r.Body.Target)
+}
+func ReconstructWordDocument(ctx context.Context, r *router.Request[schema.WordCopyInput]) (schema.OfficeConversion, error) {
+	return office.ReviewedWord(ctx, r.Param("workspaceId"), r.Param("id"), r.Body)
 }

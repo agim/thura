@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	q "thura/db/queries/gen"
+	"thura/internal/richtext"
 	"thura/internal/workspace"
 	"thura/schema"
 	"time"
@@ -24,7 +25,7 @@ func View(c q.Calendar) schema.Calendar {
 	return schema.Calendar{ID: c.ID, WorkspaceID: c.WorkspaceID, Name: c.Name, Color: c.Color, OwnerSubject: c.OwnerSubject, CreatedAt: c.CreatedAt}
 }
 func ViewEvent(e q.CalendarEvent) schema.CalendarEvent {
-	return schema.CalendarEvent{MeetingID: e.MeetingID, ID: e.ID, CalendarID: e.CalendarID, Uid: e.Uid, Organizer: e.Organizer, Title: e.Title, Description: e.Description, Location: e.Location, AllDay: e.AllDay, StartDate: e.StartDate, EndDate: e.EndDate, StartsAt: e.StartsAt, EndsAt: e.EndsAt, TimeZone: e.TimeZone, Rrule: e.Rrule, Sequence: int(e.Sequence), Cancelled: e.Cancelled, CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt}
+	return schema.CalendarEvent{MeetingID: e.MeetingID, ID: e.ID, CalendarID: e.CalendarID, Uid: e.Uid, Organizer: e.Organizer, Title: e.Title, Description: e.Description, DescriptionHTML: e.DescriptionHTML, Location: e.Location, AllDay: e.AllDay, StartDate: e.StartDate, EndDate: e.EndDate, StartsAt: e.StartsAt, EndsAt: e.EndsAt, TimeZone: e.TimeZone, Rrule: e.Rrule, Sequence: int(e.Sequence), Cancelled: e.Cancelled, CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt}
 }
 func ViewAttendee(a q.EventAttendee) schema.EventAttendee {
 	return schema.EventAttendee{ID: a.ID, EventID: a.EventID, Email: a.Email, Response: schema.Attendance(a.Response), ResponseSequence: int(a.ResponseSequence)}
@@ -164,7 +165,7 @@ func saveAttendees(ctx context.Context, queries *q.Queries, id string, values []
 	return nil
 }
 func Insert(ctx context.Context, queries *q.Queries, calendarID, uid, organizer string, in schema.EventInput) (q.CalendarEvent, error) {
-	e, err := queries.CreateCalendarEvent(ctx, q.CreateCalendarEventParams{CalendarID: calendarID, Uid: uid, Organizer: organizer, Title: in.Title, Description: text(in.Description), Location: text(in.Location), AllDay: in.AllDay, StartDate: text(in.StartDate), EndDate: text(in.EndDate), StartsAt: in.StartsAt, EndsAt: in.EndsAt, TimeZone: in.TimeZone, Rrule: text(in.Rrule)})
+	e, err := queries.CreateCalendarEvent(ctx, q.CreateCalendarEventParams{CalendarID: calendarID, Uid: uid, Organizer: organizer, Title: in.Title, Description: text(in.Description), DescriptionHTML: richtext.Clean(text(in.DescriptionHTML)), Location: text(in.Location), AllDay: in.AllDay, StartDate: text(in.StartDate), EndDate: text(in.EndDate), StartsAt: in.StartsAt, EndsAt: in.EndsAt, TimeZone: in.TimeZone, Rrule: text(in.Rrule)})
 	if err == nil {
 		err = saveAttendees(ctx, queries, e.ID, in.Attendees)
 	}
@@ -205,11 +206,7 @@ func CreateEvent(ctx context.Context, w, calendarID string, in schema.EventInput
 	if err != nil {
 		return schema.EventDetail{}, err
 	}
-	out, err := Detail(ctx, queries, e)
-	if err != nil {
-		return out, err
-	}
-	return out, tx.Commit(ctx)
+	return finishEvent(ctx, tx, queries, w, e, in)
 }
 func Lock(ctx context.Context, w, calendarID, id string) (pgx.Tx, *q.Queries, q.CalendarEvent, error) {
 	if _, err := Get(ctx, w, calendarID, id); err != nil {
@@ -261,18 +258,14 @@ func Update(ctx context.Context, w, calendarID, id string, in schema.EventInput)
 			return schema.EventDetail{}, err
 		}
 	}
-	e, err = queries.UpdateCalendarEvent(ctx, q.UpdateCalendarEventParams{CalendarID: calendarID, ID: id, Title: in.Title, Description: text(in.Description), Location: text(in.Location), AllDay: in.AllDay, StartDate: text(in.StartDate), EndDate: text(in.EndDate), StartsAt: in.StartsAt, EndsAt: in.EndsAt, TimeZone: in.TimeZone, Rrule: text(in.Rrule)})
+	e, err = queries.UpdateCalendarEvent(ctx, q.UpdateCalendarEventParams{CalendarID: calendarID, ID: id, Title: in.Title, Description: text(in.Description), DescriptionHTML: richtext.Clean(text(in.DescriptionHTML)), Location: text(in.Location), AllDay: in.AllDay, StartDate: text(in.StartDate), EndDate: text(in.EndDate), StartsAt: in.StartsAt, EndsAt: in.EndsAt, TimeZone: in.TimeZone, Rrule: text(in.Rrule)})
 	if err == nil {
 		err = saveAttendees(ctx, queries, id, in.Attendees)
 	}
 	if err != nil {
 		return schema.EventDetail{}, err
 	}
-	out, err := Detail(ctx, queries, e)
-	if err != nil {
-		return out, err
-	}
-	return out, tx.Commit(ctx)
+	return finishEvent(ctx, tx, queries, w, e, in)
 }
 func Cancel(ctx context.Context, w, calendarID, id string, sequence int) (schema.EventDetail, error) {
 	tx, queries, e, err := Lock(ctx, w, calendarID, id)
@@ -311,6 +304,10 @@ func Exception(ctx context.Context, w, calendarID, id string, in schema.Exceptio
 	if err == nil {
 		e, err = queries.BumpEventSequence(ctx, id)
 	}
+	if err != nil {
+		return schema.EventDetail{}, err
+	}
+	e, err = prepareMeeting(ctx, queries, w, e, eventInput(e))
 	if err != nil {
 		return schema.EventDetail{}, err
 	}

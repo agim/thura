@@ -113,7 +113,7 @@ func validate(v map[string]string) error {
 			}
 		}
 	}
-	for _, group := range [][]string{{"MATRIX_SERVER_URL", "MATRIX_SERVER_NAME", "MATRIX_AS_TOKEN"}, {"OFFICE_SERVER_URL", "OFFICE_APP_URL", "OFFICE_JWT_SECRET"}, {"LIVEKIT_SERVER_URL", "LIVEKIT_PUBLIC_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"}} {
+	for _, group := range [][]string{{"MATRIX_SERVER_URL", "MATRIX_SERVER_NAME", "MATRIX_AS_TOKEN"}, {"COLLABORA_SERVER_URL", "COLLABORA_APP_URL", "COLLABORA_TOKEN_SECRET"}, {"LIVEKIT_SERVER_URL", "LIVEKIT_PUBLIC_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"}} {
 		if v[group[0]] == "" {
 			continue
 		}
@@ -126,8 +126,9 @@ func validate(v map[string]string) error {
 			}
 		}
 	}
-	if v["OFFICE_SERVER_URL"] != "" && !httpsOrigin(v["OFFICE_APP_URL"]) {
-		return errors.New("office requires an HTTPS app origin")
+
+	if v["COLLABORA_SERVER_URL"] != "" && (!httpsOrigin(v["COLLABORA_APP_URL"]) || len(v["COLLABORA_TOKEN_SECRET"]) < 32) {
+		return errors.New("collabora requires an HTTPS app origin and a secret of at least 32 characters")
 	}
 	if v["LIVEKIT_SERVER_URL"] != "" {
 		u, e := url.Parse(v["LIVEKIT_PUBLIC_URL"])

@@ -1,3 +1,5 @@
+import { SelectControl } from './components/SelectControl'
+import { DateTimeControl } from './components/DateTimeControl'
 // A list page's search, filters, date range, sort and paging, kept in the
 // address (so a list can be linked, reloaded and gone back to) and sent to
 // a list route that reads them with list.Read (pkg/list): the routes
@@ -133,10 +135,10 @@ export function ListToolbar(props: {
       {props.range && (
         <span className="flex items-center gap-1 text-sm text-muted">
           <label>
-            {props.range} from <input type="date" value={state.since} onChange={(e) => set({ since: e.target.value })} className={field} />
+            {props.range} from <DateTimeControl type="date" value={state.since} onChange={(e) => set({ since: e.target.value })} className={field} />
           </label>
           <label>
-            to <input type="date" value={state.until} min={state.since || undefined} onChange={(e) => set({ until: e.target.value })} className={field} />
+            to <DateTimeControl type="date" value={state.until} min={state.since || undefined} onChange={(e) => set({ until: e.target.value })} className={field} />
           </label>
         </span>
       )}
@@ -155,14 +157,14 @@ export function FilterSelect(props: {
 }) {
   const value = props.state.filters[props.name] ?? ''
   return (
-    <select aria-label={props.label} value={value} onChange={(e) => props.set({ filters: { [props.name]: e.target.value } })} className={field}>
+    <SelectControl aria-label={props.label} value={value} onChange={(e) => props.set({ filters: { [props.name]: e.target.value } })} className={field}>
       <option value="">{props.label}: All</option>
       {props.options.map((o) => (
         <option key={o.value} value={o.value}>
           {props.label}: {o.label}
         </option>
       ))}
-    </select>
+    </SelectControl>
   )
 }
 

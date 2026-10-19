@@ -75,6 +75,52 @@ func (q *Queries) CountActiveMeetings(ctx context.Context, workspaceID string) (
 	return count, err
 }
 
+const countMeetingGuestTokens = `-- name: CountMeetingGuestTokens :one
+SELECT COUNT(*) FROM meeting_participant WHERE meeting_id=$1 AND guest_invite_id IS NOT NULL AND (joined OR token_expires_at>now())
+`
+
+func (q *Queries) CountMeetingGuestTokens(ctx context.Context, meetingID string) (int64, error) {
+	row := q.db.QueryRow(ctx, countMeetingGuestTokens, meetingID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const createMeetingInvite = `-- name: CreateMeetingInvite :one
+INSERT INTO meeting_invite(meeting_id,event_id,code,pin_hash,pin_sealed,expires_at) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(code) DO NOTHING RETURNING id, meeting_id, event_id, code, pin_hash, pin_sealed, expires_at
+`
+
+type CreateMeetingInviteParams struct {
+	MeetingID string    `json:"meeting_id"`
+	EventID   string    `json:"event_id"`
+	Code      string    `json:"code"`
+	PinHash   string    `json:"pin_hash"`
+	PinSealed string    `json:"pin_sealed"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+func (q *Queries) CreateMeetingInvite(ctx context.Context, arg CreateMeetingInviteParams) (MeetingInvite, error) {
+	row := q.db.QueryRow(ctx, createMeetingInvite,
+		arg.MeetingID,
+		arg.EventID,
+		arg.Code,
+		arg.PinHash,
+		arg.PinSealed,
+		arg.ExpiresAt,
+	)
+	var i MeetingInvite
+	err := row.Scan(
+		&i.ID,
+		&i.MeetingID,
+		&i.EventID,
+		&i.Code,
+		&i.PinHash,
+		&i.PinSealed,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
 const endMeeting = `-- name: EndMeeting :one
 UPDATE meeting SET ended_at=now() WHERE id=$1 RETURNING id, workspace_id, request_id, name, created_by, ended_at, created_at
 `
@@ -94,6 +140,15 @@ func (q *Queries) EndMeeting(ctx context.Context, id string) (Meeting, error) {
 	return i, err
 }
 
+const expireMeetingGuestTokens = `-- name: ExpireMeetingGuestTokens :exec
+DELETE FROM meeting_participant WHERE guest_invite_id IS NOT NULL AND NOT joined AND token_expires_at<now()-interval '1 day'
+`
+
+func (q *Queries) ExpireMeetingGuestTokens(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, expireMeetingGuestTokens)
+	return err
+}
+
 const expireMeetingWebhooks = `-- name: ExpireMeetingWebhooks :exec
 DELETE FROM meeting_webhook WHERE created_at < now()-interval '30 days'
 `
@@ -101,6 +156,38 @@ DELETE FROM meeting_webhook WHERE created_at < now()-interval '30 days'
 func (q *Queries) ExpireMeetingWebhooks(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, expireMeetingWebhooks)
 	return err
+}
+
+const findGuestCalendarEvent = `-- name: FindGuestCalendarEvent :one
+SELECT meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE id=$1
+`
+
+func (q *Queries) FindGuestCalendarEvent(ctx context.Context, id string) (CalendarEvent, error) {
+	row := q.db.QueryRow(ctx, findGuestCalendarEvent, id)
+	var i CalendarEvent
+	err := row.Scan(
+		&i.MeetingID,
+		&i.ID,
+		&i.CalendarID,
+		&i.Uid,
+		&i.Organizer,
+		&i.Title,
+		&i.Description,
+		&i.DescriptionHTML,
+		&i.Location,
+		&i.AllDay,
+		&i.StartDate,
+		&i.EndDate,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.TimeZone,
+		&i.Rrule,
+		&i.Sequence,
+		&i.Cancelled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const findMeeting = `-- name: FindMeeting :one
@@ -187,7 +274,7 @@ func (q *Queries) GetMeeting(ctx context.Context, arg GetMeetingParams) (Meeting
 }
 
 const getMeetingParticipant = `-- name: GetMeetingParticipant :one
-SELECT id, meeting_id, subject, token_expires_at, joined, session_id, updated_at FROM meeting_participant WHERE meeting_id=$1 AND subject=$2
+SELECT guest_invite_id, id, meeting_id, subject, token_expires_at, joined, session_id, updated_at FROM meeting_participant WHERE meeting_id=$1 AND subject=$2
 `
 
 type GetMeetingParticipantParams struct {
@@ -199,6 +286,7 @@ func (q *Queries) GetMeetingParticipant(ctx context.Context, arg GetMeetingParti
 	row := q.db.QueryRow(ctx, getMeetingParticipant, arg.MeetingID, arg.Subject)
 	var i MeetingParticipant
 	err := row.Scan(
+		&i.GuestInviteID,
 		&i.ID,
 		&i.MeetingID,
 		&i.Subject,
@@ -273,10 +361,14 @@ func (q *Queries) ListMeetings(ctx context.Context, workspaceID string) ([]Meeti
 }
 
 const listRevokedMeetingParticipants = `-- name: ListRevokedMeetingParticipants :many
-SELECT p.id, p.meeting_id, p.subject, p.token_expires_at, p.joined, p.session_id, p.updated_at,m.workspace_id FROM meeting_participant p JOIN meeting m ON m.id=p.meeting_id WHERE (p.joined OR p.token_expires_at > now()) AND (m.ended_at IS NOT NULL OR NOT EXISTS(SELECT 1 FROM auth_member a WHERE a.subject=p.subject AND a.scope=m.workspace_id::text AND a.role IN ('owner','admin','member'))) ORDER BY p.updated_at LIMIT 100
+SELECT p.guest_invite_id, p.id, p.meeting_id, p.subject, p.token_expires_at, p.joined, p.session_id, p.updated_at,m.workspace_id FROM meeting_participant p JOIN meeting m ON m.id=p.meeting_id
+WHERE (p.joined OR p.token_expires_at > now()) AND (m.ended_at IS NOT NULL OR
+(p.guest_invite_id IS NULL AND NOT EXISTS(SELECT 1 FROM auth_member a WHERE a.subject=p.subject AND a.scope=m.workspace_id::text AND a.role IN ('owner','admin','member'))) OR
+(p.guest_invite_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM meeting_invite i JOIN calendar_event e ON e.id=i.event_id WHERE i.id=p.guest_invite_id AND i.meeting_id=p.meeting_id AND e.meeting_id=i.meeting_id AND NOT e.cancelled AND i.expires_at>now()))) ORDER BY p.updated_at LIMIT 100
 `
 
 type ListRevokedMeetingParticipantsRow struct {
+	GuestInviteID  *string   `json:"guest_invite_id"`
 	ID             string    `json:"id"`
 	MeetingID      string    `json:"meeting_id"`
 	Subject        string    `json:"subject"`
@@ -297,6 +389,7 @@ func (q *Queries) ListRevokedMeetingParticipants(ctx context.Context) ([]ListRev
 	for rows.Next() {
 		var i ListRevokedMeetingParticipantsRow
 		if err := rows.Scan(
+			&i.GuestInviteID,
 			&i.ID,
 			&i.MeetingID,
 			&i.Subject,
@@ -340,6 +433,84 @@ func (q *Queries) LockMeeting(ctx context.Context, arg LockMeetingParams) (Meeti
 	return i, err
 }
 
+const meetingInviteByCode = `-- name: MeetingInviteByCode :one
+SELECT id, meeting_id, event_id, code, pin_hash, pin_sealed, expires_at FROM meeting_invite WHERE code=$1
+`
+
+func (q *Queries) MeetingInviteByCode(ctx context.Context, code string) (MeetingInvite, error) {
+	row := q.db.QueryRow(ctx, meetingInviteByCode, code)
+	var i MeetingInvite
+	err := row.Scan(
+		&i.ID,
+		&i.MeetingID,
+		&i.EventID,
+		&i.Code,
+		&i.PinHash,
+		&i.PinSealed,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const meetingInviteByEvent = `-- name: MeetingInviteByEvent :one
+SELECT id, meeting_id, event_id, code, pin_hash, pin_sealed, expires_at FROM meeting_invite WHERE event_id=$1
+`
+
+func (q *Queries) MeetingInviteByEvent(ctx context.Context, eventID string) (MeetingInvite, error) {
+	row := q.db.QueryRow(ctx, meetingInviteByEvent, eventID)
+	var i MeetingInvite
+	err := row.Scan(
+		&i.ID,
+		&i.MeetingID,
+		&i.EventID,
+		&i.Code,
+		&i.PinHash,
+		&i.PinSealed,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const meetingParticipantAllowed = `-- name: MeetingParticipantAllowed :one
+SELECT EXISTS(SELECT 1 FROM meeting_participant p JOIN meeting m ON m.id=p.meeting_id
+WHERE p.meeting_id=$1 AND p.subject=$2 AND m.ended_at IS NULL AND (
+(p.guest_invite_id IS NULL AND EXISTS(SELECT 1 FROM auth_member a WHERE a.subject=p.subject AND a.scope=m.workspace_id::text AND a.role IN ('owner','admin','member'))) OR
+(p.guest_invite_id IS NOT NULL AND EXISTS(SELECT 1 FROM meeting_invite i JOIN calendar_event e ON e.id=i.event_id WHERE i.id=p.guest_invite_id AND i.meeting_id=p.meeting_id AND e.meeting_id=i.meeting_id AND NOT e.cancelled AND i.expires_at>now()))))
+`
+
+type MeetingParticipantAllowedParams struct {
+	MeetingID string `json:"meeting_id"`
+	Subject   string `json:"subject"`
+}
+
+func (q *Queries) MeetingParticipantAllowed(ctx context.Context, arg MeetingParticipantAllowedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, meetingParticipantAllowed, arg.MeetingID, arg.Subject)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const saveGuestMeetingToken = `-- name: SaveGuestMeetingToken :exec
+INSERT INTO meeting_participant(meeting_id,subject,guest_invite_id,token_expires_at) VALUES($1,$2,$3,$4)
+`
+
+type SaveGuestMeetingTokenParams struct {
+	MeetingID      string    `json:"meeting_id"`
+	Subject        string    `json:"subject"`
+	GuestInviteID  *string   `json:"guest_invite_id"`
+	TokenExpiresAt time.Time `json:"token_expires_at"`
+}
+
+func (q *Queries) SaveGuestMeetingToken(ctx context.Context, arg SaveGuestMeetingTokenParams) error {
+	_, err := q.db.Exec(ctx, saveGuestMeetingToken,
+		arg.MeetingID,
+		arg.Subject,
+		arg.GuestInviteID,
+		arg.TokenExpiresAt,
+	)
+	return err
+}
+
 const saveMeetingToken = `-- name: SaveMeetingToken :exec
 INSERT INTO meeting_participant(meeting_id,subject,token_expires_at) VALUES($1,$2,$3) ON CONFLICT(meeting_id,subject) DO UPDATE SET token_expires_at=excluded.token_expires_at,updated_at=now()
 `
@@ -352,5 +523,63 @@ type SaveMeetingTokenParams struct {
 
 func (q *Queries) SaveMeetingToken(ctx context.Context, arg SaveMeetingTokenParams) error {
 	_, err := q.db.Exec(ctx, saveMeetingToken, arg.MeetingID, arg.Subject, arg.TokenExpiresAt)
+	return err
+}
+
+const setEventMeetingDetails = `-- name: SetEventMeetingDetails :one
+UPDATE calendar_event SET meeting_id=$2,location=$3,description=$4 WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+`
+
+type SetEventMeetingDetailsParams struct {
+	ID          string  `json:"id"`
+	MeetingID   *string `json:"meeting_id"`
+	Location    string  `json:"location"`
+	Description string  `json:"description"`
+}
+
+func (q *Queries) SetEventMeetingDetails(ctx context.Context, arg SetEventMeetingDetailsParams) (CalendarEvent, error) {
+	row := q.db.QueryRow(ctx, setEventMeetingDetails,
+		arg.ID,
+		arg.MeetingID,
+		arg.Location,
+		arg.Description,
+	)
+	var i CalendarEvent
+	err := row.Scan(
+		&i.MeetingID,
+		&i.ID,
+		&i.CalendarID,
+		&i.Uid,
+		&i.Organizer,
+		&i.Title,
+		&i.Description,
+		&i.DescriptionHTML,
+		&i.Location,
+		&i.AllDay,
+		&i.StartDate,
+		&i.EndDate,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.TimeZone,
+		&i.Rrule,
+		&i.Sequence,
+		&i.Cancelled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateMeetingInviteExpiry = `-- name: UpdateMeetingInviteExpiry :exec
+UPDATE meeting_invite SET expires_at=$2 WHERE id=$1
+`
+
+type UpdateMeetingInviteExpiryParams struct {
+	ID        string    `json:"id"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+func (q *Queries) UpdateMeetingInviteExpiry(ctx context.Context, arg UpdateMeetingInviteExpiryParams) error {
+	_, err := q.db.Exec(ctx, updateMeetingInviteExpiry, arg.ID, arg.ExpiresAt)
 	return err
 }

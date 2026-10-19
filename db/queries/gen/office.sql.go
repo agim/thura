@@ -11,7 +11,7 @@ import (
 )
 
 const createOfficeSession = `-- name: CreateOfficeSession :one
-INSERT INTO office_session(file_id,subject,source_version,base_version,document_key,expires_at) VALUES($1,$2,$3,$3,$4,$5) RETURNING id, file_id, subject, source_version, base_version, document_key, last_checksum, expires_at, created_at
+INSERT INTO office_session(file_id,subject,source_version,document_key,expires_at) VALUES($1,$2,$3,$4,$5) RETURNING id, file_id, subject, source_version, document_key, expires_at, created_at
 `
 
 type CreateOfficeSessionParams struct {
@@ -36,9 +36,7 @@ func (q *Queries) CreateOfficeSession(ctx context.Context, arg CreateOfficeSessi
 		&i.FileID,
 		&i.Subject,
 		&i.SourceVersion,
-		&i.BaseVersion,
 		&i.DocumentKey,
-		&i.LastChecksum,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 	)
@@ -46,7 +44,7 @@ func (q *Queries) CreateOfficeSession(ctx context.Context, arg CreateOfficeSessi
 }
 
 const getOfficeSession = `-- name: GetOfficeSession :one
-SELECT id, file_id, subject, source_version, base_version, document_key, last_checksum, expires_at, created_at FROM office_session WHERE id=$1
+SELECT id, file_id, subject, source_version, document_key, expires_at, created_at FROM office_session WHERE id=$1
 `
 
 func (q *Queries) GetOfficeSession(ctx context.Context, id string) (OfficeSession, error) {
@@ -57,47 +55,9 @@ func (q *Queries) GetOfficeSession(ctx context.Context, id string) (OfficeSessio
 		&i.FileID,
 		&i.Subject,
 		&i.SourceVersion,
-		&i.BaseVersion,
 		&i.DocumentKey,
-		&i.LastChecksum,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 	)
 	return i, err
-}
-
-const lockOfficeSession = `-- name: LockOfficeSession :one
-SELECT id, file_id, subject, source_version, base_version, document_key, last_checksum, expires_at, created_at FROM office_session WHERE id=$1 FOR UPDATE
-`
-
-func (q *Queries) LockOfficeSession(ctx context.Context, id string) (OfficeSession, error) {
-	row := q.db.QueryRow(ctx, lockOfficeSession, id)
-	var i OfficeSession
-	err := row.Scan(
-		&i.ID,
-		&i.FileID,
-		&i.Subject,
-		&i.SourceVersion,
-		&i.BaseVersion,
-		&i.DocumentKey,
-		&i.LastChecksum,
-		&i.ExpiresAt,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const saveOfficeSession = `-- name: SaveOfficeSession :exec
-UPDATE office_session SET base_version=$2,last_checksum=$3 WHERE id=$1
-`
-
-type SaveOfficeSessionParams struct {
-	ID           string `json:"id"`
-	BaseVersion  int32  `json:"base_version"`
-	LastChecksum string `json:"last_checksum"`
-}
-
-func (q *Queries) SaveOfficeSession(ctx context.Context, arg SaveOfficeSessionParams) error {
-	_, err := q.db.Exec(ctx, saveOfficeSession, arg.ID, arg.BaseVersion, arg.LastChecksum)
-	return err
 }

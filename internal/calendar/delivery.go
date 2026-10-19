@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"strings"
 	q "thura/db/queries/gen"
+	"thura/internal/meet"
 	"thura/schema"
 	"time"
 )
@@ -45,6 +46,16 @@ func Invite(ctx context.Context, w, c, id string, in schema.CalendarInviteInput)
 	if int(e.Sequence) != in.Sequence {
 		return out, router.Errorf(409, "event changed; reload before sending")
 	}
+	out, err = inviteTx(ctx, tx, queries, w, e)
+	if err != nil {
+		return out, err
+	}
+	return out, tx.Commit(ctx)
+}
+
+func inviteTx(ctx context.Context, tx pgx.Tx, queries *q.Queries, w string, e q.CalendarEvent) (schema.CalendarDispatchResult, error) {
+	out := schema.CalendarDispatchResult{Captured: Captured()}
+	id := e.ID
 	dispatch, err := queries.GetCalendarDispatch(ctx, q.GetCalendarDispatchParams{EventID: id, Sequence: e.Sequence})
 	if err == nil && time.Since(dispatch.CreatedAt) < 30*24*time.Hour {
 		return out, nil
@@ -74,14 +85,25 @@ func Invite(ctx context.Context, w, c, id string, in schema.CalendarInviteInput)
 		method = "CANCEL"
 		subject = "Cancelled: " + e.Title
 	}
-	content, err := ExportWorkspaceICS(ctx, w, []q.CalendarEvent{e}, map[string][]q.EventAttendee{id: attendees}, map[string][]q.EventException{id: exceptions}, method)
+	content, err := exportWorkspaceICS(ctx, queries, w, []q.CalendarEvent{e}, map[string][]q.EventAttendee{id: attendees}, map[string][]q.EventException{id: exceptions}, method)
 	if err != nil {
 		return out, err
 	}
 	for _, a := range attendees {
 		text := "Calendar event: " + e.Title + "\nOrganizer: " + e.Organizer + "\n\nOpen the attached calendar file."
 		if e.MeetingID != nil {
-			text += "\n\nMeeting: " + mail.From(ctx).Link("/app?workspace="+w+"&meeting="+*e.MeetingID) + "\nOnly current workspace members can join."
+			invite, xerr := queries.MeetingInviteByEvent(ctx, e.ID)
+			if xerr == nil && invite.MeetingID == *e.MeetingID {
+				instructions, xerr := meet.InviteInstructions(ctx, invite)
+				if xerr != nil {
+					return out, xerr
+				}
+				text += "\n\n" + instructions
+			} else if xerr != nil && !errors.Is(xerr, pgx.ErrNoRows) {
+				return out, xerr
+			} else {
+				text += "\n\nMeeting: " + mail.From(ctx).Link("/app?workspace="+w+"&meeting="+*e.MeetingID) + "\nOnly current workspace members can join."
+			}
 		}
 		if !e.Cancelled {
 			bytes := make([]byte, 32)
@@ -107,7 +129,7 @@ func Invite(ctx context.Context, w, c, id string, in schema.CalendarInviteInput)
 	if err = queries.CreateCalendarDispatch(ctx, q.CreateCalendarDispatchParams{EventID: id, Sequence: e.Sequence}); err != nil {
 		return out, err
 	}
-	return out, tx.Commit(ctx)
+	return out, nil
 }
 
 func replyGrant(ctx context.Context, queries *q.Queries, token string) (q.GetCalendarReplyGrantRow, q.CalendarEvent, error) {

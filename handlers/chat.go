@@ -38,3 +38,7 @@ func SendChatFile(ctx context.Context, r *router.Request[schema.ChatFileInput]) 
 func DownloadChatFile(ctx context.Context, r *router.Request[router.None]) (schema.FileContent, error) {
 	return chat.DownloadFile(ctx, r.Param("workspaceId"), r.Param("id"), r.Query("eventId"))
 }
+
+func SearchChatMessages(ctx context.Context, r *router.Request[router.None]) (schema.ChatTimeline, error) {
+	return chat.Search(ctx, r.Param("workspaceId"), r.Param("id"), r.Query("search"), r.Query("cursor"))
+}

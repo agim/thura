@@ -11,7 +11,7 @@ export class DraftAutosave {
   private result: MailItem
 
   constructor(item: MailItem, private persist: (input: DraftInput) => Promise<MailItem>, private report: (state: string, error: string) => void) {
-    this.input = { to: item.toAddress, cc: item.cc, bcc: item.bcc, subject: item.subject, text: item.textBody, threadId: item.threadId }
+    this.input = { to: item.toAddress, cc: item.cc, bcc: item.bcc, subject: item.subject, text: item.textBody, html: item.htmlBody, threadId: item.threadId }
     this.result = item
   }
 

@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
 	"thura/internal/platform/objectgc"
+	"thura/internal/platform/objectstore"
 	"thura/internal/serverpolicy"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -211,7 +212,7 @@ func PutChunk(ctx context.Context, w, id string, n int, b []byte) error {
 	}
 	key := "drive/uploads/" + u.ID + "/" + uuid.NewString()
 	store := storage.From(ctx)
-	if _, err = store.Put(ctx, key, bytes.NewReader(b), storage.PutOptions{ContentType: "application/octet-stream"}); err != nil {
+	if _, err = objectstore.Put(ctx, key, bytes.NewReader(b), storage.PutOptions{ContentType: "application/octet-stream"}); err != nil {
 		return err
 	}
 	_, err = queries.PutUploadChunk(ctx, q.PutUploadChunkParams{SessionID: id, Number: int32(n), Size: int32(len(b)), Checksum: Hash(b), ObjectKey: key})
@@ -283,6 +284,13 @@ func Finish(ctx context.Context, w, id string) (schema.DriveFile, error) {
 		f, err = queries.CreateDriveFile(ctx, q.CreateDriveFileParams{WorkspaceID: w, FolderID: u.FolderID, Name: u.Name, ContentType: u.ContentType, Size: u.ExpectedSize})
 	} else {
 		f, err = queries.LockDriveFile(ctx, q.LockDriveFileParams{WorkspaceID: w, ID: *u.FileID})
+		if err == nil {
+			if lock, e := queries.GetWopiLock(ctx, f.ID); e == nil && lock.LockID != "" && lock.ExpiresAt.After(lidza.Now(ctx)) {
+				return schema.DriveFile{}, router.Errorf(409, "This file is open in a document editor. Close it before uploading a replacement")
+			} else if e != nil && !errors.Is(e, pgx.ErrNoRows) {
+				return schema.DriveFile{}, e
+			}
+		}
 		if err == nil && (f.Trashed || f.CurrentVersion != u.BaseVersion) {
 			return schema.DriveFile{}, router.Errorf(409, "newer version exists or file is in trash")
 		}
@@ -298,7 +306,7 @@ func Finish(ctx context.Context, w, id string) (schema.DriveFile, error) {
 	}
 	key := "drive/files/" + f.ID + "/" + uuid.NewString()
 	store := storage.From(ctx)
-	if _, err = store.Put(ctx, key, bytes.NewReader(content.Bytes()), storage.PutOptions{ContentType: f.ContentType}); err != nil {
+	if _, err = objectstore.Put(ctx, key, bytes.NewReader(content.Bytes()), storage.PutOptions{ContentType: f.ContentType}); err != nil {
 		return schema.DriveFile{}, err
 	}
 	_, err = queries.AddFileVersion(ctx, q.AddFileVersionParams{FileID: f.ID, Number: f.CurrentVersion, ObjectKey: key, Checksum: Hash(content.Bytes()), Size: f.Size, CreatedBy: u.Subject})

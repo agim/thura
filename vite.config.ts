@@ -53,6 +53,9 @@ export default defineConfig(({ isSsrBuild }) => ({
   },
   build: {
     outDir: 'dist',
+    // The theme switches color-scheme at runtime. Preserve native light-dark()
+    // rather than lowering it to static compiler-generated scheme variables.
+    cssTarget: 'esnext',
     emptyOutDir: true,
     // dist/.vite/manifest.json: where each entry was built, for the
     // prerender to find the enhance scripts.

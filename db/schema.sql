@@ -215,7 +215,8 @@ CREATE TABLE job (
   finished_at timestamptz,
   last_error text,
   created_at timestamptz NOT NULL DEFAULT now(),
-  unique_key text
+  unique_key text,
+  trace_parent text
 );
 CREATE INDEX job_state_run_at_idx ON job (state, run_at);
 CREATE UNIQUE INDEX job_kind_unique_key_key ON job (kind, unique_key);
@@ -320,13 +321,19 @@ CREATE TABLE office_session (
   file_id uuid NOT NULL REFERENCES drive_file(id),
   subject text NOT NULL,
   source_version integer NOT NULL,
-  base_version integer NOT NULL,
   document_key text NOT NULL,
-  last_checksum text NOT NULL DEFAULT '',
   expires_at timestamptz NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX office_session_file_id_idx ON office_session (file_id);
+
+CREATE TABLE wopi_lock (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  file_id uuid NOT NULL UNIQUE REFERENCES drive_file(id),
+  lock_id text NOT NULL DEFAULT '',
+  base_version integer NOT NULL,
+  expires_at timestamptz NOT NULL
+);
 
 CREATE TABLE calendar (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -358,6 +365,7 @@ CREATE TABLE calendar_event (
   organizer text NOT NULL,
   title varchar(500) NOT NULL,
   description text NOT NULL DEFAULT '',
+  description_html text NOT NULL DEFAULT '',
   location text NOT NULL DEFAULT '',
   all_day boolean NOT NULL,
   start_date text NOT NULL DEFAULT '',
@@ -462,7 +470,18 @@ CREATE TABLE chat_participant (
 CREATE INDEX chat_participant_room_id_idx ON chat_participant (room_id);
 CREATE UNIQUE INDEX chat_participant_room_id_subject_key ON chat_participant (room_id, subject);
 
+CREATE TABLE meeting_invite (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  meeting_id uuid NOT NULL UNIQUE REFERENCES meeting(id),
+  event_id uuid NOT NULL UNIQUE REFERENCES calendar_event(id),
+  code text NOT NULL UNIQUE,
+  pin_hash text NOT NULL,
+  pin_sealed text NOT NULL,
+  expires_at timestamptz NOT NULL
+);
+
 CREATE TABLE meeting_participant (
+  guest_invite_id uuid REFERENCES meeting_invite(id),
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   meeting_id uuid NOT NULL REFERENCES meeting(id),
   subject text NOT NULL,
@@ -483,9 +502,11 @@ CREATE TABLE meeting_webhook (
 
 CREATE TABLE mail_label (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  mailbox_id uuid NOT NULL REFERENCES mailbox(id),
+  workspace_id uuid REFERENCES workspace(id),
+  mailbox_id uuid REFERENCES mailbox(id),
   name varchar(40) NOT NULL
 );
+CREATE INDEX mail_label_workspace_id_idx ON mail_label (workspace_id);
 CREATE INDEX mail_label_mailbox_id_idx ON mail_label (mailbox_id);
 CREATE UNIQUE INDEX mail_label_mailbox_id_name_key ON mail_label (mailbox_id, name);
 
@@ -611,4 +632,101 @@ CREATE TABLE setup_probe (
 CREATE INDEX setup_probe_created_at_idx ON setup_probe (created_at);
 CREATE INDEX setup_probe_subject_kind_created_at_idx ON setup_probe (subject, kind, created_at);
 CREATE INDEX setup_probe_kind_fingerprint_state_created_at_idx ON setup_probe (kind, fingerprint, state, created_at);
+
+CREATE TABLE correspondence_link (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  contact_id uuid NOT NULL REFERENCES contact(id) ON DELETE CASCADE,
+  source text NOT NULL,
+  source_id uuid NOT NULL,
+  created_by text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX correspondence_link_contact_id_idx ON correspondence_link (contact_id);
+CREATE UNIQUE INDEX correspondence_link_contact_id_source_source_id_key ON correspondence_link (contact_id, source, source_id);
+
+CREATE TABLE resource_label (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  label_id uuid NOT NULL REFERENCES mail_label(id),
+  source varchar(20) NOT NULL,
+  source_id uuid NOT NULL
+);
+CREATE INDEX resource_label_label_id_idx ON resource_label (label_id);
+CREATE INDEX resource_label_source_id_idx ON resource_label (source_id);
+CREATE UNIQUE INDEX resource_label_label_id_source_source_id_key ON resource_label (label_id, source, source_id);
+
+CREATE TABLE llm_usage (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  at timestamptz NOT NULL DEFAULT now(),
+  provider text NOT NULL,
+  model text NOT NULL,
+  label text NOT NULL,
+  input integer NOT NULL,
+  output integer NOT NULL,
+  ms integer NOT NULL,
+  status text NOT NULL,
+  error text
+);
+CREATE INDEX llm_usage_at_idx ON llm_usage (at);
+CREATE INDEX llm_usage_label_idx ON llm_usage (label);
+
+CREATE TABLE assistant_cache (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  cache_key varchar(64) NOT NULL,
+  lease_token uuid,
+  text text NOT NULL,
+  model text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL
+);
+CREATE INDEX assistant_cache_workspace_id_idx ON assistant_cache (workspace_id);
+CREATE INDEX assistant_cache_expires_at_idx ON assistant_cache (expires_at);
+CREATE UNIQUE INDEX assistant_cache_workspace_id_cache_key_key ON assistant_cache (workspace_id, cache_key);
+
+CREATE TABLE auth_factor (
+  subject text PRIMARY KEY,
+  secret_sealed text NOT NULL,
+  last_step bigint NOT NULL DEFAULT 0,
+  backup_codes text[] NOT NULL,
+  enabled_at timestamptz,
+  failed_count integer NOT NULL DEFAULT 0,
+  failed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE auth_step_up (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject text NOT NULL,
+  session_id text NOT NULL,
+  purpose text NOT NULL,
+  target text NOT NULL DEFAULT '',
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX auth_step_up_session_id_idx ON auth_step_up (session_id);
+CREATE UNIQUE INDEX auth_step_up_session_id_purpose_target_key ON auth_step_up (session_id, purpose, target);
+
+CREATE TABLE auth_workspace (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  created_by text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE auth_invite (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace text NOT NULL,
+  email text NOT NULL,
+  role text NOT NULL,
+  token_hash text NOT NULL UNIQUE,
+  invited_by text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  accepted_at timestamptz,
+  accepted_by text,
+  revoked_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX auth_invite_workspace_idx ON auth_invite (workspace);
 

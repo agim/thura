@@ -102,7 +102,9 @@ func unseal(raw string) (map[string]string, error) {
 	if e != nil {
 		return nil, errors.New("saved setup could not be decrypted")
 	}
-	var v map[string]string
+	// New optional settings must not invalidate an older published snapshot.
+	// JSON overlays explicit saved values, including deliberately empty ones.
+	v := defaults()
 	if json.Unmarshal(b, &v) != nil {
 		return nil, errors.New("saved setup is invalid")
 	}

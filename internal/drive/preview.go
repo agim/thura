@@ -17,8 +17,12 @@ import (
 	"github.com/agim/lidza/pkg/router"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"strings"
 	q "thura/db/queries/gen"
+	"thura/internal/platform/documentprocess"
+	"thura/internal/platform/documenttext"
 	"thura/internal/platform/objectgc"
+	"thura/internal/platform/objectstore"
 	"thura/internal/platform/safeimage"
 	"thura/schema"
 )
@@ -30,6 +34,7 @@ type previewPayload struct {
 	WorkspaceID string `json:"workspaceId"`
 	FileID      string `json:"fileId"`
 	Version     int32  `json:"version"`
+	OCR         bool   `json:"ocr,omitempty"`
 }
 
 type previewBytes struct {
@@ -108,6 +113,19 @@ func Preview(ctx context.Context, w, id string) (schema.FilePreview, error) {
 }
 
 func RequestPreview(ctx context.Context, w, id string) (schema.FilePreview, error) {
+	return requestPreview(ctx, w, id, false)
+}
+func RequestOCRPreview(ctx context.Context, w, id string) (schema.FilePreview, error) {
+	f, err := Get(ctx, w, id)
+	if err != nil {
+		return schema.FilePreview{}, err
+	}
+	if f.ContentType != "application/pdf" {
+		return schema.FilePreview{}, router.Errorf(422, "Text recognition requires a PDF")
+	}
+	return requestPreview(ctx, w, id, true)
+}
+func requestPreview(ctx context.Context, w, id string, ocr bool) (schema.FilePreview, error) {
 	if _, err := Get(ctx, w, id); err != nil {
 		return schema.FilePreview{}, err
 	}
@@ -138,7 +156,7 @@ func RequestPreview(ctx context.Context, w, id string) (schema.FilePreview, erro
 		return schema.FilePreview{}, err
 	}
 	if err == nil && previous.Version == f.CurrentVersion {
-		if previous.Status == "ready" || previous.Status == "unavailable" {
+		if (previous.Status == "ready" && !ocr) || (previous.Status == "unavailable" && !ocr) {
 			return previewView(previous), nil
 		}
 		if previous.JobID != "" {
@@ -160,7 +178,7 @@ func RequestPreview(ctx context.Context, w, id string) (schema.FilePreview, erro
 	if err != nil {
 		return schema.FilePreview{}, err
 	}
-	jobID, err := jobs.From(ctx).EnqueueTx(ctx, tx, PreviewJob, previewPayload{WorkspaceID: w, FileID: id, Version: f.CurrentVersion})
+	jobID, err := jobs.From(ctx).EnqueueTx(ctx, tx, PreviewJob, previewPayload{WorkspaceID: w, FileID: id, Version: f.CurrentVersion, OCR: ocr})
 	if err != nil {
 		return schema.FilePreview{}, err
 	}
@@ -201,6 +219,18 @@ func GeneratePreview(ctx context.Context, raw json.RawMessage) error {
 		return errors.New("preview source checksum mismatch")
 	}
 	result, supported := buildPreview(b, f.ContentType)
+	if !supported {
+		text, extractErr := documenttext.Extract(ctx, b, f.ContentType)
+		if in.OCR {
+			text, extractErr = documentprocess.OCR(ctx, b)
+		}
+		if extractErr != nil && in.OCR {
+			return extractErr
+		}
+		if extractErr == nil && strings.TrimSpace(text) != "" {
+			result, supported = buildPreview([]byte(text), "text/plain")
+		}
+	}
 	tx, err := db.From(ctx).Begin(ctx)
 	if err != nil {
 		return err
@@ -236,7 +266,7 @@ func GeneratePreview(ctx context.Context, raw json.RawMessage) error {
 		completed.Checksum = Hash(result.data)
 		completed.ContentType = result.contentType
 		completed.Width, completed.Height, completed.Truncated = int32(result.width), int32(result.height), result.truncated
-		if _, err = storage.From(ctx).Put(ctx, completed.ObjectKey, bytes.NewReader(result.data), storage.PutOptions{ContentType: result.contentType}); err != nil {
+		if _, err = objectstore.Put(ctx, completed.ObjectKey, bytes.NewReader(result.data), storage.PutOptions{ContentType: result.contentType}); err != nil {
 			return err
 		}
 	}

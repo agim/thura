@@ -206,6 +206,10 @@ func Timeline(ctx context.Context, w, id, from string) (schema.ChatTimeline, err
 	if err != nil {
 		return out, err
 	}
+	names, err := senderNames(ctx, w, cfg)
+	if err != nil {
+		return out, err
+	}
 	for _, e := range response.Chunk {
 		if e.Type != "m.room.message" || e.Content.Body == "" {
 			continue
@@ -219,7 +223,7 @@ func Timeline(ctx context.Context, w, id, from string) (schema.ChatTimeline, err
 		if e.Content.URL != "" {
 			file = &schema.ChatMessageFile{Name: e.Content.Body, Size: e.Content.Info.Size}
 		}
-		out.Items = append(out.Items, schema.ChatMessage{ID: e.ID, Sender: e.Sender, Body: e.Content.Body, Timestamp: int(e.Timestamp), File: file, ReplyTo: reply})
+		out.Items = append(out.Items, schema.ChatMessage{ID: e.ID, Sender: e.Sender, SenderName: names[e.Sender], Body: e.Content.Body, Timestamp: int(e.Timestamp), File: file, ReplyTo: reply})
 	}
 	if response.End != "" {
 		out.Next = &response.End
@@ -301,4 +305,22 @@ func Receipt(ctx context.Context, w, id, event string) error {
 		return err
 	}
 	return cfg.Call(ctx, user, "POST", "/_matrix/client/v3/rooms/"+url.PathEscape(r.MatrixRoomID)+"/read_markers", map[string]string{"m.fully_read": event, "m.read": event}, nil)
+}
+
+// Resolve only current workspace members; provider identities remain the source
+// of truth and unknown/remote senders retain their Matrix ID in the UI.
+func senderNames(ctx context.Context, workspaceID string, cfg provider.Config) (map[string]*string, error) {
+	rows, err := q.New(db.From(ctx)).ListWorkspaceMembers(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	names := make(map[string]*string, len(rows))
+	for _, member := range rows {
+		name := strings.TrimSpace(member.Name)
+		if name == "" {
+			name = member.Email
+		}
+		names[cfg.User(member.Subject)] = &name
+	}
+	return names, nil
 }

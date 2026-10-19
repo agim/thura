@@ -2,8 +2,8 @@
 
 Meetings belong to a workspace. Current members can create them and request
 short-lived access; no client-supplied SFU room name is trusted. The server maps
-a meeting UUID to `thura_<UUID>` and creates that room before joining. Guests are
-not enabled: a meeting link conveys no access beyond workspace membership.
+a meeting UUID to `thura_<UUID>` and creates that room before joining. Ordinary workspace links require current membership. Calendar events can explicitly
+create a separate invitation granting room-only guest access with a meeting ID and PIN.
 Tokens name one identity and room, permit camera/microphone/screen sharing and
 subscription, and have no room-administration, recording, or room-creation
 permissions. Recording, transcription, and AI summaries are disabled.
@@ -30,7 +30,7 @@ cannot recreate a deleted meeting room. Route signed webhooks to
 `/api/v1/meet/webhook`, using the same API key/secret. The official LiveKit
 verifier checks the JWT and the exact body checksum, with a 64 KB input bound.
 An event ledger deduplicates delivery. A session ID prevents a delayed leave
-from clearing a newer join. Unknown/nonmember identities and joins on ended
+from clearing a newer join. Unknown identities, revoked members, invalid guest grants and joins on ended
 meetings are removed. Operators must monitor webhook and job failures.
 
 Join tokens expire after two minutes; expiration alone does **not** disconnect
@@ -86,3 +86,49 @@ bundle; the React media controls are a separate ~133 KB minified chunk.
 The bundle groups exclude recursive dependency capture so shared React code cannot pull media chunks into ordinary page loads. Strict execution order preserves module initialization; the real two-browser media suite validates the resulting split. The upstream client triggers Vite's generic 500 KB chunk warning; it is not
 silenced by raising the warning threshold. Review these sizes when upgrading.
 A fixed media viewport supports adaptive subscriptions before remote tracks arrive.
+
+## Calendar guests
+
+Select **Add Thura Meet** when creating or editing an event without an existing
+meeting. The event, room metadata and invitation grant are saved in one database
+transaction. **Save event** sends nothing; **Save & send invitations** atomically
+queues one invitation per attendee through the official mail pack. Per-version
+dispatch deduplication also applies to the separate Send invitations action.
+Captured demo mail is labelled as captured rather than delivered.
+
+The calendar LOCATION and URL contain `/meet?room=<9-digit-ID>#pin=<6-digit-PIN>`.
+The description and plain-text email include that link, the meeting ID, PIN and
+manual instructions for `/meet`. A physical location supplied during creation is
+preserved in the description. Existing member-only meeting bindings keep their
+original behavior and physical location. A guest-enabled event cannot be rebound
+to a different room while retaining its old invitation; create a new event instead.
+
+The public joining page asks for a display name and issues only a two-minute
+LiveKit token for that room. It creates no account, membership or workspace
+session. The PIN travels in the fragment, is removed from the address bar on
+load, and is submitted in a rate-limited POST rather than a logged request URL.
+The private grant stores a hash and a master-key-sealed PIN; authorized calendar
+records and invitation messages necessarily include the plaintext joining PIN.
+Anyone possessing the invitation can join; an email address is not verified.
+Keep invitations private. Removing a single attendee does not rotate an already
+shared room PIN; cancel the event or end its meeting to revoke the shared grant.
+
+Grants expire 24 hours after the final bounded series occurrence (including
+moved exceptions). Cancelled events, ended rooms and changed bindings deny new
+admission immediately. Signed webhooks and the minute reconciliation job remove
+connected revoked guests with the same bounded revocation window as members.
+
+## Local macOS demo
+
+The local demo uses Homebrew LiveKit server **1.13.10**, signaling on
+`127.0.0.1:7880` and loopback UDP media on `127.0.0.1:7882`, with room auto-creation
+disabled and signed webhooks enabled. Private generated credentials/configuration
+stay under ignored `.lidza/correspondence-demo/`; the private demo launcher starts
+the SFU if needed. No production credentials or provider settings are replaced.
+The browser room uses the supported dual-peer-connection path to avoid a
+fast-join `setConfiguration` compatibility error on affected Chromium builds.
+
+Desktop and phone-viewport checks use an actual WebRTC connection and LiveKit's
+synthetic video participant, with physical microphone/camera off. Loopback links
+work on this Mac; a physical phone or external invitee requires an operator's
+reachable HTTPS/WSS deployment, advertised media addresses and TURN as appropriate.

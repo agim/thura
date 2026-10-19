@@ -97,15 +97,11 @@ func applyEvent(ctx context.Context, cfg provider.Config, eventID, checksum, id,
 		return err
 	}
 	if kind == "participant_joined" {
-		member, xerr := queries.IsWorkspaceMember(ctx, q.IsWorkspaceMemberParams{Scope: m.WorkspaceID, Subject: subject})
+		allowed, xerr := queries.MeetingParticipantAllowed(ctx, q.MeetingParticipantAllowedParams{MeetingID: id, Subject: subject})
 		if xerr != nil {
 			return xerr
 		}
-		_, xerr = queries.GetMeetingParticipant(ctx, q.GetMeetingParticipantParams{MeetingID: id, Subject: subject})
-		if xerr != nil && !errors.Is(xerr, pgx.ErrNoRows) {
-			return xerr
-		}
-		if !member || m.EndedAt != nil || errors.Is(xerr, pgx.ErrNoRows) {
+		if !allowed {
 			if err = cfg.Call(ctx, "RemoveParticipant", Room(id), map[string]string{"room": Room(id), "identity": subject}, nil); err != nil {
 				return err
 			}

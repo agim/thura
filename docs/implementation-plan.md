@@ -10,7 +10,7 @@ The developer confirmed that this completion goal is the first release and that 
 
 | Milestone | Current evidence and remaining work |
 | --- | --- |
-| 0. Brief and integration boundaries | Brief completed; prototype, Postfix, ONLYOFFICE, Matrix and LiveKit integration evidence recorded in implementation status. |
+| 0. Brief and integration boundaries | Brief completed; prototype, Postfix, Collabora, Matrix and LiveKit integration evidence recorded in implementation status. |
 | 1. Accounts and permissions | Membership/invitations and revocation are implemented. Durable transaction-bound audit history and manager-only history browsing are implemented. Go tests prove rollback, scoped paging/filters and revoked access; browser checks cover manager controls and ordinary-member refusal. |
 | 2. Mail and Contacts | Core drafts, delivery, conversations, labels and contact handoffs are implemented. Server sanitization, sandboxed formatted reading and opt-in bounded CID images are implemented. Go/browser checks cover scoped CID images, raw/original byte preservation, inert HTML and reload resetting image consent. Hosted-native ingress adapters and expanded contact fields stay outside this release. |
 | 3. Drive and Office | Uploads, versions, shares, quotas, cleanup and editing are implemented. Private background PNG/text previews are implemented. Go/browser checks prove retry, obsolete-job refusal, checksum verification, access revocation, purge cleanup, inert text and reload persistence. |
@@ -62,7 +62,7 @@ These are recommendations, not installed dependencies. Verify React compatibilit
 | Email HTML | [bluemonday](https://github.com/microcosm-cc/bluemonday), BSD-3-Clause, plus [DOMPurify](https://github.com/cure53/DOMPurify), MPL-2.0 or Apache-2.0 | Go sanitization is authoritative. Client sanitization is additional defense. Neither replaces iframe isolation, URL policy, or CSP. |
 | Mail, Contacts, Drive lists | [TanStack Table](https://github.com/TanStack/table), MIT | Use server-side filtering and paging. Add [TanStack Virtual](https://github.com/TanStack/virtual), MIT, only when measured list sizes justify it. |
 | Calendar | [FullCalendar React](https://github.com/fullcalendar/fullcalendar), MIT standard plugins | Day/week/month and recurrence views. Premium resource scheduling is a separate product/license choice. |
-| Word and spreadsheet files | [ONLYOFFICE DocumentServer](https://github.com/ONLYOFFICE/DocumentServer), AGPL-3.0 Community | A separate document service behind an authorized Go connector. Confirm edition limits, license obligations, and DOCX/XLSX fidelity before selecting it. Evaluate Collabora as an alternative. |
+| Word and spreadsheet files | [Collabora CODE](https://github.com/CollaboraOnline/online.mirror) | Separate private document service with WOPI grants and native desktop/mobile editing. See docs/collabora.md for verified behavior and distribution boundaries. |
 | Browser-native spreadsheets | [Univer core](https://github.com/dream-num/univer), Apache-2.0 | Alternative for native workspace sheets. Do not assume all collaboration, import/export, or server features are included in the open-source core. |
 | Federated chat | [Matrix JS SDK](https://github.com/matrix-org/matrix-js-sdk), Apache-2.0, with a maintained Matrix homeserver | Proven federation is preferable to inventing a Slack-like federation protocol. Current [Element Synapse](https://github.com/element-hq/synapse) is AGPL-3.0; the old matrix-org repository's license is not sufficient evidence for current releases. |
 | Meetings | [LiveKit server](https://github.com/livekit/livekit) and [React components](https://github.com/livekit/components-js), Apache-2.0 | Go creates authorized room tokens; clients use the media SDK. Requires an SFU, reachable media ports, and TURN for restricted networks. |
@@ -236,7 +236,7 @@ Resolve these through the brief, in small batches. Historical source text does n
 | Sign-in and registration | Līdza auth; confirm password/OIDC, invitations, MFA, and recovery | MailVault's device-token system must not create a second authentication authority. |
 | Visual design | Recover the approved prototype before selecting final tokens | Exact screenshots/source are currently missing; do not invent approval of a palette. |
 | First live mail transport | One configured provider or local MTA, chosen by deployment needs | Both receiving and sending must be proven with the actual credentials/domain. |
-| Office service | Evaluate ONLYOFFICE against real DOCX/XLSX fixtures | Fidelity, service operation, limits, and license obligations affect architecture. |
+| Office service | Validate Collabora against real DOCX/XLSX fixtures | Fidelity, service operation, limits, and license obligations affect architecture. |
 | Chat federation | Matrix with a maintained homeserver | Requires agreement on external service operation, identity, encryption, and moderation. |
 | SMIP priority and reputation policy | Separate experimental track; no public ranking in the first release | Protocol trust, cryptography, and complaint governance remain unresolved. |
 | Delivery agreements | Confirm commit/push policy, feature test bar, and reporting in the brief | The prior scaffold push does not establish an ongoing release policy. |

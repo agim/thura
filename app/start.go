@@ -18,8 +18,8 @@ import (
 	"thura/internal/mailbox"
 	"thura/internal/meet"
 	"thura/internal/platform/objectgc"
+	"thura/internal/platform/objectstore"
 	livekit "thura/internal/providers/livekit"
-	provider "thura/internal/providers/onlyoffice"
 	"thura/internal/setup"
 )
 
@@ -29,6 +29,9 @@ import (
 // once and left alone; this file is the app's.
 func onStart(ctx context.Context, s *lidza.Services) error {
 	if err := setup.Activate(lidza.WithServices(ctx, s), s); err != nil {
+		return err
+	}
+	if err := objectstore.Configure(lidza.WithServices(ctx, s), s); err != nil {
 		return err
 	}
 	if err := federation.Configure(s); err != nil {
@@ -87,11 +90,7 @@ func appHeaders() []middleware.Middleware {
 	// CSSOM. Allow only that empty element's hash, keeping other inline styles
 	// blocked and retaining the default script policy.
 	policy := middleware.AddCSP(middleware.DefaultCSP, "style-src", "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='")
-	if cfg, err := provider.Load(); err == nil {
-		policy = middleware.AddCSP(policy, "script-src", cfg.ServerURL)
-		policy = middleware.AddCSP(policy, "frame-src", "'self'", cfg.ServerURL)
-		policy = middleware.AddCSP(policy, "connect-src", cfg.ServerURL)
-	}
+	policy = middleware.AddCSP(policy, "frame-src", "'self'")
 	permissions := middleware.DefaultPermissionsPolicy
 	if cfg, err := livekit.Load(); err == nil {
 		policy = middleware.AddCSP(policy, "connect-src", cfg.PublicURL)

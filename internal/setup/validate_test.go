@@ -65,3 +65,25 @@ func TestValidateSetupProviderRequirementsAndTransportRestrictions(t *testing.T)
 		t.Fatal("unpaired SMIP admitted")
 	}
 }
+
+func TestOlderPublishedSnapshotRetainsNewOptionalDefaults(t *testing.T) {
+	t.Setenv("LIDZA_MASTER_KEY_OFF", "")
+	t.Setenv("LIDZA_MASTER_KEY", "adadadadadadadadadadadadadadadadadadadadadadadadadadadadadadadad")
+	old := validSetup()
+	delete(old, "COLLABORA_SERVER_URL")
+	old["COLLABORA_APP_URL"] = ""
+	encrypted, err := seal(old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := unseal(encrypted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded["COLLABORA_SERVER_URL"] != "" || loaded["COLLABORA_APP_URL"] != "" {
+		t.Fatal("snapshot defaults or explicit empty value lost")
+	}
+	if err = validate(loaded); err != nil {
+		t.Fatal(err)
+	}
+}

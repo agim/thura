@@ -12,7 +12,7 @@ SMIP work is isolated from app-completion work. [SMIP/0.1](smip-v0.1.md) is the 
 | CalDAV | No connector in this release. | A future endpoint needs discovery, ETags/conditional writes, sync tokens, calendar ACLs, recurrence fidelity and idempotent imports. Keep it separate from SMIP chat/file transfer and the typed app API. |
 | WebDAV | No connector in this release. | A future Drive adapter must map collections/resources, locks or conditional writes, versions, quota and authorization to Drive. A received SMIP file is an immutable copy, not a remote WebDAV mount or edit capability. |
 | S3-compatible storage | Implemented optional object backend through Līdza storage. | Store received files through the pack after quota/checksum/authorization checks. Object keys and signed download URLs are local storage mechanisms, not federation identity or permission. No remote URL ingestion in SMIP/0.1. |
-| ONLYOFFICE document protocol | Implemented optional authenticated editing/callback connector. | A transferred document never grants an edit session. Issue local authorized configuration/tickets; callbacks retain version and membership checks. |
+| Collabora WOPI protocol | Authenticated document iframe and file-scoped read/write grants. | A transferred document never grants an edit session. Recheck membership, trash, locks and base versions on saves. |
 | WebRTC / LiveKit | Implemented optional real-time media service. | SMIP may later carry an explicitly authorized invitation or meeting reference, not audio/video or a reusable room token. Media encryption/TURN/device acceptance and scoped meeting authorization remain independent. |
 
 ## Shared adapter requirements

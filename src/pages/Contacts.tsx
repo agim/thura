@@ -1,52 +1,37 @@
-import { useState, type FormEvent } from 'react'
-import { useMutation, useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import { AssistantAction } from '../components/AssistantAction'
+import { ActionButton } from '../components/ActionButton'
+import { RecipientInput } from '../components/RecipientInput'
+import { ActionRow } from '../components/ActionRow'
+import { ResourceLabels } from '../components/ResourceLabels'
+import { AppSidebar } from '../components/AppSidebar'
+import { Navigate } from '@tanstack/react-router'
+import { AppPageHeader, NewAction } from '../components/AppPageHeader'
+import { confirmAction } from '../components/ConfirmationHost'
+import { useCompactScreen } from '../components/CompactDisclosure'
+import { WorkspaceDialog } from '../components/WorkspaceDialog'
+import { Search, Mail, MessageCircle, Orbit, Pencil, Trash2, MoreHorizontal, Users } from 'lucide-react'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import { api, validators, type Contact, type ContactInput } from '@lidza/client'
-import { SignIn } from '../components/SignIn'
 
 const emptyContact: ContactInput = { name: '', email: '', company: '', phone: '', favorite: false }
 
-export function Contacts() {
-  const session = useQuery({ queryKey: ['session'], queryFn: () => api.authSession(), retry: false })
-  if (session.isPending) return <p role="status">Loading account…</p>
-  if (session.isError) return <p role="alert">Could not load your account. Reload to try again.</p>
-  return session.data.user ? <WorkspaceContacts /> : <SignIn />
-}
+export function Contacts() { return <Navigate to="/app/contacts" replace /> }
 
-function WorkspaceContacts() {
-  const client = useQueryClient()
-  const [selected, setSelected] = useState('')
-  const workspaces = useQuery({ queryKey: ['workspaces'], queryFn: () => api.listWorkspaces() })
-  const logout = useMutation({ mutationFn: () => api.authLogout(), onSuccess: async () => {
-    await client.cancelQueries()
-    client.setQueryData(['session'], { user: null })
-    client.removeQueries({ predicate: query => query.queryKey[0] !== 'session' })
-  } })
-  const workspace = workspaces.data?.items.find(w => w.id === selected) ?? workspaces.data?.items[0]
-  return <div className="space-y-6">
-    <header className="flex items-center justify-between gap-4"><h1 className="text-3xl font-semibold">Contacts</h1><button type="button" onClick={() => logout.mutate()} disabled={logout.isPending}>Sign out</button></header>
-    {logout.isError && <p role="alert">{logout.error.message}</p>}
-    {workspaces.isPending && <p role="status">Loading workspaces…</p>}
-    {workspaces.isError && <p role="alert">{workspaces.error.message}</p>}
-    {workspaces.data?.items.length === 0 && <p>Your account has no workspace membership yet. Ask your workspace owner for access.</p>}
-    {workspace && <>
-      <label className="block">Workspace<select className="ml-3 rounded border p-2" value={workspace.id} onChange={e => setSelected(e.target.value)}>{workspaces.data?.items.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
-      <ContactBook key={workspace.id} workspaceId={workspace.id} />
-    </>}
-  </div>
-}
-
-export function ContactBook({ workspaceId, onEmail, onChat, handoffPending }: { workspaceId: string; onEmail?: (contact: Contact) => void; onChat?: (contact: Contact) => void; handoffPending?: boolean }) {
+export function ContactBook({ workspaceId, onEmail, onChat, onLoop, handoffPending, search, initialAdding = false }: { initialAdding?: boolean; workspaceId: string; search?: string; onLoop?: (contact: Contact) => void; onEmail?: (contact: Contact) => void; onChat?: (contact: Contact) => void; handoffPending?: boolean }) {
   const client = useQueryClient()
   const [edit, setEdit] = useState<Contact | null>(null)
+  const [adding, setAdding] = useState(initialAdding)
   const [form, setForm] = useState<ContactInput>(emptyContact)
-  const [query, setQuery] = useState('')
+  const [localQuery, setQuery] = useState('')
+  const query = search ?? localQuery
   const [error, setError] = useState('')
   const key = ['contacts', workspaceId]
   const contacts = useInfiniteQuery({ queryKey: [...key, query], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listContacts({ workspaceId }, { query: { search: query, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined })
   const refresh = () => client.invalidateQueries({ queryKey: key })
   const save = useMutation({
     mutationFn: (body: ContactInput) => edit ? api.updateContact({ workspaceId, id: edit.id }, body) : api.createContact({ workspaceId }, body),
-    onSuccess: async () => { setForm(emptyContact); setEdit(null); await refresh() },
+    onSuccess: async () => { setForm(emptyContact); setEdit(null); setAdding(false); await refresh() },
   })
   const remove = useMutation({ mutationFn: (id: string) => api.deleteContact({ workspaceId, id }), onSuccess: refresh })
   function submit(event: FormEvent) {
@@ -57,25 +42,31 @@ export function ContactBook({ workspaceId, onEmail, onChat, handoffPending }: { 
     if (problems.length === 0) save.mutate(body)
   }
   const visible = contacts.isError ? [] : [...new Map(contacts.data?.pages.flatMap(page => page.items).map(item => [item.id, item]) ?? []).values()]
-  return <>
-    <form onSubmit={submit} className="space-y-3 rounded border border-line p-4">
-      <h2 className="text-xl font-medium">{edit ? 'Edit contact' : 'Add contact'}</h2>
-      {(['name', 'email', 'company', 'phone'] as const).map(field => <label className="block capitalize" key={field}>{field[0].toUpperCase() + field.slice(1)}<input className="block w-full rounded border p-2" value={form[field] ?? ''} required={field === 'name' || field === 'email'} type={field === 'email' ? 'email' : 'text'} onChange={e => setForm({ ...form, [field]: e.target.value })} /></label>)}
+  return <><AppPageHeader title="Contacts" action={<NewAction label="New contact" onClick={() => setAdding(true)} />} /><div className="contacts-browser">
+    <AppSidebar title="Directory" label="Contacts tools" className="contacts-toolbar">{search === undefined && <label><Search size={18} aria-hidden="true" /><input aria-label="Search contacts" placeholder="Search contacts" value={query} onChange={e => setQuery(e.target.value)} /></label>}<span className="app-sidebar-current"><Users size={18} aria-hidden="true" />All contacts</span></AppSidebar><div className="contacts-content">
+    {(adding || edit) && <WorkspaceDialog title={edit ? 'Edit contact' : 'New contact'} onClose={() => { setAdding(false); setEdit(null); setForm(emptyContact); setError(''); save.reset() }}><form onSubmit={submit} className="contact-editor">
+      {(['name', 'email', 'company', 'phone'] as const).map(field => field === 'email' ? <RecipientInput key={field} workspaceId={workspaceId} label="Email" multiple={false} required value={form.email} onChange={email => setForm({ ...form, email })} /> : <label className="block capitalize" key={field}>{field === 'company' ? 'Organization (optional)' : field[0].toUpperCase() + field.slice(1)}<input className="block w-full rounded border p-2" value={form[field] ?? ''} required={field === 'name'} type="text" onChange={e => setForm({ ...form, [field]: e.target.value })} /></label>)}
       <label className="flex gap-2"><input type="checkbox" checked={form.favorite} onChange={e => setForm({ ...form, favorite: e.target.checked })} />Favorite</label>
       {(error || save.isError) && <p role="alert">{error || save.error?.message}</p>}
-      <button className="rounded bg-brand px-4 py-2 text-white" disabled={save.isPending || remove.isPending}>Save contact</button>
-      {edit && <button type="button" className="ml-3" disabled={save.isPending} onClick={() => { setEdit(null); setForm(emptyContact); setError(''); save.reset() }}>Cancel editing</button>}
-    </form>
-    <label className="block">Search contacts<input className="ml-3 rounded border p-2" value={query} onChange={e => setQuery(e.target.value)} /></label>
+      <ActionRow label="Contact actions"><ActionButton className="primary-action" disabled={save.isPending || remove.isPending}>Save contact</ActionButton>
+      {edit && <ActionButton type="button" className="ml-3" disabled={save.isPending} onClick={() => { setEdit(null); setForm(emptyContact); setError(''); save.reset() }}>Cancel editing</ActionButton>}</ActionRow>
+    </form></WorkspaceDialog>}
     {contacts.isPending && <p role="status">Loading contacts…</p>}
     {contacts.isError && <p role="alert">{contacts.error.message}</p>}
     {remove.isError && <p role="alert">{remove.error.message}</p>}
     {contacts.data && visible.length === 0 && <p>{query ? 'No contacts match your search.' : 'No contacts yet.'}</p>}
-    <ul className="contact-grid">{visible.map(c => <li key={c.id} className="rounded border border-line p-4">
-      <h2 className="font-semibold">{c.name}{c.favorite ? ' ★' : ''}</h2><p>{c.email}</p><p>{c.company} {c.phone}</p>
-      <div className="mt-2 flex flex-wrap gap-4">{onEmail && <button type="button" disabled={handoffPending} onClick={() => onEmail(c)}>Email {c.name}</button>}{onChat && <button type="button" disabled={handoffPending} onClick={() => onChat(c)}>Chat with {c.name}</button>}<button type="button" disabled={save.isPending || remove.isPending} onClick={() => { setEdit(c); setForm(c); setError(''); save.reset() }}>Edit {c.name}</button><button type="button" disabled={save.isPending || remove.isPending} onClick={() => { if (window.confirm(`Delete ${c.name}?`)) { if (edit?.id === c.id) { setEdit(null); setForm(emptyContact) }; remove.mutate(c.id) } }}>Delete {c.name}</button></div>
+    <div className="contact-columns" aria-hidden="true"><span>Name</span><span>Organization</span><span>Actions</span></div><ul className="contact-grid contact-directory">{visible.map(c => <li key={c.id} className="rounded border border-line p-4">
+      <span className="contact-avatar" aria-hidden="true">{c.name.split(/\s+/).slice(0, 2).map(n => n[0]).join('')}</span><div className="contact-identity"><h2 className="font-semibold">{c.name}{c.favorite ? ' ★' : ''}</h2><p>{c.email}</p></div><div className="contact-organization"><span>{c.company || 'Personal contact'}</span>{c.phone && <small>{c.phone}</small>}</div>
+      <div className="contact-actions"><ContactActions name={c.name}><AssistantAction workspaceId={workspaceId} source="contacts" contextLabel={c.name} initialAction="draft" content={`Contact: ${c.name}\nEmail: ${c.email}\nOrganization: ${c.company || ''}`} /><ResourceLabels workspaceId={workspaceId} source="contact" id={c.id} title={`Labels for ${c.name}`} />{onLoop && <ActionButton type="button" onClick={() => onLoop(c)} aria-label={`Open Loop with ${c.name}`} title="Loop"><Orbit size={18} aria-hidden="true" /><span>Loop</span></ActionButton>}{onEmail && <ActionButton type="button" disabled={handoffPending} onClick={() => onEmail(c)} aria-label={`Email ${c.name}`} title="Email"><Mail size={18} aria-hidden="true" /><span>Email</span></ActionButton>}{onChat && <ActionButton type="button" disabled={handoffPending} onClick={() => onChat(c)} aria-label={`Chat with ${c.name}`} title="Chat"><MessageCircle size={18} aria-hidden="true" /><span>Chat</span></ActionButton>}<ActionButton type="button" disabled={save.isPending || remove.isPending} onClick={() => { setEdit(c); setForm(c); setError(''); save.reset() }} aria-label={`Edit ${c.name}`} title="Edit"><Pencil size={18} aria-hidden="true" /><span>Edit</span></ActionButton><ActionButton type="button" disabled={save.isPending || remove.isPending} onClick={async () => { if (await confirmAction(`Delete ${c.name}?`)) { if (edit?.id === c.id) { setEdit(null); setForm(emptyContact) }; remove.mutate(c.id) } }} aria-label={`Delete ${c.name}`} title="Delete"><Trash2 size={18} aria-hidden="true" /><span>Delete</span></ActionButton></ContactActions></div>
     </li>)}</ul>
-    {contacts.hasNextPage && <button disabled={contacts.isFetchingNextPage} onClick={() => void contacts.fetchNextPage()}>Load more contacts</button>}
-    <p className="text-sm text-muted">Shared with this workspace. {visible.length} contacts loaded; search covers the full directory.</p>
-  </>
+    {contacts.hasNextPage && <ActionButton disabled={contacts.isFetchingNextPage} onClick={() => void contacts.fetchNextPage()}>Load more contacts</ActionButton>}
+    <p className="directory-count">{visible.length} {visible.length === 1 ? 'contact' : 'contacts'}{contacts.hasNextPage ? ' loaded' : ''} · Shared with your workspace</p>
+  </div></div></>
+}
+
+function ContactActions({ name, children }: { name: string; children: ReactNode }) {
+  const compact = useCompactScreen()
+  const [open, setOpen] = useState(false)
+  if (!compact) return <ActionRow label={`Actions for ${name}`} className="contact-action-list">{children}</ActionRow>
+  return <><ActionButton className="contact-menu-trigger" aria-label={`Actions for ${name}`} onClick={() => setOpen(true)}><MoreHorizontal size={20} /></ActionButton>{open && <WorkspaceDialog title={name} onClose={() => setOpen(false)}><div role="presentation" onClick={event => { const target = event.target as HTMLElement; if (target.closest('.contact-action-list') && !target.closest('[aria-haspopup="dialog"]')) setOpen(false) }}><div className="contact-action-list">{children}</div></div></WorkspaceDialog>}</>
 }

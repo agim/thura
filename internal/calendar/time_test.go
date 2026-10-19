@@ -113,3 +113,20 @@ func TestICSUnicodeExceptionsAndAllDayRoundTrip(t *testing.T) {
 		t.Fatal("alarm properties leaked into event", err)
 	}
 }
+
+func TestRichDescriptionExportsReadableCalendarText(t *testing.T) {
+	start := time.Date(2026, 10, 19, 13, 0, 0, 0, time.UTC)
+	end := start.Add(time.Hour)
+	event := q.CalendarEvent{ID: "rich", Uid: "rich@example.com", Organizer: "owner@example.com", Title: "Plan", Description: "Review the plan\nBring notes", DescriptionHTML: "<p><strong>Review the plan</strong></p><p>Bring notes</p>", StartsAt: &start, EndsAt: &end, TimeZone: "America/New_York", UpdatedAt: start}
+	raw, err := ExportICS([]q.CalendarEvent{event}, nil, nil, "REQUEST")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "<strong>") || !strings.Contains(string(raw), `DESCRIPTION:Review the plan\nBring notes`) {
+		t.Fatalf("invitation contains markup or lost readable text: %s", raw)
+	}
+	records, _, err := ParseICS(raw, "America/New_York")
+	if err != nil || len(records) != 1 || text(records[0].Input.Description) != event.Description {
+		t.Fatalf("rich description changed plain calendar semantics: %v", err)
+	}
+}
