@@ -61,3 +61,28 @@ test('calendar explicitly saves and sends captured attendee invitations', async 
   await expect(page.getByRole('dialog', { name: 'New meeting', exact: true })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: meeting.name, exact: true })).toBeVisible()
 })
+
+for (const width of [390, 1440]) {
+  test(`a cold meeting invitation has one guest entry screen at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    const initial = await page.request.get('/meet?room=123456789')
+    expect(initial.status()).toBe(200)
+    const html = await initial.text()
+    expect(html).toContain('Opening your meeting…')
+    expect(html).not.toContain('name="meeting-code"')
+    expect(html).not.toContain('Sign in to Thura')
+    expect(html).not.toContain('type="password"')
+    let release!: () => void
+    const scripts = new Promise<void>(resolve => { release = resolve })
+    await page.route('**/assets/*.js', async route => { await scripts; await route.continue() })
+    await page.goto('/meet?room=123456789#pin=123456', { waitUntil: 'commit' })
+    await expect(page.getByRole('heading', { name: 'Opening your meeting…', exact: true })).toBeVisible()
+    await expect(page.getByLabel('Meeting ID', { exact: true })).toHaveCount(0)
+    release()
+    await expect(page.getByRole('heading', { name: 'Join a meeting', exact: true })).toBeVisible()
+    await expect(page.getByLabel('Meeting ID', { exact: true })).toHaveValue('123456789')
+    await expect(page.getByLabel('PIN', { exact: true })).toHaveValue('123456')
+    await expect(page.getByRole('heading', { name: 'Sign in to Thura', exact: true })).toHaveCount(0)
+    await expect(page).toHaveURL(/\/meet$/)
+  })
+}

@@ -5,6 +5,7 @@ import { MeetingCall } from '../components/MeetingCall'
 import { userError } from '../lib/errors'
 import { Video, ShieldCheck } from 'lucide-react'
 export function GuestMeet() {
+  const [invitationReady, setInvitationReady] = useState(false)
   const [code, setCode] = useState('')
   const [pin, setPin] = useState('')
   const [name, setName] = useState('')
@@ -16,9 +17,13 @@ export function GuestMeet() {
     const invitationPin = new URLSearchParams(location.hash.slice(1)).get('pin')
     if (room) setCode(room)
     if (invitationPin) setPin(invitationPin)
-    history.replaceState(null, '', location.pathname)
+    history.replaceState(history.state, '', location.pathname)
+    setInvitationReady(true)
   }, [])
   const join = useMutation({ mutationFn: () => api.joinGuestMeeting({ code, pin, name }), onSuccess: data => { setAccess(data); setError(''); setLeft(false) } })
+  // The prerender cannot read the PIN fragment. Do not paint an empty manual
+  // join form before hydration has populated all invitation fields together.
+  if (!invitationReady) return <section className="guest-meeting" aria-busy="true"><div className="guest-meet-icon"><Video size={24} aria-hidden="true" /></div><h1>Opening your meeting…</h1><p role="status">Preparing your invitation.</p></section>
   return <section className="guest-meeting">
     {access ? <><h1>{access.name}</h1><MeetingCall token={access.token} serverUrl={access.serverUrl} onLeave={() => { setAccess(null); setLeft(true) }} onError={setError} /></> : <>
       <div className="guest-meet-icon"><Video size={24} /></div><h1>{left ? 'You left the meeting' : 'Join a meeting'}</h1>
