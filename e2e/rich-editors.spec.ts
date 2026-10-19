@@ -66,6 +66,7 @@ test('Drive document formatting saves immutable versions and reopens with tables
   await page.getByRole('button', { name: 'Create document', exact: true }).click()
   await page.getByRole('button', { name: 'Edit document', exact: true }).click()
   expect((await page.getByRole('textbox', { name: 'Document', exact: true }).boundingBox())!.width).toBeGreaterThan(700)
+  expect((await page.getByRole('textbox', { name: 'Document', exact: true }).boundingBox())!.y).toBeLessThan(350)
   await page.getByRole('textbox', { name: 'Document', exact: true }).fill('Team planning')
   await page.getByRole('textbox', { name: 'Document', exact: true }).press('ControlOrMeta+a')
   await page.getByRole('button', { name: 'Bold', exact: true }).click()

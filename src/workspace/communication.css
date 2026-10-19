@@ -1142,3 +1142,16 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 #orbit-workspace.zero-workspace .drive-body:has(.drive-document-editor,.office-editor) > .drive-detail { border:0; padding:0; }
 #orbit-workspace.zero-workspace .drive-browser:has(.drive-document-editor,.office-editor) .drive-view-options { visibility:hidden; }
 #orbit-workspace.zero-workspace .rich-editor-content :is(p,li) { font-size:inherit; line-height:inherit; }
+#orbit-workspace.zero-workspace .drive-browser:has(.drive-document-editor,.office-editor) > .app-page-header { display:none; }
+#orbit-workspace.zero-workspace .drive-browser:has(.drive-document-editor,.office-editor) .drive-view-options { display:none; }
+#orbit-workspace.zero-workspace .full-editor > .rich-editor-label { display:none; }
+@media(min-width:1000px) {
+ #orbit-workspace.zero-workspace .drive-browser:has(.drive-document-editor,.office-editor) { grid-template-rows:auto 1fr; }
+ #orbit-workspace.zero-workspace .drive-browser:has(.drive-document-editor,.office-editor) .drive-tabs { grid-row:1 / span 2; }
+ #orbit-workspace.zero-workspace .drive-browser:has(.drive-document-editor,.office-editor) .drive-body { grid-row:1 / span 2; }
+ #orbit-workspace.zero-workspace .drive-body:has(.drive-document-editor,.office-editor) .drive-detail > header { padding:0 0 12px; }
+ #orbit-workspace.zero-workspace .drive-body:has(.drive-document-editor,.office-editor) .drive-detail > header > div { display:grid; grid-template-columns:44px minmax(0,1fr); column-gap:12px; align-items:center; }
+ #orbit-workspace.zero-workspace .drive-body:has(.drive-document-editor,.office-editor) .drive-detail > header .file-type { grid-row:1 / span 2; }
+ #orbit-workspace.zero-workspace .drive-body:has(.drive-document-editor,.office-editor) .drive-detail > header h3 { margin:0; }
+ #orbit-workspace.zero-workspace .drive-body:has(.drive-document-editor,.office-editor) .drive-detail > header p { grid-column:2; margin:0; }
+}
