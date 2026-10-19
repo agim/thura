@@ -1,0 +1,11 @@
+{
+  "cpus": 1,
+  "memory_bytes": 1073741824,
+  "swap_bytes": 0,
+  "p95_ms_max": 5000,
+  "emails_per_minute_min": 5,
+  "phishing_recall_min": 0.95,
+  "benign_false_positive_rate_max": 0.02,
+  "errors_max": 0,
+  "note": "Quality gates apply separately to authored email and publisher email subsets; URL and instruction/tail challenges reported separately. Authored cases are a smoke test, not a representative independent corpus."
+}

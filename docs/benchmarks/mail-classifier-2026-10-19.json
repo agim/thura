@@ -1,0 +1,333 @@
+{
+  "date": "2026-10-19",
+  "decision": "rejected_do_not_integrate",
+  "host": "Apple M5, Docker Linux arm64; CPU quota is not a generic cloud-vCPU performance guarantee",
+  "candidate": {
+    "repository": "onnx-community/phishing-email-detection-distilbert_v2.4.1-ONNX",
+    "revision": "8b488fdbc432690dd9323f5fd8119c5f3290b46b",
+    "source_repository": "cybersectony/phishing-email-detection-distilbert_v2.4.1",
+    "source_revision": "6724dec17360ab1f6450553f1d950404f66a5dde",
+    "declared_source_license": "Apache-2.0",
+    "label_mapping_source": "https://huggingface.co/datasets/cybersectony/PhishingEmailDetectionv2.0/blob/afba38f4a7ffbe89259ab68ae7c6426f944496cc/README.md",
+    "labels": [
+      "legitimate_email",
+      "phishing_email",
+      "legitimate_url",
+      "phishing_url"
+    ],
+    "files": {
+      "model_int8.onnx": {
+        "remote": "onnx/model_int8.onnx",
+        "bytes": 67538702,
+        "sha256": "ef6330f3f756e45e17a67bc7d7bc0c41996bee52b28ba7b1b537342866436530"
+      },
+      "model.onnx": {
+        "remote": "onnx/model.onnx",
+        "bytes": 267959729,
+        "sha256": "c30f422325e817a16df42f7d762f247a27fa1e4277a23d6ed62ff1aeb3a111fa"
+      },
+      "tokenizer.json": {
+        "remote": "tokenizer.json",
+        "bytes": 711661,
+        "sha256": "cb374d6bc042c22455946f4e09a89d29882a199fdaf8fb25be00dc8b8857a448"
+      },
+      "config.json": {
+        "remote": "config.json",
+        "bytes": 879,
+        "sha256": "432269537c4f62230f129d7cd2739c70209f23e29156179b352ff8d0270a6cf3"
+      }
+    }
+  },
+  "gates": {
+    "cpus": 1,
+    "memory_bytes": 1073741824,
+    "swap_bytes": 0,
+    "p95_ms_max": 5000,
+    "emails_per_minute_min": 5,
+    "phishing_recall_min": 0.95,
+    "benign_false_positive_rate_max": 0.02,
+    "errors_max": 0,
+    "note": "Quality gates apply separately to authored email and publisher email subsets; URL and instruction/tail challenges reported separately. Authored cases are a smoke test, not a representative independent corpus."
+  },
+  "comparison": {
+    "matching_binary_predictions": 473,
+    "cases": 476,
+    "different_ids": [
+      "authored-safe-15",
+      "authored-safe-23",
+      "publisher-test-0-087ae7139aa7e4d5"
+    ]
+  },
+  "runs": {
+    "int8": {
+      "status": "rejected",
+      "constraints_verified": true,
+      "limits": {
+        "cpus": 1,
+        "memory_bytes": 1073741824,
+        "swap_bytes": 0
+      },
+      "gates": {
+        "cpus": 1,
+        "memory_bytes": 1073741824,
+        "swap_bytes": 0,
+        "p95_ms_max": 5000,
+        "emails_per_minute_min": 5,
+        "phishing_recall_min": 0.95,
+        "benign_false_positive_rate_max": 0.02,
+        "errors_max": 0,
+        "note": "Quality gates apply separately to authored email and publisher email subsets; URL and instruction/tail challenges reported separately. Authored cases are a smoke test, not a representative independent corpus."
+      },
+      "docker": {
+        "image_id": "sha256:49a8560eaee1c35cb00ee9fdd96bda064d90de0cc37cb38c8b5a38465d4dea3f",
+        "host_config": {
+          "NanoCpus": 1000000000,
+          "Memory": 1073741824,
+          "MemorySwap": 1073741824,
+          "NetworkMode": "none"
+        }
+      },
+      "architecture": "arm64",
+      "container_state": {
+        "ExitCode": 0,
+        "OOMKilled": false,
+        "StartedAt": "2026-10-19T19:47:20.883606998Z",
+        "FinishedAt": "2026-10-19T19:47:56.705339919Z"
+      },
+      "precision": "int8",
+      "startup_seconds": 0.2802633210012573,
+      "model_sha256": "ef6330f3f756e45e17a67bc7d7bc0c41996bee52b28ba7b1b537342866436530",
+      "dataset_sha256": "3a86bcf5581a451d8dfe901bf9ca4d0e4e31ebb7b44e2f8f7cb39a4fcb3bb34f",
+      "cgroup": {
+        "memory.max": "1073741824",
+        "memory.peak": "271769600",
+        "memory.swap.max": "0",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "100000 100000",
+        "cpu.stat": "usage_usec 35216343\nuser_usec 34972281\nsystem_usec 244061\ncore_sched.force_idle_usec 0\nnr_periods 357\nnr_throttled 134\nthrottled_usec 517076\nnr_bursts 0\nburst_usec 0"
+      },
+      "groups": {
+        "authored_email": {
+          "count": 64,
+          "benign": 32,
+          "phishing": 32,
+          "invalid_or_failed": 0,
+          "false_positives": 9,
+          "missed_phishing": 2,
+          "false_positive_rate": 0.28125,
+          "phishing_recall": 0.9375,
+          "accuracy": 0.828125
+        },
+        "publisher_email": {
+          "count": 200,
+          "benign": 100,
+          "phishing": 100,
+          "invalid_or_failed": 0,
+          "false_positives": 6,
+          "missed_phishing": 2,
+          "false_positive_rate": 0.06,
+          "phishing_recall": 0.98,
+          "accuracy": 0.96
+        },
+        "publisher_url": {
+          "count": 200,
+          "benign": 100,
+          "phishing": 100,
+          "invalid_or_failed": 0,
+          "false_positives": 0,
+          "missed_phishing": 1,
+          "false_positive_rate": 0.0,
+          "phishing_recall": 0.99,
+          "accuracy": 0.995
+        },
+        "instruction_challenge": {
+          "count": 8,
+          "benign": 0,
+          "phishing": 8,
+          "invalid_or_failed": 0,
+          "false_positives": 0,
+          "missed_phishing": 0,
+          "false_positive_rate": null,
+          "phishing_recall": 1.0,
+          "accuracy": 1.0
+        },
+        "long_tail_challenge": {
+          "count": 4,
+          "benign": 0,
+          "phishing": 4,
+          "invalid_or_failed": 0,
+          "false_positives": 0,
+          "missed_phishing": 4,
+          "false_positive_rate": null,
+          "phishing_recall": 0.0,
+          "accuracy": 0.0
+        }
+      },
+      "latency_ms": {
+        "first": 9.060134998435387,
+        "p50": 8.8960520006367,
+        "p95": 358.46581700025126,
+        "max": 1719.151609999244
+      },
+      "sequential_cases_per_minute": 805.905086215224,
+      "failures": [
+        "authored_email: phishing recall/validity below gate",
+        "authored_email: benign false positive rate above gate",
+        "publisher_email: benign false positive rate above gate",
+        "long_tail_challenge: phishing recall/validity below gate"
+      ],
+      "quality_note": "Publisher test data is not independently held out by Thura. Authored cases are a smoke test, not a population accuracy estimate. Measured is not automatic production approval.",
+      "email_performance": {
+        "count": 276,
+        "latency_ms": {
+          "first": 9.060134998435387,
+          "p50": 42.71763599899714,
+          "p95": 582.5593199988361,
+          "max": 1719.151609999244
+        },
+        "sequential_cases_per_minute": 481.3676684892295
+      }
+    },
+    "fp32": {
+      "status": "rejected",
+      "constraints_verified": true,
+      "limits": {
+        "cpus": 1,
+        "memory_bytes": 1073741824,
+        "swap_bytes": 0
+      },
+      "gates": {
+        "cpus": 1,
+        "memory_bytes": 1073741824,
+        "swap_bytes": 0,
+        "p95_ms_max": 5000,
+        "emails_per_minute_min": 5,
+        "phishing_recall_min": 0.95,
+        "benign_false_positive_rate_max": 0.02,
+        "errors_max": 0,
+        "note": "Quality gates apply separately to authored email and publisher email subsets; URL and instruction/tail challenges reported separately. Authored cases are a smoke test, not a representative independent corpus."
+      },
+      "docker": {
+        "image_id": "sha256:49a8560eaee1c35cb00ee9fdd96bda064d90de0cc37cb38c8b5a38465d4dea3f",
+        "host_config": {
+          "NanoCpus": 1000000000,
+          "Memory": 1073741824,
+          "MemorySwap": 1073741824,
+          "NetworkMode": "none"
+        }
+      },
+      "architecture": "arm64",
+      "container_state": {
+        "ExitCode": 0,
+        "OOMKilled": false,
+        "StartedAt": "2026-10-19T19:47:56.958901608Z",
+        "FinishedAt": "2026-10-19T19:49:21.950087609Z"
+      },
+      "precision": "fp32",
+      "startup_seconds": 0.9081954610010143,
+      "model_sha256": "c30f422325e817a16df42f7d762f247a27fa1e4277a23d6ed62ff1aeb3a111fa",
+      "dataset_sha256": "3a86bcf5581a451d8dfe901bf9ca4d0e4e31ebb7b44e2f8f7cb39a4fcb3bb34f",
+      "cgroup": {
+        "memory.max": "1073741824",
+        "memory.peak": "487968768",
+        "memory.swap.max": "0",
+        "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+        "cpu.max": "100000 100000",
+        "cpu.stat": "usage_usec 84892838\nuser_usec 84180990\nsystem_usec 711847\ncore_sched.force_idle_usec 0\nnr_periods 849\nnr_throttled 31\nthrottled_usec 22669\nnr_bursts 0\nburst_usec 0"
+      },
+      "groups": {
+        "authored_email": {
+          "count": 64,
+          "benign": 32,
+          "phishing": 32,
+          "invalid_or_failed": 0,
+          "false_positives": 9,
+          "missed_phishing": 2,
+          "false_positive_rate": 0.28125,
+          "phishing_recall": 0.9375,
+          "accuracy": 0.828125
+        },
+        "publisher_email": {
+          "count": 200,
+          "benign": 100,
+          "phishing": 100,
+          "invalid_or_failed": 0,
+          "false_positives": 5,
+          "missed_phishing": 2,
+          "false_positive_rate": 0.05,
+          "phishing_recall": 0.98,
+          "accuracy": 0.965
+        },
+        "publisher_url": {
+          "count": 200,
+          "benign": 100,
+          "phishing": 100,
+          "invalid_or_failed": 0,
+          "false_positives": 0,
+          "missed_phishing": 1,
+          "false_positive_rate": 0.0,
+          "phishing_recall": 0.99,
+          "accuracy": 0.995
+        },
+        "instruction_challenge": {
+          "count": 8,
+          "benign": 0,
+          "phishing": 8,
+          "invalid_or_failed": 0,
+          "false_positives": 0,
+          "missed_phishing": 0,
+          "false_positive_rate": null,
+          "phishing_recall": 1.0,
+          "accuracy": 1.0
+        },
+        "long_tail_challenge": {
+          "count": 4,
+          "benign": 0,
+          "phishing": 4,
+          "invalid_or_failed": 0,
+          "false_positives": 0,
+          "missed_phishing": 4,
+          "false_positive_rate": null,
+          "phishing_recall": 0.0,
+          "accuracy": 0.0
+        }
+      },
+      "latency_ms": {
+        "first": 26.13607400053297,
+        "p50": 27.75403399937204,
+        "p95": 891.0637699991639,
+        "max": 3811.2478199982434
+      },
+      "sequential_cases_per_minute": 339.9536765159365,
+      "failures": [
+        "authored_email: phishing recall/validity below gate",
+        "authored_email: benign false positive rate above gate",
+        "publisher_email: benign false positive rate above gate",
+        "long_tail_challenge: phishing recall/validity below gate"
+      ],
+      "quality_note": "Publisher test data is not independently held out by Thura. Authored cases are a smoke test, not a population accuracy estimate. Measured is not automatic production approval.",
+      "email_performance": {
+        "count": 276,
+        "latency_ms": {
+          "first": 26.13607400053297,
+          "p50": 116.52799799776403,
+          "p95": 1390.2442819999123,
+          "max": 3811.2478199982434
+        },
+        "sequential_cases_per_minute": 204.4416038091246
+      }
+    }
+  },
+  "license_evidence": {
+    "source-card": "7d203b5015338874a955473ed02ff85d19bc53028c2cd0950dafdae0aff6f400",
+    "base-license": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1",
+    "dataset-card": "c92b79ec132771070390e7a4ef26de03fc029c1abfe2d5a5d9abeccd5a19b142"
+  },
+  "corpus": {
+    "total": 476,
+    "email_and_challenge": 276,
+    "url": 200,
+    "publisher_parquet_sha256": "ddbedae0c45d52b0c950c9831a8a6b6db13de27ea1cd3e5e3c09f32e692214dc",
+    "independence": "Publisher test split is not independently held out by Thura; authored fixtures are a small smoke test, not a population estimate."
+  }
+}

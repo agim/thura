@@ -1,0 +1,15 @@
+{
+  "repository": "onnx-community/phishing-email-detection-distilbert_v2.4.1-ONNX",
+  "revision": "8b488fdbc432690dd9323f5fd8119c5f3290b46b",
+  "source_repository": "cybersectony/phishing-email-detection-distilbert_v2.4.1",
+  "source_revision": "6724dec17360ab1f6450553f1d950404f66a5dde",
+  "declared_source_license": "Apache-2.0",
+  "label_mapping_source": "https://huggingface.co/datasets/cybersectony/PhishingEmailDetectionv2.0/blob/afba38f4a7ffbe89259ab68ae7c6426f944496cc/README.md",
+  "labels": ["legitimate_email", "phishing_email", "legitimate_url", "phishing_url"],
+  "files": {
+    "model_int8.onnx": {"remote": "onnx/model_int8.onnx", "bytes": 67538702, "sha256": "ef6330f3f756e45e17a67bc7d7bc0c41996bee52b28ba7b1b537342866436530"},
+    "model.onnx": {"remote": "onnx/model.onnx", "bytes": 267959729, "sha256": "c30f422325e817a16df42f7d762f247a27fa1e4277a23d6ed62ff1aeb3a111fa"},
+    "tokenizer.json": {"remote": "tokenizer.json", "bytes": 711661, "sha256": "cb374d6bc042c22455946f4e09a89d29882a199fdaf8fb25be00dc8b8857a448"},
+    "config.json": {"remote": "config.json", "bytes": 879, "sha256": "432269537c4f62230f129d7cd2739c70209f23e29156179b352ff8d0270a6cf3"}
+  }
+}
