@@ -34,7 +34,8 @@ test('shared contact suggestions preserve recipients and work with the keyboard'
       await page.getByRole('listbox', { name: `${label} contact suggestions` }).getByRole('option', { name: `${name} ${email}` }).click()
       await expect(page.getByRole('button', { name: `Remove ${email} from ${label}`, exact: true })).toBeVisible()
     }
-    await page.getByRole('button', { name: 'Close Cc / Bcc', exact: true }).click()
+    await page.getByRole('button', { name: 'Cc / Bcc', exact: true }).click()
+    await expect(page.getByLabel('Cc', { exact: true })).toHaveCount(0)
     await page.getByRole('button', { name: 'Save draft', exact: true }).click()
     await expect(page.getByRole('status')).toContainText('Draft saved')
   } finally {

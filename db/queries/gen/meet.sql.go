@@ -159,7 +159,7 @@ func (q *Queries) ExpireMeetingWebhooks(ctx context.Context) error {
 }
 
 const findGuestCalendarEvent = `-- name: FindGuestCalendarEvent :one
-SELECT meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE id=$1
+SELECT meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE id=$1
 `
 
 func (q *Queries) FindGuestCalendarEvent(ctx context.Context, id string) (CalendarEvent, error) {
@@ -173,6 +173,7 @@ func (q *Queries) FindGuestCalendarEvent(ctx context.Context, id string) (Calend
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,
@@ -526,7 +527,7 @@ func (q *Queries) SaveMeetingToken(ctx context.Context, arg SaveMeetingTokenPara
 }
 
 const setEventMeetingDetails = `-- name: SetEventMeetingDetails :one
-UPDATE calendar_event SET meeting_id=$2,location=$3,description=$4 WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET meeting_id=$2,location=$3,description=$4 WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 type SetEventMeetingDetailsParams struct {
@@ -552,6 +553,7 @@ func (q *Queries) SetEventMeetingDetails(ctx context.Context, arg SetEventMeetin
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,

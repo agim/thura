@@ -1,3 +1,4 @@
+import { RichTextEditor } from './RichTextEditor'
 import { ActionButton } from './ActionButton'
 import { ActionRow } from './ActionRow'
 import { ResourceLabels } from './ResourceLabels'
@@ -97,7 +98,8 @@ function DraftEditor(props: DraftEditorProps) {
 }
 
 function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorProps) {
-  const [input, setInput] = useState<DraftInput>({ to: item.toAddress, cc: item.cc, bcc: item.bcc, subject: item.subject, text: item.textBody, threadId: item.threadId })
+  const [input, setInput] = useState<DraftInput>({ to: item.toAddress, cc: item.cc, bcc: item.bcc, subject: item.subject, text: item.textBody, html: item.htmlBody, threadId: item.threadId })
+  const [extraRecipients, setExtraRecipients] = useState(!!(item.cc || item.bcc))
   const [schedule, setSchedule] = useState('')
   const attachmentInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
@@ -126,10 +128,10 @@ function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorP
   function submit(e: FormEvent) { e.preventDefault(); setError(''); send.mutate() }
   return <form className="composer-form" onSubmit={submit}>
     <h3 className="title">Compose message</h3>
-    <div className="composer-recipient-row">{([['to', 'To']] as const).map(([field, label]) => <RecipientInput key={field} workspaceId={workspaceId} label={label} disabled={send.isPending} value={input[field] ?? ''} onChange={value => change(field, value)} />)}
-    <ModalAction done label="Cc / Bcc"><div className="recipient-extras">{([['cc', 'Cc'], ['bcc', 'Bcc']] as const).map(([field, label]) => <RecipientInput key={field} workspaceId={workspaceId} label={label} disabled={send.isPending} value={input[field] ?? ''} onChange={value => change(field, value)} />)}</div></ModalAction></div>
+    <div className="composer-recipient-row"><RecipientInput inlineLabel workspaceId={workspaceId} label="To" disabled={send.isPending} value={input.to ?? ''} onChange={value => change('to', value)} /><ActionButton type="button" className="recipient-toggle" aria-expanded={extraRecipients} onClick={() => setExtraRecipients(v => !v)}>Cc / Bcc</ActionButton></div>
+    {extraRecipients && <div className="recipient-extras">{([['cc', 'Cc'], ['bcc', 'Bcc']] as const).map(([field, label]) => <RecipientInput inlineLabel key={field} workspaceId={workspaceId} label={label} disabled={send.isPending} value={input[field] ?? ''} onChange={value => change(field, value)} />)}</div>}
     <label>Subject<input disabled={send.isPending} value={input.subject ?? ''} onChange={e => change('subject', e.target.value)} /></label>
-    <label>Message<textarea disabled={send.isPending} aria-label="Message" value={input.text ?? ''} onChange={e => change('text', e.target.value)} /></label>
+    <RichTextEditor label="Message" disabled={send.isPending} html={input.html} text={input.text} onChange={(html, text) => { const next = { ...input, html, text }; setInput(next); autosave.update(next) }} />
     <label className="visually-hidden">Attachments<input ref={attachmentInput} type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
     <ul>{detail.data?.attachments.map(a => <li key={a.id}>{a.name} <ActionButton type="button" aria-label={`Remove ${a.name}`} disabled={busy} onClick={() => removeAttachment.mutate(a.id)}><X size={14} aria-hidden="true" /></ActionButton></li>)}</ul>
     {(failure || error) && <p role="alert">{failure?.message || error}</p>}

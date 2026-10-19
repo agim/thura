@@ -17,11 +17,11 @@ test('shared mailbox persists drafts, uploads privately, queues and undoes sendi
   await page.reload()
   await page.getByRole('button', { name: 'Drafts', exact: true }).click()
   await page.getByRole('button').filter({ has: page.getByText(subject, { exact: true }) }).click()
-  await expect(page.getByLabel('Message', { exact: true })).toHaveValue('A durable draft body')
+  await expect(page.getByLabel('Message', { exact: true })).toHaveText('A durable draft body')
   await expect(page.getByText('note.txt', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Send', exact: true }).click()
   await page.getByRole('button', { name: 'Undo send', exact: true }).click()
-  await expect(page.getByLabel('Message', { exact: true })).toHaveValue('A durable draft body')
+  await expect(page.getByLabel('Message', { exact: true })).toHaveText('A durable draft body')
   await expect(page.getByText('Sending cancelled. Draft restored.', { exact: true })).toBeVisible()
 })
 

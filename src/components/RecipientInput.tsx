@@ -8,8 +8,8 @@ const split = (value: string) => value.split(/[,;\n]+/).map(v => v.trim()).filte
 const unique = (values: string[]) => [...new Map(values.map(v => [v.toLowerCase(), v])).values()]
 /** Workspace-scoped contact lookup and removable email recipients. Authentication
  * fields omit workspaceId, so they never query the private directory. */
-export function RecipientInput({ workspaceId, label, value, disabled = false, onChange, multiple = true, required = false, autoComplete = 'off' }: {
-  workspaceId?: string; label: string; value: string; disabled?: boolean; onChange: (value: string) => void; multiple?: boolean; required?: boolean; autoComplete?: string
+export function RecipientInput({ workspaceId, label, value, disabled = false, onChange, multiple = true, required = false, autoComplete = 'off', inlineLabel = false }: {
+  workspaceId?: string; label: string; value: string; disabled?: boolean; onChange: (value: string) => void; multiple?: boolean; required?: boolean; autoComplete?: string; inlineLabel?: boolean
 }) {
   const id = useId()
   const input = useRef<HTMLInputElement>(null)
@@ -41,11 +41,11 @@ export function RecipientInput({ workspaceId, label, value, disabled = false, on
     setTokens(next); setDraft(rest); publish(next, rest); setOpen(false); setActive(-1)
   }
   function remove(email: string) { const next = tokens.filter(t => t !== email); setTokens(next); publish(next, draft); input.current?.focus() }
-  return <div className="recipient-field" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) commit() }}>
+  return <div className={`recipient-field${inlineLabel ? ' recipient-inline' : ''}`} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) commit() }}>
     <label htmlFor={id}>{label}</label>
     <div className={`recipient-control ${!multiple && settled && address.test(value) ? 'single-recipient' : ''}`}>
       {multiple && tokens.map(email => <span className="recipient-pill" key={email}><span>{email}</span><button type="button" disabled={disabled} aria-label={`Remove ${email} from ${label}`} onClick={() => remove(email)}><X size={14} aria-hidden="true" /></button></span>)}
-      <input ref={input} id={id} aria-label={label} type={multiple ? 'text' : 'email'} required={required && (!multiple || !tokens.length)} disabled={disabled} value={multiple ? draft : value} autoComplete={autoComplete} role={workspaceId ? 'combobox' : undefined} aria-autocomplete={workspaceId ? 'list' : undefined} aria-expanded={workspaceId ? suggestions.length > 0 : undefined} aria-controls={suggestions.length ? `${id}-suggestions` : undefined} aria-activedescendant={active >= 0 && suggestions[active] ? `${id}-contact-${active}` : undefined}
+      <input data-empty={multiple && !draft ? 'true' : undefined} ref={input} id={id} aria-label={label} type={multiple ? 'text' : 'email'} required={required && (!multiple || !tokens.length)} disabled={disabled} value={multiple ? draft : value} autoComplete={autoComplete} role={workspaceId ? 'combobox' : undefined} aria-autocomplete={workspaceId ? 'list' : undefined} aria-expanded={workspaceId ? suggestions.length > 0 : undefined} aria-controls={suggestions.length ? `${id}-suggestions` : undefined} aria-activedescendant={active >= 0 && suggestions[active] ? `${id}-contact-${active}` : undefined}
         onFocus={() => { setOpen(true); setSettled(false) }} onChange={event => { const text = event.target.value; setActive(-1); setOpen(true); if (!multiple) { onChange(text); return }; if (/[,;\n]/.test(text)) { const parts = split(text); const next = unique([...tokens, ...parts.filter(v => address.test(v))]); const rest = parts.filter(v => !address.test(v)).join(', '); setTokens(next); setDraft(rest); publish(next, rest) } else { setDraft(text); publish(tokens, text) } }}
         onKeyDown={event => {
           if (event.key === 'Escape') { setOpen(false); event.stopPropagation(); return }

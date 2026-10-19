@@ -294,3 +294,7 @@ Why: All application action groups use ActionRow for consistent sizing, alignmen
 ## 2026-10-19: Shared recipient and action controls
 
 Why: Email and contact fields reuse RecipientInput for workspace-scoped suggestions, keyboard selection and removable recipient pills. Authentication omits directory lookup. ActionButton owns visual variants while ActionRow owns responsive placement. Dialog menus remain within the dialog scroll area.
+
+## 2026-10-18: Shared rich text editing
+
+Use Tiptap/ProseMirror for a shared WYSIWYG surface rather than browser editing commands. Email and calendar descriptions use a compact toolbar; native Drive HTML documents expose headings, font size, alignment, highlighting and tables. Keep plain-text email/ICS bodies alongside sanitized authored HTML. Inbound email retains its stricter reader policy. Native documents keep an account-scoped recovery copy in this browser tab and reuse Drive's authenticated downloads and resumable, version-checked uploads; DOCX/XLSX continue through the existing ONLYOFFICE integration so their formats are not silently converted. Recipient labels are inline in compose and Cc/Bcc expand into separate rows using the shared RecipientInput.

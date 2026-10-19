@@ -358,6 +358,7 @@ CREATE TABLE calendar_event (
   organizer text NOT NULL,
   title varchar(500) NOT NULL,
   description text NOT NULL DEFAULT '',
+  description_html text NOT NULL DEFAULT '',
   location text NOT NULL DEFAULT '',
   all_day boolean NOT NULL,
   start_date text NOT NULL DEFAULT '',

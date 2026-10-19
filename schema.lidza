@@ -555,6 +555,7 @@ model CalendarEvent {
  organizer string
  title string @min(1) @max(500)
  description text @default("")
+ descriptionHtml text @default("")
  location string @default("")
  allDay bool
  startDate string @default("")
@@ -605,6 +606,7 @@ type EventInput {
  resetExceptions bool
  title string @min(1) @max(500)
  description string? @max(20000)
+ descriptionHtml string? @max(100000)
  location string? @max(1000)
  allDay bool
  startDate string?

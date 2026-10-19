@@ -258,25 +258,26 @@ type CalendarDispatch struct {
 }
 
 type CalendarEvent struct {
-	MeetingID   *string    `json:"meeting_id"`
-	ID          string     `json:"id"`
-	CalendarID  string     `json:"calendar_id"`
-	Uid         string     `json:"uid"`
-	Organizer   string     `json:"organizer"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Location    string     `json:"location"`
-	AllDay      bool       `json:"all_day"`
-	StartDate   string     `json:"start_date"`
-	EndDate     string     `json:"end_date"`
-	StartsAt    *time.Time `json:"starts_at"`
-	EndsAt      *time.Time `json:"ends_at"`
-	TimeZone    string     `json:"time_zone"`
-	Rrule       string     `json:"rrule"`
-	Sequence    int32      `json:"sequence"`
-	Cancelled   bool       `json:"cancelled"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	MeetingID       *string    `json:"meeting_id"`
+	ID              string     `json:"id"`
+	CalendarID      string     `json:"calendar_id"`
+	Uid             string     `json:"uid"`
+	Organizer       string     `json:"organizer"`
+	Title           string     `json:"title"`
+	Description     string     `json:"description"`
+	DescriptionHTML string     `json:"description_html"`
+	Location        string     `json:"location"`
+	AllDay          bool       `json:"all_day"`
+	StartDate       string     `json:"start_date"`
+	EndDate         string     `json:"end_date"`
+	StartsAt        *time.Time `json:"starts_at"`
+	EndsAt          *time.Time `json:"ends_at"`
+	TimeZone        string     `json:"time_zone"`
+	Rrule           string     `json:"rrule"`
+	Sequence        int32      `json:"sequence"`
+	Cancelled       bool       `json:"cancelled"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 type CalendarReminder struct {

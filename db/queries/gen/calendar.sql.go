@@ -25,7 +25,7 @@ func (q *Queries) AddEventAttendee(ctx context.Context, arg AddEventAttendeePara
 }
 
 const bindCalendarMeeting = `-- name: BindCalendarMeeting :one
-UPDATE calendar_event SET meeting_id=$2, sequence=sequence+1, updated_at=now() WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET meeting_id=$2, sequence=sequence+1, updated_at=now() WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 type BindCalendarMeetingParams struct {
@@ -44,6 +44,7 @@ func (q *Queries) BindCalendarMeeting(ctx context.Context, arg BindCalendarMeeti
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,
@@ -61,7 +62,7 @@ func (q *Queries) BindCalendarMeeting(ctx context.Context, arg BindCalendarMeeti
 }
 
 const bumpEventSequence = `-- name: BumpEventSequence :one
-UPDATE calendar_event SET sequence=sequence+1,updated_at=now() WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET sequence=sequence+1,updated_at=now() WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 func (q *Queries) BumpEventSequence(ctx context.Context, id string) (CalendarEvent, error) {
@@ -75,6 +76,7 @@ func (q *Queries) BumpEventSequence(ctx context.Context, id string) (CalendarEve
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,
@@ -103,7 +105,7 @@ func (q *Queries) CalendarAccountEmail(ctx context.Context, subject string) (str
 }
 
 const cancelCalendarEvent = `-- name: CancelCalendarEvent :one
-UPDATE calendar_event SET cancelled=true,sequence=sequence+1,updated_at=now() WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET cancelled=true,sequence=sequence+1,updated_at=now() WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 func (q *Queries) CancelCalendarEvent(ctx context.Context, id string) (CalendarEvent, error) {
@@ -117,6 +119,7 @@ func (q *Queries) CancelCalendarEvent(ctx context.Context, id string) (CalendarE
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,
@@ -195,24 +198,25 @@ func (q *Queries) CreateCalendar(ctx context.Context, arg CreateCalendarParams) 
 }
 
 const createCalendarEvent = `-- name: CreateCalendarEvent :one
-INSERT INTO calendar_event(calendar_id,uid,organizer,title,description,location,all_day,start_date,end_date,starts_at,ends_at,time_zone,rrule)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+INSERT INTO calendar_event(calendar_id,uid,organizer,title,description,location,all_day,start_date,end_date,starts_at,ends_at,time_zone,rrule,description_html)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 type CreateCalendarEventParams struct {
-	CalendarID  string     `json:"calendar_id"`
-	Uid         string     `json:"uid"`
-	Organizer   string     `json:"organizer"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Location    string     `json:"location"`
-	AllDay      bool       `json:"all_day"`
-	StartDate   string     `json:"start_date"`
-	EndDate     string     `json:"end_date"`
-	StartsAt    *time.Time `json:"starts_at"`
-	EndsAt      *time.Time `json:"ends_at"`
-	TimeZone    string     `json:"time_zone"`
-	Rrule       string     `json:"rrule"`
+	CalendarID      string     `json:"calendar_id"`
+	Uid             string     `json:"uid"`
+	Organizer       string     `json:"organizer"`
+	Title           string     `json:"title"`
+	Description     string     `json:"description"`
+	Location        string     `json:"location"`
+	AllDay          bool       `json:"all_day"`
+	StartDate       string     `json:"start_date"`
+	EndDate         string     `json:"end_date"`
+	StartsAt        *time.Time `json:"starts_at"`
+	EndsAt          *time.Time `json:"ends_at"`
+	TimeZone        string     `json:"time_zone"`
+	Rrule           string     `json:"rrule"`
+	DescriptionHTML string     `json:"description_html"`
 }
 
 func (q *Queries) CreateCalendarEvent(ctx context.Context, arg CreateCalendarEventParams) (CalendarEvent, error) {
@@ -230,6 +234,7 @@ func (q *Queries) CreateCalendarEvent(ctx context.Context, arg CreateCalendarEve
 		arg.EndsAt,
 		arg.TimeZone,
 		arg.Rrule,
+		arg.DescriptionHTML,
 	)
 	var i CalendarEvent
 	err := row.Scan(
@@ -240,6 +245,7 @@ func (q *Queries) CreateCalendarEvent(ctx context.Context, arg CreateCalendarEve
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,
@@ -288,7 +294,7 @@ func (q *Queries) EnsurePersonalCalendar(ctx context.Context, arg EnsurePersonal
 }
 
 const findCalendarEventUID = `-- name: FindCalendarEventUID :one
-SELECT meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND uid=$2
+SELECT meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND uid=$2
 `
 
 type FindCalendarEventUIDParams struct {
@@ -307,6 +313,7 @@ func (q *Queries) FindCalendarEventUID(ctx context.Context, arg FindCalendarEven
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,
@@ -348,7 +355,7 @@ func (q *Queries) GetCalendar(ctx context.Context, arg GetCalendarParams) (Calen
 }
 
 const getCalendarEvent = `-- name: GetCalendarEvent :one
-SELECT meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND id=$2
+SELECT meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND id=$2
 `
 
 type GetCalendarEventParams struct {
@@ -367,6 +374,7 @@ func (q *Queries) GetCalendarEvent(ctx context.Context, arg GetCalendarEventPara
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,
@@ -384,7 +392,7 @@ func (q *Queries) GetCalendarEvent(ctx context.Context, arg GetCalendarEventPara
 }
 
 const importCalendarEvent = `-- name: ImportCalendarEvent :one
-UPDATE calendar_event SET organizer=$3,title=$4,description=$5,location=$6,all_day=$7,start_date=$8,end_date=$9,starts_at=$10,ends_at=$11,time_zone=$12,rrule=$13,sequence=$14,cancelled=$15,updated_at=now() WHERE calendar_id=$1 AND id=$2 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET organizer=$3,title=$4,description=$5,description_html='',location=$6,all_day=$7,start_date=$8,end_date=$9,starts_at=$10,ends_at=$11,time_zone=$12,rrule=$13,sequence=$14,cancelled=$15,updated_at=now() WHERE calendar_id=$1 AND id=$2 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 type ImportCalendarEventParams struct {
@@ -432,6 +440,7 @@ func (q *Queries) ImportCalendarEvent(ctx context.Context, arg ImportCalendarEve
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,
@@ -479,7 +488,7 @@ func (q *Queries) ListCalendarAttendees(ctx context.Context, calendarID string) 
 }
 
 const listCalendarEvents = `-- name: ListCalendarEvents :many
-SELECT meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 ORDER BY created_at DESC LIMIT 1000
+SELECT meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 ORDER BY created_at DESC LIMIT 1000
 `
 
 func (q *Queries) ListCalendarEvents(ctx context.Context, calendarID string) ([]CalendarEvent, error) {
@@ -499,6 +508,7 @@ func (q *Queries) ListCalendarEvents(ctx context.Context, calendarID string) ([]
 			&i.Organizer,
 			&i.Title,
 			&i.Description,
+			&i.DescriptionHTML,
 			&i.Location,
 			&i.AllDay,
 			&i.StartDate,
@@ -657,7 +667,7 @@ func (q *Queries) ListEventExceptions(ctx context.Context, eventID string) ([]Ev
 }
 
 const lockCalendarEvent = `-- name: LockCalendarEvent :one
-SELECT meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND id=$2 FOR UPDATE
+SELECT meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at FROM calendar_event WHERE calendar_id=$1 AND id=$2 FOR UPDATE
 `
 
 type LockCalendarEventParams struct {
@@ -676,6 +686,7 @@ func (q *Queries) LockCalendarEvent(ctx context.Context, arg LockCalendarEventPa
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,
@@ -764,7 +775,7 @@ func (q *Queries) SaveEventException(ctx context.Context, arg SaveEventException
 }
 
 const setImportedEventSequence = `-- name: SetImportedEventSequence :one
-UPDATE calendar_event SET sequence=$2,cancelled=$3 WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET sequence=$2,cancelled=$3 WHERE id=$1 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 type SetImportedEventSequenceParams struct {
@@ -784,6 +795,7 @@ func (q *Queries) SetImportedEventSequence(ctx context.Context, arg SetImportedE
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,
@@ -801,23 +813,24 @@ func (q *Queries) SetImportedEventSequence(ctx context.Context, arg SetImportedE
 }
 
 const updateCalendarEvent = `-- name: UpdateCalendarEvent :one
-UPDATE calendar_event SET title=$3,description=$4,location=$5,all_day=$6,start_date=$7,end_date=$8,starts_at=$9,ends_at=$10,time_zone=$11,rrule=$12,sequence=sequence+1,updated_at=now()
-WHERE calendar_id=$1 AND id=$2 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
+UPDATE calendar_event SET title=$3,description=$4,location=$5,all_day=$6,start_date=$7,end_date=$8,starts_at=$9,ends_at=$10,time_zone=$11,rrule=$12,description_html=$13,sequence=sequence+1,updated_at=now()
+WHERE calendar_id=$1 AND id=$2 RETURNING meeting_id, id, calendar_id, uid, organizer, title, description, description_html, location, all_day, start_date, end_date, starts_at, ends_at, time_zone, rrule, sequence, cancelled, created_at, updated_at
 `
 
 type UpdateCalendarEventParams struct {
-	CalendarID  string     `json:"calendar_id"`
-	ID          string     `json:"id"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Location    string     `json:"location"`
-	AllDay      bool       `json:"all_day"`
-	StartDate   string     `json:"start_date"`
-	EndDate     string     `json:"end_date"`
-	StartsAt    *time.Time `json:"starts_at"`
-	EndsAt      *time.Time `json:"ends_at"`
-	TimeZone    string     `json:"time_zone"`
-	Rrule       string     `json:"rrule"`
+	CalendarID      string     `json:"calendar_id"`
+	ID              string     `json:"id"`
+	Title           string     `json:"title"`
+	Description     string     `json:"description"`
+	Location        string     `json:"location"`
+	AllDay          bool       `json:"all_day"`
+	StartDate       string     `json:"start_date"`
+	EndDate         string     `json:"end_date"`
+	StartsAt        *time.Time `json:"starts_at"`
+	EndsAt          *time.Time `json:"ends_at"`
+	TimeZone        string     `json:"time_zone"`
+	Rrule           string     `json:"rrule"`
+	DescriptionHTML string     `json:"description_html"`
 }
 
 func (q *Queries) UpdateCalendarEvent(ctx context.Context, arg UpdateCalendarEventParams) (CalendarEvent, error) {
@@ -834,6 +847,7 @@ func (q *Queries) UpdateCalendarEvent(ctx context.Context, arg UpdateCalendarEve
 		arg.EndsAt,
 		arg.TimeZone,
 		arg.Rrule,
+		arg.DescriptionHTML,
 	)
 	var i CalendarEvent
 	err := row.Scan(
@@ -844,6 +858,7 @@ func (q *Queries) UpdateCalendarEvent(ctx context.Context, arg UpdateCalendarEve
 		&i.Organizer,
 		&i.Title,
 		&i.Description,
+		&i.DescriptionHTML,
 		&i.Location,
 		&i.AllDay,
 		&i.StartDate,

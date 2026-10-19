@@ -906,25 +906,26 @@ func (v Calendar) Validate() error {
 
 // CalendarEvent is a row of the calendar_event table.
 type CalendarEvent struct {
-	MeetingID   *string    `json:"meetingId" db:"meeting_id"`
-	ID          string     `json:"id" db:"id"`
-	CalendarID  string     `json:"calendarId" db:"calendar_id"`
-	Uid         string     `json:"uid" db:"uid"`
-	Organizer   string     `json:"organizer" db:"organizer"`
-	Title       string     `json:"title" db:"title"`
-	Description string     `json:"description" db:"description"`
-	Location    string     `json:"location" db:"location"`
-	AllDay      bool       `json:"allDay" db:"all_day"`
-	StartDate   string     `json:"startDate" db:"start_date"`
-	EndDate     string     `json:"endDate" db:"end_date"`
-	StartsAt    *time.Time `json:"startsAt" db:"starts_at"`
-	EndsAt      *time.Time `json:"endsAt" db:"ends_at"`
-	TimeZone    string     `json:"timeZone" db:"time_zone"`
-	Rrule       string     `json:"rrule" db:"rrule"`
-	Sequence    int        `json:"sequence" db:"sequence"`
-	Cancelled   bool       `json:"cancelled" db:"cancelled"`
-	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time  `json:"updatedAt" db:"updated_at"`
+	MeetingID       *string    `json:"meetingId" db:"meeting_id"`
+	ID              string     `json:"id" db:"id"`
+	CalendarID      string     `json:"calendarId" db:"calendar_id"`
+	Uid             string     `json:"uid" db:"uid"`
+	Organizer       string     `json:"organizer" db:"organizer"`
+	Title           string     `json:"title" db:"title"`
+	Description     string     `json:"description" db:"description"`
+	DescriptionHTML string     `json:"descriptionHtml" db:"description_html"`
+	Location        string     `json:"location" db:"location"`
+	AllDay          bool       `json:"allDay" db:"all_day"`
+	StartDate       string     `json:"startDate" db:"start_date"`
+	EndDate         string     `json:"endDate" db:"end_date"`
+	StartsAt        *time.Time `json:"startsAt" db:"starts_at"`
+	EndsAt          *time.Time `json:"endsAt" db:"ends_at"`
+	TimeZone        string     `json:"timeZone" db:"time_zone"`
+	Rrule           string     `json:"rrule" db:"rrule"`
+	Sequence        int        `json:"sequence" db:"sequence"`
+	Cancelled       bool       `json:"cancelled" db:"cancelled"`
+	CreatedAt       time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt       time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 // Validate applies the rules of CalendarEvent from schema.lidza.
@@ -950,6 +951,9 @@ func (v CalendarEvent) Validate() error {
 	}
 	if v.Description == "" {
 		errs.Add("description", "required", "required")
+	}
+	if v.DescriptionHTML == "" {
+		errs.Add("descriptionHtml", "required", "required")
 	}
 	if v.Location == "" {
 		errs.Add("location", "required", "required")
@@ -2768,6 +2772,7 @@ type EventInput struct {
 	ResetExceptions bool       `json:"resetExceptions"`
 	Title           string     `json:"title"`
 	Description     *string    `json:"description"`
+	DescriptionHTML *string    `json:"descriptionHtml"`
 	Location        *string    `json:"location"`
 	AllDay          bool       `json:"allDay"`
 	StartDate       *string    `json:"startDate"`
@@ -2796,6 +2801,12 @@ func (v EventInput) Validate() error {
 		x := *v.Description
 		if len(x) > 20000 {
 			errs.Add("description", "max", "at most 20000 character(s)")
+		}
+	}
+	if v.DescriptionHTML != nil {
+		x := *v.DescriptionHTML
+		if len(x) > 100000 {
+			errs.Add("descriptionHtml", "max", "at most 100000 character(s)")
 		}
 	}
 	if v.Location != nil {
