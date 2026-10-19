@@ -16,6 +16,13 @@ key unless a replacement is supplied. Keys are encrypted in server settings
 and never returned to browsers. Process environment variables override saved
 settings; conflicting saves explain that deployment configuration must change.
 
+The top-bar AI button and contextual **AI** actions open the same nonmodal
+sidebar beside your resource on desktop. On smaller screens the assistant
+occupies the content area; closing it returns to the resource. Email compose
+has its own embedded **Help me write** tool, with polishing, shortening and
+drafting actions. Suggested replies can be explicitly inserted into a new
+reply draft; generation alone sends nothing.
+
 The shared **AI** action offers drafts, rewrites, summaries and next steps for
 visible mail, calendar descriptions, contacts, Loop activity, supported Drive
 text/documents and loaded chat messages. Meet can prepare an agenda from the
@@ -36,3 +43,9 @@ model tools for retrieving other resources or changing data. Token usage is
 recorded by the Līdza LLM pack under each feature. There is one server-wide
 model configuration; a multi-node deployment must restart other nodes after a
 configuration change so they load the encrypted saved settings.
+
+The assistant shows a context-update notice when selected content changes.
+Refresh the included text before generating or inserting for the new selection.
+Previously closed editors cannot receive an insertion. App/workspace navigation
+clears the panel and its in-memory suggestions. Follow-up requests can include
+the last displayed suggestion, within the same input bounds.

@@ -133,6 +133,7 @@ func Save(ctx context.Context, w string, in schema.AISettingsInput) (schema.AISe
 
 func actionInstructions() map[string]string {
 	return map[string]string{
+		"ask":        "Answer the user's question using only the supplied text. Explain when the available context cannot answer it.",
 		"summarize":  "Summarize the supplied text concisely. Preserve important dates, decisions and unresolved questions.",
 		"rewrite":    "Rewrite the supplied text clearly and professionally while preserving its meaning and facts.",
 		"shorten":    "Shorten the supplied text while preserving its essential meaning and facts.",

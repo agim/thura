@@ -1169,3 +1169,79 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
  #orbit-workspace.zero-workspace .contact-organization { grid-column:2; grid-row:2; }
  #orbit-workspace.zero-workspace .contact-actions { grid-column:3; grid-row:1/3; }
 }
+
+/* AI is part of the workspace, not a blocking dialog. */
+#orbit-workspace.zero-workspace .workspace-body { display:grid; grid-template-columns:minmax(0,1fr); min-width:0; align-items:start; }
+#orbit-workspace.zero-workspace .assistant-dock { min-width:0; width:auto; margin:8px 8px 8px 0; padding:0; background:var(--paper); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+#orbit-workspace.zero-workspace .assistant-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 14px; border-bottom:1px solid var(--line); margin:0; }
+#orbit-workspace.zero-workspace .assistant-heading > div { display:flex; align-items:center; gap:8px; color:var(--teal); }
+#orbit-workspace.zero-workspace .assistant-heading :is(h2,h4) { margin:0; font-size:15px; font-weight:600; color:var(--ink); }
+#orbit-workspace.zero-workspace .assistant-heading > button { width:36px; min-width:36px; height:36px; padding:8px; border:0; background:transparent; }
+#orbit-workspace.zero-workspace .assistant-panel { display:flex; flex-direction:column; gap:16px; min-width:0; padding:16px; }
+#orbit-workspace.zero-workspace .assistant-panel p { margin:0; line-height:1.55; }
+#orbit-workspace.zero-workspace .assistant-panel h3 { margin:0 0 8px; font-size:18px; }
+#orbit-workspace.zero-workspace .assistant-context { border-bottom:1px solid var(--line); padding-bottom:12px; }
+#orbit-workspace.zero-workspace .assistant-source { display:block; max-width:100%; font-size:12px; font-weight:600; overflow-wrap:anywhere; }
+#orbit-workspace.zero-workspace .assistant-context details { margin-top:8px; font-size:12px; color:var(--quiet); }
+#orbit-workspace.zero-workspace .assistant-context summary { cursor:pointer; }
+#orbit-workspace.zero-workspace .assistant-context label { margin:10px 0 0; gap:6px; }
+#orbit-workspace.zero-workspace .assistant-panel textarea { box-sizing:border-box; width:100%; min-width:0; font:inherit; font-size:13px; line-height:1.5; }
+#orbit-workspace.zero-workspace .assistant-context-update { display:grid; gap:8px; font-size:12px; }
+#orbit-workspace.zero-workspace .assistant-setup { background:var(--canvas); border:1px solid var(--line); border-radius:8px; padding:10px; font-size:12px; }
+#orbit-workspace.zero-workspace .assistant-welcome > p { font-size:13px; color:var(--quiet); }
+#orbit-workspace.zero-workspace .assistant-quick-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+#orbit-workspace.zero-workspace .assistant-quick-actions > button { width:auto; min-height:36px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:12px; text-align:left; background:var(--canvas); }
+#orbit-workspace.zero-workspace .assistant-turns { display:grid; gap:20px; min-width:0; }
+#orbit-workspace.zero-workspace .assistant-turn { display:grid; gap:12px; min-width:0; }
+#orbit-workspace.zero-workspace .assistant-question { justify-self:end; max-width:90%; padding:10px 12px; background:var(--tealsoft); border-radius:12px 12px 2px 12px; color:var(--ink); overflow-wrap:anywhere; font-size:13px; }
+#orbit-workspace.zero-workspace .assistant-output { white-space:pre-wrap; overflow-wrap:anywhere; max-height:none; overflow:visible; padding:0; border:0; background:transparent; font-size:14px; line-height:1.6; }
+#orbit-workspace.zero-workspace .assistant-prompt { margin-top:auto; border:1px solid var(--line); border-radius:12px; padding:10px; background:var(--canvas); }
+#orbit-workspace.zero-workspace .assistant-prompt:focus-within { outline:2px solid var(--teal); outline-offset:2px; }
+#orbit-workspace.zero-workspace .assistant-prompt > textarea { min-height:64px; padding:0; border:0; background:transparent; box-shadow:none; outline:none; resize:vertical; }
+#orbit-workspace.zero-workspace .assistant-prompt-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; }
+#orbit-workspace.zero-workspace .assistant-prompt-actions .select-control { flex:1; min-width:0; width:auto; }
+#orbit-workspace.zero-workspace .assistant-prompt-actions > button { flex:0 0 36px; width:36px; height:36px; padding:8px; border-radius:50%; }
+#orbit-workspace.zero-workspace .assistant-disclaimer { color:var(--quiet); font-size:11px; }
+#orbit-workspace.zero-workspace .assistant-inline { margin:12px 0; min-width:0; }
+#orbit-workspace.zero-workspace .assistant-inline > button { display:inline-flex; align-items:center; gap:8px; color:var(--teal); background:var(--tealsoft); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:13px; }
+#orbit-workspace.zero-workspace .assistant-inline > div { border:1px solid var(--line); border-radius:12px; margin-top:8px; background:var(--paper); }
+#orbit-workspace.zero-workspace .assistant-writing-panel .assistant-quick-actions { margin-top:10px; }
+#orbit-workspace.zero-workspace .assistant-launcher[aria-expanded=true] { color:var(--teal); background:var(--tealsoft); }
+@media(min-width:1280px) {
+ #orbit-workspace.zero-workspace .workspace-body:has(> .assistant-dock) { grid-template-columns:minmax(0,1fr) 360px; gap:0; }
+ #orbit-workspace.zero-workspace .assistant-dock { position:sticky; top:8px; max-height:calc(100dvh - 88px); overflow-y:auto; }
+ #orbit-workspace.zero-workspace .assistant-dock > .assistant-panel { min-height:calc(100dvh - 170px); }
+ #orbit-workspace.zero-workspace .workspace-body:has(> .assistant-dock) .contact-directory > li { grid-template-columns:42px minmax(0,1fr) 364px; }
+ #orbit-workspace.zero-workspace .workspace-body:has(> .assistant-dock) .contact-organization { grid-column:2; grid-row:2; }
+ #orbit-workspace.zero-workspace .workspace-body:has(> .assistant-dock) .contact-actions { grid-column:3; grid-row:1/3; }
+ #orbit-workspace.zero-workspace .workspace-body:has(> .assistant-dock) .contact-columns { display:none; }
+}
+@media(max-width:1279px) {
+ #orbit-workspace.zero-workspace .workspace-body:has(> .assistant-dock) > .workspace-content { display:none; }
+ #orbit-workspace.zero-workspace .assistant-dock { margin:8px; }
+ #orbit-workspace.zero-workspace .assistant-dock > .assistant-panel { min-height:calc(100dvh - 212px); }
+}
+#orbit-workspace.zero-workspace .workspace-body { grid-column:1/-1; }
+#orbit-workspace.zero-workspace .ws-top:has(> .assistant-launcher) { grid-template-columns:auto minmax(0,1fr) 36px 36px; }
+#orbit-workspace.zero-workspace .ws-top > .assistant-launcher { grid-column:3; }
+#orbit-workspace.zero-workspace .ws-top:has(> .assistant-launcher) > button[aria-label="Account menu"] { grid-column:4; }
+@media(min-width:1200px) {
+ #orbit-workspace.zero-workspace .ws-top:has(> .assistant-launcher) { grid-template-columns:100px auto minmax(160px,1fr) 36px 36px; }
+ #orbit-workspace.zero-workspace .ws-top > .assistant-launcher { grid-column:4; }
+ #orbit-workspace.zero-workspace .ws-top:has(> .assistant-launcher) > button[aria-label="Account menu"] { grid-column:5; }
+}
+@media(max-width:999px) { #orbit-workspace.zero-workspace .ws-top:has(> .assistant-launcher) { grid-template-columns:32px minmax(0,1fr) 36px 36px; } }
+@media(min-width:1280px) {
+ #orbit-workspace.zero-workspace .workspace-body:has(> .assistant-dock) #orbit-mail-vibrant.has-message .layout { grid-template-columns:var(--app-sidebar-width) minmax(0,1fr); }
+ #orbit-workspace.zero-workspace .workspace-body:has(> .assistant-dock) #orbit-mail-vibrant.has-message .layout > .list { display:none; }
+}
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .app-action-row { flex-wrap:nowrap; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .assistant-panel .assistant-prompt > textarea { min-height:64px; height:64px; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .assistant-panel .assistant-context textarea { min-height:96px; }
+/* Shared actions adapt to the space left by the AI sidebar, not just the viewport. */
+#orbit-workspace.zero-workspace .workspace-content { container:workspace-page / inline-size; }
+@container workspace-page (max-width:1200px) {
+ #orbit-workspace.zero-workspace .workspace-content .app-action-row > button:has(svg):has(.action-label),
+ #orbit-workspace.zero-workspace #orbit-mail-vibrant .app-action-row > button:has(svg):has(.action-label) { width:44px; padding:10px; }
+ #orbit-workspace.zero-workspace .workspace-content .app-action-row > button:has(svg) .action-label { display:none; }
+}
