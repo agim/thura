@@ -18,6 +18,7 @@ import (
 	"thura/internal/mailbox"
 	"thura/internal/meet"
 	"thura/internal/platform/objectgc"
+	"thura/internal/platform/objectstore"
 	livekit "thura/internal/providers/livekit"
 	provider "thura/internal/providers/onlyoffice"
 	"thura/internal/setup"
@@ -29,6 +30,9 @@ import (
 // once and left alone; this file is the app's.
 func onStart(ctx context.Context, s *lidza.Services) error {
 	if err := setup.Activate(lidza.WithServices(ctx, s), s); err != nil {
+		return err
+	}
+	if err := objectstore.Configure(lidza.WithServices(ctx, s), s); err != nil {
 		return err
 	}
 	if err := federation.Configure(s); err != nil {

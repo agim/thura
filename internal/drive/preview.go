@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
 	"thura/internal/platform/objectgc"
+	"thura/internal/platform/objectstore"
 	"thura/internal/platform/safeimage"
 	"thura/schema"
 )
@@ -236,7 +237,7 @@ func GeneratePreview(ctx context.Context, raw json.RawMessage) error {
 		completed.Checksum = Hash(result.data)
 		completed.ContentType = result.contentType
 		completed.Width, completed.Height, completed.Truncated = int32(result.width), int32(result.height), result.truncated
-		if _, err = storage.From(ctx).Put(ctx, completed.ObjectKey, bytes.NewReader(result.data), storage.PutOptions{ContentType: result.contentType}); err != nil {
+		if _, err = objectstore.Put(ctx, completed.ObjectKey, bytes.NewReader(result.data), storage.PutOptions{ContentType: result.contentType}); err != nil {
 			return err
 		}
 	}

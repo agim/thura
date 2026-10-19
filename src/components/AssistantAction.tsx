@@ -13,7 +13,7 @@ export function AssistantAction(props: Props & { contextOnly?: boolean }) {
   latest.current = props
   const apply = useRef((text: string) => latest.current.onUse?.(text))
   const current = { ...props, id, onUse: props.onUse ? apply.current : undefined }
-  useEffect(() => { const next = { ...latest.current, id, onUse: latest.current.onUse ? apply.current : undefined }; update(next); if (next.source !== "contacts") offer(next) }, [id, props.content, props.contextLabel, update, offer])
+  useEffect(() => { const next = { ...latest.current, id, onUse: latest.current.onUse ? apply.current : undefined }; update(next); if (next.source !== "contacts") offer(next) }, [id, props.content, props.contextLabel, props.contextVersion, update, offer])
   useEffect(() => () => { release(id); withdraw(id) }, [id, release, withdraw])
   if (props.contextOnly) return null
   return <ActionButton type="button" aria-label={`AI assistant for ${props.source}`} aria-expanded={target?.id === id} aria-controls="workspace-assistant" onClick={() => open(current)}><Sparkles size={16} /><span className="action-label">AI</span></ActionButton>

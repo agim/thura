@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	queries "thura/db/queries/gen"
+	"thura/internal/platform/objectstore"
 	"time"
 )
 
@@ -214,7 +215,7 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 	}
 	digest := sha256.Sum256(raw)
 	rawKey := "mail/" + m.ID + "/raw/" + hex.EncodeToString(digest[:]) + ".eml"
-	if _, err = storage.From(ctx).Put(ctx, rawKey, bytes.NewReader(raw), storage.PutOptions{ContentType: "message/rfc822"}); err != nil {
+	if _, err = objectstore.Put(ctx, rawKey, bytes.NewReader(raw), storage.PutOptions{ContentType: "message/rfc822"}); err != nil {
 		return queries.MailItem{}, err
 	}
 	item, err := tq.InsertInboundMail(ctx, queries.InsertInboundMailParams{MailboxID: m.ID, FromAddress: parsed.From, ToAddress: parsed.To, Cc: parsed.Cc, Subject: parsed.Subject, TextBody: parsed.Text, HTMLBody: parsed.HTML, RawKey: rawKey, ExternalID: &deliveryID, ThreadID: parsed.Thread, MessageID: parsed.MessageID, InReplyTo: parsed.InReplyTo, ReferencesHeader: parsed.References})
@@ -223,7 +224,7 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 	}
 	for n, a := range parsed.Attachments {
 		key := "mail/" + m.ID + "/" + item.ID + "/inbound-" + strconv.Itoa(n)
-		if _, err = storage.From(ctx).Put(ctx, key, bytes.NewReader(a.Data), storage.PutOptions{ContentType: a.ContentType}); err != nil {
+		if _, err = objectstore.Put(ctx, key, bytes.NewReader(a.Data), storage.PutOptions{ContentType: a.ContentType}); err != nil {
 			return queries.MailItem{}, err
 		}
 		if _, err = tq.AddMailAttachment(ctx, queries.AddMailAttachmentParams{ItemID: item.ID, Name: a.Name, ContentType: a.ContentType, Size: int32(len(a.Data)), ObjectKey: key, ContentID: a.ContentID}); err != nil {

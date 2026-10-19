@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	q "thura/db/queries/gen"
 	"thura/internal/drive"
+	"thura/internal/platform/objectstore"
 	"thura/internal/smip"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -239,7 +240,7 @@ func ImportFile(ctx context.Context, w, id string, in schema.SmipImportInput) (s
 		return schema.DriveFile{}, err
 	}
 	key := "drive/files/" + file.ID + "/" + uuid.NewString()
-	if _, err = storage.From(ctx).Put(ctx, key, bytes.NewReader(data), storage.PutOptions{ContentType: "application/octet-stream"}); err != nil {
+	if _, err = objectstore.Put(ctx, key, bytes.NewReader(data), storage.PutOptions{ContentType: "application/octet-stream"}); err != nil {
 		return schema.DriveFile{}, err
 	}
 	if _, err = queries.AddFileVersion(ctx, q.AddFileVersionParams{FileID: file.ID, Number: file.CurrentVersion, ObjectKey: key, Checksum: drive.Hash(data), Size: file.Size, CreatedBy: auth.CurrentUser(ctx).ID}); err != nil {

@@ -36,9 +36,25 @@ OAuth flow.
    `authReset`. While `me.verified` is false, a banner offers
    `authVerifyResend()`: a new link to the signed-in user's address
    (nothing is sent once it is verified, or with `NoVerifyEmail`).
+   Two-factor endpoints are mounted too: start enrollment with
+   `authTwoFactorSetup`, show its local `qrCodeDataUrl` for scanning and keep
+   `otpauthUrl` and `secret` as fallbacks, then confirm with
+   `authTwoFactorEnable({code})`, and show the returned recovery codes
+   exactly once. Status is `authTwoFactorStatus`; disabling or regenerating
+   recovery codes requires a current code. Once enabled, password login
+   sends the current code in `X-Lidza-OTP`; provider sign-in relies on the
+   provider's own second factor. Factors need `LIDZA_MASTER_KEY` so their
+   secrets are sealed in the database.
+   For a credential or other sensitive value, post `{code, purpose, target}`
+   to `authStepUp`; the grant is bound to this account and browser session,
+   that exact purpose and target, for at most 15 minutes. The server route
+   must call `auth.AuthorizeStepUp(ctx, req.Raw, purpose, target)` immediately
+   before returning the value. Its `OnEvent` entries
+   (`EventStepUpGranted`, `EventStepUpAuthorized`, `EventStepUpRejected`)
+   carry purpose and target, never the value.
 3. Providers: `AUTH_PROVIDERS=google,github` in `.env` or on the admin
    pages (section "Sign-in providers"); the client id and secret in the
-   credentials: `lidza credentials set AUTH_GOOGLE_CLIENT_ID=...
+   app's settings: `lidza settings set AUTH_GOOGLE_CLIENT_ID=...
    AUTH_GOOGLE_CLIENT_SECRET=...`. Register the callback
    `<APP_URL>/api/v1/auth/google/callback` with the provider. Microsoft
    takes `AUTH_MICROSOFT_TENANT`; another OIDC issuer takes

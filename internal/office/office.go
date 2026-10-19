@@ -20,6 +20,7 @@ import (
 	"strings"
 	q "thura/db/queries/gen"
 	"thura/internal/drive"
+	"thura/internal/platform/objectstore"
 	provider "thura/internal/providers/onlyoffice"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -213,7 +214,7 @@ func Save(ctx context.Context, id string, in schema.OfficeCallback, header strin
 	}
 	key := "drive/files/" + f.ID + "/" + uuid.NewString()
 	store := storage.From(ctx)
-	if _, err = store.Put(ctx, key, bytes.NewReader(b), storage.PutOptions{ContentType: f.ContentType}); err != nil {
+	if _, err = objectstore.Put(ctx, key, bytes.NewReader(b), storage.PutOptions{ContentType: f.ContentType}); err != nil {
 		return fail, err
 	}
 	f, err = queries.UpdateDriveVersion(ctx, q.UpdateDriveVersionParams{WorkspaceID: f.WorkspaceID, ID: f.ID, Size: int32(len(b))})

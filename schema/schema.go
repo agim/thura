@@ -595,6 +595,7 @@ type Job struct {
 	LastError   *string         `json:"lastError" db:"last_error"`
 	CreatedAt   time.Time       `json:"createdAt" db:"created_at"`
 	UniqueKey   *string         `json:"uniqueKey" db:"unique_key"`
+	TraceParent *string         `json:"traceParent" db:"trace_parent"`
 }
 
 // Validate applies the rules of Job from schema.lidza.
@@ -1714,6 +1715,147 @@ func (v LLMUsage) Validate() error {
 	}
 	if v.Status == "" {
 		errs.Add("status", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AssistantCache is a row of the assistant_cache table.
+type AssistantCache struct {
+	ID          string    `json:"id" db:"id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	CacheKey    string    `json:"cacheKey" db:"cache_key"`
+	LeaseToken  *string   `json:"leaseToken" db:"lease_token"`
+	Text        string    `json:"text" db:"text"`
+	Model       string    `json:"model" db:"model"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	ExpiresAt   time.Time `json:"expiresAt" db:"expires_at"`
+}
+
+// Validate applies the rules of AssistantCache from schema.lidza.
+func (v AssistantCache) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.CacheKey == "" {
+		errs.Add("cacheKey", "required", "required")
+	}
+	if len(v.CacheKey) > 64 {
+		errs.Add("cacheKey", "max", "at most 64 character(s)")
+	}
+	if v.Text == "" {
+		errs.Add("text", "required", "required")
+	}
+	if v.Model == "" {
+		errs.Add("model", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthFactor is a row of the auth_factor table.
+type AuthFactor struct {
+	Subject      string     `json:"subject" db:"subject"`
+	SecretSealed string     `json:"secretSealed" db:"secret_sealed"`
+	LastStep     int64      `json:"lastStep" db:"last_step"`
+	BackupCodes  []string   `json:"backupCodes" db:"backup_codes"`
+	EnabledAt    *time.Time `json:"enabledAt" db:"enabled_at"`
+	FailedCount  int        `json:"failedCount" db:"failed_count"`
+	FailedAt     *time.Time `json:"failedAt" db:"failed_at"`
+	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of AuthFactor from schema.lidza.
+func (v AuthFactor) Validate() error {
+	var errs validate.Errors
+	if v.SecretSealed == "" {
+		errs.Add("secretSealed", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthStepUp is a row of the auth_step_up table.
+type AuthStepUp struct {
+	ID        string    `json:"id" db:"id"`
+	Subject   string    `json:"subject" db:"subject"`
+	SessionID string    `json:"sessionId" db:"session_id"`
+	Purpose   string    `json:"purpose" db:"purpose"`
+	Target    string    `json:"target" db:"target"`
+	ExpiresAt time.Time `json:"expiresAt" db:"expires_at"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of AuthStepUp from schema.lidza.
+func (v AuthStepUp) Validate() error {
+	var errs validate.Errors
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if v.SessionID == "" {
+		errs.Add("sessionId", "required", "required")
+	}
+	if v.Purpose == "" {
+		errs.Add("purpose", "required", "required")
+	}
+	if v.Target == "" {
+		errs.Add("target", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthWorkspace is a row of the auth_workspace table.
+type AuthWorkspace struct {
+	ID        string    `json:"id" db:"id"`
+	Name      string    `json:"name" db:"name"`
+	CreatedBy string    `json:"createdBy" db:"created_by"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of AuthWorkspace from schema.lidza.
+func (v AuthWorkspace) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.CreatedBy == "" {
+		errs.Add("createdBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AuthInvite is a row of the auth_invite table.
+type AuthInvite struct {
+	ID         string     `json:"id" db:"id"`
+	Workspace  string     `json:"workspace" db:"workspace"`
+	Email      string     `json:"email" db:"email"`
+	Role       string     `json:"role" db:"role"`
+	TokenHash  string     `json:"tokenHash" db:"token_hash"`
+	InvitedBy  string     `json:"invitedBy" db:"invited_by"`
+	ExpiresAt  time.Time  `json:"expiresAt" db:"expires_at"`
+	AcceptedAt *time.Time `json:"acceptedAt" db:"accepted_at"`
+	AcceptedBy *string    `json:"acceptedBy" db:"accepted_by"`
+	RevokedAt  *time.Time `json:"revokedAt" db:"revoked_at"`
+	CreatedAt  time.Time  `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of AuthInvite from schema.lidza.
+func (v AuthInvite) Validate() error {
+	var errs validate.Errors
+	if v.Workspace == "" {
+		errs.Add("workspace", "required", "required")
+	}
+	if v.Email == "" {
+		errs.Add("email", "required", "required")
+	}
+	if v.Role == "" {
+		errs.Add("role", "required", "required")
+	}
+	if v.TokenHash == "" {
+		errs.Add("tokenHash", "required", "required")
+	}
+	if v.InvitedBy == "" {
+		errs.Add("invitedBy", "required", "required")
 	}
 	return errs.Result()
 }
@@ -4098,10 +4240,11 @@ func (v ResourceLabelInput) Validate() error {
 
 // AssistantInput is an API type.
 type AssistantInput struct {
-	Source       string  `json:"source"`
-	Action       string  `json:"action"`
-	Content      string  `json:"content"`
-	Instructions *string `json:"instructions"`
+	Source         string  `json:"source"`
+	Action         string  `json:"action"`
+	Content        string  `json:"content"`
+	ContextVersion *string `json:"contextVersion"`
+	Instructions   *string `json:"instructions"`
 }
 
 // Validate applies the rules of AssistantInput from schema.lidza.
@@ -4131,6 +4274,12 @@ func (v AssistantInput) Validate() error {
 	if len(v.Content) > 20000 {
 		errs.Add("content", "max", "at most 20000 character(s)")
 	}
+	if v.ContextVersion != nil {
+		x := *v.ContextVersion
+		if len(x) > 200 {
+			errs.Add("contextVersion", "max", "at most 200 character(s)")
+		}
+	}
 	if v.Instructions != nil {
 		x := *v.Instructions
 		if len(x) > 2000 {
@@ -4145,6 +4294,7 @@ type AssistantResult struct {
 	Text      string `json:"text"`
 	Model     string `json:"model"`
 	Truncated bool   `json:"truncated"`
+	Cached    bool   `json:"cached"`
 }
 
 // Validate applies the rules of AssistantResult from schema.lidza.

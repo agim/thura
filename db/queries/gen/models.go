@@ -143,6 +143,17 @@ func (ns NullWorkspaceRole) Value() (driver.Value, error) {
 	return string(ns.WorkspaceRole), nil
 }
 
+type AssistantCache struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	CacheKey    string    `json:"cache_key"`
+	LeaseToken  *string   `json:"lease_token"`
+	Text        string    `json:"text"`
+	Model       string    `json:"model"`
+	CreatedAt   time.Time `json:"created_at"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
 type AuditEvent struct {
 	ID        string    `json:"id"`
 	At        time.Time `json:"at"`
@@ -179,6 +190,18 @@ type AuthConnection struct {
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
+type AuthFactor struct {
+	Subject      string     `json:"subject"`
+	SecretSealed string     `json:"secret_sealed"`
+	LastStep     int64      `json:"last_step"`
+	BackupCodes  []string   `json:"backup_codes"`
+	EnabledAt    *time.Time `json:"enabled_at"`
+	FailedCount  int32      `json:"failed_count"`
+	FailedAt     *time.Time `json:"failed_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
 type AuthIdentity struct {
 	ID              string    `json:"id"`
 	Provider        string    `json:"provider"`
@@ -188,6 +211,20 @@ type AuthIdentity struct {
 	Name            *string   `json:"name"`
 	CreatedAt       time.Time `json:"created_at"`
 	LastUsedAt      time.Time `json:"last_used_at"`
+}
+
+type AuthInvite struct {
+	ID         string     `json:"id"`
+	Workspace  string     `json:"workspace"`
+	Email      string     `json:"email"`
+	Role       string     `json:"role"`
+	TokenHash  string     `json:"token_hash"`
+	InvitedBy  string     `json:"invited_by"`
+	ExpiresAt  time.Time  `json:"expires_at"`
+	AcceptedAt *time.Time `json:"accepted_at"`
+	AcceptedBy *string    `json:"accepted_by"`
+	RevokedAt  *time.Time `json:"revoked_at"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
 
 type AuthMember struct {
@@ -220,6 +257,16 @@ type AuthSession struct {
 	CreatedAt       time.Time  `json:"created_at"`
 }
 
+type AuthStepUp struct {
+	ID        string    `json:"id"`
+	Subject   string    `json:"subject"`
+	SessionID string    `json:"session_id"`
+	Purpose   string    `json:"purpose"`
+	Target    string    `json:"target"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type AuthToken struct {
 	ID        string     `json:"id"`
 	Purpose   string     `json:"purpose"`
@@ -238,6 +285,14 @@ type AuthUser struct {
 	VerifiedAt   *time.Time `json:"verified_at"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
+type AuthWorkspace struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	CreatedBy string    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Calendar struct {
@@ -429,6 +484,7 @@ type Job struct {
 	LastError   *string    `json:"last_error"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UniqueKey   *string    `json:"unique_key"`
+	TraceParent *string    `json:"trace_parent"`
 }
 
 type JobSchedule struct {

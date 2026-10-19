@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strings"
 	queries "thura/db/queries/gen"
+	"thura/internal/platform/objectstore"
 	"thura/internal/richtext"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -337,7 +338,7 @@ func SaveAttachment(ctx context.Context, workspaceID, mailboxID, itemID string, 
 		size += int64(a.Size)
 	}
 	key := fmt.Sprintf("mail/%s/%s/attachment-%d", mailboxID, itemID, time.Now().UnixNano())
-	object, err := storage.From(ctx).Put(ctx, key, file.Body, storage.PutOptions{ContentType: file.ContentType})
+	object, err := objectstore.Put(ctx, key, file.Body, storage.PutOptions{ContentType: file.ContentType})
 	if err != nil {
 		return schema.AttachmentView{}, err
 	}

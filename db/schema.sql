@@ -215,7 +215,8 @@ CREATE TABLE job (
   finished_at timestamptz,
   last_error text,
   created_at timestamptz NOT NULL DEFAULT now(),
-  unique_key text
+  unique_key text,
+  trace_parent text
 );
 CREATE INDEX job_state_run_at_idx ON job (state, run_at);
 CREATE UNIQUE INDEX job_kind_unique_key_key ON job (kind, unique_key);
@@ -661,4 +662,65 @@ CREATE TABLE llm_usage (
 );
 CREATE INDEX llm_usage_at_idx ON llm_usage (at);
 CREATE INDEX llm_usage_label_idx ON llm_usage (label);
+
+CREATE TABLE assistant_cache (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  cache_key varchar(64) NOT NULL,
+  lease_token uuid,
+  text text NOT NULL,
+  model text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL
+);
+CREATE INDEX assistant_cache_workspace_id_idx ON assistant_cache (workspace_id);
+CREATE INDEX assistant_cache_expires_at_idx ON assistant_cache (expires_at);
+CREATE UNIQUE INDEX assistant_cache_workspace_id_cache_key_key ON assistant_cache (workspace_id, cache_key);
+
+CREATE TABLE auth_factor (
+  subject text PRIMARY KEY,
+  secret_sealed text NOT NULL,
+  last_step bigint NOT NULL DEFAULT 0,
+  backup_codes text[] NOT NULL,
+  enabled_at timestamptz,
+  failed_count integer NOT NULL DEFAULT 0,
+  failed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE auth_step_up (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject text NOT NULL,
+  session_id text NOT NULL,
+  purpose text NOT NULL,
+  target text NOT NULL DEFAULT '',
+  expires_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX auth_step_up_session_id_idx ON auth_step_up (session_id);
+CREATE UNIQUE INDEX auth_step_up_session_id_purpose_target_key ON auth_step_up (session_id, purpose, target);
+
+CREATE TABLE auth_workspace (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  created_by text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE auth_invite (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace text NOT NULL,
+  email text NOT NULL,
+  role text NOT NULL,
+  token_hash text NOT NULL UNIQUE,
+  invited_by text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  accepted_at timestamptz,
+  accepted_by text,
+  revoked_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX auth_invite_workspace_idx ON auth_invite (workspace);
 

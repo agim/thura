@@ -335,7 +335,6 @@ model AuthMember @table("auth_member") {
   @@index(scope, role)
 }
 
-// Types of the jobs pack.
 // Background jobs (jobs.Queue). uniqueKey is set by jobs.Unique while the
 // job is pending or running and cleared when it finishes; NULLs do not
 // collide, so the unique index holds one live job per kind and key.
@@ -352,6 +351,9 @@ model Job @table("job") {
   lastError   text?
   createdAt   time   @default(now())
   uniqueKey   string?
+  // The W3C traceparent of the span that enqueued the job, with
+  // tracing on; the run continues that trace.
+  traceParent string?
   @@index(state, runAt)
   @@unique(kind, uniqueKey)
 }
@@ -1163,12 +1165,28 @@ type AssistantInput {
  source string @min(1) @max(20)
  action string @min(1) @max(30)
  content string @max(20000)
+ contextVersion string? @max(200)
  instructions string? @max(2000)
 }
 type AssistantResult {
  text string
  model string
  truncated bool
+ cached bool
+}
+
+// Exact-request results shared only within their authorized workspace.
+// Source text and instructions are hashed, never stored in this cache.
+model AssistantCache {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace) @index
+ cacheKey string @max(64)
+ leaseToken uuid?
+ text string
+ model string
+ createdAt time @default(now())
+ expiresAt time @index
+ @@unique(workspaceId,cacheKey)
 }
 type AISettings {
  enabled bool
@@ -1187,4 +1205,59 @@ type AISettingsInput {
  baseUrl string? @max(500)
  apiKey string? @max(5000)
  maxTokens int @min(128) @max(4096)
+}
+
+// An authenticator-app factor for an account. The secret is sealed with
+// LIDZA_MASTER_KEY; backup codes are one-way hashes and each TOTP time step
+// can be used only once.
+model AuthFactor @table("auth_factor") {
+  subject      string   @id
+  secretSealed string
+  lastStep     bigint   @default(0)
+  backupCodes  string[]
+  enabledAt    time?
+  failedCount  int      @default(0)
+  failedAt     time?
+  createdAt    time     @default(now())
+  updatedAt    time     @default(now())
+}
+
+// A fresh second-factor check, bound to one sign-in, purpose and target.
+// It is never a broad account unlock.
+model AuthStepUp @table("auth_step_up") {
+  id        uuid   @id @default(uuid())
+  subject   string
+  sessionId string @index
+  purpose   string
+  target    string @default("")
+  expiresAt time
+  createdAt time   @default(now())
+  @@unique(sessionId, purpose, target)
+}
+
+// A workspace (auth.Teams): a group of accounts sharing the app's data.
+// Its id is the scope of its members' roles in auth_member.
+model AuthWorkspace @table("auth_workspace") {
+  id        uuid   @id @default(uuid())
+  name      string
+  createdBy string
+  createdAt time   @default(now())
+  updatedAt time   @default(now())
+}
+
+// An invitation to a workspace, bound to an email address; the token is
+// kept as its hash.
+model AuthInvite @table("auth_invite") {
+  id         uuid   @id @default(uuid())
+  workspace  string
+  email      string
+  role       string
+  tokenHash  string @unique
+  invitedBy  string
+  expiresAt  time
+  acceptedAt time?
+  acceptedBy string?
+  revokedAt  time?
+  createdAt  time   @default(now())
+  @@index(workspace)
 }

@@ -31,7 +31,7 @@ func TestAssistantScopesRequestsAndUsesOnlyExplicitText(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		for _, sql := range []string{"DELETE FROM auth_member WHERE scope=$1", "DELETE FROM workspace WHERE id=$1"} {
+		for _, sql := range []string{"DELETE FROM assistant_cache WHERE workspace_id=$1", "DELETE FROM auth_member WHERE scope=$1", "DELETE FROM workspace WHERE id=$1"} {
 			if _, err := db.From(ctx).Exec(ctx, sql, space.ID); err != nil {
 				t.Error(err)
 			}
@@ -103,7 +103,7 @@ func TestAssistantStartsDisabledAndBoundsInput(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		for _, sql := range []string{"DELETE FROM auth_member WHERE scope=$1", "DELETE FROM workspace WHERE id=$1"} {
+		for _, sql := range []string{"DELETE FROM assistant_cache WHERE workspace_id=$1", "DELETE FROM auth_member WHERE scope=$1", "DELETE FROM workspace WHERE id=$1"} {
 			if _, err := db.From(ctx).Exec(ctx, sql, space.ID); err != nil {
 				t.Error(err)
 			}
@@ -150,7 +150,7 @@ func TestAssistantOperatorSettingsPersistEncryptedAndNeverReturnKeys(t *testing.
 				t.Error(err)
 			}
 		}
-		for _, sql := range []string{"DELETE FROM auth_member WHERE scope=$1", "DELETE FROM workspace WHERE id=$1"} {
+		for _, sql := range []string{"DELETE FROM assistant_cache WHERE workspace_id=$1", "DELETE FROM auth_member WHERE scope=$1", "DELETE FROM workspace WHERE id=$1"} {
 			if _, err := db.From(ctx).Exec(ctx, sql, space.ID); err != nil {
 				t.Error(err)
 			}
