@@ -128,5 +128,10 @@
     "title": "Labels \u00b7 Thura",
     "description": "Manage labels shared across your Thura workspace.",
     "noIndex": true
+  },
+  "/app/settings/ai": {
+    "title": "AI settings \u00b7 Thura",
+    "description": "Manage your Thura model service and AI preferences.",
+    "noIndex": true
   }
 }

@@ -1,3 +1,5 @@
+import { AssistantAction } from './AssistantAction'
+import { plainToHTML, richHTMLText } from './RichTextEditor'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -11,6 +13,8 @@ import { userError } from '../lib/errors'
 export function DriveDocumentEditor({ workspaceId, subject, file, contentTarget, save, busy }: {
   workspaceId: string; subject: string; file: DriveFile; contentTarget: HTMLElement | null; save: (file: File, base: DriveFile) => Promise<DriveFile>; busy: boolean
 }) {
+  const [revision, setRevision] = useState(0)
+  const [plain, setPlain] = useState('')
   const [open, setOpen] = useState(false)
   const [html, setHTML] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
@@ -23,11 +27,11 @@ export function DriveDocumentEditor({ workspaceId, subject, file, contentTarget,
   }, enabled: open, retry: false })
   const recoveryKey = `thura:document:${subject}:${workspaceId}:${file.id}`
   function recover() {
-    setBase(file)
+    setBase(file); setPlain('')
     try {
       const copy = JSON.parse(sessionStorage.getItem(recoveryKey) || 'null')
       if (copy && typeof copy.html === 'string' && Number.isInteger(copy.version) && copy.version > 0) {
-        setHTML(cleanRichHTML(copy.html)); setBase({ ...file, currentVersion: copy.version }); setDirty(true); setNotice('Recovered unsaved changes')
+        setHTML(cleanRichHTML(copy.html)); setPlain(richHTMLText(copy.html)); setBase({ ...file, currentVersion: copy.version }); setDirty(true); setNotice('Recovered unsaved changes')
       }
     } catch { /* An unavailable local recovery store must not block editing. */ }
     setOpen(true)
@@ -45,5 +49,5 @@ export function DriveDocumentEditor({ workspaceId, subject, file, contentTarget,
       remember(null); setBase(updated); setDirty(false); setNotice(`Saved version ${updated.currentVersion}`)
     } catch (failure) { setError(userError(failure)); setNotice('Changes have not been saved. Your editor copy is still here.') }
   }
-  return <><ActionButton type="button" aria-label={open ? 'Close editor' : 'Edit document'} disabled={!contentTarget || busy || !subject} onClick={() => open ? void close() : recover()}>{open ? <X size={16} /> : <Pencil size={16} />}<span className="action-label">{open ? 'Close editor' : 'Edit document'}</span></ActionButton>{open && <ActionButton type="button" variant="primary" aria-label="Save document" disabled={!dirty || busy} onClick={() => void persist()}><Save size={16} /><span className="action-label">Save document</span></ActionButton>}{open && contentTarget && createPortal(<section className="drive-document-editor" aria-label="Document editor">{source.isPending && <p role="status">Loading document…</p>}{(source.error || error) && <p role="alert">{error || userError(source.error)}</p>}{(source.data !== undefined || html !== null) && <RichTextEditor full label="Document" html={html ?? source.data} disabled={busy} onChange={value => { setHTML(value); remember(value); setDirty(true); setNotice('Unsaved changes') }} />}<p role="status">{notice || 'Edits save as a new Drive version.'}</p></section>, contentTarget)}</>
+  return <><ActionButton type="button" aria-label={open ? 'Close editor' : 'Edit document'} disabled={!contentTarget || busy || !subject} onClick={() => open ? void close() : recover()}>{open ? <X size={16} /> : <Pencil size={16} />}<span className="action-label">{open ? 'Close editor' : 'Edit document'}</span></ActionButton>{open && <AssistantAction workspaceId={workspaceId} source="drive" initialAction="rewrite" content={plain || richHTMLText(html ?? source.data ?? '')} useLabel="Append to document" onUse={text => { const value = (html ?? source.data ?? '') + plainToHTML(text); setHTML(value); setPlain(richHTMLText(value)); remember(value); setDirty(true); setRevision(v => v + 1) }} />}{open && <ActionButton type="button" variant="primary" aria-label="Save document" disabled={!dirty || busy} onClick={() => void persist()}><Save size={16} /><span className="action-label">Save document</span></ActionButton>}{open && contentTarget && createPortal(<section className="drive-document-editor" aria-label="Document editor">{source.isPending && <p role="status">Loading document…</p>}{(source.error || error) && <p role="alert">{error || userError(source.error)}</p>}{(source.data !== undefined || html !== null) && <RichTextEditor key={revision} full label="Document" html={html ?? source.data} disabled={busy} onChange={(value, text) => { setPlain(text); setHTML(value); remember(value); setDirty(true); setNotice('Unsaved changes') }} />}<p role="status">{notice || 'Edits save as a new Drive version.'}</p></section>, contentTarget)}</>
 }

@@ -1686,6 +1686,38 @@ func (v ResourceLabel) Validate() error {
 	return errs.Result()
 }
 
+// LLMUsage is a row of the llm_usage table.
+type LLMUsage struct {
+	ID       string    `json:"id" db:"id"`
+	At       time.Time `json:"at" db:"at"`
+	Provider string    `json:"provider" db:"provider"`
+	Model    string    `json:"model" db:"model"`
+	Label    string    `json:"label" db:"label"`
+	Input    int       `json:"input" db:"input"`
+	Output   int       `json:"output" db:"output"`
+	Ms       int       `json:"ms" db:"ms"`
+	Status   string    `json:"status" db:"status"`
+	Error    *string   `json:"error" db:"error"`
+}
+
+// Validate applies the rules of LLMUsage from schema.lidza.
+func (v LLMUsage) Validate() error {
+	var errs validate.Errors
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if v.Model == "" {
+		errs.Add("model", "required", "required")
+	}
+	if v.Label == "" {
+		errs.Add("label", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -4060,6 +4092,142 @@ func (v ResourceLabelInput) Validate() error {
 	var errs validate.Errors
 	if v.LabelID == "" {
 		errs.Add("labelId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AssistantInput is an API type.
+type AssistantInput struct {
+	Source       string  `json:"source"`
+	Action       string  `json:"action"`
+	Content      string  `json:"content"`
+	Instructions *string `json:"instructions"`
+}
+
+// Validate applies the rules of AssistantInput from schema.lidza.
+func (v AssistantInput) Validate() error {
+	var errs validate.Errors
+	if v.Source == "" {
+		errs.Add("source", "required", "required")
+	}
+	if len(v.Source) < 1 {
+		errs.Add("source", "min", "at least 1 character(s)")
+	}
+	if len(v.Source) > 20 {
+		errs.Add("source", "max", "at most 20 character(s)")
+	}
+	if v.Action == "" {
+		errs.Add("action", "required", "required")
+	}
+	if len(v.Action) < 1 {
+		errs.Add("action", "min", "at least 1 character(s)")
+	}
+	if len(v.Action) > 30 {
+		errs.Add("action", "max", "at most 30 character(s)")
+	}
+	if v.Content == "" {
+		errs.Add("content", "required", "required")
+	}
+	if len(v.Content) > 20000 {
+		errs.Add("content", "max", "at most 20000 character(s)")
+	}
+	if v.Instructions != nil {
+		x := *v.Instructions
+		if len(x) > 2000 {
+			errs.Add("instructions", "max", "at most 2000 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// AssistantResult is an API type.
+type AssistantResult struct {
+	Text      string `json:"text"`
+	Model     string `json:"model"`
+	Truncated bool   `json:"truncated"`
+}
+
+// Validate applies the rules of AssistantResult from schema.lidza.
+func (v AssistantResult) Validate() error {
+	var errs validate.Errors
+	if v.Text == "" {
+		errs.Add("text", "required", "required")
+	}
+	if v.Model == "" {
+		errs.Add("model", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AISettings is an API type.
+type AISettings struct {
+	Enabled      bool   `json:"enabled"`
+	Ready        bool   `json:"ready"`
+	Provider     string `json:"provider"`
+	Model        string `json:"model"`
+	BaseURL      string `json:"baseUrl"`
+	HasKey       bool   `json:"hasKey"`
+	MaxTokens    int    `json:"maxTokens"`
+	CanConfigure bool   `json:"canConfigure"`
+}
+
+// Validate applies the rules of AISettings from schema.lidza.
+func (v AISettings) Validate() error {
+	var errs validate.Errors
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if v.Model == "" {
+		errs.Add("model", "required", "required")
+	}
+	if v.BaseURL == "" {
+		errs.Add("baseUrl", "required", "required")
+	}
+	return errs.Result()
+}
+
+// AISettingsInput is an API type.
+type AISettingsInput struct {
+	Enabled   bool    `json:"enabled"`
+	Provider  string  `json:"provider"`
+	Model     string  `json:"model"`
+	BaseURL   *string `json:"baseUrl"`
+	APIKey    *string `json:"apiKey"`
+	MaxTokens int     `json:"maxTokens"`
+}
+
+// Validate applies the rules of AISettingsInput from schema.lidza.
+func (v AISettingsInput) Validate() error {
+	var errs validate.Errors
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
+	}
+	if len(v.Provider) > 30 {
+		errs.Add("provider", "max", "at most 30 character(s)")
+	}
+	if v.Model == "" {
+		errs.Add("model", "required", "required")
+	}
+	if len(v.Model) > 120 {
+		errs.Add("model", "max", "at most 120 character(s)")
+	}
+	if v.BaseURL != nil {
+		x := *v.BaseURL
+		if len(x) > 500 {
+			errs.Add("baseUrl", "max", "at most 500 character(s)")
+		}
+	}
+	if v.APIKey != nil {
+		x := *v.APIKey
+		if len(x) > 5000 {
+			errs.Add("apiKey", "max", "at most 5000 character(s)")
+		}
+	}
+	if v.MaxTokens < 128 {
+		errs.Add("maxTokens", "min", "at least 128")
+	}
+	if v.MaxTokens > 4096 {
+		errs.Add("maxTokens", "max", "at most 4096")
 	}
 	return errs.Result()
 }

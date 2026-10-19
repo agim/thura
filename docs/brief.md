@@ -31,7 +31,7 @@ Invite teammates and manage workspace access.
 
 ### What is out of scope for now? <!-- brief:out_of_scope -->
 
-Public registration, billing, recording/transcription and AI summaries, end-to-end encrypted chat/device recovery, native spreadsheet collaboration, CalDAV/external calendar sync, IMAP compatibility, and the experimental SMIP protocol are outside this release. Additional hosted-provider-native ingress adapters and expanded contact fields are later integrations.
+Public registration, billing, recording/transcription, end-to-end encrypted chat/device recovery, native spreadsheet collaboration, CalDAV/external calendar sync, IMAP compatibility, and the experimental SMIP protocol are outside this release. Additional hosted-provider-native ingress adapters and expanded contact fields are later integrations.
 
 ## Data
 
@@ -101,11 +101,11 @@ The deployment administrator chooses SMTP (including Debian Postfix), Mailgun, S
 
 ### Which language model provider? <!-- brief:model -->
 
-No production language-model provider in this release; AI features are deferred. Test/fake provider configuration does not authorize external model calls.
+User-invoked AI suggestions are supported through the official LLM pack. The server administrator selects and enables a local or hosted provider in Settings. No background processing, model tools, automatic sending, or call recording/transcription. Fake providers are tests only.
 
 ### How much may the model cost a month? <!-- brief:model_budget -->
 
-Zero external model spend for this release. Any later provider or budget requires an explicit product decision.
+AI starts disabled. Provider credentials and enablement require server-administrator configuration; no paid provider calls are authorized by implementation or tests alone. Requests have bounded input, output, timeout and rate limits.
 
 ### Where do files go in production? <!-- brief:storage -->
 

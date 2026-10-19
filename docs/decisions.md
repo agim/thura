@@ -298,3 +298,13 @@ Why: Email and contact fields reuse RecipientInput for workspace-scoped suggesti
 ## 2026-10-18: Shared rich text editing
 
 Use Tiptap/ProseMirror for a shared WYSIWYG surface rather than browser editing commands. Email and calendar descriptions use a compact toolbar; native Drive HTML documents expose headings, font size, alignment, highlighting and tables. Keep plain-text email/ICS bodies alongside sanitized authored HTML. Inbound email retains its stricter reader policy. Native documents keep an account-scoped recovery copy in this browser tab and reuse Drive's authenticated downloads and resumable, version-checked uploads; DOCX/XLSX continue through the existing ONLYOFFICE integration so their formats are not silently converted. Recipient labels are inline in compose and Cc/Bcc expand into separate rows using the shared RecipientInput.
+
+## 2026-10-19: Pack llm added
+
+Why: Shared user-invoked AI drafting, rewriting, summaries and preparation across workspace resources, using the official LLM pack and operator-managed settings.
+
+Touches: lidza.json, packs.go
+
+## 2026-10-18: User-invoked AI assistance across workspace resources
+
+Use the official Līdza LLM pack for Ollama, OpenAI, Anthropic and Google Gemini, preserving one provider interface, encrypted credential storage and token usage reporting. Keep model IDs configurable instead of a hardcoded model catalog. The server administrator configures and enables the service in Settings; it starts disabled and production fake responses are unavailable. Workspace members explicitly review the text included in each bounded request. The model receives no retrieval or mutation tools and cannot send mail/chat, modify contacts, invite participants or record calls. Outputs require a user action to insert/replace text; Drive appends suggestions so existing formatted content survives. Meet prepares agendas from supplied context and never pretends to summarize unrecorded audio. Existing resource authorization supplies the visible context; the generation endpoint accepts user-provided text and never reads other resource rows.

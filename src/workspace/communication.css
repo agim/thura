@@ -1010,9 +1010,9 @@
 .app-action-hint { position: fixed; z-index: 10000; transform: translateX(-50%); max-width: min(240px, calc(100vw - 24px)); padding: 6px 10px; background: #202124; color: #fff; border-radius: 6px; font: 500 12px/1.4 var(--font-sans, sans-serif); pointer-events: none; }
 #orbit-workspace.zero-workspace .app-toast { position: fixed; z-index: 100; left: 50%; bottom: 24px; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); padding: 12px 16px; margin: 0; border-radius: 8px; background: var(--ink); color: var(--paper); box-shadow: 0 4px 20px #0002; font-size: 13px; }
 @media (min-width: 1000px) {
- #orbit-workspace.zero-workspace .contact-directory > li { grid-template-columns: 42px minmax(0,1fr) minmax(130px,.65fr) 312px; }
- #orbit-workspace.zero-workspace .contact-columns { grid-template-columns: minmax(0,1fr) minmax(130px,.65fr) 312px; }
- #orbit-workspace.zero-workspace .contact-actions .app-action-row { gap: 8px; }
+ #orbit-workspace.zero-workspace .contact-directory > li { grid-template-columns: 42px minmax(0,1fr) minmax(130px,.65fr) 364px; }
+ #orbit-workspace.zero-workspace .contact-columns { grid-template-columns: minmax(0,1fr) minmax(130px,.65fr) 364px; }
+ #orbit-workspace.zero-workspace .contact-actions .app-action-row { gap: 8px; justify-content:flex-start; }
  #orbit-workspace.zero-workspace .contact-action-list.app-action-row > button { width: 44px; padding: 10px; }
 }
 /* Primary header actions already fit their reserved space and need no scroll layer. */
@@ -1154,4 +1154,18 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
  #orbit-workspace.zero-workspace .drive-body:has(.drive-document-editor,.office-editor) .drive-detail > header .file-type { grid-row:1 / span 2; }
  #orbit-workspace.zero-workspace .drive-body:has(.drive-document-editor,.office-editor) .drive-detail > header h3 { margin:0; }
  #orbit-workspace.zero-workspace .drive-body:has(.drive-document-editor,.office-editor) .drive-detail > header p { grid-column:2; margin:0; }
+}
+.assistant-panel { display:grid; gap:16px; min-width:0; }
+.assistant-panel p { margin:0; }
+.assistant-panel label { display:grid; gap:8px; min-width:0; }
+.assistant-panel textarea { min-height:74px; resize:vertical; }
+.assistant-output { white-space:pre-wrap; overflow-wrap:anywhere; padding:14px; border:1px solid var(--line); border-radius:8px; background:var(--canvas); max-height:40dvh; overflow:auto; }
+.assistant-result { display:grid; gap:12px; }
+.ai-settings-fields { display:grid; gap:16px; border:0; padding:0; min-width:0; }
+
+@media(min-width:1000px) and (max-width:1200px) {
+ #orbit-workspace.zero-workspace .contact-directory > li { grid-template-columns:42px minmax(0,1fr) 364px; }
+ #orbit-workspace.zero-workspace .contact-columns { display:none; }
+ #orbit-workspace.zero-workspace .contact-organization { grid-column:2; grid-row:2; }
+ #orbit-workspace.zero-workspace .contact-actions { grid-column:3; grid-row:1/3; }
 }

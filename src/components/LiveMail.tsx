@@ -1,3 +1,5 @@
+import { AssistantAction } from './AssistantAction'
+import { plainToHTML, richHTMLText } from './RichTextEditor'
 import { RichTextEditor } from './RichTextEditor'
 import { ActionButton } from './ActionButton'
 import { ActionRow } from './ActionRow'
@@ -73,7 +75,7 @@ function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, quer
           {current.status === 'queued' && <ActionButton disabled={undo.isPending} onClick={() => undo.mutate(current.id)}>Undo send</ActionButton>}
           <MailReader key={`reader:${current.id}`} workspaceId={workspaceId} mailboxId={mailboxId} id={current.id} html={current.htmlBody} text={current.textBody} attachments={detail.data?.attachments || []} />
           {detail.data?.attachments.map(a => <ActionButton className="attachment" key={a.id} onClick={() => void download(a.id)}>Download {a.name} · {Math.ceil(a.size / 1024)} KB</ActionButton>)}
-          <ActionRow label="Message actions" className="replybar"><ActionButton aria-label="Reply" onClick={() => void reply()}><Reply size={18} aria-hidden="true" /><span className="action-label">Reply</span></ActionButton><ActionButton aria-label="Reply all" onClick={() => void reply(true)}><ReplyAll size={18} aria-hidden="true" /><span className="action-label">Reply all</span></ActionButton><ActionButton aria-label="Forward" onClick={() => void reply(false, true)}><Forward size={18} aria-hidden="true" /><span className="action-label">Forward</span></ActionButton>
+          <ActionRow label="Message actions" className="replybar"><AssistantAction workspaceId={workspaceId} source="mail" content={`${current.subject}\nFrom: ${current.fromAddress}\n${current.textBody || richHTMLText(current.htmlBody)}`} /><ActionButton aria-label="Reply" onClick={() => void reply()}><Reply size={18} aria-hidden="true" /><span className="action-label">Reply</span></ActionButton><ActionButton aria-label="Reply all" onClick={() => void reply(true)}><ReplyAll size={18} aria-hidden="true" /><span className="action-label">Reply all</span></ActionButton><ActionButton aria-label="Forward" onClick={() => void reply(false, true)}><Forward size={18} aria-hidden="true" /><span className="action-label">Forward</span></ActionButton>
           <MailConversation key={`conversation:${current.id}`} scope={{ workspaceId, mailboxId }} item={current} onSelect={i => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null) }} /></ActionRow>
         </> : <p className="empty">Select a message or compose a new one.</p>}
       </section>
@@ -99,6 +101,7 @@ function DraftEditor(props: DraftEditorProps) {
 
 function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorProps) {
   const [input, setInput] = useState<DraftInput>({ to: item.toAddress, cc: item.cc, bcc: item.bcc, subject: item.subject, text: item.textBody, html: item.htmlBody, threadId: item.threadId })
+  const [editorRevision, setEditorRevision] = useState(0)
   const [extraRecipients, setExtraRecipients] = useState(!!(item.cc || item.bcc))
   const [schedule, setSchedule] = useState('')
   const attachmentInput = useRef<HTMLInputElement>(null)
@@ -131,11 +134,11 @@ function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorP
     <div className="composer-recipient-row"><RecipientInput inlineLabel workspaceId={workspaceId} label="To" disabled={send.isPending} value={input.to ?? ''} onChange={value => change('to', value)} /><ActionButton type="button" className="recipient-toggle" aria-expanded={extraRecipients} onClick={() => setExtraRecipients(v => !v)}>Cc / Bcc</ActionButton></div>
     {extraRecipients && <div className="recipient-extras">{([['cc', 'Cc'], ['bcc', 'Bcc']] as const).map(([field, label]) => <RecipientInput inlineLabel key={field} workspaceId={workspaceId} label={label} disabled={send.isPending} value={input[field] ?? ''} onChange={value => change(field, value)} />)}</div>}
     <label>Subject<input disabled={send.isPending} value={input.subject ?? ''} onChange={e => change('subject', e.target.value)} /></label>
-    <RichTextEditor label="Message" disabled={send.isPending} html={input.html} text={input.text} onChange={(html, text) => { const next = { ...input, html, text }; setInput(next); autosave.update(next) }} />
+    <RichTextEditor key={editorRevision} label="Message" disabled={send.isPending} html={input.html} text={input.text} onChange={(html, text) => { const next = { ...input, html, text }; setInput(next); autosave.update(next) }} />
     <label className="visually-hidden">Attachments<input ref={attachmentInput} type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
     <ul>{detail.data?.attachments.map(a => <li key={a.id}>{a.name} <ActionButton type="button" aria-label={`Remove ${a.name}`} disabled={busy} onClick={() => removeAttachment.mutate(a.id)}><X size={14} aria-hidden="true" /></ActionButton></li>)}</ul>
     {(failure || error) && <p role="alert">{failure?.message || error}</p>}
-    <ActionRow label="Compose actions" className="composer-actions">
+    <ActionRow label="Compose actions" className="composer-actions"><AssistantAction workspaceId={workspaceId} source="mail" initialAction="draft" content={input.text || ''} useLabel="Replace message" onUse={text => { const next = { ...input, text, html: plainToHTML(text) }; setInput(next); autosave.update(next); setEditorRevision(v => v + 1) }} />
       <ActionButton type="button" className="attach-action" aria-label="Attach file" title="Attach file" disabled={busy} onClick={() => attachmentInput.current?.click()}><Paperclip size={16} aria-hidden="true" /><span>Attach file</span></ActionButton>
       <ModalAction className="schedule-action" done label="Schedule send" icon={<Clock size={16} aria-hidden="true" />}><DateTimeControl label="Send" type="datetime-local" value={schedule} onChange={e => setSchedule(e.target.value)} /></ModalAction>
       <ActionButton type="button" className="save-draft-action" disabled={busy} onClick={() => save.mutate()}>Save draft</ActionButton><ActionButton variant="primary" className="mainaction" disabled={busy}>Send</ActionButton>

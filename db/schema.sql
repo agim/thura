@@ -647,3 +647,18 @@ CREATE INDEX resource_label_label_id_idx ON resource_label (label_id);
 CREATE INDEX resource_label_source_id_idx ON resource_label (source_id);
 CREATE UNIQUE INDEX resource_label_label_id_source_source_id_key ON resource_label (label_id, source, source_id);
 
+CREATE TABLE llm_usage (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  at timestamptz NOT NULL DEFAULT now(),
+  provider text NOT NULL,
+  model text NOT NULL,
+  label text NOT NULL,
+  input integer NOT NULL,
+  output integer NOT NULL,
+  ms integer NOT NULL,
+  status text NOT NULL,
+  error text
+);
+CREATE INDEX llm_usage_at_idx ON llm_usage (at);
+CREATE INDEX llm_usage_label_idx ON llm_usage (label);
+

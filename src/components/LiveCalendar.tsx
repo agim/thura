@@ -1,3 +1,5 @@
+import { AssistantAction } from './AssistantAction'
+import { plainToHTML } from './RichTextEditor'
 import { RichTextEditor } from './RichTextEditor'
 import { ActionButton } from './ActionButton'
 import { RecipientInput } from './RecipientInput'
@@ -84,6 +86,7 @@ function EventForm({ workspaceId, calendarId, zone, date, initial, occurrence, s
   const first = DateTime.fromISO(date || DateTime.now().setZone(zone).toISODate()!, { zone }).set({ hour: 9 })
   const [mode, setMode] = useState<'series' | 'occurrence'>(event?.rrule && occurrence ? 'occurrence' : 'series')
   const [title, setTitle] = useState(occurrence?.title || event?.title || '')
+  const [descriptionRevision, setDescriptionRevision] = useState(0)
   const [descriptionHtml, setDescriptionHTML] = useState(event?.descriptionHtml || '')
   const [description, setDescription] = useState(event?.description || '')
   const [location, setLocation] = useState(event?.location || '')
@@ -113,7 +116,7 @@ function EventForm({ workspaceId, calendarId, zone, date, initial, occurrence, s
     {createMeeting && <p className="field-help">A meeting link, PIN and joining instructions will be included in the invitation. Invited guests can join without a Thura account.</p>}
     {event?.meetingId && event.location.includes('/meet?room=') && <div className="event-meeting-link"><strong>Thura Meet</strong><a href={event.location} target="_blank" rel="noreferrer">Open meeting</a><small>The invitation includes a meeting ID and PIN for guests.</small></div>}
     {!event?.location.includes('/meet?room=') && <label>{createMeeting ? 'Physical location (optional)' : 'Event location'}<input disabled={mode === 'occurrence'} value={location} onChange={e => setLocation(e.target.value)} /></label>}<RecipientInput workspaceId={workspaceId} label="Attendee emails" disabled={mode === 'occurrence'} value={guests} onChange={setGuests} />{initial?.attendees.length ? <ul>{initial.attendees.map(a => <li key={a.id}>{a.email}: {a.response}{a.responseSequence < event!.sequence ? ' (prior event version)' : ''}</li>)}</ul> : null}
-    <ModalAction done label="Description and recurrence"><RichTextEditor label="Description" disabled={mode === 'occurrence'} html={descriptionHtml} text={description} onChange={(html, text) => { setDescriptionHTML(html); setDescription(text) }} /><RecurrenceControl disabled={mode === 'occurrence'} value={rule} onChange={setRule} start={allDay ? startDate : starts} zone={zone} allDay={allDay} /></ModalAction>
+    <ModalAction done label="Description and recurrence"><ActionRow label="Description assistance"><AssistantAction workspaceId={workspaceId} source="calendar" initialAction="agenda" content={`${title}\n${description}`} useLabel="Replace description" onUse={mode === 'occurrence' ? undefined : text => { setDescription(text); setDescriptionHTML(plainToHTML(text)); setDescriptionRevision(v => v + 1) }} /></ActionRow><RichTextEditor key={descriptionRevision} label="Description" disabled={mode === 'occurrence'} html={descriptionHtml} text={description} onChange={(html, text) => { setDescriptionHTML(html); setDescription(text) }} /><RecurrenceControl disabled={mode === 'occurrence'} value={rule} onChange={setRule} start={allDay ? startDate : starts} zone={zone} allDay={allDay} /></ModalAction>
     <ActionRow label="Event actions" className="event-save">{mode === 'series' && guests.trim() && <ActionButton type="button" className="primary-action" disabled={save.isPending || cancel.isPending} onClick={() => save.mutate(true)}>Save &amp; send invitations</ActionButton>}<ActionButton className={guests.trim() && mode === 'series' ? '' : 'primary-action'} disabled={save.isPending || cancel.isPending}>Save event</ActionButton>{event && <ActionButton type="button" disabled={save.isPending || cancel.isPending} onClick={async () => { if (await confirmAction(`Cancel ${mode === 'occurrence' ? 'this occurrence' : 'the entire event series'}?`)) cancel.mutate() }}>{mode === 'occurrence' ? 'Cancel occurrence' : 'Cancel series'}</ActionButton>}</ActionRow>
     </>}{(save.error || cancel.error || error) && <p role="alert">{error || userError(save.error || cancel.error)}</p>}</form>
 }

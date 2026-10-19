@@ -1,3 +1,4 @@
+import { AssistantAction } from './AssistantAction'
 import { ActionButton } from './ActionButton'
 import { ActionRow } from './ActionRow'
 import { ResourceLabels } from './ResourceLabels'
@@ -48,7 +49,7 @@ function Timeline({ workspaceId, person, onOpen, onBack, search }: { workspaceId
     <p>{scope === 'organization' ? 'Activity involving people at this organization.' : current.email}</p></div></header>
     {current.company && <div className="correspondence-scope"><button aria-pressed={scope === 'person'} onClick={() => setScope('person')}>This person</button><button aria-pressed={scope === 'organization'} onClick={() => setScope('organization')}>Organization: {current.company}</button></div>}
     <ActionRow label="Timeline actions" className="timeline-tools"><label className="timeline-source"><span className="visually-hidden">Source</span><SelectControl aria-label="Source" value={source} onChange={e => setSource(e.target.value)}><option value="">All sources</option>{sources.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectControl></label>
-    {scope === 'person' && <><LinkItems workspaceId={workspaceId} person={current} /><ResourceLabels workspaceId={workspaceId} source="contact" id={current.id} /></>}
+    {scope === 'person' && <><AssistantAction workspaceId={workspaceId} source="loop" content={`${current.name}\n${items.map(item => `${item.subject}: ${item.preview}`).join('\n\n')}`} /><LinkItems workspaceId={workspaceId} person={current} /><ResourceLabels workspaceId={workspaceId} source="contact" id={current.id} /></>}
     <ActionButton className="secondary" aria-label="Refresh timeline" onClick={() => void timeline.refetch()} disabled={timeline.isFetching}><RefreshCw size={17} /></ActionButton></ActionRow>
     {unlink.isError && <p role="alert">{unlink.error.message}</p>}
     {notices.map(notice => <p role="status" key={notice}>{notice}</p>)}

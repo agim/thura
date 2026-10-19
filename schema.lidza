@@ -1139,3 +1139,52 @@ type ResourceLabelInput {
  labelId uuid
  applied bool
 }
+
+// Types of the llm pack.
+// Every call the llm pack makes, with its tokens: the pack writes a row
+// after each Chat, Stream, Generate or Run when the db pack runs. Label
+// is Request.Label, the feature that made the call ("note.tags").
+model LLMUsage @table("llm_usage") {
+  id       uuid    @id @default(uuid())
+  at       time    @default(now()) @index
+  provider string
+  model    string
+  label    string  @index
+  input    int
+  output   int
+  ms       int
+  status   string
+  error    string?
+}
+
+// User-invoked AI suggestions. The caller supplies only the visible text;
+// the assistant has no tools, background crawls or resource retrieval access.
+type AssistantInput {
+ source string @min(1) @max(20)
+ action string @min(1) @max(30)
+ content string @max(20000)
+ instructions string? @max(2000)
+}
+type AssistantResult {
+ text string
+ model string
+ truncated bool
+}
+type AISettings {
+ enabled bool
+ ready bool
+ provider string
+ model string
+ baseUrl string
+ hasKey bool
+ maxTokens int
+ canConfigure bool
+}
+type AISettingsInput {
+ enabled bool
+ provider string @max(30)
+ model string @max(120)
+ baseUrl string? @max(500)
+ apiKey string? @max(5000)
+ maxTokens int @min(128) @max(4096)
+}

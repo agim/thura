@@ -15,6 +15,7 @@ import { WorkspaceDialog } from './WorkspaceDialog'
 const tags = ['p', 'br', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'a', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'hr', 'pre', 'code', 'table', 'tbody', 'tr', 'th', 'td', 'mark', 'span']
 export const cleanRichHTML = (html: string) => DOMPurify.sanitize(html, { ALLOWED_TAGS: tags, ALLOWED_ATTR: ['href', 'target', 'rel', 'style', 'colspan', 'rowspan'], ALLOW_DATA_ATTR: false })
 export function plainToHTML(text: string) { return text.split('\n').map(line => `<p>${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`).join('') }
+export function richHTMLText(html: string) { return DOMPurify.sanitize(cleanRichHTML(html).replace(/<\/(p|li|h[1-6]|tr)>/gi, '</$1>\n').replace(/<br\s*\/?\s*>/gi, '\n'), { RETURN_DOM_FRAGMENT: true }).textContent || '' }
 export function RichContent({ html, text }: { html?: string; text: string }) {
   return html ? <div className="rich-content" dangerouslySetInnerHTML={{ __html: cleanRichHTML(html) }} /> : <div className="rich-content plain-content">{text}</div>
 }

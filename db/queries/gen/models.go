@@ -440,6 +440,19 @@ type JobSchedule struct {
 	UpdatedAt time.Time  `json:"updated_at"`
 }
 
+type LlmUsage struct {
+	ID       string    `json:"id"`
+	At       time.Time `json:"at"`
+	Provider string    `json:"provider"`
+	Model    string    `json:"model"`
+	Label    string    `json:"label"`
+	Input    int32     `json:"input"`
+	Output   int32     `json:"output"`
+	Ms       int32     `json:"ms"`
+	Status   string    `json:"status"`
+	Error    *string   `json:"error"`
+}
+
 type MailAttachment struct {
 	ID          string `json:"id"`
 	ItemID      string `json:"item_id"`
