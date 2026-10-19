@@ -1,3 +1,5 @@
+import { ActionButton } from '../components/ActionButton'
+import { RecipientInput } from '../components/RecipientInput'
 import { confirmAction } from '../components/ConfirmationHost'
 import { SelectControl } from '../components/SelectControl'
 import { useState, type FormEvent } from 'react'
@@ -37,20 +39,20 @@ function Membership({ workspaceId, subject }: { workspaceId: string; subject: st
       <span className="contact-avatar" aria-hidden="true">{(m.name || m.email).split(/\s+/).slice(0,2).map(part => part[0]).join('').toUpperCase()}</span><div className="member-identity"><strong>{m.name || m.email}</strong><small>{m.email}</small></div>
       {manager && (own?.role === 'owner' || m.role === 'member') ? <>
         <label className="member-role"><span className="visually-hidden">Role for {m.name || m.email}</span><SelectControl aria-label={`Role for ${m.name || m.email}`} disabled={busy || own?.role !== 'owner'} value={m.role} onChange={e => change.mutate({ target: m.subject, role: e.target.value as WorkspaceRole })}>{['member', 'admin', 'owner'].map(r => <option key={r} value={r}>{r[0].toUpperCase() + r.slice(1)}</option>)}</SelectControl></label>
-        <button className="member-remove" type="button" aria-label={`Remove ${m.name || m.email}`} title={`Remove ${m.name || m.email}`} disabled={busy} onClick={async () => { if (await confirmAction(`Remove ${m.email} from this workspace?`)) remove.mutate(m.subject) }}><Trash2 size={18} /></button>
+        <ActionButton className="member-remove" type="button" aria-label={`Remove ${m.name || m.email}`} title={`Remove ${m.name || m.email}`} disabled={busy} onClick={async () => { if (await confirmAction(`Remove ${m.email} from this workspace?`)) remove.mutate(m.subject) }}><Trash2 size={18} /></ActionButton>
       </> : <span>{m.role}</span>}
     </li>)}</ul>
     {manager && <>
-      <ModalAction label="Invite a member"><form className="settings-form" onSubmit={submit}>
+      <ModalAction label="Invite a member" completion={invite.isSuccess ? invite.submittedAt : 0}><form className="settings-form" onSubmit={submit}>
 
-        <label className="block">Invite email<input className="block w-full rounded border p-2" type="email" required value={email} onChange={e => setEmail(e.target.value)} /></label>
+        <RecipientInput workspaceId={workspaceId} label="Invite email" multiple={false} required value={email} onChange={setEmail} />
         <label>Invitation role<SelectControl className="ml-3 border rounded p-2" value={role} onChange={e => setRole(e.target.value as WorkspaceRole)}>{(own?.role === 'owner' ? ['member', 'admin', 'owner'] : ['member']).map(r => <option key={r} value={r}>{r[0].toUpperCase() + r.slice(1)}</option>)}</SelectControl></label>
-        <button className="primary-action" disabled={busy}>Send invitation</button>
+        {invite.isError && <p role="alert">{invite.error.message}</p>}<ActionButton className="primary-action" disabled={busy}>Send invitation</ActionButton>
       </form></ModalAction>
       {invite.isSuccess && <p role="status">Invitation queued for delivery.</p>}
       <h3 className="member-invitations-title">Invitations</h3>
-      <ul className="invitation-list">{!invites.isError && invites.data?.items.map(i => <li key={i.id} className="settings-list-row">{i.email} · {i.role} · {i.acceptedAt ? 'Accepted' : i.revokedAt ? 'Revoked' : new Date(i.expiresAt) <= new Date() ? 'Expired' : 'Pending'}
-        {!i.acceptedAt && !i.revokedAt && <button type="button" disabled={busy} className="ml-4" onClick={() => revoke.mutate(i.id)}>Revoke {i.email}</button>}
+      <ul className="invitation-list">{!invites.isError && invites.data?.items.map(i => <li key={i.id} className="settings-list-row"><span>{i.email} · {i.role} · {i.acceptedAt ? 'Accepted' : i.revokedAt ? 'Revoked' : new Date(i.expiresAt) <= new Date() ? 'Expired' : 'Pending'}</span>
+        {!i.acceptedAt && !i.revokedAt && <ActionButton type="button" disabled={busy} className="ml-4" aria-label={`Revoke ${i.email}`} onClick={() => revoke.mutate(i.id)}>Revoke</ActionButton>}
       </li>)}</ul>
       <WorkspaceHistory workspaceId={workspaceId} members={members.data?.items ?? []} />
     </>}

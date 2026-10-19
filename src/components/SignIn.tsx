@@ -1,3 +1,5 @@
+import { RecipientInput } from './RecipientInput'
+import { ActionButton } from './ActionButton'
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@lidza/client'
@@ -21,11 +23,11 @@ export function SignIn({ setup = false }: { setup?: boolean }) {
       <div className="signin-brand"><span aria-hidden="true">t</span>thura</div>
       <form onSubmit={submit} className="signin-card" aria-busy={login.isPending}>
         <header><h1>Sign in to Thura</h1><p>Your conversations, files, and people. All together.</p></header>
-        <label>Email<input type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} /></label>
+        <RecipientInput label="Email" multiple={false} required autoComplete="username" value={email} onChange={setEmail} />
         <label>Password<input type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></label>
         {!setup && <Link className="signin-recovery" to="/forgot">Forgot your password?</Link>}
         {login.isError && <p className="signin-error" role="alert">{login.error.message}</p>}
-        <button className="signin-submit" disabled={login.isPending}>Sign in</button>
+        <ActionButton variant="primary" className="signin-submit" disabled={login.isPending}>Sign in</ActionButton>
         {login.isPending && <p role="status">Signing in…</p>}
         <p className="signin-invite">Workspaces are invite-only. Use the account provided by your workspace owner.</p>
       </form>

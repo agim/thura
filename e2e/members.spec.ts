@@ -15,7 +15,7 @@ test('owner can invite and revoke, and cannot remove the last owner', async ({ p
   await page.getByRole('button', { name: 'Invite a member', exact: true }).click()
   await page.getByLabel('Invite email', { exact: true }).fill(email)
   await page.getByRole('button', { name: 'Send invitation', exact: true }).click()
-  await page.getByRole('button', { name: 'Close Invite a member', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Invite a member', exact: true })).toHaveCount(0)
   await expect(page.getByText('Invitation queued for delivery.')).toBeVisible()
   const invitation = page.locator('li').filter({ has: page.getByRole('button', { name: `Revoke ${email}`, exact: true }) })
   await expect(invitation).toContainText('Pending')

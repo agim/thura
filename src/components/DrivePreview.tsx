@@ -1,3 +1,4 @@
+import { ActionButton } from './ActionButton'
 import { Eye, EyeOff, RefreshCw } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { ActionRow } from './ActionRow'
@@ -25,7 +26,7 @@ export function DrivePreview({ workspaceId, file, actions }: { workspaceId: stri
     text = new TextDecoder().decode(Uint8Array.from(atob(data.data), char => char.charCodeAt(0)))
   }
   return <section className="file-preview" aria-label={`Preview of ${file.name}`}>
-    <ActionRow label="File actions" className="file-preview-actions">{open ? <><button aria-label="Hide preview" onClick={() => setOpenVersion(null)}><EyeOff size={16} /><span className="action-label">Hide preview</span></button>{status === 'failed' && <button aria-label="Retry preview" disabled={request.isPending} onClick={() => request.mutate()}><RefreshCw size={16} /><span className="action-label">Retry preview</span></button>}</> : <button aria-label={status === 'failed' ? 'Retry preview' : 'Preview file'} disabled={request.isPending} onClick={() => request.mutate()}><Eye size={16} /><span className="action-label">{status === 'failed' ? 'Retry preview' : 'Preview file'}</span></button>}{actions}</ActionRow>
+    <ActionRow label="File actions" className="file-preview-actions">{open ? <><ActionButton aria-label="Hide preview" onClick={() => setOpenVersion(null)}><EyeOff size={16} /><span className="action-label">Hide preview</span></ActionButton>{status === 'failed' && <ActionButton aria-label="Retry preview" disabled={request.isPending} onClick={() => request.mutate()}><RefreshCw size={16} /><span className="action-label">Retry preview</span></ActionButton>}</> : <ActionButton aria-label={status === 'failed' ? 'Retry preview' : 'Preview file'} disabled={request.isPending} onClick={() => request.mutate()}><Eye size={16} /><span className="action-label">{status === 'failed' ? 'Retry preview' : 'Preview file'}</span></ActionButton>}{actions}</ActionRow>
     {(request.error || (open && preview.error)) && <p role="alert">{userError(request.error || preview.error)} {open && <button onClick={() => preview.refetch()}>Retry loading preview</button>}</p>}
     {open && preview.isPending && <p role="status">Loading preview…</p>}
     {open && status === 'pending' && <p role="status">Preparing private preview…</p>}

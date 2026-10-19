@@ -39,6 +39,7 @@ test('returning to a contact draft loads saved edits instead of the handoff snap
     await page.getByRole('button', { name: 'Retry loading draft', exact: true }).click()
     await expect(page.getByLabel('Subject', { exact: true })).toHaveValue(name)
     await expect(page.getByLabel('Message', { exact: true })).toHaveValue('The saved body must survive tab navigation.')
+    await page.locator('.recipient-field').filter({ has: page.getByLabel('To', { exact: true }) }).getByRole('button', { name: /^Remove / }).click()
     await page.getByLabel('To', { exact: true }).fill('updated-recipient@example.com')
     await page.getByRole('button', { name: 'Save draft', exact: true }).click()
     await expect(page.locator('.composer-form').getByRole('status')).toContainText('Draft saved')
@@ -46,7 +47,7 @@ test('returning to a contact draft loads saved edits instead of the handoff snap
     await page.getByRole('button', { name: 'Drafts', exact: true }).click()
     await page.locator('.mailrow').filter({ hasText: name }).click()
     await expect(page.getByLabel('Message', { exact: true })).toHaveValue('The saved body must survive tab navigation.')
-    await expect(page.getByLabel('To', { exact: true })).toHaveValue('updated-recipient@example.com')
+    await expect(page.getByRole('button', { name: 'Remove updated-recipient@example.com from To', exact: true })).toBeVisible()
   } finally {
     expect((await page.request.delete(workspace + '/contacts/' + contact.id, { headers: { 'Sec-Fetch-Site': 'same-origin' } })).status()).toBe(204)
   }

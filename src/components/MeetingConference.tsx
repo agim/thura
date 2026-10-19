@@ -1,3 +1,4 @@
+import { ActionButton } from './ActionButton'
 import { useEffect, useRef, useState } from 'react'
 import { Track } from 'livekit-client'
 import { MessageSquare, LogOut, X } from 'lucide-react'
@@ -43,7 +44,7 @@ function MeetingChat({ open }: { open: boolean }) {
     {error && <p role="alert">{error}</p>}
     <form className="lk-chat-form" onSubmit={async event => { event.preventDefault(); if (!message.trim() || isSending) return; try { await send(message.trim()); setMessage(''); setError('') } catch { setError('Message was not sent. Try again.') } }}>
       <input className="lk-form-control lk-chat-form-input" aria-label="Meeting message" placeholder="Message everyone…" value={message} onChange={event => setMessage(event.target.value)} maxLength={2000} />
-      <button className="lk-button lk-chat-form-button" disabled={isSending || !message.trim()}>Send</button>
+      <ActionButton className="lk-button lk-chat-form-button" disabled={isSending || !message.trim()}>Send</ActionButton>
     </form>
   </div>
 }

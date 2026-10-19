@@ -33,16 +33,17 @@ export function SelectControl({ children, selectedValues, value, defaultValue, o
     const width = Math.min(Math.max(rect.width, 220), window.innerWidth - 32)
     const below = window.innerHeight - rect.bottom - 12
     const above = rect.top - 12
-    const maxHeight = Math.min(280, Math.max(below, above))
-    setPosition({ left: Math.max(16, Math.min(rect.left, window.innerWidth - width - 16)), top: below >= Math.min(280, above) ? rect.bottom + 6 : Math.max(12, rect.top - maxHeight - 6), width, maxHeight })
-  }, [open])
+    const height = Math.min(280, menu.current?.scrollHeight || 280)
+    const maxHeight = Math.max(40, Math.min(height, Math.max(below, above)))
+    setPosition({ left: Math.max(16, Math.min(rect.left, window.innerWidth - width - 16)), top: below >= height ? rect.bottom + 6 : Math.max(12, rect.top - maxHeight - 6), width, maxHeight })
+  }, [open, options.length])
   useEffect(() => {
     if (!open) return
-    const outside = (event: PointerEvent) => { if (!button.current?.contains(event.target as Node) && !menu.current?.contains(event.target as Node)) setOpen(false) }
+    const outside = (event: MouseEvent) => { if (!button.current?.contains(event.target as Node) && !menu.current?.contains(event.target as Node)) setOpen(false) }
     const dismiss = () => setOpen(false)
-    document.addEventListener('pointerdown', outside)
+    document.addEventListener('click', outside)
     window.addEventListener('resize', dismiss)
-    return () => { document.removeEventListener('pointerdown', outside); window.removeEventListener('resize', dismiss) }
+    return () => { document.removeEventListener('click', outside); window.removeEventListener('resize', dismiss) }
   }, [open])
   useEffect(() => { if (open) menu.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: 'nearest' }) }, [active, open])
   function show() { setActive(Math.max(0, options.findIndex(option => option.value === selectedValue && !option.disabled))); setOpen(true) }
@@ -65,5 +66,5 @@ export function SelectControl({ children, selectedValues, value, defaultValue, o
     }
   }
   const host = open ? button.current?.closest('dialog') || document.getElementById('orbit-workspace') || document.body : null
-  return <span className={`select-control ${className}`}><button ref={button} type="button" id={id} role="combobox" aria-label={suppliedLabel || label || undefined} aria-labelledby={props['aria-labelledby']} aria-describedby={props['aria-describedby']} aria-required={required} aria-expanded={open} aria-haspopup="listbox" aria-controls={`${id}-options`} aria-activedescendant={open ? `${id}-option-${active}` : undefined} data-value={selectedValue} disabled={disabled} onKeyDown={keyDown} onClick={() => open ? setOpen(false) : show()}><span>{selectedValues && selectedValue !== '__new__' ? options.filter(option => selectedValues.includes(option.value)).map(option => option.label).join(', ') || 'Choose labels' : selected?.label || 'Select an option'}</span><ChevronDown size={16} aria-hidden="true" /></button>{open && host && createPortal(<div ref={menu} id={`${id}-options`} role="listbox" aria-multiselectable={selectedValues ? true : undefined} tabIndex={-1} aria-label={`${suppliedLabel || label || 'Select'} options`} className="select-options" style={position} onKeyDown={keyDown}>{options.map((option, index) => <button type="button" role="option" id={`${id}-option-${index}`} key={option.value} data-index={index} data-value={option.value} aria-selected={selectedValues ? selectedValues.includes(option.value) : option.value === selectedValue} disabled={option.disabled} tabIndex={-1} className={active === index ? 'highlighted' : ''} onPointerMove={() => !option.disabled && setActive(index)} onClick={() => choose(index)}><span>{option.label}</span>{(selectedValues ? selectedValues.includes(option.value) : option.value === selectedValue) && <Check size={16} aria-hidden="true" />}</button>)}</div>, host)}</span>
+  return <span className={`select-control ${className}`}><button ref={button} type="button" id={id} role="combobox" aria-label={suppliedLabel || label || undefined} aria-labelledby={props['aria-labelledby']} aria-describedby={props['aria-describedby']} aria-required={required} aria-expanded={open} aria-haspopup="listbox" aria-controls={`${id}-options`} aria-activedescendant={open ? `${id}-option-${active}` : undefined} data-value={selectedValue} disabled={disabled} onKeyDown={keyDown} onClick={() => open ? setOpen(false) : show()}><span>{selectedValues && selectedValue !== '__new__' ? options.filter(option => selectedValues.includes(option.value)).map(option => option.label).join(', ') || 'Choose labels' : selected?.label || 'Select an option'}</span><ChevronDown size={16} aria-hidden="true" /></button>{open && host && createPortal(<div ref={menu} id={`${id}-options`} role="listbox" aria-multiselectable={selectedValues ? true : undefined} tabIndex={-1} aria-label={`${suppliedLabel || label || 'Select'} options`} className={`select-options ${host instanceof HTMLDialogElement ? "select-options-inline" : ""}`} style={host instanceof HTMLDialogElement ? undefined : position} onKeyDown={keyDown}>{options.map((option, index) => <button type="button" role="option" id={`${id}-option-${index}`} key={option.value} data-index={index} data-value={option.value} aria-selected={selectedValues ? selectedValues.includes(option.value) : option.value === selectedValue} disabled={option.disabled} tabIndex={-1} className={active === index ? 'highlighted' : ''} onPointerMove={() => !option.disabled && setActive(index)} onClick={() => choose(index)}><span>{option.label}</span>{(selectedValues ? selectedValues.includes(option.value) : option.value === selectedValue) && <Check size={16} aria-hidden="true" />}</button>)}</div>, host instanceof HTMLDialogElement ? button.current!.parentElement! : host)}</span>
 }

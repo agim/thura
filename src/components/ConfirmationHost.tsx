@@ -1,3 +1,4 @@
+import { ActionButton } from './ActionButton'
 import { ActionRow } from './ActionRow'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -13,5 +14,5 @@ export function ConfirmationHost() {
   const request = queue[0]
   if (!request) return null
   const close = (confirmed: boolean) => { request.resolve(confirmed); setQueue(current => current.slice(1)) }
-  return createPortal(<WorkspaceDialog title="Confirm action" onClose={() => close(false)}><p>{request.message}</p><footer><ActionRow label="Dialog actions" align="end"><button type="button" onClick={() => close(false)}>Cancel</button><button type="button" className="primary-action" onClick={() => close(true)}>Confirm</button></ActionRow></footer></WorkspaceDialog>, document.querySelector('dialog[open]') || document.getElementById('orbit-workspace') || document.body)
+  return createPortal(<WorkspaceDialog title="Confirm action" onClose={() => close(false)}><p>{request.message}</p><footer><ActionRow label="Dialog actions" align="end"><ActionButton type="button" onClick={() => close(false)}>Cancel</ActionButton><ActionButton type="button" className="primary-action" onClick={() => close(true)}>Confirm</ActionButton></ActionRow></footer></WorkspaceDialog>, document.querySelector('dialog[open]') || document.getElementById('orbit-workspace') || document.body)
 }

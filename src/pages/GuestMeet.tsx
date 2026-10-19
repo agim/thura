@@ -1,3 +1,4 @@
+import { ActionButton } from '../components/ActionButton'
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { api, type GuestMeetingAccess } from '@lidza/client'
@@ -32,7 +33,7 @@ export function GuestMeet() {
         <label>Meeting ID<input name="meeting-code" inputMode="numeric" autoComplete="off" maxLength={9} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} /></label>
         <label>PIN<input name="meeting-pin" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} /></label>
         <label>Your name<input autoComplete="name" maxLength={80} value={name} onChange={e => setName(e.target.value)} /></label>
-        <button disabled={join.isPending || code.length !== 9 || pin.length !== 6 || !name.trim()}>{join.isPending ? 'Joining…' : left ? 'Rejoin meeting' : 'Join meeting'}</button>
+        <ActionButton disabled={join.isPending || code.length !== 9 || pin.length !== 6 || !name.trim()}>{join.isPending ? 'Joining…' : left ? 'Rejoin meeting' : 'Join meeting'}</ActionButton>
       </form><small className="guest-meeting-privacy"><ShieldCheck size={16} />Your microphone and camera start off. This invitation grants access to this meeting only.</small>
     </>}
     {(error || join.error) && <p role="alert">{error || userError(join.error)}</p>}

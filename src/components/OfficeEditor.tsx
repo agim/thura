@@ -1,3 +1,4 @@
+import { ActionButton } from './ActionButton'
 import { Pencil, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useEffect, useId, useState } from 'react'
@@ -39,5 +40,5 @@ export function OfficeEditor({ workspaceId, fileId, contentTarget }: { workspace
     }).catch(e => { if (!disposed) setError(userError(e)) })
     return () => { disposed = true; editor?.destroyEditor(); void client.invalidateQueries({ queryKey: ['drive', workspaceId] }) }
   }, [opened, open.data, id, client, workspaceId])
-  return <><button type="button" aria-label={opened ? 'Close editor' : 'Edit document'} disabled={!contentTarget || open.isPending} onClick={() => opened ? setOpened(false) : open.mutate()}>{opened ? <X size={16} /> : <Pencil size={16} />}<span className="action-label">{opened ? 'Close editor' : 'Edit document'}</span></button>{contentTarget && (opened || open.error || error) && createPortal(<div className="office-editor"><h4>Document editor</h4>{(open.error || error) && <p role="alert">{error || userError(open.error)}</p>}{opened && <><p role="status">{notice}</p><p>Saving creates immutable Drive versions. If another upload changes this file, the save is refused; preserve the editor copy and reopen the current version.</p><div id={id} /></>}</div>, contentTarget)}</>
+  return <><ActionButton type="button" aria-label={opened ? 'Close editor' : 'Edit document'} disabled={!contentTarget || open.isPending} onClick={() => opened ? setOpened(false) : open.mutate()}>{opened ? <X size={16} /> : <Pencil size={16} />}<span className="action-label">{opened ? 'Close editor' : 'Edit document'}</span></ActionButton>{contentTarget && (opened || open.error || error) && createPortal(<div className="office-editor"><h4>Document editor</h4>{(open.error || error) && <p role="alert">{error || userError(open.error)}</p>}{opened && <><p role="status">{notice}</p><p>Saving creates immutable Drive versions. If another upload changes this file, the save is refused; preserve the editor copy and reopen the current version.</p><div id={id} /></>}</div>, contentTarget)}</>
 }

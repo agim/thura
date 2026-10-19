@@ -1,3 +1,4 @@
+import { ActionButton } from './ActionButton'
 import { useState, useEffect } from 'react'
 import { ActionRow } from './ActionRow'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -13,7 +14,7 @@ export function ResourceLabels({ workspaceId, source, id, title = 'Apply labels'
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
   useEffect(() => { if (!message) return; const timer = setTimeout(() => setMessage(''), 5000); return () => clearTimeout(timer) }, [message])
-  return <><button type="button" className="resource-label-trigger" aria-label={title} aria-haspopup="dialog" onClick={() => setOpen(true)}><Tag size={16} aria-hidden="true" /><span className="action-label">Labels</span></button>{open && <WorkspaceDialog title="Apply labels" onClose={() => setOpen(false)}><LabelEditor completed={name => { setMessage(`“${name}” created and applied.`); setOpen(false) }} key={`${workspaceId}:${source}:${id}`} workspaceId={workspaceId} source={source} id={id} /></WorkspaceDialog>}{message && <p className="app-toast" role="status">{message}</p>}</>
+  return <><ActionButton type="button" className="resource-label-trigger" aria-label={title} aria-haspopup="dialog" onClick={() => setOpen(true)}><Tag size={16} aria-hidden="true" /><span className="action-label">Labels</span></ActionButton>{open && <WorkspaceDialog title="Apply labels" onClose={() => setOpen(false)}><LabelEditor completed={name => { setMessage(`“${name}” created and applied.`); setOpen(false) }} key={`${workspaceId}:${source}:${id}`} workspaceId={workspaceId} source={source} id={id} /></WorkspaceDialog>}{message && <p className="app-toast" role="status">{message}</p>}</>
 }
 function LabelEditor({ workspaceId, source, id, completed }: Props & { completed: (name: string) => void }) {
   const client = useQueryClient()
@@ -40,7 +41,7 @@ function LabelEditor({ workspaceId, source, id, completed }: Props & { completed
   return <div className="resource-label-editor">
     <p className="small quiet">Select a label to apply or remove it. Labels are shared across your workspace.</p>
     <label>Label<SelectControl aria-label="Label" selectedValues={applied} value={selected} disabled={busy || catalog.isPending || assigned.isPending || catalog.isError || assigned.isError} onChange={e => { const value = e.target.value; setSelected(value); setNotice(''); create.reset(); change.reset(); if (value && value !== '__new__') { change.mutate({ labelId: value, applied: !applied.includes(value) }); setSelected('') } }}><option value="__new__">+ New label</option>{catalog.data?.items.map(label => <option key={label.id} value={label.id}>{label.name}</option>)}</SelectControl></label>
-    {selected === '__new__' && <form className="resource-label-create" onSubmit={e => { e.preventDefault(); if (name.trim() && !busy) create.mutate(name.trim()) }}><label>New label<input required maxLength={40} value={name} disabled={busy} onChange={e => setName(e.target.value)} placeholder="Label name" /></label><ActionRow label="New label actions" align="end"><button type="button" disabled={busy} onClick={() => { setSelected(''); setName(''); create.reset() }}>Cancel</button><button className="primary-action" disabled={busy || !name.trim()}>{create.isPending ? 'Creating…' : 'Create & apply'}</button></ActionRow></form>}
+    {selected === '__new__' && <form className="resource-label-create" onSubmit={e => { e.preventDefault(); if (name.trim() && !busy) create.mutate(name.trim()) }}><label>New label<input required maxLength={40} value={name} disabled={busy} onChange={e => setName(e.target.value)} placeholder="Label name" /></label><ActionRow label="New label actions" align="end"><ActionButton type="button" disabled={busy} onClick={() => { setSelected(''); setName(''); create.reset() }}>Cancel</ActionButton><ActionButton className="primary-action" disabled={busy || !name.trim()}>{create.isPending ? 'Creating…' : 'Create & apply'}</ActionButton></ActionRow></form>}
     {failure && <p role="alert">{userError(failure)}</p>}
     {notice && <p role="status">{notice}</p>}
     {assigned.isPending && <p role="status">Loading labels…</p>}

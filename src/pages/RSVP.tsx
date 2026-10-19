@@ -1,3 +1,4 @@
+import { ActionButton } from '../components/ActionButton'
 import { ActionRow } from '../components/ActionRow'
 import { displayDate } from '../lib/display-date'
 import { FileControl } from '../components/FileControl'
@@ -15,7 +16,7 @@ export function CalendarRSVP() {
   return <section><h1>Calendar invitation</h1><p>This link lets you respond to one event. It does not create a Thura account or grant workspace access.</p>
     {!token && <p role="alert">Open the complete invitation link from your email.</p>}
     {data && !invitation.isError && <><h2>{data.event.title}</h2><p>Organizer: {data.event.organizer}</p><p>For: {data.email}</p><p>Starts: {displayDate(data.event.allDay ? data.event.startDate : data.event.startsAt, data.event.timeZone)} ({data.event.timeZone})</p><p>{data.event.location}</p><p>{data.event.description}</p><p role="status">Your response: {data.response}</p>
-      <ActionRow label="Invitation response" >{(['accepted', 'tentative', 'declined'] as const).map(response => <button key={response} disabled={reply.isPending || upload.isPending} onClick={() => reply.mutate(response)}>{response === 'accepted' ? 'Accept' : response === 'tentative' ? 'Maybe' : 'Decline'}</button>)}</ActionRow>
+      <ActionRow label="Invitation response" >{(['accepted', 'tentative', 'declined'] as const).map(response => <ActionButton key={response} disabled={reply.isPending || upload.isPending} onClick={() => reply.mutate(response)}>{response === 'accepted' ? 'Accept' : response === 'tentative' ? 'Maybe' : 'Decline'}</ActionButton>)}</ActionRow>
       <label>Import calendar reply<FileControl type="file" accept=".ics,text/calendar" disabled={upload.isPending || reply.isPending} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label><p>Replies apply to the entire series. Links expire after 30 days or when the event changes.</p></>}
     {(invitation.error || reply.error || upload.error) && <p role="alert">{userError(invitation.error || reply.error || upload.error)}</p>}
   </section>

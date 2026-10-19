@@ -290,3 +290,7 @@ Keep the existing mail_label and mail_tag table names and old label IDs so store
 ## 2026-10-19: Shared action rows and human calendar repeat controls
 
 Why: All application action groups use ActionRow for consistent sizing, alignment, compact icon labels and app-styled hints. Repeat choices use shared menus and date controls while retaining RRULE only at the API boundary; imported custom schedules stay unchanged until explicitly replaced. Action modals close on confirmed success and preserve failed submissions.
+
+## 2026-10-19: Shared recipient and action controls
+
+Why: Email and contact fields reuse RecipientInput for workspace-scoped suggestions, keyboard selection and removable recipient pills. Authentication omits directory lookup. ActionButton owns visual variants while ActionRow owns responsive placement. Dialog menus remain within the dialog scroll area.

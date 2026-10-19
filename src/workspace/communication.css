@@ -148,7 +148,6 @@
  #orbit-workspace.zero-workspace .event-save, #orbit-workspace.zero-workspace #orbit-mail-vibrant .composer-actions { position: fixed; z-index: 15; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); margin: 0; padding: 12px 16px; background: var(--paper); border-top: 1px solid var(--line); }
 }
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .reader > .mobile-back { display: inline-flex; padding: 8px 0; color: var(--quiet); margin: 0 0 12px; }
-#orbit-workspace.zero-workspace #orbit-mail-vibrant .replybar > button:first-child { color: var(--teal); background: var(--tealsoft); border-radius: 8px; }
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .reader .toolbar { margin: 0 0 16px; padding: 8px 0 12px; }
 /* One global app bar; folders, people and other app navigation remain local. */
 #orbit-workspace.zero-workspace { grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto 1fr; padding-bottom: 0; }
@@ -1020,3 +1019,61 @@
 #orbit-workspace.zero-workspace .app-page-actions { overflow: visible; }
 #orbit-workspace.zero-workspace .workspace-dialog .recurrence-control label { margin: 0; }
 #orbit-workspace.zero-workspace .workspace-dialog .recurrence-control .field-help { margin: 0; }
+
+/* Actions share appearance as well as alignment. Picker and navigation controls
+   retain their own states; action variants express intent consistently. */
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog, .thura-signin) button.app-action,
+#orbit-workspace.zero-workspace #orbit-mail-vibrant button.app-action {
+ display:inline-flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0;
+ height:44px; min-height:44px; min-width:44px; width:auto; margin:0; padding:8px 12px;
+ border:1px solid var(--line,#dadce0); border-radius:8px; background:var(--paper,#fff);
+ color:var(--ink,#202124); font:500 13px/1.25 var(--font-sans, sans-serif); white-space:nowrap;
+ box-shadow:none; cursor:pointer;
+}
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog, .thura-signin) button.app-action[data-variant=primary],
+#orbit-workspace.zero-workspace #orbit-mail-vibrant button.app-action[data-variant=primary] { background:var(--teal,#06f); color:var(--oncoral,#fff); border-color:transparent; }
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog, .thura-signin) button.app-action[data-variant=danger],
+#orbit-workspace.zero-workspace #orbit-mail-vibrant button.app-action[data-variant=danger] { background:#b3261e; color:#fff; border-color:transparent; }
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) button.app-action:disabled { opacity:.5; cursor:default; }
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) button.app-action:hover:not(:disabled) { filter:brightness(.94); }
+button.app-action svg { width:18px; height:18px; flex-shrink:0; }
+.select-control:has(.select-options-inline) { display:block; }
+.select-options.select-options-inline { position:relative; top:auto; left:auto; width:100%; max-height:min(240px,35dvh); margin-top:6px; box-sizing:border-box; }
+.recipient-field { position:relative; min-width:0; display:grid; gap:8px; }
+.recipient-control { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-height:44px; padding:6px 10px; border:1px solid var(--line,#dadce0); border-radius:8px; background:var(--paper,#fff); }
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog, .thura-signin) .recipient-control > input,
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .recipient-control > input { flex:1 1 120px; min-width:60px; width:120px; max-width:100%; height:30px; min-height:30px; border:0; background:transparent; box-shadow:none; padding:3px; margin:0; color:inherit; font:inherit; }
+.recipient-control:focus-within { outline:2px solid var(--teal,#06f); outline-offset:2px; }
+.recipient-pill { display:inline-flex; align-items:center; gap:4px; max-width:100%; padding:3px 6px 3px 10px; border-radius:18px; background:#e8f0fe; color:#174ea6; font-size:13px; }
+.recipient-pill > span { overflow-wrap:anywhere; min-width:0; }
+.recipient-pill button,.recipient-control.single-recipient > button { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; min-height:28px; padding:4px; border:0; border-radius:50%; background:transparent; color:inherit; }
+.recipient-control.single-recipient { background:#e8f0fe; color:#174ea6; border-radius:22px; }
+.recipient-suggestions { max-height:220px; overflow:auto; border:1px solid var(--line,#dadce0); background:var(--paper,#fff); border-radius:8px; padding:4px; }
+.recipient-suggestions > button { display:flex; flex-direction:column; align-items:flex-start; gap:3px; width:100%; padding:10px; text-align:left; border:0; border-radius:5px; background:transparent; color:inherit; }
+.recipient-suggestions > button[aria-selected=true], .recipient-suggestions > button:hover { background:var(--tealsoft,#e8f0fe); }
+.recipient-suggestions span { font-size:12px; overflow-wrap:anywhere; }
+#orbit-workspace.zero-workspace .file-label-badge { background:#e8f0fe; color:#174ea6; }
+@media(max-width:640px) { :is(#orbit-workspace.zero-workspace, .workspace-dialog) .app-action-row > button.app-action:has(svg):has(.action-label),
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .app-action-row > button.app-action:has(svg):has(.action-label) { width:44px; padding:10px; } }
+:is(#orbit-workspace.zero-workspace, .workspace-dialog, .thura-public, .thura-signin) .recipient-pill > button,
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .recipient-pill > button,
+:is(#orbit-workspace.zero-workspace, .workspace-dialog, .thura-public, .thura-signin) .recipient-control.single-recipient > button,
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .recipient-control.single-recipient > button { display:inline-flex; align-items:center; justify-content:center; flex:0 0 28px; width:28px; min-width:28px; height:28px; min-height:28px; margin:0; padding:4px; border:0; background:transparent; color:inherit; box-shadow:none; }
+:is(#orbit-workspace.zero-workspace, .workspace-dialog, .thura-public, .thura-signin) .recipient-control > input:focus,
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .recipient-control > input:focus { outline:none; box-shadow:none; }
+:is(#orbit-workspace.zero-workspace, .workspace-dialog, .thura-public, .thura-signin) .recipient-suggestions > button,
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .recipient-suggestions > button { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:3px; width:100%; min-height:52px; height:auto; margin:0; padding:8px 10px; text-align:left; border:0; border-radius:5px; background:transparent; color:inherit; box-shadow:none; }
+:is(#orbit-workspace.zero-workspace, .workspace-dialog) .recipient-suggestions > button[aria-selected=true],
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .recipient-suggestions > button[aria-selected=true],
+:is(#orbit-workspace.zero-workspace, .workspace-dialog) .recipient-suggestions > button:hover,
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .recipient-suggestions > button:hover { background:var(--tealsoft,#e8f0fe); }
+:is(#orbit-workspace.zero-workspace) button.app-action.new-action,
+#orbit-workspace.zero-workspace #orbit-mail-vibrant button.app-action.new-action { width:100px; min-width:100px; }
+@media(max-width:999px) { #orbit-workspace.zero-workspace .drive-detail > header > button.app-action { display:none; } }
+#orbit-workspace.zero-workspace .invitation-list .settings-list-row > span { min-width:0; overflow-wrap:anywhere; }
+/* Search has the same outer height with or without its submit action, so the
+   app header never shifts when navigating between contextual/global search. */
+#orbit-workspace.zero-workspace .workspace-search { height:46px; min-height:46px; }
+#orbit-workspace.zero-workspace .workspace-search input { height:44px; min-height:44px; }
+@media(max-width:999px) { #orbit-workspace.zero-workspace .workspace-search button.app-action { display:none; } }
+@media(min-width:1000px) { #orbit-workspace.zero-workspace .drive-detail > button.app-action.drive-detail-back { display:none; } }
