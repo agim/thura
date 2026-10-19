@@ -329,3 +329,10 @@ An atomic expiring Postgres lease coalesces concurrent equal requests across use
 
 
 Līdza v0.1.123 pins local storage with an `os.Root` handle. Thura records the configured directory identity at startup and checks it before app-owned object writes, retaining the existing rollback-and-retry behavior if that directory is moved, replaced or unavailable. All writes still use the official storage pack; setup probes use their separate draft-configured client.
+
+
+## 2026-10-19: Drive layout follows available content width
+
+The AI dock and file details can narrow Drive independently of the browser viewport. Container queries now hide secondary file columns when the list is narrow and use a focused detail view with Back to files when two readable panes no longer fit. Filenames remain single-line with ellipsis and full accessible names; label badges keep horizontal text and dark lettering on their pale background. Regression tests measure text width, badge height, pane boundaries and stable geometry through polling at desktop and mobile sizes. Visual acceptance requires inspecting actual names and labels, not merely checking that the page has no horizontal overflow.
+
+The local demonstration uses loopback-only Ollama with gemma3:4b, configured through the existing encrypted AI settings and official LLM pack. A live verification generated a summary for one member, reused it for another member with no provider call, then uploaded version 2 of that same file and verified a fresh provider call and changed response. Local model data and startup configuration stay outside git.

@@ -71,3 +71,5 @@ never in an agent's local memory.
 - 2026-10-19: Keep the AI sidebar open across app switches within a workspace. Automatically follow the currently viewed email, file or conversation, clearing stale suggestions and insertion targets. Workspace changes clear the assistant. Inline writing helpers retain draft-change protection.
 
 - 2026-10-19: AI results are cached in Postgres per workspace and exact reviewed request/model configuration. Reuse summaries across users; changed text, prompts, model/settings or credentials invalidate the key. Keep membership/enablement checks before hits, coalesce simultaneous requests, never cache failures or incomplete replies, and mark cached output.
+
+- 2026-10-19: Validate dense layouts against their available container width with the AI dock and details open. Drive must preserve readable filenames and horizontal labels, hide secondary metadata before text collapses, and offer a focused detail view with Back to files when needed. No-overflow checks alone do not establish visual quality.

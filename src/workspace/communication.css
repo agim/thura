@@ -1245,3 +1245,23 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
  #orbit-workspace.zero-workspace #orbit-mail-vibrant .app-action-row > button:has(svg):has(.action-label) { width:44px; padding:10px; }
  #orbit-workspace.zero-workspace .workspace-content .app-action-row > button:has(svg) .action-label { display:none; }
 }
+
+/* Drive responds to the width of its own list, including beside AI/details. */
+#orbit-workspace.zero-workspace .drive-contents { container:drive-list / inline-size; }
+#orbit-workspace.zero-workspace .file-name > span:last-child { flex:1; min-width:0; }
+#orbit-workspace.zero-workspace .file-title,
+#orbit-workspace.zero-workspace .file-name small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#orbit-workspace.zero-workspace .file-label-badge { overflow:hidden; white-space:nowrap; flex-shrink:1; color:#174ea6; }
+#orbit-workspace.zero-workspace .file-label-badge > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+@container drive-list (max-width:620px) {
+ #orbit-workspace.zero-workspace .drive-columns,
+ #orbit-workspace.zero-workspace .drive-files.list .drive-file { grid-template-columns:minmax(0,1fr) 104px; gap:12px; }
+ #orbit-workspace.zero-workspace .drive-files.list :is(.file-modified,.file-size),
+ #orbit-workspace.zero-workspace .drive-columns > :is(:nth-child(2),:nth-child(3)) { display:none; }
+}
+@container workspace-page (max-width:1050px) {
+ #orbit-workspace.zero-workspace .drive-body:has(.drive-detail) { grid-template-columns:minmax(0,1fr); }
+ #orbit-workspace.zero-workspace .drive-body:has(.drive-detail) > .drive-contents { display:none; }
+ #orbit-workspace.zero-workspace .drive-body > .drive-detail { padding-left:0; border-left:0; }
+ #orbit-workspace.zero-workspace .drive-detail > button.app-action.drive-detail-back { display:inline-flex; }
+}
