@@ -11,10 +11,10 @@ export function AppSidebar({ title, label, className = '', children, showContent
     if (!compact || !open) return
     const selected = (event: MouseEvent) => {
       const target = event.target as HTMLElement
-      if (target.closest('dialog')?.querySelector('.app-sidebar-popup') && target.closest('a, .folder-button, [role="option"], [aria-pressed], .calendar-transfer-button')) setOpen(false)
+      if (target.closest('dialog')?.querySelector('.app-sidebar-popup') && target.closest('a, .folder-button, [role="option"], [aria-pressed], .calendar-transfer-button')) setTimeout(() => setOpen(false), 0)
     }
-    document.addEventListener('click', selected)
-    return () => document.removeEventListener('click', selected)
+    document.addEventListener('click', selected, true)
+    return () => document.removeEventListener('click', selected, true)
   }, [compact, open])
   const content = <><h3 className="app-sidebar-caption">{title}</h3><div className="app-sidebar-body">{children}</div></>
   return <>{compact && <button type="button" className="app-sidebar-browse" aria-haspopup="dialog" onClick={() => setOpen(true)}><PanelLeft size={18} aria-hidden="true" />Browse</button>}{compact && open ? <WorkspaceDialog title={title} onClose={() => setOpen(false)}><aside aria-label={label} className="app-sidebar-popup">{content}</aside></WorkspaceDialog> : <aside aria-label={label} className={`app-sidebar ${className}${compact && showContentOnCompact ? ' app-sidebar-inline' : ''}`} style={compact && !showContentOnCompact ? {display:'none'} : undefined}>{content}</aside>}</>

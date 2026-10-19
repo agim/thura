@@ -2389,8 +2389,9 @@ func (v FileContent) Validate() error {
 
 // DriveListing is an API type.
 type DriveListing struct {
-	Folders []DriveFolder `json:"folders"`
-	Files   []DriveFile   `json:"files"`
+	Folders []DriveFolder    `json:"folders"`
+	Files   []DriveFile      `json:"files"`
+	Labels  []DriveFileLabel `json:"labels"`
 }
 
 // Validate applies the rules of DriveListing from schema.lidza.
@@ -2407,6 +2408,34 @@ func (v DriveListing) Validate() error {
 			errs.Add("files", "nested", err.Error())
 			break
 		}
+	}
+	for _, x := range v.Labels {
+		if err := x.Validate(); err != nil {
+			errs.Add("labels", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// DriveFileLabel is an API type.
+type DriveFileLabel struct {
+	FileID  string `json:"fileId"`
+	LabelID string `json:"labelId"`
+	Name    string `json:"name"`
+}
+
+// Validate applies the rules of DriveFileLabel from schema.lidza.
+func (v DriveFileLabel) Validate() error {
+	var errs validate.Errors
+	if v.FileID == "" {
+		errs.Add("fileId", "required", "required")
+	}
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
 	}
 	return errs.Result()
 }

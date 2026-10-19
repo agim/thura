@@ -950,3 +950,73 @@
 .resource-label-list > label input { flex: 0 0 auto; }
 #orbit-workspace.zero-workspace .calendar-detail-navigation { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 #orbit-workspace.zero-workspace .calendar-detail-navigation .calendar-back { margin: 0; }
+
+/* One action layout for all app and dialog controls. */
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) .app-action-row {
+ display:flex; flex-direction:row; flex-wrap:nowrap; align-items:center; gap:8px;
+ min-width:0; max-width:100%; overflow-x:auto; overflow-y:hidden; padding:2px;
+ scrollbar-width:thin; overscroll-behavior-inline:contain;
+}
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) .app-action-row[data-align=end] { justify-content:flex-end; }
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) .app-action-row > :is(button,a) {
+ display:inline-flex; align-items:center; justify-content:center; align-self:center;
+ flex:0 0 auto; width:auto; min-width:44px; height:44px; min-height:44px;
+ margin:0; padding:8px 12px; gap:8px; white-space:nowrap; line-height:1.25;
+ font-size:var(--app-font-control,13px); font-weight:500; vertical-align:middle;
+}
+.app-action-row > :is(button,a) > svg { flex-shrink:0; }
+.workspace-dialog footer > .app-action-row { width:100%; }
+#orbit-workspace.zero-workspace .drive-detail .file-preview { min-width:0; }
+#orbit-workspace.zero-workspace .drive-detail .file-preview-actions { margin:0 0 16px; }
+#orbit-workspace.zero-workspace .file-labels { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-top:5px; }
+#orbit-workspace.zero-workspace .file-label-badge { display:inline-flex; align-items:center; gap:4px; max-width:100%; padding:2px 7px; border-radius:5px; background:var(--tealsoft); color:var(--teal); font-size:11px; font-weight:500; line-height:1.5; overflow-wrap:anywhere; }
+#orbit-workspace.zero-workspace .file-label-badge svg { flex-shrink:0; }
+#orbit-workspace.zero-workspace .drive-file .file-name { align-items:flex-start; }
+#orbit-workspace.zero-workspace .resource-label-filter { display:grid; gap:6px; width:100%; min-width:0; font-size:12px; }
+#orbit-workspace.zero-workspace .resource-label-filter .select-control { width:100%; min-width:0; }
+@media(max-width:640px) {
+ :is(#orbit-workspace.zero-workspace,.thura-public,.workspace-dialog) .app-action-row[data-align=end] { justify-content:flex-start; }
+ #orbit-workspace.zero-workspace .composer-actions .save-draft-action { margin-left:auto; }
+}
+#orbit-workspace.zero-workspace .drive-columns,
+#orbit-workspace.zero-workspace .drive-files.list .drive-file { grid-template-columns:minmax(0,1fr) 120px 70px 104px; }
+@media(min-width:1101px) and (max-width:1400px) {
+ #orbit-workspace.zero-workspace .drive-body:has(.drive-detail) .drive-columns,
+ #orbit-workspace.zero-workspace .drive-body:has(.drive-detail) .drive-files.list .drive-file { grid-template-columns:minmax(0,1fr) 70px 104px; }
+}
+@media(max-width:760px) {
+ #orbit-workspace.zero-workspace .drive-files.list .drive-file { grid-template-columns:minmax(0,1fr) 104px; }
+}
+#orbit-workspace.zero-workspace .drive-detail .file-preview { container-type:inline-size; }
+@container(max-width:720px) {
+ #orbit-workspace.zero-workspace .file-preview-actions > button { width:44px; padding:10px; }
+ #orbit-workspace.zero-workspace .file-preview-actions > button .action-label { display:none; }
+}
+
+/* Repeat controls use the same fields as event dates and app menus. */
+.recurrence-control { display: grid; gap: 16px; min-width: 0; }
+.recurrence-control label { display: grid; gap: 8px; }
+.recurrence-control .repeat-interval { display: flex; align-items: end; gap: 12px; }
+.recurrence-control .repeat-interval label { width: 110px; }
+.recurrence-control .repeat-interval > span { padding-bottom: 12px; }
+.recurrence-control .repeat-weekdays { padding: 0; border: 0; margin: 0; min-width: 0; }
+.recurrence-control .repeat-weekdays legend { margin-bottom: 8px; }
+.recurrence-control .repeat-weekdays > div { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+:is(#orbit-workspace.zero-workspace, .workspace-dialog) .repeat-weekdays button { width: 100%; min-width: 0; min-height: 40px; padding: 4px; border-radius: 8px; }
+:is(#orbit-workspace.zero-workspace, .workspace-dialog) .repeat-weekdays button[aria-pressed="true"] { background: var(--tealsoft); color: var(--teal); border-color: currentColor; opacity: 1; }
+@media (max-width: 640px) {
+  :is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) .app-action-row > button:has(svg):has(.action-label) { width: 44px; padding: 10px; }
+  :is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) .app-action-row > button:has(svg) .action-label { display: none; }
+}
+.app-action-hint { position: fixed; z-index: 10000; transform: translateX(-50%); max-width: min(240px, calc(100vw - 24px)); padding: 6px 10px; background: #202124; color: #fff; border-radius: 6px; font: 500 12px/1.4 var(--font-sans, sans-serif); pointer-events: none; }
+#orbit-workspace.zero-workspace .app-toast { position: fixed; z-index: 100; left: 50%; bottom: 24px; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); padding: 12px 16px; margin: 0; border-radius: 8px; background: var(--ink); color: var(--paper); box-shadow: 0 4px 20px #0002; font-size: 13px; }
+@media (min-width: 1000px) {
+ #orbit-workspace.zero-workspace .contact-directory > li { grid-template-columns: 42px minmax(0,1fr) minmax(130px,.65fr) 312px; }
+ #orbit-workspace.zero-workspace .contact-columns { grid-template-columns: minmax(0,1fr) minmax(130px,.65fr) 312px; }
+ #orbit-workspace.zero-workspace .contact-actions .app-action-row { gap: 8px; }
+ #orbit-workspace.zero-workspace .contact-action-list.app-action-row > button { width: 44px; padding: 10px; }
+}
+/* Primary header actions already fit their reserved space and need no scroll layer. */
+#orbit-workspace.zero-workspace .app-page-actions { overflow: visible; }
+#orbit-workspace.zero-workspace .workspace-dialog .recurrence-control label { margin: 0; }
+#orbit-workspace.zero-workspace .workspace-dialog .recurrence-control .field-help { margin: 0; }

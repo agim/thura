@@ -455,6 +455,12 @@ model ShareGrant {
 type DriveListing {
  folders DriveFolder[]
  files DriveFile[]
+ labels DriveFileLabel[]
+}
+type DriveFileLabel {
+ fileId uuid
+ labelId uuid
+ name string
 }
 type FolderInput {
  name string @min(1) @max(200)

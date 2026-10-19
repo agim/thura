@@ -127,6 +127,40 @@ func (q *Queries) LabelResourceContainer(ctx context.Context, id string) (string
 	return container_id, err
 }
 
+const listDriveFileLabels = `-- name: ListDriveFileLabels :many
+SELECT r.source_id AS file_id,l.id AS label_id,l.name FROM resource_label r
+JOIN drive_file f ON f.id=r.source_id AND r.source='document'
+JOIN mail_label l ON l.id=r.label_id LEFT JOIN mailbox b ON b.id=l.mailbox_id
+WHERE f.workspace_id=$1 AND COALESCE(l.workspace_id,b.workspace_id)=$1
+ORDER BY r.source_id,lower(l.name),l.id
+`
+
+type ListDriveFileLabelsRow struct {
+	FileID  string `json:"file_id"`
+	LabelID string `json:"label_id"`
+	Name    string `json:"name"`
+}
+
+func (q *Queries) ListDriveFileLabels(ctx context.Context, workspaceID string) ([]ListDriveFileLabelsRow, error) {
+	rows, err := q.db.Query(ctx, listDriveFileLabels, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListDriveFileLabelsRow
+	for rows.Next() {
+		var i ListDriveFileLabelsRow
+		if err := rows.Scan(&i.FileID, &i.LabelID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listResourceLabels = `-- name: ListResourceLabels :many
 SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l JOIN resource_label r ON r.label_id=l.id LEFT JOIN mailbox b ON b.id=l.mailbox_id
 WHERE COALESCE(l.workspace_id,b.workspace_id)=$1 AND r.source=$2 AND r.source_id=$3 ORDER BY l.name,l.id

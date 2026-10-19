@@ -1,9 +1,11 @@
+import { ActionRow } from './ActionRow'
 import { ResourceLabels } from './ResourceLabels'
 import { AppSidebar } from './AppSidebar'
 import { ArrowDownUp } from 'lucide-react'
-import { WorkspaceDialog } from './WorkspaceDialog'
+import { WorkspaceDialog, useCloseDialog } from './WorkspaceDialog'
 import { DetailBack } from './DetailBack'
 import { AppPageHeader, NewAction } from './AppPageHeader'
+import { RecurrenceControl } from './RecurrenceControl'
 import { DateTimeControl } from './DateTimeControl'
 import { confirmAction } from './ConfirmationHost'
 import { FileControl } from './FileControl'
@@ -107,16 +109,17 @@ function EventForm({ workspaceId, calendarId, zone, date, initial, occurrence, s
     {createMeeting && <p className="field-help">A meeting link, PIN and joining instructions will be included in the invitation. Invited guests can join without a Thura account.</p>}
     {event?.meetingId && event.location.includes('/meet?room=') && <div className="event-meeting-link"><strong>Thura Meet</strong><a href={event.location} target="_blank" rel="noreferrer">Open meeting</a><small>The invitation includes a meeting ID and PIN for guests.</small></div>}
     {!event?.location.includes('/meet?room=') && <label>{createMeeting ? 'Physical location (optional)' : 'Event location'}<input disabled={mode === 'occurrence'} value={location} onChange={e => setLocation(e.target.value)} /></label>}<label>Attendee emails<textarea disabled={mode === 'occurrence'} aria-label="Attendee emails" value={guests} onChange={e => setGuests(e.target.value)} /></label>{initial?.attendees.length ? <ul>{initial.attendees.map(a => <li key={a.id}>{a.email}: {a.response}{a.responseSequence < event!.sequence ? ' (prior event version)' : ''}</li>)}</ul> : null}
-    <ModalAction label="Description and recurrence"><label>Description<textarea disabled={mode === 'occurrence'} aria-label="Description" value={description} onChange={e => setDescription(e.target.value)} /></label><label>Recurrence rule<input disabled={mode === 'occurrence'} value={rule} placeholder="FREQ=WEEKLY;COUNT=12" onChange={e => setRule(e.target.value)} /></label></ModalAction>
-    <div className="row event-save">{mode === 'series' && guests.trim() && <button type="button" className="primary-action" disabled={save.isPending || cancel.isPending} onClick={() => save.mutate(true)}>Save &amp; send invitations</button>}<button className={guests.trim() && mode === 'series' ? '' : 'primary-action'} disabled={save.isPending || cancel.isPending}>Save event</button>{event && <button type="button" disabled={save.isPending || cancel.isPending} onClick={async () => { if (await confirmAction(`Cancel ${mode === 'occurrence' ? 'this occurrence' : 'the entire event series'}?`)) cancel.mutate() }}>{mode === 'occurrence' ? 'Cancel occurrence' : 'Cancel series'}</button>}</div>
+    <ModalAction done label="Description and recurrence"><label>Description<textarea disabled={mode === 'occurrence'} aria-label="Description" value={description} onChange={e => setDescription(e.target.value)} /></label><RecurrenceControl disabled={mode === 'occurrence'} value={rule} onChange={setRule} start={allDay ? startDate : starts} zone={zone} allDay={allDay} /></ModalAction>
+    <ActionRow label="Event actions" className="event-save">{mode === 'series' && guests.trim() && <button type="button" className="primary-action" disabled={save.isPending || cancel.isPending} onClick={() => save.mutate(true)}>Save &amp; send invitations</button>}<button className={guests.trim() && mode === 'series' ? '' : 'primary-action'} disabled={save.isPending || cancel.isPending}>Save event</button>{event && <button type="button" disabled={save.isPending || cancel.isPending} onClick={async () => { if (await confirmAction(`Cancel ${mode === 'occurrence' ? 'this occurrence' : 'the entire event series'}?`)) cancel.mutate() }}>{mode === 'occurrence' ? 'Cancel occurrence' : 'Cancel series'}</button>}</ActionRow>
     </>}{(save.error || cancel.error || error) && <p role="alert">{error || userError(save.error || cancel.error)}</p>}</form>
 }
 
 function CalendarDelivery({ workspaceId, calendarId, detail }: { workspaceId: string; calendarId: string; detail: EventDetail }) {
+  const closeDialog = useCloseDialog()
   const id = detail.event.id
   const [notice, setNotice] = useState('')
   const setting = useQuery({ queryKey: ['calendar-reminder', id], queryFn: () => api.getCalendarReminder({ workspaceId, calendarId, id }) })
-  const invite = useMutation({ mutationFn: () => api.sendCalendarInvitations({ workspaceId, calendarId, id }, { sequence: detail.event.sequence }), onSuccess: r => setNotice(r.queued === 0 ? 'This event version was already queued.' : `${r.queued} messages queued.${r.captured ? ' Development mail capture is active; messages will not be delivered.' : ''}`) })
+  const invite = useMutation({ mutationFn: () => api.sendCalendarInvitations({ workspaceId, calendarId, id }, { sequence: detail.event.sequence }), onSuccess: r => { setNotice(r.queued === 0 ? 'This event version was already queued.' : `${r.queued} messages queued.${r.captured ? ' Development mail capture is active; messages will not be delivered.' : ''}`); closeDialog() } })
   const reminder = useMutation({ mutationFn: (minutes: string) => api.setCalendarReminder({ workspaceId, calendarId, id }, { minutesBefore: minutes ? Number(minutes) : null }), onSuccess: () => setting.refetch() })
   return <section className="calendar-delivery"><h3>Invitations and reminders</h3><button type="button" disabled={invite.isPending || !detail.attendees.length} onClick={() => invite.mutate()}>{detail.event.cancelled ? 'Send cancellation' : 'Send invitations'}</button><p>Send the saved event to every attendee. Sending again for the same version does not duplicate mail. RSVP links apply to the whole series.</p>
     {!detail.event.cancelled && <label>Your email reminder<SelectControl aria-label="Your email reminder" disabled={reminder.isPending || setting.isPending || setting.isError} value={setting.data?.minutesBefore?.toString() || ''} onChange={e => reminder.mutate(e.target.value)}><option value="">Off</option>{[5, 10, 15, 30, 60, 1440, 10080].map(n => <option key={n} value={n}>{n < 60 ? `${n} minutes before` : n < 1440 ? '1 hour before' : n < 10080 ? '1 day before' : '1 week before'}</option>)}</SelectControl></label>}

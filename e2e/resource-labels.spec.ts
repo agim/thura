@@ -1,5 +1,6 @@
-import { expect, test } from '@playwright/test'
-import { chooseOption } from './controls'
+import { test } from './label-fixture'
+import { expect } from '@playwright/test'
+import { chooseOption, labelIsApplied } from './controls'
 
 for (const width of [390, 1440]) {
   test(`create and apply a shared label from an email at ${width}px`, async ({ page }) => {
@@ -21,8 +22,10 @@ for (const width of [390, 1440]) {
     await page.getByRole('option', { name: '+ New label', exact: true }).click()
     await dialog.getByLabel('New label', { exact: true }).fill(name)
     await dialog.getByRole('button', { name: 'Create & apply', exact: true }).click()
-    await expect(dialog.getByRole('checkbox', { name, exact: true })).toBeChecked()
-    await expect(dialog.getByRole('status')).toHaveText(`“${name}” created and applied.`)
+    await expect(dialog).not.toBeVisible()
+    await page.getByRole('button', { name: 'Apply labels', exact: true }).click()
+    await expect.poll(() => labelIsApplied(dialog, name)).toBe(true)
+    await expect(page.getByRole('status').filter({ hasText: 'created and applied.' })).toHaveText(`“${name}” created and applied.`)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     const bounds = await dialog.boundingBox()
     expect(bounds!.width).toBeLessThanOrEqual(width)
@@ -32,15 +35,16 @@ for (const width of [390, 1440]) {
     await page.getByRole('button', { name: 'Drafts', exact: true }).click()
     await page.locator('.mailrow').filter({ hasText: name }).click()
     await page.getByRole('button', { name: 'Apply labels', exact: true }).click()
-    await expect(dialog.getByRole('checkbox', { name, exact: true })).toBeChecked()
+    await expect.poll(() => labelIsApplied(dialog, name)).toBe(true)
     await dialog.getByRole('button', { name: 'Close Apply labels' }).click()
     await page.getByRole('link', { name: 'Contacts', exact: true }).click()
     if (width < 1000) await page.getByRole('button', { name: /^Actions for / }).first().click()
     await page.getByRole('button', { name: /^Labels for / }).first().click()
     await chooseOption(dialog.getByRole('combobox', { name: 'Label', exact: true }), { label: name })
-    await expect(dialog.getByRole('checkbox', { name, exact: true })).toBeChecked()
+    await expect.poll(() => labelIsApplied(dialog, name)).toBe(true)
     // A shared label is reused, while each resource keeps its own assignment.
-    await expect(dialog.getByRole('checkbox', { name, exact: true })).toHaveCount(1)
+    await expect(dialog.getByRole('checkbox')).toHaveCount(0)
+    await expect.poll(() => labelIsApplied(dialog, name)).toBe(true)
   })
 }
 
@@ -71,7 +75,9 @@ for (const width of [390, 1440]) {
     const label = `Event ${width} ${Date.now()}`
     await dialog.getByLabel('New label', { exact: true }).fill(label)
     await dialog.getByRole('button', { name: 'Create & apply', exact: true }).click()
-    await expect(dialog.getByRole('checkbox', { name: label, exact: true })).toBeChecked()
+    await expect(dialog).not.toBeVisible()
+    await page.getByRole('button', { name: 'Apply labels', exact: true }).click()
+    await expect.poll(() => labelIsApplied(dialog, label)).toBe(true)
     await dialog.getByRole('button', { name: 'Close Apply labels', exact: true }).click()
     await expect(page.getByLabel('Event title', { exact: true })).toHaveValue(title)
     expect(saves).toBe(0)

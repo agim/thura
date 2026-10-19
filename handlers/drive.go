@@ -25,7 +25,17 @@ func ListDrive(ctx context.Context, r *router.Request[router.None]) (schema.Driv
 		return schema.DriveListing{}, err
 	}
 	files, err := queries.ListDriveFiles(ctx, w)
-	out := schema.DriveListing{Folders: []schema.DriveFolder{}, Files: []schema.DriveFile{}}
+	out := schema.DriveListing{Folders: []schema.DriveFolder{}, Files: []schema.DriveFile{}, Labels: []schema.DriveFileLabel{}}
+	if err != nil {
+		return out, err
+	}
+	tags, err := queries.ListDriveFileLabels(ctx, w)
+	if err != nil {
+		return out, err
+	}
+	for _, tag := range tags {
+		out.Labels = append(out.Labels, schema.DriveFileLabel{FileID: tag.FileID, LabelID: tag.LabelID, Name: tag.Name})
+	}
 	for _, f := range folders {
 		out.Folders = append(out.Folders, drive.Folder(f))
 	}

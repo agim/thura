@@ -57,7 +57,7 @@ test('text preview stays inert, refreshes after a new version, and explains unsu
     await expect(page.locator('.file-preview pre')).toHaveText(source)
     expect(await page.evaluate(() => 'previewExecuted' in window)).toBe(false)
     expect(remoteRequests).toEqual([])
-    await page.getByText('Manage file', { exact: true }).click()
+    await page.getByRole('button', { name: 'Manage file', exact: true }).click()
   await page.getByLabel('Upload new version', { exact: true }).setInputFiles({ name, mimeType: 'text/plain', buffer: Buffer.from('Replacement private text.') })
     await page.getByRole('button', { name: 'Close Manage file', exact: true }).click()
     await expect(page.getByRole('complementary', { name: 'File details' })).toContainText('Version 2')

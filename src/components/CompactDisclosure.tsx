@@ -11,6 +11,6 @@ export function useCompactScreen() {
 }
 
 /** Secondary tools share the same dialog on every screen size. */
-export function CompactDisclosure({ label, children, primary = false, expanded = false }: { label: string; children: ReactNode; primary?: boolean; expanded?: boolean }) {
-  return <ModalAction label={label} className={primary ? 'primary-action' : ''} expanded={expanded}>{children}</ModalAction>
+export function CompactDisclosure({ label, children, primary = false, expanded = false, completion = 0, icon }: { label: string; children: ReactNode; primary?: boolean; expanded?: boolean; completion?: number; icon?: ReactNode }) {
+  return <ModalAction label={label} className={primary ? 'primary-action' : ''} expanded={expanded} completion={completion} icon={icon}>{children}</ModalAction>
 }

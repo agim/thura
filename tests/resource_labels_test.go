@@ -107,6 +107,17 @@ func TestWorkspaceLabelsCreateApplyAndResourcePermissions(t *testing.T) {
 			t.Fatalf("%s did not reuse the shared label", source)
 		}
 	}
+
+	var driveList schema.DriveListing
+	request("GET", base+"/drive", nil, &driveList, 200)
+	if len(driveList.Labels) != 1 || driveList.Labels[0].FileID != resources["document"] || driveList.Labels[0].LabelID != label.ID || driveList.Labels[0].Name != label.Name {
+		t.Fatal("Drive listing omitted its file label badges")
+	}
+	var otherDrive schema.DriveListing
+	request("GET", "/api/v1/workspaces/"+workspaces[1]+"/drive", nil, &otherDrive, 200)
+	if len(otherDrive.Labels) != 0 {
+		t.Fatal("Drive label assignments crossed workspaces")
+	}
 	var catalog schema.MailLabelList
 	request("GET", base+"/labels", nil, &catalog, 200)
 	if len(catalog.Items) != 1 {
@@ -135,6 +146,11 @@ func TestWorkspaceLabelsCreateApplyAndResourcePermissions(t *testing.T) {
 		t.Fatal("failed requests left orphan labels")
 	}
 	request("DELETE", base+"/labels/"+label.ID, nil, nil, 204)
+	request("GET", base+"/drive", nil, &driveList, 200)
+	if len(driveList.Labels) != 0 {
+		t.Fatal("deleted label remained in Drive list badges")
+	}
+
 	for source, id := range resources {
 		var assigned schema.MailLabelList
 		request("GET", resource(source, id), nil, &assigned, 200)

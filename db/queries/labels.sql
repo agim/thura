@@ -21,3 +21,10 @@ SELECT id FROM contact WHERE id=$1 AND workspace_id=$2;
 SELECT mailbox_id AS container_id FROM mail_item WHERE id=$1;
 -- name: DeleteWorkspaceLabel :exec
 DELETE FROM mail_label l WHERE l.id=sqlc.arg(id) AND COALESCE(l.workspace_id,(SELECT b.workspace_id FROM mailbox b WHERE b.id=l.mailbox_id))=sqlc.arg(workspace_id);
+
+-- name: ListDriveFileLabels :many
+SELECT r.source_id AS file_id,l.id AS label_id,l.name FROM resource_label r
+JOIN drive_file f ON f.id=r.source_id AND r.source='document'
+JOIN mail_label l ON l.id=r.label_id LEFT JOIN mailbox b ON b.id=l.mailbox_id
+WHERE f.workspace_id=sqlc.arg(workspace_id) AND COALESCE(l.workspace_id,b.workspace_id)=sqlc.arg(workspace_id)
+ORDER BY r.source_id,lower(l.name),l.id;

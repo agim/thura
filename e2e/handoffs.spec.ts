@@ -1,6 +1,7 @@
+import { test } from './label-fixture'
 import { openSettings } from './controls'
-import { chooseOption } from './controls'
-import { expect, test } from '@playwright/test'
+import { chooseOption, labelIsApplied } from './controls'
+import { expect } from '@playwright/test'
 const workspace = '/api/v1/workspaces/a0000000-0000-4000-8000-000000000001'
 const mailbox = workspace + '/mailboxes/a0000000-0000-4000-8000-000000000010'
 async function signIn(page: import('@playwright/test').Page) {
@@ -77,11 +78,11 @@ test('mail signature, labels and attachment removal persist through reload', asy
       }
       return route.continue()
     })
-    await page.getByRole('checkbox', { name, exact: true }).click()
+    await chooseOption(page.getByRole('combobox', { name: 'Label', exact: true }), { label: name })
     await expect(page.getByRole('alert')).toBeVisible()
-    await expect(page.getByRole('checkbox', { name, exact: true })).not.toBeChecked()
-    await page.getByRole('checkbox', { name, exact: true }).check()
-    await expect(page.getByRole('checkbox', { name, exact: true })).toBeChecked()
+    await expect.poll(() => labelIsApplied(page.getByRole('dialog', { name: 'Apply labels' }), name)).toBe(false)
+    await chooseOption(page.getByRole('combobox', { name: 'Label', exact: true }), { label: name })
+    await expect.poll(() => labelIsApplied(page.getByRole('dialog', { name: 'Apply labels' }), name)).toBe(true)
     await page.getByRole('button', { name: 'Close Apply labels', exact: true }).click()
     await chooseOption(page.getByRole('combobox', { name: 'Filter by label', exact: true }), { label: name })
     await expect(page.locator('.mailrow')).toHaveCount(1)
@@ -91,7 +92,7 @@ test('mail signature, labels and attachment removal persist through reload', asy
     await expect(page.getByLabel('Message', { exact: true })).toHaveValue('\n\nBrowser team signature')
     await expect(page.getByRole('button', { name: 'Remove remove.txt', exact: true })).toHaveCount(0)
     await page.getByRole('button', { name: 'Apply labels', exact: true }).click()
-    await expect(page.getByRole('checkbox', { name, exact: true })).toBeChecked()
+    await expect.poll(() => labelIsApplied(page.getByRole('dialog', { name: 'Apply labels' }), name)).toBe(true)
     await page.getByRole('button', { name: 'Close Apply labels', exact: true }).click()
     await openSettings(page, 'mail')
     await page.getByRole('link', { name: 'Labels', exact: true }).click()

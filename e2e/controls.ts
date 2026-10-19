@@ -16,3 +16,14 @@ export async function openSettings(page: Page, section?: 'mail' | 'calendar') {
   }
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
 }
+
+export async function labelIsApplied(scope: Locator, name: string) {
+  const control = scope.getByRole('combobox', { name: 'Label', exact: true })
+  await expect(control).toBeEnabled()
+  await control.click()
+  const option = control.page().getByRole('listbox').getByRole('option', { name, exact: true })
+  await expect(option).toHaveCount(1)
+  const selected = await option.getAttribute('aria-selected')
+  await control.click()
+  return selected === 'true'
+}

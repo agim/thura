@@ -31,7 +31,7 @@ test('Correspondence links source records and opens the existing apps', async ({
   await page.getByRole('button', { name: 'Close Link existing item', exact: true }).click()
   await expect(page.getByRole('button', { name: fileName, exact: true })).toBeVisible()
   await page.getByRole('button', { name: fileName, exact: true }).click()
-  await page.getByText('Manage file', { exact: true }).click()
+  await page.getByRole('button', { name: 'Manage file', exact: true }).click()
   await expect(page.getByLabel('Upload new version', { exact: true })).toBeAttached()
   await expect(page.getByRole('dialog', { name: 'Manage file' }).getByRole('button', { name: 'Choose file', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Close Manage file', exact: true }).click()

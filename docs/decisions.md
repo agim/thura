@@ -286,3 +286,7 @@ from LiveKit's public components to retain labelled controls at phone sizes.
 A label is workspace-owned and reusable on mail, Drive files, contacts, calendar events, chat rooms and meetings. One shared dialog offers New label first and creates plus assigns it atomically. The catalog and assignment writers serialize on the workspace lock, reuse case-insensitive names on create-and-apply retries, and preserve current workspace membership and resource-specific access checks. Settings → Labels manages the catalog; sharing a label never grants access to its resources.
 
 Keep the existing mail_label and mail_tag table names and old label IDs so stored assignments and mailbox API clients remain compatible. New catalog entries carry workspace_id and no mailbox_id. Existing entries resolve their workspace through their original mailbox, preserving stored data without destructive migration. ResourceLabel records non-mail assignments; mail retains its existing tags and filtering queries. Resource reads always pass through the ordinary access checks, including personal calendars and direct chats.
+
+## 2026-10-19: Shared action rows and human calendar repeat controls
+
+Why: All application action groups use ActionRow for consistent sizing, alignment, compact icon labels and app-styled hints. Repeat choices use shared menus and date controls while retaining RRULE only at the API boundary; imported custom schedules stay unchanged until explicitly replaced. Action modals close on confirmed success and preserve failed submissions.
