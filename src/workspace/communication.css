@@ -1031,7 +1031,7 @@
  box-shadow:none; cursor:pointer;
 }
 :is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog, .thura-signin) button.app-action[data-variant=primary],
-#orbit-workspace.zero-workspace #orbit-mail-vibrant button.app-action[data-variant=primary] { background:var(--teal,#06f); color:var(--oncoral,#fff); border-color:transparent; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant button.app-action[data-variant=primary] { background:var(--teal,var(--action,#06f)); color:var(--oncoral,light-dark(#fff,#121827)); border-color:transparent; }
 :is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog, .thura-signin) button.app-action[data-variant=danger],
 #orbit-workspace.zero-workspace #orbit-mail-vibrant button.app-action[data-variant=danger] { background:#b3261e; color:#fff; border-color:transparent; }
 :is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) button.app-action:disabled { opacity:.5; cursor:default; }
@@ -1077,3 +1077,12 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 #orbit-workspace.zero-workspace .workspace-search input { height:44px; min-height:44px; }
 @media(max-width:999px) { #orbit-workspace.zero-workspace .workspace-search button.app-action { display:none; } }
 @media(min-width:1000px) { #orbit-workspace.zero-workspace .drive-detail > button.app-action.drive-detail-back { display:none; } }
+#orbit-workspace.zero-workspace .app-sidebar button.app-action { width:100%; justify-content:flex-start; }
+#orbit-workspace.zero-workspace .timeline-tools.app-action-row { overflow:visible; }
+#orbit-workspace.zero-workspace .timeline-tools.app-action-row .timeline-source { min-width:0; max-width:180px; flex:1 1 auto; }
+#orbit-workspace.zero-workspace .app-action-row:empty { display:none; }
+
+#orbit-workspace.zero-workspace .timeline-tools.app-action-row .timeline-source .select-control { width:100%; }
+#orbit-workspace.zero-workspace .activity-filters { display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; }
+#orbit-workspace.zero-workspace .workspace-dialog .activity-filters label { flex:1 1 120px; min-width:0; margin:0; }
+#orbit-workspace.zero-workspace .activity-entry { padding:12px; border:1px solid var(--line); border-radius:8px; overflow-wrap:anywhere; }

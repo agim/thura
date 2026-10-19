@@ -39,7 +39,7 @@ export function LiveMeet({ workspaceId, meetingId, initialName, onLink }: { work
 
     {access ? <><MeetingCall token={access.token} serverUrl={access.serverUrl} onLeave={() => setAccess(null)} onError={setRoomError} /></> : <>
       <AppSidebar title="Meetings" className="meeting-sidebar" label="Meeting navigation">
-        <button className="folder-button" aria-haspopup="dialog" onClick={() => setJoiningLink(true)}><Link2 size={18} />Join with a link</button>
+        <ActionButton className="folder-button" aria-haspopup="dialog" onClick={() => setJoiningLink(true)}><Link2 size={18} />Join with a link</ActionButton>
         <button aria-pressed={meetingFilter === 'active'} onClick={() => { setMeetingFilter('active'); setSelected('') }}><Video size={18} />Available meetings</button>
         <button aria-pressed={meetingFilter === 'ended'} onClick={() => { setMeetingFilter('ended'); setSelected('') }}><Clock size={18} />Past meetings</button>
         <ul aria-label="Meeting">{[...(meeting && !meetings.data?.items.some(m => m.id === meeting.id) ? [meeting] : []), ...(meetings.data?.items || [])].filter(m => meetingFilter === 'ended' ? !!m.endedAt : !m.endedAt).map(m => <li key={m.id}><button aria-pressed={meeting?.id === m.id} onClick={() => setSelected(m.id)}><span className="conversation-avatar"><Video size={18} /></span><span className="conversation-copy"><strong>{m.name}</strong><small>{m.endedAt ? 'Ended' : 'Workspace meeting'}</small></span></button></li>)}</ul>

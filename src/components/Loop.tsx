@@ -1,3 +1,5 @@
+import { ActionButton } from './ActionButton'
+import { ActionRow } from './ActionRow'
 import { ResourceLabels } from './ResourceLabels'
 import { AppSidebar } from './AppSidebar'
 import { displayDate } from '../lib/display-date'
@@ -5,7 +7,7 @@ import { DetailBack } from './DetailBack'
 import { AppPageHeader, NewAction } from './AppPageHeader'
 import { SelectControl } from './SelectControl'
 import { ModalAction } from './ModalAction'
-import { RefreshCw, UserRound, Mail, MessageSquare, FileText, Video, CalendarDays } from 'lucide-react'
+import { Link2, RefreshCw, UserRound, Mail, MessageSquare, FileText, Video, CalendarDays } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type Contact, type CorrespondenceEntry } from '@lidza/client'
@@ -25,7 +27,7 @@ export function Loop({ workspaceId, initialContact, onOpen, onContacts, onSelect
         {people.isError && <p role="alert">{people.error.message}</p>}
         <ul>{contacts.map(c => <li key={c.id}><button aria-pressed={person?.id === c.id} onClick={() => { setPerson(c); onSelect(c) }}><span className="person-avatar" aria-hidden="true">{c.name.split(/\s+/).map(n => n[0]).slice(0, 2).join('')}</span><span className="person-copy"><strong>{c.name}</strong><span>{c.email}</span>{c.company && <small>{c.company}</small>}</span></button></li>)}</ul>
         {!people.isPending && !people.isError && contacts.length === 0 && <p>No contacts found. Add someone to start their Loop.</p>}
-        {people.hasNextPage && <button disabled={people.isFetchingNextPage} onClick={() => void people.fetchNextPage()}>More people</button>}
+        {people.hasNextPage && <ActionButton disabled={people.isFetchingNextPage} onClick={() => void people.fetchNextPage()}>More people</ActionButton>}
       </AppSidebar>
       {person ? <Timeline search={timelineSearch} key={person.id} workspaceId={workspaceId} person={person} onBack={() => { setPerson(undefined); onSelect(undefined) }} onOpen={onOpen} /> : <div className="correspondence-empty"><UserRound size={32} aria-hidden="true" /><h3>Your people, in context</h3><p>Select a person to see their timeline. Personal contacts need no organization.</p></div>}
     </div>
@@ -45,10 +47,10 @@ function Timeline({ workspaceId, person, onOpen, onBack, search }: { workspaceId
     <h3>{scope === 'organization' ? current.company : current.name}</h3>
     <p>{scope === 'organization' ? 'Activity involving people at this organization.' : current.email}</p></div></header>
     {current.company && <div className="correspondence-scope"><button aria-pressed={scope === 'person'} onClick={() => setScope('person')}>This person</button><button aria-pressed={scope === 'organization'} onClick={() => setScope('organization')}>Organization: {current.company}</button></div>}
-    <div className="timeline-tools"><label className="timeline-source"><span className="visually-hidden">Source</span><SelectControl aria-label="Source" value={source} onChange={e => setSource(e.target.value)}><option value="">All sources</option>{sources.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectControl></label>
+    <ActionRow label="Timeline actions" className="timeline-tools"><label className="timeline-source"><span className="visually-hidden">Source</span><SelectControl aria-label="Source" value={source} onChange={e => setSource(e.target.value)}><option value="">All sources</option>{sources.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectControl></label>
     {scope === 'person' && <><LinkItems workspaceId={workspaceId} person={current} /><ResourceLabels workspaceId={workspaceId} source="contact" id={current.id} /></>}
+    <ActionButton className="secondary" aria-label="Refresh timeline" onClick={() => void timeline.refetch()} disabled={timeline.isFetching}><RefreshCw size={17} /></ActionButton></ActionRow>
     {unlink.isError && <p role="alert">{unlink.error.message}</p>}
-    <button className="secondary" aria-label="Refresh timeline" title="Refresh timeline" onClick={() => void timeline.refetch()} disabled={timeline.isFetching}><RefreshCw size={17} /></button></div>
     {notices.map(notice => <p role="status" key={notice}>{notice}</p>)}
     {timeline.isPending && <p role="status">Loading Loop…</p>}
     {timeline.isError && <p role="alert">{timeline.error.message}</p>}
@@ -60,9 +62,9 @@ function Timeline({ workspaceId, person, onOpen, onBack, search }: { workspaceId
       <small className="entry-reason">{item.reason}</small>
       <p className="loop-excerpt"><SearchExcerpt text={item.preview} search={search} /></p>
       <small>{item.status === 'captured' ? 'Development capture — not delivered' : item.status}</small>
-      {scope === 'person' && item.linked && <button className="secondary" disabled={unlink.isPending} onClick={() => unlink.mutate(item)}>Remove manual link</button>}
+      {scope === 'person' && item.linked && <ActionButton className="secondary" disabled={unlink.isPending} onClick={() => unlink.mutate(item)}>Remove manual link</ActionButton>}
     </li>)}</ol>
-    {timeline.hasNextPage && <button disabled={timeline.isFetchingNextPage} onClick={() => void timeline.fetchNextPage()}>Load more items</button>}
+    {timeline.hasNextPage && <ActionButton disabled={timeline.isFetchingNextPage} onClick={() => void timeline.fetchNextPage()}>Load more items</ActionButton>}
   </section>
 }
 
@@ -77,7 +79,7 @@ function LinkItems({ workspaceId, person }: { workspaceId: string; person: Conta
   const catalog = useInfiniteQuery({ queryKey: ['correspondence-sources', workspaceId, person.id, source, search], enabled: open, initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listLoopSources({ workspaceId, id: person.id }, { query: { source, search, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined })
   const link = useMutation({ mutationFn: (item: CorrespondenceEntry) => api.linkLoop({ workspaceId, id: person.id }, { source: item.source, sourceId: item.id }), onSuccess: async () => { await client.invalidateQueries({ queryKey: ['correspondence', workspaceId] }); await client.invalidateQueries({ queryKey: ['correspondence-sources', workspaceId] }) } })
   const items = catalog.isError ? [] : [...new Map(catalog.data?.pages.flatMap(p => p.items).map(i => [`${i.source}:${i.id}`, i]) ?? []).values()]
-  return <ModalAction label="Link existing item" onOpenChange={setOpen}>
+  return <ModalAction icon={<Link2 size={18} />} label="Link existing item" onOpenChange={setOpen}>
     <p>Associate an item with {person.name}. Links do not invite people or grant access. Removing a manual link keeps any automatic participant or recipient match.</p>
     <label>Item type<SelectControl aria-label="Item type" value={source} onChange={e => setSource(e.target.value)}>{sources.filter(([value]) => value !== 'mail').map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectControl></label>
     <label>Find an item<input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search titles and descriptions" /></label>
@@ -85,8 +87,8 @@ function LinkItems({ workspaceId, person }: { workspaceId: string; person: Conta
     {(catalog.error || link.error) && <p role="alert">{(catalog.error || link.error)?.message}</p>}
     {link.isSuccess && <p role="status">Item linked.</p>}
     {!catalog.isPending && !catalog.isError && items.length === 0 && <p>No accessible items found.</p>}
-    <ul>{items.map(item => <li key={`${item.source}:${item.id}`}><span>{item.subject} · {new Date(item.at).toLocaleDateString()}</span> <button className="secondary" disabled={link.isPending || item.linked} onClick={() => link.mutate(item)}>{item.linked ? 'Linked' : `Link ${item.subject}`}</button></li>)}</ul>
-    {catalog.hasNextPage && <button disabled={catalog.isFetchingNextPage} onClick={() => void catalog.fetchNextPage()}>More items</button>}
+    <ul>{items.map(item => <li key={`${item.source}:${item.id}`}><span>{item.subject} · {new Date(item.at).toLocaleDateString()}</span> <ActionButton className="secondary" disabled={link.isPending || item.linked} aria-label={item.linked ? 'Linked' : `Link ${item.subject}`} onClick={() => link.mutate(item)}>{item.linked ? 'Linked' : 'Link'}</ActionButton></li>)}</ul>
+    {catalog.hasNextPage && <ActionButton disabled={catalog.isFetchingNextPage} onClick={() => void catalog.fetchNextPage()}>More items</ActionButton>}
   </ModalAction>
 }
 
