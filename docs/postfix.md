@@ -13,6 +13,86 @@ record the resulting image digest and package versions for a release. The
 integration fixture tested Postfix 3.10.13. The same adapter can run beside
 Debian's native Postfix package on a dedicated mail host.
 
+## Included Compose deployment and wizard
+
+From the repository root, run:
+
+```sh
+python3 scripts/init-compose.py
+docker compose --env-file .env -f deploy/compose.yaml up -d --build
+```
+
+The initializer creates private `.env` bootstrap values without overwriting an
+existing file. If `.env` already exists, privately add `POSTGRES_PASSWORD`,
+`AUTH_SECRET`, `LIDZA_MASTER_KEY` (64 hex characters), `THURA_SETUP_TOKEN` and
+`THURA_POSTFIX_TOKEN` (each at least 32 random characters). Use a URL-safe
+Postgres password. Keep the setup token and master key backed up separately.
+Never commit this file. The Compose stack includes Thura, Postgres, Valkey,
+a private storage volume and a separate Postfix container with a persistent
+queue. Optional document and media services remain separate deployment choices.
+
+Put your HTTPS reverse proxy in front of `127.0.0.1:8080` and open `/setup`.
+Use the setup token from your private `.env` to create the administrator. On
+**Email service**, choose these independently:
+
+- **Receive email through:** `postfix` for the included service, or `relay` for
+  an independently managed signed raw-MIME relay.
+- **Send email through:** `postfix` for direct SMTP delivery, or `provider` to
+  select SMTP, Mailgun, SendGrid, Postmark or Resend and enter its credentials.
+
+For example, `Receive: postfix`, `Send: provider`, `Outgoing provider: mailgun`
+receives directly on your server and sends through Mailgun. Other outgoing
+providers work the same way. Selecting Mailgun does not change receiving.
+Set the mail server hostname, initial inbox address and outgoing sender; the
+inbox may differ from the sender. A blank inbox uses the sender on first
+publication. Changing this field later does not rename an existing mailbox.
+Mailbox messages send as their mailbox address, so authorize the inbox address/domain with your outgoing provider too. The sender field supplies system notices and the wizard test. Postfix receiving generates a private signing secret when none has been saved.
+
+The containers share a **network namespace**, keeping SMTP submission on
+`127.0.0.1:2525` and the authenticated configuration/ingestion requests on
+loopback. They remain separate containers with separate filesystems; no Docker
+socket or database credentials go to Postfix. The sidecar never receives
+Mailgun or other outgoing API keys. Only public receiving port 25 is published;
+`THURA_SMTP_BIND` and `THURA_SMTP_PORT` can override the host binding/port for a
+private test. Public internet MX delivery needs the real port 25.
+
+During first setup the service starts in outgoing-only bootstrap mode. This
+allows the wizard's explicitly requested test email before a mailbox UUID
+exists; port 25 does not listen and no recipients are mapped yet. Save the mail
+step, complete the mail/storage checks, publish and restart Thura:
+
+```sh
+docker compose --env-file .env -f deploy/compose.yaml restart thura
+```
+
+The sidecar polls the activated configuration every two seconds, installs exact
+mailbox mappings and opens receiving after activation. Draft edits on an active
+installation never change its mail configuration. Newly provisioned mailboxes
+are discovered automatically; mailbox-specific credential prefixes must have a
+valid inbound secret. Duplicate addresses, unsupported address syntax and more
+than 1,000 mailboxes are refused instead of publishing ambiguous routes.
+Configuration read failures retain the last configuration and queue. Removed
+mapping deliveries already in the queue are deferred for inspection, rather
+than silently discarded. Disabling managed Postfix stops the service and
+preserves its queue volume. Do not remove that volume during upgrades.
+
+Set your inbox domain's MX to the mail server hostname and its A record to this
+server; allow inbound TCP 25. Set `SMTP_TLS_DIR` in `.env` to a private directory
+containing `smtp-cert.pem` and `smtp-key.pem` for that hostname (default
+`deploy/private/smtp`). Restart Postfix after certificate rotation. Without
+these files the service does not advertise STARTTLS. Configure SPF, DKIM
+signing and DMARC/PTR for direct Postfix sending; this stack does not install a
+DKIM signer, spam filter or malware scanner. With a hosted outgoing provider,
+use that provider's sending-domain records while retaining your Postfix MX.
+DNS, certificates, public delivery and abuse filtering remain operator tasks.
+A wizard test confirms outgoing acceptance, not incoming internet reachability;
+send an external test to the inbox after activation and check the received item.
+
+For production upgrades that recreate Thura, run `up -d` for the **whole stack**
+so the sidecar follows the recreated network namespace. Keep the app listener
+on container port 3000. Scale-out mail gateways need a separate network/TLS
+plan; do not scale this shared-namespace Compose recipe blindly.
+
 ## Configure a mailbox
 
 1. Provision a mailbox through `app_provision_mailbox`, recording its UUID,
@@ -140,3 +220,24 @@ app is unavailable, queue survival across MTA restart, and official Līdza SMTP
 outbound bytes (including a full 10 MiB attachment) through Postfix to a local sink. It stops its app/container and
 removes only its synthetic mailbox metadata. Private raw objects and disposable
 queue/log evidence remain in ignored test storage. No internet recipient is used.
+
+## Compose acceptance fixture
+
+After building the stack images under the isolated project name, run:
+
+```sh
+docker compose --env-file .env -f deploy/compose.yaml -p thura-postfix-acceptance build
+python3 scripts/postfix-compose-fixture.py --keep
+npx playwright test --config scripts/postfix/playwright.config.ts
+```
+
+For browser review, pass `--keep` to the Python fixture; otherwise it removes
+its isolated containers and volumes. It creates private synthetic configuration
+in `.lidza/postfix-compose-fixture`, captures every outgoing message in a private
+SMTP sink, configures the actual native wizard, verifies persisted incoming mail
+and refuses public-port relay attempts. It changes outgoing delivery to an
+independent SMTP provider and confirms Postfix still receives. Use an unused
+fixture project, loopback app port 8082 and SMTP port 2528; never point this
+fixture at a production installation. The separate browser checks exercise
+actual desktop/phone wizard menus and ensure hidden provider fields, secret
+values and page width behave correctly. Hosted provider accounts are not used.

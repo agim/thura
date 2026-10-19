@@ -2,8 +2,10 @@ package setup
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,7 +30,10 @@ import (
 
 // runtimeState records only configuration loaded by this process. Publishing
 // a shared database snapshot cannot mark another node as initialized.
-type runtimeState struct{ Revision int32 }
+type runtimeState struct {
+	Revision     int32
+	MailSettings map[string]string
+}
 
 const fixtureSubject = "thura-fixture:externally-configured"
 
@@ -213,6 +218,10 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 		action = "server.setup.restart"
 	} else {
 		for _, f := range s.Fields {
+			// Older wizard clients do not know these optional routing fields.
+			if !form.Has(f.Name) && (strings.HasPrefix(f.Name, "THURA_MAIL_") || f.Name == "THURA_POSTFIX_HOSTNAME") {
+				continue
+			}
 			value := form.Get(f.Name)
 			if len(value) > 32768 {
 				return errors.New("setup field exceeds its size limit")
@@ -226,6 +235,22 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 			} else {
 				v[f.Name] = strings.TrimSpace(value)
 			}
+		}
+	}
+	if !restart && step == "mail" {
+		if v["THURA_MAIL_INBOUND"] == "postfix" && v["MAIL_INBOUND_SECRET"] == "" {
+			key := make([]byte, 32)
+			if _, e := rand.Read(key); e != nil {
+				return e
+			}
+			v["MAIL_INBOUND_SECRET"] = hex.EncodeToString(key)
+		}
+		if v["THURA_MAIL_OUTBOUND"] == "postfix" {
+			v["MAIL_PROVIDER"] = "smtp"
+			v["MAIL_SMTP_HOST"] = "127.0.0.1"
+			v["MAIL_SMTP_PORT"] = "2525"
+			v["MAIL_SMTP_SECURITY"] = "none"
+			v["MAIL_SMTP_USERNAME"], v["MAIL_SMTP_PASSWORD"] = "", ""
 		}
 	}
 	sealed, e := seal(v)
@@ -321,7 +346,7 @@ func Publish(ctx context.Context, revision string) error {
 		if e = queries.GrantWorkspaceOwner(ctx, q.GrantWorkspaceOwnerParams{Subject: subject, Scope: workspace.ID}); e != nil {
 			return e
 		}
-		if _, e = queries.CreateMailbox(ctx, q.CreateMailboxParams{WorkspaceID: workspace.ID, Name: "Team mail", Address: v["MAIL_FROM"], ConfigPrefix: ""}); e != nil {
+		if _, e = queries.CreateMailbox(ctx, q.CreateMailboxParams{WorkspaceID: workspace.ID, Name: "Team mail", Address: inboxAddress(v), ConfigPrefix: ""}); e != nil {
 			return e
 		}
 	} else {
@@ -387,7 +412,7 @@ func Activate(ctx context.Context, s *lidza.Services) error {
 	if e = lidza.Reconfigure(ctx, s); e != nil {
 		return errors.New("published providers could not be initialized; check server settings")
 	}
-	lidza.Provide(s, runtimeState{Revision: row.PublishedRevision})
+	lidza.Provide(s, runtimeState{Revision: row.PublishedRevision, MailSettings: v})
 	return nil
 }
 

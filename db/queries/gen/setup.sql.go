@@ -177,6 +177,38 @@ func (q *Queries) HasSuccessfulSetupProbe(ctx context.Context, arg HasSuccessful
 	return succeeded, err
 }
 
+const listPostfixMailboxes = `-- name: ListPostfixMailboxes :many
+SELECT id, workspace_id, name, address, config_prefix, signature, created_at FROM mailbox ORDER BY address,id LIMIT 1001
+`
+
+func (q *Queries) ListPostfixMailboxes(ctx context.Context) ([]Mailbox, error) {
+	rows, err := q.db.Query(ctx, listPostfixMailboxes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Mailbox
+	for rows.Next() {
+		var i Mailbox
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.Address,
+			&i.ConfigPrefix,
+			&i.Signature,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSetupProbes = `-- name: ListSetupProbes :many
 SELECT id, kind, subject, revision, fingerprint, state, created_at, updated_at FROM setup_probe ORDER BY created_at DESC,id DESC LIMIT 20
 `

@@ -14,3 +14,6 @@ config/owner-claim
 storage/
 
 __pycache__/
+
+# Private deployment certificates and local credentials
+deploy/private/

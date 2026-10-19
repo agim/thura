@@ -1,6 +1,6 @@
 # Mail connectors
 
-For deployment steps and Mailgun/DNS/MX configuration, see [Install and configure a Thura server](install-server.md). Outbound provider selection and incoming mail routing are separate configuration steps.
+For deployment steps and Mailgun/DNS/MX configuration, see [Install and configure a Thura server](install-server.md). The setup wizard offers independent incoming and outgoing choices. Its managed Postfix option automatically configures the included Compose sidecar after activation; outgoing may still use any supported provider.
 
 An operator assigns a mailbox with `app_provision_mailbox` (`workspaceId`, `name`, `address`, optional `configPrefix`). The address is the sender; members cannot override it. A prefix such as `SALES_` selects sealed `SALES_MAIL_PROVIDER`, `SALES_MAIL_API_KEY`, `SALES_MAIL_DOMAIN`, and the other official Līdza mail settings. An empty prefix uses the application's `MAIL_*` settings. Invitation/recovery delivery uses the application's own mail pack independently.
 

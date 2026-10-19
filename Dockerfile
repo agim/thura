@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
  && apt-get install -y --no-install-recommends nodejs \
  && rm -rf /var/lib/apt/lists/*
 RUN go install github.com/agim/lidza/cmd/lidza@v0.1.123
+# lidza build regenerates SQL-backed queries; sqlc requires CGO while building.
+RUN CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

@@ -15,7 +15,7 @@ import (
 // publications immediately; never cache redirects in a browser or proxy.
 func Gate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if setupResource(r) {
+		if setupResource(r) || (r.Method == http.MethodGet && r.URL.Path == "/api/v1/setup/postfix") {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -39,7 +39,7 @@ func Gate(next http.Handler) http.Handler {
 			w.Header().Set("Cache-Control", "no-store")
 			path := r.URL.Path
 			switch path {
-			case "/api/v1/setup/status", "/api/v1/setup/claim",
+			case "/api/v1/setup/postfix", "/api/v1/setup/status", "/api/v1/setup/claim",
 				"/api/v1/auth/login", "/api/v1/auth/logout", "/api/v1/auth/session",
 				"/api/v1/auth/register": // NoRegister still returns 404.
 				next.ServeHTTP(w, r)

@@ -360,3 +360,7 @@ WOPI grants bind file/member/audience/expiry/read-only state, with current permi
 ## 2026-10-19: Remove the previous editor completely
 
 The user explicitly requests Collabora as the replacement with no alternate editor retained. Remove prior provider code, callback/source/proxy routes, browser SDK, provider selection and credentials, deprecated session bookkeeping and demo container. Replace protocol-specific tests with equivalent Collabora WOPI/iframe/conversion checks, as explicitly approved by the user. Retain original files and immutable versions. One Compose stack may deploy the app and Collabora as separate containers; do not place the office engine in Thura's minimal application image.
+
+## 2026-10-19: Managed Postfix Compose with independent receiving and sending
+
+Why: The user requests an included Postfix service configured by the initial wizard, including Postfix receiving with Mailgun or any other supported outgoing transport. A private token-authenticated loopback sidecar protocol publishes activated exact mailbox mappings without exposing outgoing keys or a Docker socket. First setup uses only private outbound submission until mailbox publication and activation; Postfix retains its durable queue and reloads mapping changes. Keep external signed relays and all official mail-pack providers available independently.

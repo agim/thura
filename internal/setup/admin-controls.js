@@ -1,6 +1,23 @@
 // Setup controls run within the official, administrator-gated page.
 (() => {
   document.querySelector('.setup-steps [aria-current="step"]')?.scrollIntoView({block:"nearest",inline:"center"});
+  const updateMailFields = () => {
+    const value = name => document.getElementById(name)?.value;
+    const localOut = value('THURA_MAIL_OUTBOUND') === 'postfix';
+    const localIn = value('THURA_MAIL_INBOUND') === 'postfix';
+    const provider = value('MAIL_PROVIDER');
+    const show = (names, visible) => names.forEach(name => {
+      const field = document.querySelector(`[data-setup-field="${name}"]`);
+      if (field) field.hidden = !visible;
+    });
+    show(['THURA_POSTFIX_HOSTNAME'], localOut || localIn);
+    show(['MAIL_PROVIDER'], !localOut);
+    show(['MAIL_API_KEY', 'MAIL_REGION'], !localOut && provider !== 'smtp');
+    show(['MAIL_DOMAIN'], !localOut && provider === 'mailgun');
+    show(['MAIL_SMTP_HOST', 'MAIL_SMTP_PORT', 'MAIL_SMTP_SECURITY', 'MAIL_SMTP_USERNAME', 'MAIL_SMTP_PASSWORD'], !localOut && provider === 'smtp');
+    show(['MAIL_INBOUND_SECRET'], !localIn);
+  };
+  updateMailFields();
   for (const select of document.querySelectorAll('.setup-select')) {
     const trigger = select.querySelector('[role="combobox"]');
     const list = select.querySelector('[role="listbox"]');
@@ -26,6 +43,7 @@
         trigger.querySelector('span').textContent = option.textContent;
         options.forEach(o => o.setAttribute('aria-selected', String(o === option)));
         close(true);
+        updateMailFields();
       });
       option.addEventListener('keydown', e => {
         const keys = {ArrowDown: (index + 1) % options.length, ArrowUp: (index - 1 + options.length) % options.length, Home: 0, End: options.length - 1};

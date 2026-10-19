@@ -10,7 +10,7 @@ import urllib.parse
 import uuid
 
 
-def settings(config, hostname, listen):
+def settings(config, hostname, listen, allow_empty=False):
     hostname_pattern = r'(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?'
     if not re.fullmatch(hostname_pattern, hostname):
         raise ValueError('MAIL_HOSTNAME must be a DNS hostname')
@@ -27,7 +27,7 @@ def settings(config, hostname, listen):
     if url.username or url.password or url.query or url.fragment or url.path not in ('', '/') or not url.hostname or (url.scheme != 'https' and not (url.scheme == 'http' and local)):
         raise ValueError('baseUrl must be an HTTPS origin, or loopback HTTP')
     mailboxes = config['mailboxes']
-    if not isinstance(mailboxes, dict) or not 1 <= len(mailboxes) <= 1000:
+    if not isinstance(mailboxes, dict) or not (0 if allow_empty else 1) <= len(mailboxes) <= 1000:
         raise ValueError('Configure 1–1000 mailbox addresses')
     domains = set()
     for address, mailbox in mailboxes.items():
@@ -40,12 +40,33 @@ def settings(config, hostname, listen):
     return sorted(domains)
 
 
-def main():
-    with open(os.environ.get('THURA_RELAY_CONFIG', '/run/secrets/thura-relay.json'), encoding='utf-8') as source:
-        config = json.load(source)
-    hostname = os.environ['MAIL_HOSTNAME'].lower()
-    listen = os.environ.get('SMTP_LISTEN', '127.0.0.1:2525')
-    domains = settings(config, hostname, listen)
+def recipient_history(config, path):
+    """Keep removed recipients on the local pipe so queued mail cannot leak to MX."""
+    addresses = set(config['mailboxes'])
+    if path.exists():
+        if path.is_symlink() or path.stat().st_size > 4 * 1024 * 1024:
+            raise ValueError('invalid managed recipient history')
+        saved = json.loads(path.read_text())
+        if not isinstance(saved, list) or not all(isinstance(item, str) for item in saved):
+            raise ValueError('invalid managed recipient history')
+        addresses.update(saved)
+    if len(addresses) > 10000:
+        raise ValueError('managed recipient history limit reached; inspect queued mail before maintenance')
+    for address in addresses:
+        if len(address) > 318 or not re.fullmatch(r'[a-z0-9][a-z0-9._+\-]{0,63}@[a-z0-9][a-z0-9.\-]*\.[a-z0-9\-]+', address):
+            raise ValueError('invalid managed recipient history address')
+    staged = path.with_suffix('.next')
+    fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w') as stream:
+        json.dump(sorted(addresses), stream)
+    staged.chmod(0o600)
+    staged.replace(path)
+    return sorted(addresses)
+
+
+def configure(config, hostname, listen, managed=False):
+    domains = settings(config, hostname, listen, allow_empty=managed)
+    transport_addresses = recipient_history(config, pathlib.Path('/var/spool/postfix/.thura-recipient-history.json')) if managed else config['mailboxes']
     private = pathlib.Path('/etc/thura-postfix/private')
     relay_group = pwd.getpwnam('thura-mail').pw_gid
     private.parent.mkdir(mode=0o755, exist_ok=True)
@@ -54,14 +75,26 @@ def main():
     private.chmod(0o750)
     os.chown(private, 0, relay_group)
     target = private / 'relay.json'
-    target.write_text(json.dumps(config), encoding='utf-8')
-    os.chown(target, 0, relay_group)
-    target.chmod(0o640)
+    staged = target.with_suffix('.next')
+    # Create privately before writing, including while replacing an old file.
+    fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+        json.dump(config, stream)
+    os.chown(staged, 0, relay_group)
+    staged.chmod(0o640)
+    staged.replace(target)
     maps = pathlib.Path('/etc/postfix')
-    (maps / 'relay_recipients').write_text(''.join(f'{address} OK\n' for address in config['mailboxes']))
-    (maps / 'thura_transport').write_text(''.join(f'{address} thura:\n' for address in config['mailboxes']))
-    for name in ('relay_recipients', 'thura_transport'):
-        subprocess.run(['postmap', str(maps / name)], check=True)
+    contents = {
+        # Publish local transports before newly accepted recipients.
+        'thura_transport': ''.join(f'{address} thura:\n' for address in transport_addresses),
+        'relay_recipients': ''.join(f'{address} OK\n' for address in config['mailboxes']),
+    }
+    for name, content in contents.items():
+        staged_map = maps / (name + '.next')
+        staged_map.write_text(content)
+        subprocess.run(['postmap', str(staged_map)], check=True)
+        (maps / (name + '.next.db')).replace(maps / (name + '.db'))
+        staged_map.replace(maps / name)
     options = {
         'myhostname': hostname, 'mydestination': '', 'mynetworks': '127.0.0.1/32',
         'inet_interfaces': 'all', 'inet_protocols': 'ipv4',
@@ -107,11 +140,21 @@ def main():
         lines.append(line)
     smtp = '127.0.0.1:2525 inet n - n - - smtpd\n  -o message_size_limit=16777216\n'
     if listen != '127.0.0.1:2525':
-        smtp += f'{listen} inet n - n - - smtpd\n  -o message_size_limit=12582912\n'
+        smtp += f'{listen} inet n - n - - smtpd\n  -o message_size_limit=12582912\n  -o smtpd_relay_restrictions=reject_unauth_destination\n'
     (maps / 'master.cf').write_text(''.join(lines) + '\n' + smtp +
         'thura unix - n n - - pipe flags=R user=thura-mail '
         f'argv=/usr/bin/python3 {pathlib.Path(__file__).with_name("relay.py")} --config /etc/thura-postfix/private/relay.json --recipient ${{recipient}}\n')
     subprocess.run(['postfix', 'check'], check=True)
+
+
+def main():
+    if os.environ.get('THURA_POSTFIX_MANAGED') == 'true':
+        import managed
+        managed.main()
+        return
+    with open(os.environ.get('THURA_RELAY_CONFIG', '/run/secrets/thura-relay.json'), encoding='utf-8') as source:
+        config = json.load(source)
+    configure(config, os.environ['MAIL_HOSTNAME'].lower(), os.environ.get('SMTP_LISTEN', '127.0.0.1:2525'))
     os.execvp('postfix', ['postfix', 'start-fg'])
 
 

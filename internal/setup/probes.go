@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/mail"
 	"time"
 
@@ -36,7 +37,10 @@ func probeFingerprint(v map[string]string, kind string) (string, error) {
 	var names []string
 	switch kind {
 	case "mail":
-		names = []string{"MAIL_PROVIDER", "MAIL_FROM"}
+		names = []string{"MAIL_PROVIDER", "MAIL_FROM", "THURA_MAIL_OUTBOUND"}
+		if v["THURA_MAIL_OUTBOUND"] == "postfix" {
+			names = append(names, "THURA_POSTFIX_HOSTNAME")
+		}
 		if v["MAIL_PROVIDER"] == "smtp" {
 			names = append(names, "MAIL_SMTP_HOST", "MAIL_SMTP_PORT", "MAIL_SMTP_SECURITY", "MAIL_SMTP_USERNAME", "MAIL_SMTP_PASSWORD")
 		} else {
@@ -186,6 +190,27 @@ func Probe(ctx context.Context, kind, revision, requestID string) (string, error
 }
 
 func checkMail(ctx context.Context, v map[string]string, recipient string) error {
+	if v["THURA_MAIL_OUTBOUND"] == "postfix" {
+		// First setup can reach this action before the sidecar has finished starting.
+		// Wait for its private socket; never retry the actual message submission.
+		ready, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		for {
+			connection, err := (&net.Dialer{Timeout: time.Second}).DialContext(ready, "tcp", "127.0.0.1:2525")
+			if err == nil {
+				if err := connection.Close(); err != nil {
+					return errors.New("local Postfix readiness connection could not close")
+				}
+				break
+			}
+			select {
+			case <-ready.Done():
+				return errors.New("local Postfix is unavailable; start the Compose mail service before checking")
+			case <-time.After(200 * time.Millisecond):
+			}
+		}
+	}
+
 	var cfg mailpack.Config
 	if err := env.Fill(&cfg, v); err != nil {
 		return err

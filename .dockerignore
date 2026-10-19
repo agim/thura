@@ -14,3 +14,6 @@ test-results
 config/master.key
 config/owner-claim
 storage
+
+# Private deployment certificates and local credentials
+deploy/private/

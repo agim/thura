@@ -2,7 +2,7 @@
 
 Use this guide for a new deployment, then [operations](operations.md) for upgrades, monitoring and recovery. Every operator chooses their own hosts and domains. All names and addresses below are examples; do not publish them literally.
 
-Thura defaults to **Debian Postfix for sending and receiving**. This guide also covers **Mailgun for sending with Postfix for receiving**, plus SendGrid/Postmark/Resend. Choose the arrangement that fits the deployment. Selecting an outbound provider does not configure incoming mail.
+Thura defaults to **Debian Postfix for sending and receiving**. This guide also covers **Mailgun for sending with Postfix for receiving**, plus SendGrid/Postmark/Resend. Choose the arrangement that fits the deployment. The setup wizard now selects receiving and sending independently. The [included Compose deployment](postfix.md#included-compose-deployment-and-wizard) automatically configures Postfix receiving, with Postfix or any supported outgoing service.
 
 ## 1. Choose hosts, domains and services
 
@@ -179,7 +179,9 @@ If Postfix sends directly to internet MX hosts, configure a matching reverse-DNS
 
 ## 7. Install and map incoming Postfix mail
 
-Follow [the complete Postfix installation guide](postfix.md) for a new dedicated native Debian-family MTA or the supplied container. It supplies a queued adapter to Thura and exact recipient checks. Avoid running its configurator over an unrelated existing MTA.
+For the included Compose stack, select Postfix receiving in the wizard and your independent outgoing provider. Publish and restart Thura; the sidecar automatically installs exact receiving mappings and keeps them updated. No hand-written relay JSON or mailbox UUID lookup is needed. Follow [the Compose instructions](postfix.md#included-compose-deployment-and-wizard) for DNS/TLS and the persistent queue.
+
+The manual instructions below apply only to an independently managed MTA. Follow [the complete Postfix installation guide](postfix.md) for a new dedicated native Debian-family MTA or standalone container. Avoid running its configurator over an unrelated existing MTA.
 
 After the initial workspace/mailbox exists, obtain that mailbox's UUID from the authorized mailbox API/Mail interface or the operator provisioning result. Configure a private relay JSON file with:
 
@@ -199,7 +201,7 @@ These replacement strings are placeholders, not working credentials. Copy [the r
 
 Mount the private JSON and persist the entire Postfix queue. For public receipt, enable `SMTP_LISTEN=25`, open incoming TCP 25 and supply the SMTP certificate/key paths described in the Postfix guide. The private outbound submission listener remains loopback port 2525; do not publish it or broaden `mynetworks`. With Mailgun sending, Thura does not need to submit outbound messages to that listener.
 
-Map every accepted address explicitly. Unknown recipients, unmapped plus addresses and unauthorized relay attempts must be refused. For additional shared mailboxes, an operator uses local MCP `app_provision_mailbox` with workspace UUID, name, address and optional credential prefix, then adds its exact inbound mapping. This assigns a mailbox to a workspace; adding a user does not automatically create a personal mailbox or DNS record.
+Map every accepted address explicitly. Unknown recipients, unmapped plus addresses and unauthorized relay attempts must be refused. For additional shared mailboxes, an operator uses local MCP `app_provision_mailbox` with workspace UUID, name, address and optional credential prefix, then adds its exact inbound mapping on an independent MTA; managed Compose discovers it automatically. This assigns a mailbox to a workspace; adding a user does not automatically create a personal mailbox or DNS record.
 
 Start/reload the MTA only with correct mappings and secrets. External senders can now reach Postfix, which signs the complete raw message and sends it to `POST /api/v1/inbound/{mailboxId}`. Thura verifies the HMAC/timestamp/delivery ID and stores private MIME/attachments. During app outages the queue defers delivery and retries. Monitor queue age and failures.
 

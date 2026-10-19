@@ -1,0 +1,83 @@
+# Generate private .env with: python3 scripts/init-compose.py
+# Start behind your HTTPS reverse proxy: docker compose --env-file .env -f deploy/compose.yaml up -d --build
+services:
+  thura:
+    build: ..
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://thura:${POSTGRES_PASSWORD:?Run scripts/init-compose.py}@postgres:5432/thura?sslmode=disable
+      AUTH_SECRET: ${AUTH_SECRET:?Run scripts/init-compose.py}
+      LIDZA_MASTER_KEY: ${LIDZA_MASTER_KEY:?Run scripts/init-compose.py}
+      THURA_SETUP_TOKEN: ${THURA_SETUP_TOKEN:?Run scripts/init-compose.py}
+      THURA_POSTFIX_TOKEN: ${THURA_POSTFIX_TOKEN:?Run scripts/init-compose.py}
+      DB_MIGRATE: "true"
+      LIDZA_ADDR: 0.0.0.0:3000
+      STORAGE_PROVIDER: local
+      STORAGE_DIR: storage
+      CACHE_URL: redis://valkey:6379/0
+      REALTIME_BUS_URL: redis://valkey:6379/1
+    ports:
+      - "127.0.0.1:${THURA_HTTP_PORT:-8080}:3000"
+      # Postfix shares this network namespace. Port 2525 stays private.
+      - "${THURA_SMTP_BIND:-0.0.0.0}:${THURA_SMTP_PORT:-25}:25"
+    volumes:
+      - thura-storage:/app/storage
+  postfix:
+    build: ./postfix
+    restart: unless-stopped
+    depends_on:
+      thura:
+        condition: service_started
+        restart: true
+    network_mode: service:thura
+    environment:
+      THURA_POSTFIX_MANAGED: "true"
+      THURA_POSTFIX_TOKEN: ${THURA_POSTFIX_TOKEN:?Run scripts/init-compose.py}
+    volumes:
+      - postfix-queue:/var/spool/postfix
+      # Optional smtp-cert.pem and smtp-key.pem; private key remains read-only.
+      - ${SMTP_TLS_DIR:-./private/smtp}:/run/secrets:ro
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: thura
+      POSTGRES_USER: thura
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/init-compose.py}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thura -d thura"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  valkey:
+    image: valkey/valkey:8
+    restart: unless-stopped
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  storage-init:
+    image: busybox:1.37.0
+    restart: "no"
+    user: "0:0"
+    command: ["sh", "-c", "chown 65532:65532 /storage && chmod 0700 /storage"]
+    volumes:
+      - thura-storage:/storage
+volumes:
+  postgres-data:
+  valkey-data:
+  thura-storage:
+  postfix-queue:

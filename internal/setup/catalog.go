@@ -25,8 +25,12 @@ func Catalog() []Step {
 			field("THURA_BACKUP_PLAN", "Backup and retention plan", "textarea", "", "Describe protected database, object, provider and separate master-key backups; no automatic backup or deletion is implied."),
 		}},
 		{ID: "mail", Title: "Email service", Fields: []Field{
-			field("MAIL_PROVIDER", "Email provider", "select", "smtp", "SMTP includes Debian Postfix; other choices use the official mail pack.", "smtp", "mailgun", "sendgrid", "postmark", "resend"),
-			field("MAIL_FROM", "Sender address", "email", "", "A verified sender; creates the initial shared mailbox."),
+			field("THURA_MAIL_INBOUND", "Receive email through", "select", "relay", "Postfix uses the included Compose service. Relay keeps an independently managed signed MIME relay.", "postfix", "relay"),
+			field("THURA_MAIL_OUTBOUND", "Send email through", "select", "provider", "Choose the included Postfix service or an independent outgoing provider.", "postfix", "provider"),
+			field("THURA_POSTFIX_HOSTNAME", "Mail server hostname", "text", "", "For example mail.example.org. Point your inbox domain MX record here and this hostname A record at this server."),
+			field("THURA_MAIL_ADDRESS", "Inbox address", "email", "", "Initial shared mailbox; blank uses the sender address. Later mailbox addresses are managed separately."),
+			field("MAIL_PROVIDER", "Outgoing provider", "select", "smtp", "SMTP includes Debian Postfix; other choices use the official mail pack.", "smtp", "mailgun", "sendgrid", "postmark", "resend"),
+			field("MAIL_FROM", "Sender address", "email", "", "A verified outgoing sender; can differ from the inbox address."),
 			field("MAIL_API_KEY", "Email API key", "secret", "", "Required for API providers. Blank preserves the saved key."),
 			field("MAIL_DOMAIN", "Mailgun sending domain", "text", "", "Verify this domain in the provider console."),
 			field("MAIL_REGION", "Email API region", "select", "us", "Select the provider's regional endpoint.", "us", "eu"),
@@ -35,7 +39,7 @@ func Catalog() []Step {
 			field("MAIL_SMTP_SECURITY", "SMTP encryption", "select", "starttls", "Plain transport is allowed only to loopback Postfix.", "starttls", "tls", "none"),
 			field("MAIL_SMTP_USERNAME", "SMTP username", "text", "", "Leave both username/password empty for a trusted local relay."),
 			field("MAIL_SMTP_PASSWORD", "SMTP password", "secret", "", "Blank preserves the saved password."),
-			field("MAIL_INBOUND_SECRET", "Inbound relay signing secret", "secret", "", "At least 32 characters. Configure the raw-MIME relay separately; selecting an outbound provider does not configure its inbound webhooks."),
+			field("MAIL_INBOUND_SECRET", "Inbound relay signing secret", "secret", "", "At least 32 characters. Automatically generated for managed Postfix. For an external relay, configure the same secret there."),
 		}},
 		{ID: "storage", Title: "Private file storage", Fields: []Field{
 			field("STORAGE_PROVIDER", "Storage backend", "select", "local", "Private local disk or an S3-compatible backend.", "local", "s3"),

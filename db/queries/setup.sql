@@ -37,3 +37,6 @@ SELECT * FROM setup_probe ORDER BY created_at DESC,id DESC LIMIT 20;
 SELECT EXISTS(SELECT 1 FROM setup_probe WHERE kind=$1 AND fingerprint=$2 AND state='succeeded' AND created_at>$3) AS succeeded;
 -- name: SupersedeSetupProbeSuccesses :exec
 UPDATE setup_probe SET state='superseded' WHERE kind=$1 AND fingerprint=$2 AND state='succeeded';
+
+-- name: ListPostfixMailboxes :many
+SELECT * FROM mailbox ORDER BY address,id LIMIT 1001;

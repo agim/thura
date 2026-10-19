@@ -69,6 +69,9 @@ func validate(v map[string]string) error {
 			return e
 		}
 	}
+	if err := validateMailRouting(v); err != nil {
+		return err
+	}
 	if len(v["MAIL_INBOUND_SECRET"]) < 32 {
 		return errors.New("inbound signing secret must have at least 32 characters")
 	}

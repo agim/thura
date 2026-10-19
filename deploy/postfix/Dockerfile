@@ -4,6 +4,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends postfix python3
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 10001 thura-mail \
     && useradd --system --uid 10001 --gid thura-mail --no-create-home thura-mail
-COPY relay.py configure.py /opt/thura/
+COPY relay.py configure.py managed.py /opt/thura/
 RUN chmod 0755 /opt/thura && chmod 0644 /opt/thura/*.py
 ENTRYPOINT ["python3", "/opt/thura/configure.py"]

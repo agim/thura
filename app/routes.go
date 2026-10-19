@@ -10,6 +10,7 @@ import (
 	"thura/internal/federation"
 	"thura/internal/meet"
 	"thura/internal/providers/collabora"
+	"thura/internal/setup"
 	"thura/internal/wopi"
 
 	"thura/schema"
@@ -21,6 +22,7 @@ import (
 // from these types, so the frontend cannot drift from the API.
 func routes(r *router.Router) {
 	mountAdmin(r)
+	r.HandleFunc("GET /api/v1/setup/postfix", setup.PostfixConfig)
 	router.Route(r, "GET /api/v1/setup/status", handlers.SetupStatus, auth.Optional())
 	router.Route(r, "POST /api/v1/setup/claim", handlers.ClaimSetup, auth.Throttle())
 	// Versioned peer wire endpoint; all application routes stay under /api.

@@ -97,7 +97,7 @@ Real workspace content comes from members and the configured mail, storage, docu
 
 ### Which mail provider in production? <!-- brief:mail -->
 
-The deployment administrator chooses SMTP (including Debian Postfix), Mailgun, SendGrid, Postmark or Resend through the setup wizard; Līdza uses its official provider transports. Inbound raw-MIME relay configuration remains separate.
+The deployment administrator chooses SMTP (including Debian Postfix), Mailgun, SendGrid, Postmark or Resend through the setup wizard; Līdza uses its official provider transports. The wizard selects receiving independently: included managed Postfix in Compose or an external signed raw-MIME relay. Postfix receiving may be combined with any supported outgoing provider.
 
 ### Which language model provider? <!-- brief:model -->
 

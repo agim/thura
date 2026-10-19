@@ -23,7 +23,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 def deliver(config, recipient, raw):
     mailbox = config['mailboxes'].get(recipient.lower())
     if not mailbox:
-        return 67  # EX_NOUSER; RCPT checks should already have refused this.
+        return 75 if config.get('managed') else 67  # Retain queued mail after a managed mapping is removed.
     if len(raw) > MAX_MESSAGE:
         return 65  # EX_DATAERR; also enforced before the MTA queues it.
     timestamp = str(int(time.time()))
