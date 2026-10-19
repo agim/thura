@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	xhtml "golang.org/x/net/html"
 	q "thura/db/queries/gen"
+	"thura/internal/mailabuse"
 	"thura/internal/platform/safeimage"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -107,6 +108,9 @@ func InlineImage(ctx context.Context, w, box, item, attachment string) (schema.F
 	if _, err := ItemAccess(ctx, w, box, item); err != nil {
 		return schema.FileContent{}, err
 	}
+	if err := mailabuse.GuardAttachment(ctx, item); err != nil {
+		return schema.FileContent{}, err
+	}
 	if !workspace.ValidID(attachment) {
 		return schema.FileContent{}, router.Errorf(404, "attachment not found")
 	}
@@ -115,6 +119,9 @@ func InlineImage(ctx context.Context, w, box, item, attachment string) (schema.F
 		return schema.FileContent{}, router.Errorf(404, "attachment not found")
 	}
 	if err != nil {
+		return schema.FileContent{}, err
+	}
+	if err := mailabuse.GuardObject(ctx, a.ObjectKey); err != nil {
 		return schema.FileContent{}, err
 	}
 	if ContentID(a.ContentID) == "" {

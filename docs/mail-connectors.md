@@ -10,6 +10,8 @@ Folder listings support cursor paging and literal server-side search; defaults a
 
 Opening a draft reads its current authorized server state before showing editable fields. Returning from another app or following a Contacts handoff cannot reuse an older body/recipient snapshot. A failed read offers an explicit retry, and a message already queued or sent cannot reopen as an editable draft. Background list and attachment refreshes do not replace active editor input. This does not change the last-write-wins policy for concurrent editors or guarantee an unfinished autosave survives navigation before acknowledgment.
 
+Incoming abuse screening and workspace AI/approval controls are documented in [Mail protection](mail-protection.md). They apply to every new incoming message before Inbox delivery.
+
 ## Inbound relay contract
 
 Point the trusted SMTP edge or hosted-provider adapter at `POST /api/v1/inbound/{mailboxId}`. The request body is the complete RFC 5322 message (maximum 12 MB). Configure a random secret of at least 32 characters as the mailbox prefix's `MAIL_INBOUND_SECRET`, through sealed credentials. Headers:

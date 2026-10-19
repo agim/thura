@@ -2069,6 +2069,165 @@ func (v SmipMailReceipt) Validate() error {
 	return errs.Result()
 }
 
+// MailProtection is a row of the mail_protection table.
+type MailProtection struct {
+	ID             string    `json:"id" db:"id"`
+	WorkspaceID    string    `json:"workspaceId" db:"workspace_id"`
+	AiEnabled      bool      `json:"aiEnabled" db:"ai_enabled"`
+	ApproveUnknown bool      `json:"approveUnknown" db:"approve_unknown"`
+	SenderPerHour  int       `json:"senderPerHour" db:"sender_per_hour"`
+	DomainPerHour  int       `json:"domainPerHour" db:"domain_per_hour"`
+	SpamThreshold  int       `json:"spamThreshold" db:"spam_threshold"`
+	Revision       int       `json:"revision" db:"revision"`
+	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of MailProtection from schema.lidza.
+func (v MailProtection) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailScreening is a row of the mail_screening table.
+type MailScreening struct {
+	ID               string    `json:"id" db:"id"`
+	ItemID           string    `json:"itemId" db:"item_id"`
+	WorkspaceID      string    `json:"workspaceId" db:"workspace_id"`
+	Sender           string    `json:"sender" db:"sender"`
+	Domain           string    `json:"domain" db:"domain"`
+	Identity         string    `json:"identity" db:"identity"`
+	Authenticated    bool      `json:"authenticated" db:"authenticated"`
+	State            string    `json:"state" db:"state"`
+	Score            int       `json:"score" db:"score"`
+	Findings         string    `json:"findings" db:"findings"`
+	AiState          string    `json:"aiState" db:"ai_state"`
+	AvState          string    `json:"avState" db:"av_state"`
+	ApprovalRequired bool      `json:"approvalRequired" db:"approval_required"`
+	Released         bool      `json:"released" db:"released"`
+	Attempts         int       `json:"attempts" db:"attempts"`
+	AttemptID        string    `json:"attemptId" db:"attempt_id"`
+	PolicyRevision   int       `json:"policyRevision" db:"policy_revision"`
+	NextAttempt      time.Time `json:"nextAttempt" db:"next_attempt"`
+	UpdatedAt        time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of MailScreening from schema.lidza.
+func (v MailScreening) Validate() error {
+	var errs validate.Errors
+	if v.ItemID == "" {
+		errs.Add("itemId", "required", "required")
+	}
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Sender == "" {
+		errs.Add("sender", "required", "required")
+	}
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	if v.Identity == "" {
+		errs.Add("identity", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.Findings == "" {
+		errs.Add("findings", "required", "required")
+	}
+	if v.AiState == "" {
+		errs.Add("aiState", "required", "required")
+	}
+	if v.AvState == "" {
+		errs.Add("avState", "required", "required")
+	}
+	if v.AttemptID == "" {
+		errs.Add("attemptId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailSenderPolicy is a row of the mail_sender_policy table.
+type MailSenderPolicy struct {
+	ID          string    `json:"id" db:"id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	Identity    string    `json:"identity" db:"identity"`
+	Decision    string    `json:"decision" db:"decision"`
+	UpdatedBy   string    `json:"updatedBy" db:"updated_by"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of MailSenderPolicy from schema.lidza.
+func (v MailSenderPolicy) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Identity == "" {
+		errs.Add("identity", "required", "required")
+	}
+	if v.Decision == "" {
+		errs.Add("decision", "required", "required")
+	}
+	if v.UpdatedBy == "" {
+		errs.Add("updatedBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailComplaint is a row of the mail_complaint table.
+type MailComplaint struct {
+	ID          string    `json:"id" db:"id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	ItemID      string    `json:"itemId" db:"item_id"`
+	Identity    string    `json:"identity" db:"identity"`
+	Subject     string    `json:"subject" db:"subject"`
+	Active      bool      `json:"active" db:"active"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of MailComplaint from schema.lidza.
+func (v MailComplaint) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.ItemID == "" {
+		errs.Add("itemId", "required", "required")
+	}
+	if v.Identity == "" {
+		errs.Add("identity", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailIntakeRate is a row of the mail_intake_rate table.
+type MailIntakeRate struct {
+	ID          string    `json:"id" db:"id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	Key         string    `json:"key" db:"key"`
+	Bucket      time.Time `json:"bucket" db:"bucket"`
+	Count       int       `json:"count" db:"count"`
+}
+
+// Validate applies the rules of MailIntakeRate from schema.lidza.
+func (v MailIntakeRate) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Key == "" {
+		errs.Add("key", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -2597,6 +2756,7 @@ type MailDetail struct {
 	Attachments []AttachmentView   `json:"attachments"`
 	Labels      []MailLabel        `json:"labels"`
 	Deliveries  []MailDeliveryView `json:"deliveries"`
+	Screening   *MailScreeningView `json:"screening"`
 }
 
 // Validate applies the rules of MailDetail from schema.lidza.
@@ -2621,6 +2781,12 @@ func (v MailDetail) Validate() error {
 		if err := x.Validate(); err != nil {
 			errs.Add("deliveries", "nested", err.Error())
 			break
+		}
+	}
+	if v.Screening != nil {
+		x := *v.Screening
+		if err := x.Validate(); err != nil {
+			errs.Add("screening", "nested", err.Error())
 		}
 	}
 	return errs.Result()
@@ -4707,6 +4873,191 @@ func (v MailDeliveryList) Validate() error {
 			errs.Add("items", "nested", err.Error())
 			break
 		}
+	}
+	return errs.Result()
+}
+
+// MailProtectionInput is an API type.
+type MailProtectionInput struct {
+	AiEnabled      bool `json:"aiEnabled"`
+	ApproveUnknown bool `json:"approveUnknown"`
+	SenderPerHour  int  `json:"senderPerHour"`
+	DomainPerHour  int  `json:"domainPerHour"`
+	SpamThreshold  int  `json:"spamThreshold"`
+	Revision       int  `json:"revision"`
+}
+
+// Validate applies the rules of MailProtectionInput from schema.lidza.
+func (v MailProtectionInput) Validate() error {
+	var errs validate.Errors
+	if v.SenderPerHour < 1 {
+		errs.Add("senderPerHour", "min", "at least 1")
+	}
+	if v.SenderPerHour > 10000 {
+		errs.Add("senderPerHour", "max", "at most 10000")
+	}
+	if v.DomainPerHour < 1 {
+		errs.Add("domainPerHour", "min", "at least 1")
+	}
+	if v.DomainPerHour > 100000 {
+		errs.Add("domainPerHour", "max", "at most 100000")
+	}
+	if v.SpamThreshold < 30 {
+		errs.Add("spamThreshold", "min", "at least 30")
+	}
+	if v.SpamThreshold > 100 {
+		errs.Add("spamThreshold", "max", "at most 100")
+	}
+	if v.Revision < 0 {
+		errs.Add("revision", "min", "at least 0")
+	}
+	return errs.Result()
+}
+
+// MailProtectionView is an API type.
+type MailProtectionView struct {
+	AiEnabled           bool `json:"aiEnabled"`
+	ApproveUnknown      bool `json:"approveUnknown"`
+	SenderPerHour       int  `json:"senderPerHour"`
+	DomainPerHour       int  `json:"domainPerHour"`
+	SpamThreshold       int  `json:"spamThreshold"`
+	Revision            int  `json:"revision"`
+	CanConfigure        bool `json:"canConfigure"`
+	AiReady             bool `json:"aiReady"`
+	AntivirusConfigured bool `json:"antivirusConfigured"`
+}
+
+// Validate applies the rules of MailProtectionView from schema.lidza.
+func (v MailProtectionView) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
+// MailFinding is an API type.
+type MailFinding struct {
+	Code     string `json:"code"`
+	Severity string `json:"severity"`
+	Detail   string `json:"detail"`
+}
+
+// Validate applies the rules of MailFinding from schema.lidza.
+func (v MailFinding) Validate() error {
+	var errs validate.Errors
+	if v.Code == "" {
+		errs.Add("code", "required", "required")
+	}
+	if v.Severity == "" {
+		errs.Add("severity", "required", "required")
+	}
+	if v.Detail == "" {
+		errs.Add("detail", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailScreeningView is an API type.
+type MailScreeningView struct {
+	State            string        `json:"state"`
+	Score            int           `json:"score"`
+	Findings         []MailFinding `json:"findings"`
+	AiState          string        `json:"aiState"`
+	AvState          string        `json:"avState"`
+	Authenticated    bool          `json:"authenticated"`
+	Sender           string        `json:"sender"`
+	Reputation       string        `json:"reputation"`
+	Complaints       int           `json:"complaints"`
+	Reported         bool          `json:"reported"`
+	ApprovalRequired bool          `json:"approvalRequired"`
+	Released         bool          `json:"released"`
+	CanManage        bool          `json:"canManage"`
+	UpdatedAt        time.Time     `json:"updatedAt"`
+}
+
+// Validate applies the rules of MailScreeningView from schema.lidza.
+func (v MailScreeningView) Validate() error {
+	var errs validate.Errors
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	for _, x := range v.Findings {
+		if err := x.Validate(); err != nil {
+			errs.Add("findings", "nested", err.Error())
+			break
+		}
+	}
+	if v.AiState == "" {
+		errs.Add("aiState", "required", "required")
+	}
+	if v.AvState == "" {
+		errs.Add("avState", "required", "required")
+	}
+	if v.Sender == "" {
+		errs.Add("sender", "required", "required")
+	}
+	if v.Reputation == "" {
+		errs.Add("reputation", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailReviewInput is an API type.
+type MailReviewInput struct {
+	Action string `json:"action"`
+}
+
+// Validate applies the rules of MailReviewInput from schema.lidza.
+func (v MailReviewInput) Validate() error {
+	var errs validate.Errors
+	if v.Action == "" {
+		errs.Add("action", "required", "required")
+	}
+	if len(v.Action) > 30 {
+		errs.Add("action", "max", "at most 30 character(s)")
+	}
+	return errs.Result()
+}
+
+// MailScreenJob is an API type.
+type MailScreenJob struct {
+	ID string `json:"id"`
+}
+
+// Validate applies the rules of MailScreenJob from schema.lidza.
+func (v MailScreenJob) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailAIClassification is an API type.
+type MailAIClassification struct {
+	Risk        int    `json:"risk"`
+	Category    string `json:"category"`
+	Explanation string `json:"explanation"`
+}
+
+// Validate applies the rules of MailAIClassification from schema.lidza.
+func (v MailAIClassification) Validate() error {
+	var errs validate.Errors
+	if v.Risk < 0 {
+		errs.Add("risk", "min", "at least 0")
+	}
+	if v.Risk > 100 {
+		errs.Add("risk", "max", "at most 100")
+	}
+	if v.Category == "" {
+		errs.Add("category", "required", "required")
+	}
+	if len(v.Category) > 40 {
+		errs.Add("category", "max", "at most 40 character(s)")
+	}
+	if v.Explanation == "" {
+		errs.Add("explanation", "required", "required")
+	}
+	if len(v.Explanation) > 1000 {
+		errs.Add("explanation", "max", "at most 1000 character(s)")
 	}
 	return errs.Result()
 }

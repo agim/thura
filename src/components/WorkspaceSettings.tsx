@@ -1,3 +1,4 @@
+import { MailProtectionSettings } from './MailProtection'
 import { AISettings } from './AISettings'
 import { ActionButton } from './ActionButton'
 import { AppSidebar } from './AppSidebar'
@@ -20,7 +21,7 @@ function MailSettings({ workspaceId }: { workspaceId: string }) {
   const boxes = useQuery({ queryKey: ['mailboxes', workspaceId], queryFn: () => api.listMailboxes({ workspaceId }) })
   const [chosen, setChosen] = useState('')
   const box = boxes.data?.items.find(item => item.id === chosen) ?? boxes.data?.items[0]
-  return <><h3>Mail settings</h3>{boxes.isPending && <p role="status">Loading mailboxes…</p>}{boxes.isError && <p role="alert">{userError(boxes.error)}</p>}{boxes.data && !box && <p>No mailboxes are assigned to this workspace.</p>}{box && <><label className="settings-mailbox">Mailbox<SelectControl aria-label="Mailbox" value={box.id} onChange={e => setChosen(e.target.value)}>{boxes.data?.items.map(item => <option key={item.id} value={item.id}>{item.name} · {item.address}</option>)}</SelectControl></label><MailSignature key={box.id} scope={{ workspaceId, mailboxId: box.id }} signature={box.signature} /></>}</>
+  return <><h3>Mail settings</h3><MailProtectionSettings workspaceId={workspaceId}/>{boxes.isPending && <p role="status">Loading mailboxes…</p>}{boxes.isError && <p role="alert">{userError(boxes.error)}</p>}{boxes.data && !box && <p>No mailboxes are assigned to this workspace.</p>}{box && <><label className="settings-mailbox">Mailbox<SelectControl aria-label="Mailbox" value={box.id} onChange={e => setChosen(e.target.value)}>{boxes.data?.items.map(item => <option key={item.id} value={item.id}>{item.name} · {item.address}</option>)}</SelectControl></label><MailSignature key={box.id} scope={{ workspaceId, mailboxId: box.id }} signature={box.signature} /></>}</>
 }
 function CalendarSettings({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()

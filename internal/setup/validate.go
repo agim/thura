@@ -151,6 +151,16 @@ func validate(v map[string]string) error {
 			return errors.New("invalid SMIP pairing configuration")
 		}
 	}
+	if err := bounded(v, "MAIL_AI_PER_HOUR", 1, 10000); err != nil {
+		return err
+	}
+	if v["MAIL_CLAMD_ADDRESS"] != "" {
+		host, port, err := net.SplitHostPort(v["MAIL_CLAMD_ADDRESS"])
+		n, pe := strconv.Atoi(port)
+		if err != nil || host == "" || pe != nil || n < 1 || n > 65535 {
+			return errors.New("antivirus service requires a valid host:port")
+		}
+	}
 	if v["SMIP_MAIL_ENABLED"] == "true" {
 		var cfg smipmail.Config
 		d := json.NewDecoder(strings.NewReader(v["SMIP_MAIL_CONFIG"]))

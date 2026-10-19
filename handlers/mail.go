@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	queries "thura/db/queries/gen"
+	"thura/internal/mailabuse"
 	"thura/internal/mailbox"
 	"thura/internal/platform/paging"
 	"thura/internal/smipmail"
@@ -112,6 +113,10 @@ func GetMail(ctx context.Context, r *router.Request[router.None]) (schema.MailDe
 	for _, d := range deliveries {
 		out.Deliveries = append(out.Deliveries, schema.MailDeliveryView{ID: d.ID, Recipient: d.Recipient, Transport: d.Route, State: d.State, Reason: d.Reason, Attempts: int(d.Attempts), UpdatedAt: d.UpdatedAt})
 	}
+	if err != nil {
+		return out, err
+	}
+	out.Screening, err = mailabuse.View(ctx, i.ID, auth.CurrentUser(ctx).ID)
 	return out, err
 }
 func CreateMailDraft(ctx context.Context, r *router.Request[schema.DraftInput]) (schema.MailItem, error) {
@@ -156,7 +161,20 @@ func UpdateMailFlags(ctx context.Context, r *router.Request[schema.MailFlags]) (
 	var folder *queries.MailFolder
 	if r.Body.Folder != nil {
 		value := queries.MailFolder(*r.Body.Folder)
+		if err = mailabuse.GuardMove(ctx, i.ID, value); err != nil {
+			return schema.MailItem{}, err
+		}
 		folder = &value
+		if value == queries.MailFolderSpam || value == queries.MailFolderTrash {
+			screening, se := q.LockMailScreening(ctx, i.ID)
+			if se == nil && (value == queries.MailFolderSpam || screening.State == "pending" || screening.State == "scanning" || screening.State == "error") {
+				se = mailabuse.HoldMove(ctx, q, screening)
+			}
+			if se != nil && !errors.Is(se, pgx.ErrNoRows) {
+				return schema.MailItem{}, se
+			}
+		}
+
 		if i.Status == "queued" || i.Status == "failed" {
 			return schema.MailItem{}, router.Errorf(409, "cancel queued mail before moving it")
 		}
@@ -186,11 +204,17 @@ func DownloadMailAttachment(ctx context.Context, r *router.Request[router.None])
 	if !workspace.ValidID(r.Param("attachmentId")) {
 		return schema.FileContent{}, router.Errorf(404, "attachment not found")
 	}
+	if err := mailabuse.GuardAttachment(ctx, r.Param("id")); err != nil {
+		return schema.FileContent{}, err
+	}
 	a, err := queries.New(db.From(ctx)).GetMailAttachment(ctx, r.Param("attachmentId"))
 	if errors.Is(err, pgx.ErrNoRows) || err == nil && a.ItemID != r.Param("id") {
 		return schema.FileContent{}, router.Errorf(404, "attachment not found")
 	}
 	if err != nil {
+		return schema.FileContent{}, err
+	}
+	if err := mailabuse.GuardObject(ctx, a.ObjectKey); err != nil {
 		return schema.FileContent{}, err
 	}
 	stream, _, err := storage.From(ctx).Get(ctx, a.ObjectKey)

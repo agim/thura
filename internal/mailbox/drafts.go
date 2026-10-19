@@ -8,6 +8,7 @@ import (
 	"github.com/agim/lidza/pkg/router"
 	"github.com/jackc/pgx/v5"
 	queries "thura/db/queries/gen"
+	"thura/internal/mailabuse"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -45,6 +46,9 @@ func CreateDraft(ctx context.Context, m queries.Mailbox, authorID string, in sch
 			return queries.MailItem{}, err
 		}
 		if in.ForwardID != nil {
+			if err = mailabuse.GuardAttachment(ctx, source.ID); err != nil {
+				return queries.MailItem{}, err
+			}
 			attachments, err = q.ListMailAttachments(ctx, source.ID)
 			if err != nil {
 				return queries.MailItem{}, err

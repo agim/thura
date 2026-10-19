@@ -118,6 +118,7 @@ CREATE TABLE mail_attachment (
   content_id text NOT NULL DEFAULT ''
 );
 CREATE INDEX mail_attachment_item_id_idx ON mail_attachment (item_id);
+CREATE INDEX mail_attachment_object_key_idx ON mail_attachment (object_key);
 
 CREATE TABLE auth_session (
   id text PRIMARY KEY,
@@ -794,4 +795,74 @@ CREATE TABLE smip_mail_receipt (
   accepted_at timestamptz NOT NULL
 );
 CREATE UNIQUE INDEX smip_mail_receipt_domain_origin_message_id_key ON smip_mail_receipt (domain, origin, message_id);
+
+CREATE TABLE mail_protection (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL UNIQUE REFERENCES workspace(id) ON DELETE CASCADE,
+  ai_enabled boolean NOT NULL DEFAULT true,
+  approve_unknown boolean NOT NULL DEFAULT false,
+  sender_per_hour integer NOT NULL DEFAULT 60,
+  domain_per_hour integer NOT NULL DEFAULT 600,
+  spam_threshold integer NOT NULL DEFAULT 70,
+  revision integer NOT NULL DEFAULT 1,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE mail_screening (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  item_id uuid NOT NULL UNIQUE REFERENCES mail_item(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+  sender text NOT NULL,
+  domain text NOT NULL,
+  identity text NOT NULL,
+  authenticated boolean NOT NULL,
+  state text NOT NULL DEFAULT 'pending',
+  score integer NOT NULL DEFAULT 0,
+  findings text NOT NULL DEFAULT '[]',
+  ai_state text NOT NULL DEFAULT 'pending',
+  av_state text NOT NULL DEFAULT 'pending',
+  approval_required boolean NOT NULL DEFAULT false,
+  released boolean NOT NULL DEFAULT false,
+  attempts integer NOT NULL DEFAULT 0,
+  attempt_id text NOT NULL DEFAULT '',
+  policy_revision integer NOT NULL,
+  next_attempt timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL
+);
+CREATE INDEX mail_screening_workspace_id_idx ON mail_screening (workspace_id);
+CREATE INDEX mail_screening_state_next_attempt_idx ON mail_screening (state, next_attempt);
+CREATE INDEX mail_screening_workspace_id_domain_authenticated_idx ON mail_screening (workspace_id, domain, authenticated);
+
+CREATE TABLE mail_sender_policy (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+  identity text NOT NULL,
+  decision text NOT NULL DEFAULT 'neutral',
+  updated_by text NOT NULL,
+  updated_at timestamptz NOT NULL
+);
+CREATE UNIQUE INDEX mail_sender_policy_workspace_id_identity_key ON mail_sender_policy (workspace_id, identity);
+
+CREATE TABLE mail_complaint (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+  item_id uuid NOT NULL REFERENCES mail_item(id) ON DELETE CASCADE,
+  identity text NOT NULL,
+  subject text NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  updated_at timestamptz NOT NULL
+);
+CREATE INDEX mail_complaint_workspace_id_idx ON mail_complaint (workspace_id);
+CREATE UNIQUE INDEX mail_complaint_item_id_subject_key ON mail_complaint (item_id, subject);
+CREATE INDEX mail_complaint_workspace_id_identity_active_idx ON mail_complaint (workspace_id, identity, active);
+
+CREATE TABLE mail_intake_rate (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+  key text NOT NULL,
+  bucket timestamptz NOT NULL,
+  count integer NOT NULL DEFAULT 1
+);
+CREATE INDEX mail_intake_rate_bucket_idx ON mail_intake_rate (bucket);
+CREATE UNIQUE INDEX mail_intake_rate_workspace_id_key_bucket_key ON mail_intake_rate (workspace_id, key, bucket);
 

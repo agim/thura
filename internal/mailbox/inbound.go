@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	queries "thura/db/queries/gen"
+	"thura/internal/mailabuse"
 	"thura/internal/platform/objectstore"
 	"thura/internal/smipmail"
 	"time"
@@ -194,7 +195,7 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 		return queries.MailItem{}, err
 	}
 	defer tx.Rollback(ctx)
-	item, err := persistInbound(ctx, tx, m.ID, parsed, raw, deliveryID)
+	item, err := persistInbound(ctx, tx, m.ID, parsed, raw, deliveryID, false)
 	if err != nil {
 		return queries.MailItem{}, err
 	}
@@ -210,13 +211,14 @@ func ReceiveSMIP(ctx context.Context, tx pgx.Tx, mailboxID string, payload smipm
 	if err != nil {
 		return "", err
 	}
-	item, err := persistInbound(ctx, tx, mailboxID, parsed, raw, deliveryID)
+	item, err := persistInbound(ctx, tx, mailboxID, parsed, raw, deliveryID, true)
 	return item.ID, err
 }
-func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed ParsedMail, raw []byte, deliveryID string) (queries.MailItem, error) {
+func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed ParsedMail, raw []byte, deliveryID string, authenticated bool) (queries.MailItem, error) {
 	var err error
 	tq := queries.New(tx)
-	if _, err = tq.LockMailbox(ctx, mailboxID); err != nil {
+	box, err := tq.LockMailbox(ctx, mailboxID)
+	if err != nil {
 		return queries.MailItem{}, err
 	}
 	existing, err := tq.FindInboundMail(ctx, queries.FindInboundMailParams{MailboxID: mailboxID, ExternalID: &deliveryID})
@@ -224,6 +226,10 @@ func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed Par
 		return existing, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
+		return queries.MailItem{}, err
+	}
+	p, err := mailabuse.Preflight(ctx, tq, box, parsed.From, authenticated)
+	if err != nil {
 		return queries.MailItem{}, err
 	}
 	if parsed.InReplyTo != "" {
@@ -253,5 +259,9 @@ func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed Par
 			return queries.MailItem{}, err
 		}
 	}
-	return item, nil
+	files := []mailabuse.File{}
+	for _, a := range parsed.Attachments {
+		files = append(files, mailabuse.File{Name: a.Name, ContentType: a.ContentType, Data: a.Data})
+	}
+	return mailabuse.Enqueue(ctx, tx, box, item, p, authenticated, files)
 }

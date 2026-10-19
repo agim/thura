@@ -8,7 +8,7 @@ import { userError } from '../lib/errors'
 
 export function AISettings({workspaceId}:{workspaceId:string}) {
  const settings=useQuery({queryKey:['ai-settings',workspaceId],queryFn:()=>api.getAISettings({workspaceId})})
- return <><h3>AI settings</h3><p>One model service for Mail, Calendar, Contacts, Loop, Drive, Chat and Meet. AI runs only when someone asks, using the text they review in the AI panel.</p>{settings.isPending && <p role="status">Loading AI settings…</p>}{settings.error && <p role="alert">{userError(settings.error)}</p>}{settings.data && <AISettingsForm key={`${workspaceId}:${settings.data.provider}:${settings.data.model}:${settings.data.enabled}:${settings.data.maxTokens}`} workspaceId={workspaceId} settings={settings.data}/>}</>
+ return <><h3>AI settings</h3><p>One model service for Mail, Calendar, Contacts, Loop, Drive, Chat and Meet. Assistant actions use reviewed text when requested. Incoming mail screening can also run automatically when enabled in Mail settings.</p>{settings.isPending && <p role="status">Loading AI settings…</p>}{settings.error && <p role="alert">{userError(settings.error)}</p>}{settings.data && <AISettingsForm key={`${workspaceId}:${settings.data.provider}:${settings.data.model}:${settings.data.enabled}:${settings.data.maxTokens}`} workspaceId={workspaceId} settings={settings.data}/>}</>
 }
 function AISettingsForm({workspaceId,settings}:{workspaceId:string;settings:Settings}){
  const client=useQueryClient()

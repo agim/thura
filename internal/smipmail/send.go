@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/agim/lidza"
@@ -178,6 +179,10 @@ func (g *Gateway) sendSecure(ctx context.Context, initial q.MailTransmission, de
 	}
 	result.Reason = "secure_outcome_uncertain_no_fallback"
 	result.NextAttempt = lidza.Now(ctx).Add(time.Minute)
+	var backoff *peerBackoff
+	if errors.As(sendErr, &backoff) {
+		result.NextAttempt = lidza.Now(ctx).Add(backoff.Delay)
+	}
 	if sendErr == nil {
 		body, err := json.Marshal(receipt)
 		if err != nil {
@@ -201,6 +206,12 @@ func sendPacket(client *http.Client, request *http.Request, packet smip.Packet, 
 	defer response.Body.Close()
 	status := response.StatusCode
 	if status != http.StatusOK && status != http.StatusCreated {
+		if status == http.StatusTooManyRequests || status == http.StatusServiceUnavailable {
+			seconds, err := strconv.Atoi(response.Header.Get("Retry-After"))
+			if err == nil && seconds > 0 && seconds <= 3600 {
+				return smip.Receipt{}, status, &peerBackoff{Delay: time.Duration(seconds) * time.Second}
+			}
+		}
 		return smip.Receipt{}, status, errors.New("secure peer did not acknowledge delivery")
 	}
 	if response.Header.Get("Content-Type") != "application/json" {
@@ -231,3 +242,7 @@ func Deliveries(ctx context.Context, item string) ([]q.MailDelivery, error) {
 	}
 	return queries.ListMailDeliveries(ctx, row.ID)
 }
+
+type peerBackoff struct{ Delay time.Duration }
+
+func (e *peerBackoff) Error() string { return "secure peer requested temporary backoff" }

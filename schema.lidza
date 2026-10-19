@@ -187,7 +187,7 @@ model MailAttachment {
   name string
   contentType string
   size int
-  objectKey string
+  objectKey string @index
   contentId string @default("")
 }
 type MailboxList {
@@ -209,6 +209,7 @@ type MailDetail {
   attachments AttachmentView[]
   labels MailLabel[]
   deliveries MailDeliveryView[]
+  screening MailScreeningView?
 }
 type DraftInput {
   forwardId uuid?
@@ -1352,4 +1353,118 @@ type MailDeliveryView {
 }
 type MailDeliveryList {
  items MailDeliveryView[]
+}
+
+model MailProtection {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace, cascade) @unique
+ aiEnabled bool @default(true)
+ approveUnknown bool @default(false)
+ senderPerHour int @default(60)
+ domainPerHour int @default(600)
+ spamThreshold int @default(70)
+ revision int @default(1)
+ updatedAt time @default(now())
+}
+model MailScreening {
+ id uuid @id @default(uuid())
+ itemId uuid @ref(MailItem, cascade) @unique
+ workspaceId uuid @ref(Workspace, cascade) @index
+ sender string
+ domain string
+ identity string
+ authenticated bool
+ state string @default("pending")
+ score int @default(0)
+ findings text @default("[]")
+ aiState string @default("pending")
+ avState string @default("pending")
+ approvalRequired bool @default(false)
+ released bool @default(false)
+ attempts int @default(0)
+ attemptId string @default("")
+ policyRevision int
+ nextAttempt time
+ updatedAt time
+ @@index(state, nextAttempt)
+ @@index(workspaceId, domain, authenticated)
+}
+model MailSenderPolicy {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace, cascade)
+ identity string
+ decision string @default("neutral")
+ updatedBy string
+ updatedAt time
+ @@unique(workspaceId, identity)
+}
+model MailComplaint {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace, cascade) @index
+ itemId uuid @ref(MailItem, cascade)
+ identity string
+ subject string
+ active bool @default(true)
+ updatedAt time
+ @@unique(itemId, subject)
+ @@index(workspaceId, identity, active)
+}
+model MailIntakeRate {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace, cascade)
+ key string
+ bucket time @index
+ count int @default(1)
+ @@unique(workspaceId, key, bucket)
+}
+type MailProtectionInput {
+ aiEnabled bool
+ approveUnknown bool
+ senderPerHour int @min(1) @max(10000)
+ domainPerHour int @min(1) @max(100000)
+ spamThreshold int @min(30) @max(100)
+ revision int @min(0)
+}
+type MailProtectionView {
+ aiEnabled bool
+ approveUnknown bool
+ senderPerHour int
+ domainPerHour int
+ spamThreshold int
+ revision int
+ canConfigure bool
+ aiReady bool
+ antivirusConfigured bool
+}
+type MailFinding {
+ code string
+ severity string
+ detail string
+}
+type MailScreeningView {
+ state string
+ score int
+ findings MailFinding[]
+ aiState string
+ avState string
+ authenticated bool
+ sender string
+ reputation string
+ complaints int
+ reported bool
+ approvalRequired bool
+ released bool
+ canManage bool
+ updatedAt time
+}
+type MailReviewInput {
+ action string @max(30)
+}
+type MailScreenJob {
+ id uuid
+}
+type MailAIClassification {
+ risk int @min(0) @max(100)
+ category string @max(40)
+ explanation string @max(1000)
 }

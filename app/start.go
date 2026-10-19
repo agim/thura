@@ -15,6 +15,7 @@ import (
 	"github.com/agim/lidza/pkg/middleware"
 	"thura/internal/drive"
 	"thura/internal/federation"
+	"thura/internal/mailabuse"
 	"thura/internal/mailbox"
 	"thura/internal/meet"
 	"thura/internal/platform/objectgc"
@@ -53,6 +54,11 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 		if err := jobs.FromServices(s).Schedule(gateway.ReconcileKind(), jobs.Every(time.Minute), nil); err != nil {
 			return err
 		}
+	}
+	jobs.FromServices(s).Handle(mailabuse.ScreenJob, mailabuse.Screen, jobs.Concurrency(2))
+	jobs.FromServices(s).Handle(mailabuse.ReconcileJob, mailabuse.Reconcile, jobs.Concurrency(1))
+	if err := jobs.FromServices(s).Schedule(mailabuse.ReconcileJob, jobs.Every(time.Minute), nil); err != nil {
+		return err
 	}
 	jobs.FromServices(s).Handle(mailbox.DeliveryJob, mailbox.Deliver)
 	jobs.FromServices(s).Handle(calendar.ReminderJob, calendar.Remind, jobs.Concurrency(1))

@@ -519,6 +519,16 @@ type MailAttachment struct {
 	ContentID   string `json:"content_id"`
 }
 
+type MailComplaint struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	ItemID      string    `json:"item_id"`
+	Identity    string    `json:"identity"`
+	Subject     string    `json:"subject"`
+	Active      bool      `json:"active"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type MailDelivery struct {
 	ID             string    `json:"id"`
 	TransmissionID string    `json:"transmission_id"`
@@ -534,6 +544,14 @@ type MailDelivery struct {
 	AttemptID      string    `json:"attempt_id"`
 	NextAttempt    time.Time `json:"next_attempt"`
 	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type MailIntakeRate struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	Key         string    `json:"key"`
+	Bucket      time.Time `json:"bucket"`
+	Count       int32     `json:"count"`
 }
 
 type MailItem struct {
@@ -589,6 +607,49 @@ type MailMessage struct {
 	Attempts    int32      `json:"attempts"`
 	CreatedAt   time.Time  `json:"created_at"`
 	SentAt      *time.Time `json:"sent_at"`
+}
+
+type MailProtection struct {
+	ID             string    `json:"id"`
+	WorkspaceID    string    `json:"workspace_id"`
+	AiEnabled      bool      `json:"ai_enabled"`
+	ApproveUnknown bool      `json:"approve_unknown"`
+	SenderPerHour  int32     `json:"sender_per_hour"`
+	DomainPerHour  int32     `json:"domain_per_hour"`
+	SpamThreshold  int32     `json:"spam_threshold"`
+	Revision       int32     `json:"revision"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type MailScreening struct {
+	ID               string    `json:"id"`
+	ItemID           string    `json:"item_id"`
+	WorkspaceID      string    `json:"workspace_id"`
+	Sender           string    `json:"sender"`
+	Domain           string    `json:"domain"`
+	Identity         string    `json:"identity"`
+	Authenticated    bool      `json:"authenticated"`
+	State            string    `json:"state"`
+	Score            int32     `json:"score"`
+	Findings         string    `json:"findings"`
+	AiState          string    `json:"ai_state"`
+	AvState          string    `json:"av_state"`
+	ApprovalRequired bool      `json:"approval_required"`
+	Released         bool      `json:"released"`
+	Attempts         int32     `json:"attempts"`
+	AttemptID        string    `json:"attempt_id"`
+	PolicyRevision   int32     `json:"policy_revision"`
+	NextAttempt      time.Time `json:"next_attempt"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type MailSenderPolicy struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	Identity    string    `json:"identity"`
+	Decision    string    `json:"decision"`
+	UpdatedBy   string    `json:"updated_by"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type MailTag struct {

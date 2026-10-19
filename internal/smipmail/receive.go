@@ -6,10 +6,12 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/db"
+	"github.com/agim/lidza/pkg/router"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
 	"thura/internal/smip"
@@ -126,6 +128,13 @@ func (g *Gateway) receive(w http.ResponseWriter, r *http.Request) {
 	}
 	item, err := g.ingest(ctx, tx, mailbox.ID, payload, "smip:"+envelope.From+":"+envelope.ID)
 	if err != nil {
+		var failure *router.HTTPError
+		if errors.As(err, &failure) && failure.Status == http.StatusTooManyRequests {
+			seconds := int64(lidza.Now(ctx).UTC().Truncate(time.Hour).Add(time.Hour).Sub(lidza.Now(ctx)).Seconds()) + 1
+			w.Header().Set("Retry-After", strconv.FormatInt(seconds, 10))
+			http.Error(w, "Incoming mail rate limit reached", http.StatusTooManyRequests)
+			return
+		}
 		http.Error(w, "Mail storage unavailable", http.StatusServiceUnavailable)
 		return
 	}

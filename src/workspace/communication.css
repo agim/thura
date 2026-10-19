@@ -1314,3 +1314,13 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 #orbit-mail-vibrant .mail-delivery summary { cursor: pointer; }
 #orbit-mail-vibrant .mail-delivery ul { padding-inline-start: 20px; margin-block: 12px 0; }
 #orbit-mail-vibrant .mail-delivery li + li { margin-top: 8px; }
+
+.mail-screening { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-block: 12px; overflow-wrap: anywhere; }
+.mail-screening-held { border-inline-start: 4px solid var(--gold, #946b08); }
+.mail-screening-title { display:flex; align-items:center; gap:8px; }
+.mail-screening ul { padding-inline-start:20px; font-size:13px; }
+.mail-screening li + li { margin-block-start:6px; }
+
+/* Dense commands opt into the shared icon row, retaining names and hints. */
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) .app-action-row[data-compact] > button:has(svg):has(.action-label) { width:44px; padding:10px; }
+:is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) .app-action-row[data-compact] > button:has(svg) .action-label { display:none; }

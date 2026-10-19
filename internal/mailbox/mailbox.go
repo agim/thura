@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strings"
 	queries "thura/db/queries/gen"
+	"thura/internal/mailabuse"
 	"thura/internal/platform/objectstore"
 	"thura/internal/richtext"
 	"thura/internal/smipmail"
@@ -264,6 +265,9 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 	}
 	var total int64
 	for _, a := range attachments {
+		if err := mailabuse.GuardObject(ctx, a.ObjectKey); err != nil {
+			return err
+		}
 		r, _, err := storage.From(ctx).Get(ctx, a.ObjectKey)
 		if err != nil {
 			return err
