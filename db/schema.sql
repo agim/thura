@@ -321,13 +321,19 @@ CREATE TABLE office_session (
   file_id uuid NOT NULL REFERENCES drive_file(id),
   subject text NOT NULL,
   source_version integer NOT NULL,
-  base_version integer NOT NULL,
   document_key text NOT NULL,
-  last_checksum text NOT NULL DEFAULT '',
   expires_at timestamptz NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX office_session_file_id_idx ON office_session (file_id);
+
+CREATE TABLE wopi_lock (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  file_id uuid NOT NULL UNIQUE REFERENCES drive_file(id),
+  lock_id text NOT NULL DEFAULT '',
+  base_version integer NOT NULL,
+  expires_at timestamptz NOT NULL
+);
 
 CREATE TABLE calendar (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

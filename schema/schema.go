@@ -849,9 +849,7 @@ type OfficeSession struct {
 	FileID        string    `json:"fileId" db:"file_id"`
 	Subject       string    `json:"subject" db:"subject"`
 	SourceVersion int       `json:"sourceVersion" db:"source_version"`
-	BaseVersion   int       `json:"baseVersion" db:"base_version"`
 	DocumentKey   string    `json:"documentKey" db:"document_key"`
-	LastChecksum  string    `json:"lastChecksum" db:"last_checksum"`
 	ExpiresAt     time.Time `json:"expiresAt" db:"expires_at"`
 	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
 }
@@ -868,8 +866,26 @@ func (v OfficeSession) Validate() error {
 	if v.DocumentKey == "" {
 		errs.Add("documentKey", "required", "required")
 	}
-	if v.LastChecksum == "" {
-		errs.Add("lastChecksum", "required", "required")
+	return errs.Result()
+}
+
+// WopiLock is a row of the wopi_lock table.
+type WopiLock struct {
+	ID          string    `json:"id" db:"id"`
+	FileID      string    `json:"fileId" db:"file_id"`
+	LockID      string    `json:"lockId" db:"lock_id"`
+	BaseVersion int       `json:"baseVersion" db:"base_version"`
+	ExpiresAt   time.Time `json:"expiresAt" db:"expires_at"`
+}
+
+// Validate applies the rules of WopiLock from schema.lidza.
+func (v WopiLock) Validate() error {
+	var errs validate.Errors
+	if v.FileID == "" {
+		errs.Add("fileId", "required", "required")
+	}
+	if v.LockID == "" {
+		errs.Add("lockId", "required", "required")
 	}
 	return errs.Result()
 }
@@ -2847,46 +2863,39 @@ func (v OpenShareInput) Validate() error {
 	return errs.Result()
 }
 
+// OfficeCapabilities is an API type.
+type OfficeCapabilities struct {
+	Extensions   []string `json:"extensions"`
+	ContentTypes []string `json:"contentTypes"`
+}
+
+// Validate applies the rules of OfficeCapabilities from schema.lidza.
+func (v OfficeCapabilities) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
 // OfficeConfig is an API type.
 type OfficeConfig struct {
-	ScriptURL string          `json:"scriptUrl"`
-	Config    json.RawMessage `json:"config"`
+	Provider       string `json:"provider"`
+	EditorURL      string `json:"editorUrl"`
+	AccessToken    string `json:"accessToken"`
+	AccessTokenTTL int    `json:"accessTokenTTL"`
+	ReadOnly       bool   `json:"readOnly"`
 }
 
 // Validate applies the rules of OfficeConfig from schema.lidza.
 func (v OfficeConfig) Validate() error {
 	var errs validate.Errors
-	if v.ScriptURL == "" {
-		errs.Add("scriptUrl", "required", "required")
+	if v.Provider == "" {
+		errs.Add("provider", "required", "required")
 	}
-	return errs.Result()
-}
-
-// OfficeCallback is an API type.
-type OfficeCallback struct {
-	Key    string  `json:"key"`
-	Status int     `json:"status"`
-	URL    *string `json:"url"`
-	Token  *string `json:"token"`
-}
-
-// Validate applies the rules of OfficeCallback from schema.lidza.
-func (v OfficeCallback) Validate() error {
-	var errs validate.Errors
-	if v.Key == "" {
-		errs.Add("key", "required", "required")
+	if v.EditorURL == "" {
+		errs.Add("editorUrl", "required", "required")
 	}
-	return errs.Result()
-}
-
-// OfficeResult is an API type.
-type OfficeResult struct {
-	Error int `json:"error"`
-}
-
-// Validate applies the rules of OfficeResult from schema.lidza.
-func (v OfficeResult) Validate() error {
-	var errs validate.Errors
+	if v.AccessToken == "" {
+		errs.Add("accessToken", "required", "required")
+	}
 	return errs.Result()
 }
 

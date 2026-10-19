@@ -11,6 +11,7 @@ import (
 	"thura/internal/drive"
 	"thura/internal/office"
 	"thura/internal/platform/auditlog"
+	"thura/internal/wopi"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -186,7 +187,7 @@ func RequestDriveOCR(ctx context.Context, r *router.Request[router.None]) (schem
 	return drive.RequestOCRPreview(ctx, r.Param("workspaceId"), r.Param("id"))
 }
 func ConvertOfficeDocument(ctx context.Context, r *router.Request[schema.OfficeConversionInput]) (schema.OfficeConversion, error) {
-	return office.Conversion(ctx, r.Param("workspaceId"), r.Param("id"), r.Body.Target)
+	return wopi.Convert(ctx, r.Param("workspaceId"), r.Param("id"), r.Body.Target)
 }
 func ReconstructWordDocument(ctx context.Context, r *router.Request[schema.WordCopyInput]) (schema.OfficeConversion, error) {
 	return office.ReviewedWord(ctx, r.Param("workspaceId"), r.Param("id"), r.Body)

@@ -20,7 +20,6 @@ import (
 	"thura/internal/platform/objectgc"
 	"thura/internal/platform/objectstore"
 	livekit "thura/internal/providers/livekit"
-	provider "thura/internal/providers/onlyoffice"
 	"thura/internal/setup"
 )
 
@@ -91,11 +90,7 @@ func appHeaders() []middleware.Middleware {
 	// CSSOM. Allow only that empty element's hash, keeping other inline styles
 	// blocked and retaining the default script policy.
 	policy := middleware.AddCSP(middleware.DefaultCSP, "style-src", "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='")
-	if cfg, err := provider.Load(); err == nil {
-		policy = middleware.AddCSP(policy, "script-src", cfg.ServerURL)
-		policy = middleware.AddCSP(policy, "frame-src", "'self'", cfg.ServerURL)
-		policy = middleware.AddCSP(policy, "connect-src", cfg.ServerURL)
-	}
+	policy = middleware.AddCSP(policy, "frame-src", "'self'")
 	permissions := middleware.DefaultPermissionsPolicy
 	if cfg, err := livekit.Load(); err == nil {
 		policy = middleware.AddCSP(policy, "connect-src", cfg.PublicURL)

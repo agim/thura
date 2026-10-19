@@ -521,24 +521,27 @@ model OfficeSession {
  fileId uuid @ref(DriveFile) @index
  subject string
  sourceVersion int
- baseVersion int
  documentKey string
- lastChecksum string @default("")
  expiresAt time
  createdAt time @default(now())
 }
+model WopiLock {
+ id uuid @id @default(uuid())
+ fileId uuid @ref(DriveFile) @unique
+ lockId string @default("")
+ baseVersion int
+ expiresAt time
+}
+type OfficeCapabilities {
+ extensions string[]
+ contentTypes string[]
+}
 type OfficeConfig {
- scriptUrl string
- config json
-}
-type OfficeCallback {
- key string
- status int
- url string?
- token string?
-}
-type OfficeResult {
- error int
+ provider string
+ editorUrl string
+ accessToken string
+ accessTokenTTL int
+ readOnly bool
 }
 type OfficeConversionInput {
  target string @min(3) @max(4)

@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/url"
@@ -124,24 +123,24 @@ func TestSetupRoutingPublicationAndDraftRestart(t *testing.T) {
 	if r := s.JSON(t, "GET", "/api/v1/workspaces", nil, nil); r.StatusCode != 200 {
 		t.Fatal("published installation remained blocked")
 	}
-	// Office callbacks use the document provider's bearer token, not a Thura
-	// session. The setup gate must leave that verification to the provider.
-	request, err := http.NewRequest("POST", s.URL+"/api/v1/office/callback/unknown", strings.NewReader(`{"status":2}`))
+	// WOPI owns bearer verification; the active setup gate must not reinterpret it as a Thura session.
+	t.Setenv("COLLABORA_SERVER_URL", "https://documents.example")
+	t.Setenv("COLLABORA_APP_URL", "https://setup.example")
+	t.Setenv("COLLABORA_TOKEN_SECRET", "test-wopi-routing-secret-maple-816293")
+	request, err := http.NewRequest("POST", s.URL+"/api/v1/wopi/files/unknown?access_token=invalid", strings.NewReader(""))
 	if err != nil {
 		t.Fatal(err)
 	}
-	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer PUBLIC-provider-token-not-a-Thura-session")
 	response, err := s.Client().Do(request)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var callback schema.OfficeResult
-	err = json.NewDecoder(response.Body).Decode(&callback)
-	response.Body.Close()
-	if err != nil || response.StatusCode != 200 || callback.Error != 1 {
-		t.Fatal("setup gate intercepted document-provider authentication")
+	if response.StatusCode != 401 {
+		t.Fatal("setup gate intercepted WOPI authentication")
 	}
+	response.Body.Close()
+
 	revision, _, _ = setupRow(t, s)
 	r = setupForm(t, s, "restart", url.Values{"revision": {strconv.Itoa(revision)}, "confirm": {"restart"}, "step": {"server"}})
 	if strings.Contains(r.Header.Get("Location"), "error=") {

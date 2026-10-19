@@ -12,7 +12,7 @@ test('office editing reports an unconfigured service without claiming a saved ed
   await page.getByLabel('Upload file', { exact: true }).setInputFiles({ name, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer })
   await expect(page.getByRole('status')).toHaveText('Upload complete')
   await openViewedFile(page)
-  await expect(page.getByRole('alert')).toHaveText('Document editing is not configured')
+  await expect(page.getByRole('alert')).toHaveText('Collabora editing is not configured')
   await expect(page.locator('.office-editor iframe')).toHaveCount(0)
   await page.getByRole('button', { name: 'Back to Drive', exact: true }).click()
   await page.getByRole('button', { name, exact: true }).click()

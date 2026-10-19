@@ -633,9 +633,7 @@ type OfficeSession struct {
 	FileID        string    `json:"file_id"`
 	Subject       string    `json:"subject"`
 	SourceVersion int32     `json:"source_version"`
-	BaseVersion   int32     `json:"base_version"`
 	DocumentKey   string    `json:"document_key"`
-	LastChecksum  string    `json:"last_checksum"`
 	ExpiresAt     time.Time `json:"expires_at"`
 	CreatedAt     time.Time `json:"created_at"`
 }
@@ -770,6 +768,14 @@ type UploadSession struct {
 	ExpiresAt    time.Time  `json:"expires_at"`
 	CompletedAt  *time.Time `json:"completed_at"`
 	CreatedAt    time.Time  `json:"created_at"`
+}
+
+type WopiLock struct {
+	ID          string    `json:"id"`
+	FileID      string    `json:"file_id"`
+	LockID      string    `json:"lock_id"`
+	BaseVersion int32     `json:"base_version"`
+	ExpiresAt   time.Time `json:"expires_at"`
 }
 
 type Workspace struct {

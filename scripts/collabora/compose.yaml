@@ -1,0 +1,20 @@
+# Supply a tested image digest for your CPU architecture and the exact WOPI origin.
+services:
+  collabora:
+    image: ${COLLABORA_IMAGE:?Set COLLABORA_IMAGE to a tested official image digest}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8091:9980"
+    command:
+      - --o:ssl.enable=false
+      - --o:ssl.termination=true
+      - --o:net.service_root=/api/v1/collabora
+      - --o:storage.wopi.alias_groups[@mode]=groups
+      - --o:storage.wopi.alias_groups.group[0].host=${THURA_WOPI_ORIGIN:?Set the exact Thura origin reachable by Collabora}
+      - --o:storage.wopi.alias_groups.group[0].host[@allow]=true
+      - --o:admin_console.enable=false
+      - --o:logging.level=warning
+    # Distroless CODE images have no shell; the stock /livez check also omits
+    # service_root. Monitor /api/v1/collabora/hosting/discovery externally.
+    healthcheck:
+      disable: true

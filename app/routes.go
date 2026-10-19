@@ -9,8 +9,8 @@ import (
 	"thura/handlers"
 	"thura/internal/federation"
 	"thura/internal/meet"
-	"thura/internal/office"
-	officeprovider "thura/internal/providers/onlyoffice"
+	"thura/internal/providers/collabora"
+	"thura/internal/wopi"
 
 	"thura/schema"
 )
@@ -26,10 +26,12 @@ func routes(r *router.Router) {
 	// Versioned peer wire endpoint; all application routes stay under /api.
 	r.HandleFunc("POST /api/v1/smip/v0.1/messages", federation.Receive)
 	r.HandleFunc("POST /api/v1/meet/webhook", meet.Webhook)
-	r.HandleFunc("GET /api/v1/office/source", office.Source)
-	r.HandleFunc("POST /api/v1/office/callback/{id}", office.Callback)
+	r.HandleFunc("GET /api/v1/wopi/files/{id}", wopi.Handler)
+	r.HandleFunc("POST /api/v1/wopi/files/{id}", wopi.Handler)
+	r.HandleFunc("GET /api/v1/wopi/files/{id}/contents", wopi.Handler)
+	r.HandleFunc("POST /api/v1/wopi/files/{id}/contents", wopi.Handler)
 	auth.Mount(r, auth.Options{NoRegister: true, Providers: []auth.Provider{}, Title: "Thura"})
-	r.Group("/api/v1/office/editor", auth.Require()).HandleFunc("/api/v1/office/editor/", officeprovider.Proxy)
+	r.Group("/api/v1/collabora", auth.Require()).HandleFunc("/api/v1/collabora/", collabora.Proxy)
 	router.Route(r, "GET /api/v1/hello/{name}", hello)
 	router.Route(r, "POST /api/v1/inbound/{mailboxId}", handlers.ReceiveMail, router.UploadLimit(12<<20))
 	router.Route(r.Group("/api/v1/invitations", auth.Optional()), "POST /api/v1/invitations/accept", handlers.AcceptInvite, auth.Throttle())
@@ -133,6 +135,7 @@ func routes(r *router.Router) {
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares", handlers.CreateDriveShare)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares", handlers.ListDriveShares)
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/drive/files/{id}/shares/{shareId}", handlers.RevokeDriveShare)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/drive/office-capabilities", handlers.GetOfficeCapabilities)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/office", handlers.OpenOfficeDocument)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/convert", handlers.ConvertOfficeDocument)
 	router.Route(ai, "POST /api/v1/workspaces/{workspaceId}/drive/files/{id}/ocr", handlers.RequestDriveOCR)

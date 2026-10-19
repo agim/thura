@@ -29,7 +29,7 @@
         "tentative",
         "declined"
       ],
-      "Line": 587
+      "Line": 603
     }
   ],
   "Models": [
@@ -4393,25 +4393,6 @@
           "Line": 523
         },
         {
-          "Name": "baseVersion",
-          "Type": "int",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 524
-        },
-        {
           "Name": "documentKey",
           "Type": "string",
           "Optional": false,
@@ -4428,26 +4409,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 525
-        },
-        {
-          "Name": "lastChecksum",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "\"\"",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 526
+          "Line": 524
         },
         {
           "Name": "expiresAt",
@@ -4466,7 +4428,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 527
+          "Line": 525
         },
         {
           "Name": "createdAt",
@@ -4485,11 +4447,115 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 528
+          "Line": 526
         }
       ],
       "Indexes": null,
       "Line": 519,
+      "Persisted": true
+    },
+    {
+      "Name": "WopiLock",
+      "Table": "wopi_lock",
+      "Fields": [
+        {
+          "Name": "id",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": true,
+          "Unique": false,
+          "Index": false,
+          "Default": "uuid()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 529
+        },
+        {
+          "Name": "fileId",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": true,
+          "Index": false,
+          "Default": "",
+          "Ref": "DriveFile",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 530
+        },
+        {
+          "Name": "lockId",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "\"\"",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 531
+        },
+        {
+          "Name": "baseVersion",
+          "Type": "int",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 532
+        },
+        {
+          "Name": "expiresAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 533
+        }
+      ],
+      "Indexes": null,
+      "Line": 528,
       "Persisted": true
     },
     {
@@ -4513,7 +4579,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 545
+          "Line": 561
         },
         {
           "Name": "workspaceId",
@@ -4532,7 +4598,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 546
+          "Line": 562
         },
         {
           "Name": "name",
@@ -4551,7 +4617,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 547
+          "Line": 563
         },
         {
           "Name": "color",
@@ -4570,7 +4636,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 548
+          "Line": 564
         },
         {
           "Name": "ownerSubject",
@@ -4589,7 +4655,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 549
+          "Line": 565
         },
         {
           "Name": "createdAt",
@@ -4608,11 +4674,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 550
+          "Line": 566
         }
       ],
       "Indexes": null,
-      "Line": 544,
+      "Line": 560,
       "Persisted": true
     },
     {
@@ -4636,7 +4702,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 553
+          "Line": 569
         },
         {
           "Name": "id",
@@ -4655,7 +4721,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 554
+          "Line": 570
         },
         {
           "Name": "calendarId",
@@ -4674,7 +4740,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 555
+          "Line": 571
         },
         {
           "Name": "uid",
@@ -4693,7 +4759,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 556
+          "Line": 572
         },
         {
           "Name": "organizer",
@@ -4712,7 +4778,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 557
+          "Line": 573
         },
         {
           "Name": "title",
@@ -4731,7 +4797,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 558
+          "Line": 574
         },
         {
           "Name": "description",
@@ -4750,7 +4816,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 559
+          "Line": 575
         },
         {
           "Name": "descriptionHtml",
@@ -4769,7 +4835,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 560
+          "Line": 576
         },
         {
           "Name": "location",
@@ -4788,7 +4854,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 561
+          "Line": 577
         },
         {
           "Name": "allDay",
@@ -4807,7 +4873,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 562
+          "Line": 578
         },
         {
           "Name": "startDate",
@@ -4826,7 +4892,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 563
+          "Line": 579
         },
         {
           "Name": "endDate",
@@ -4837,270 +4903,6 @@
           "Unique": false,
           "Index": false,
           "Default": "\"\"",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 564
-        },
-        {
-          "Name": "startsAt",
-          "Type": "time",
-          "Optional": true,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 565
-        },
-        {
-          "Name": "endsAt",
-          "Type": "time",
-          "Optional": true,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 566
-        },
-        {
-          "Name": "timeZone",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 567
-        },
-        {
-          "Name": "rrule",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "\"\"",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 568
-        },
-        {
-          "Name": "sequence",
-          "Type": "int",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "0",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 569
-        },
-        {
-          "Name": "cancelled",
-          "Type": "bool",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "false",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 570
-        },
-        {
-          "Name": "createdAt",
-          "Type": "time",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "now()",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 571
-        },
-        {
-          "Name": "updatedAt",
-          "Type": "time",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "now()",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 572
-        }
-      ],
-      "Indexes": [
-        {
-          "Fields": [
-            "calendarId",
-            "uid"
-          ],
-          "Unique": true
-        }
-      ],
-      "Line": 552,
-      "Persisted": true
-    },
-    {
-      "Name": "EventException",
-      "Table": "event_exception",
-      "Fields": [
-        {
-          "Name": "id",
-          "Type": "uuid",
-          "Optional": false,
-          "Array": false,
-          "ID": true,
-          "Unique": false,
-          "Index": false,
-          "Default": "uuid()",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 576
-        },
-        {
-          "Name": "eventId",
-          "Type": "uuid",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": true,
-          "Default": "",
-          "Ref": "CalendarEvent",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 577
-        },
-        {
-          "Name": "instanceKey",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 578
-        },
-        {
-          "Name": "cancelled",
-          "Type": "bool",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 579
-        },
-        {
-          "Name": "title",
-          "Type": "string",
-          "Optional": true,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
           "Ref": "",
           "OnDelete": "",
           "Min": null,
@@ -5150,6 +4952,270 @@
           "Line": 582
         },
         {
+          "Name": "timeZone",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 583
+        },
+        {
+          "Name": "rrule",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "\"\"",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 584
+        },
+        {
+          "Name": "sequence",
+          "Type": "int",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "0",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 585
+        },
+        {
+          "Name": "cancelled",
+          "Type": "bool",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "false",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 586
+        },
+        {
+          "Name": "createdAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "now()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 587
+        },
+        {
+          "Name": "updatedAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "now()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 588
+        }
+      ],
+      "Indexes": [
+        {
+          "Fields": [
+            "calendarId",
+            "uid"
+          ],
+          "Unique": true
+        }
+      ],
+      "Line": 568,
+      "Persisted": true
+    },
+    {
+      "Name": "EventException",
+      "Table": "event_exception",
+      "Fields": [
+        {
+          "Name": "id",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": true,
+          "Unique": false,
+          "Index": false,
+          "Default": "uuid()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 592
+        },
+        {
+          "Name": "eventId",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": true,
+          "Default": "",
+          "Ref": "CalendarEvent",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 593
+        },
+        {
+          "Name": "instanceKey",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 594
+        },
+        {
+          "Name": "cancelled",
+          "Type": "bool",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 595
+        },
+        {
+          "Name": "title",
+          "Type": "string",
+          "Optional": true,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 596
+        },
+        {
+          "Name": "startsAt",
+          "Type": "time",
+          "Optional": true,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 597
+        },
+        {
+          "Name": "endsAt",
+          "Type": "time",
+          "Optional": true,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 598
+        },
+        {
           "Name": "startDate",
           "Type": "string",
           "Optional": true,
@@ -5166,7 +5232,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 583
+          "Line": 599
         },
         {
           "Name": "endDate",
@@ -5185,7 +5251,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 584
+          "Line": 600
         }
       ],
       "Indexes": [
@@ -5197,7 +5263,7 @@
           "Unique": true
         }
       ],
-      "Line": 575,
+      "Line": 591,
       "Persisted": true
     },
     {
@@ -5221,7 +5287,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 589
+          "Line": 605
         },
         {
           "Name": "eventId",
@@ -5240,7 +5306,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 590
+          "Line": 606
         },
         {
           "Name": "email",
@@ -5259,7 +5325,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 591
+          "Line": 607
         },
         {
           "Name": "response",
@@ -5278,7 +5344,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 592
+          "Line": 608
         },
         {
           "Name": "responseSequence",
@@ -5297,7 +5363,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 593
+          "Line": 609
         }
       ],
       "Indexes": [
@@ -5309,7 +5375,7 @@
           "Unique": true
         }
       ],
-      "Line": 588,
+      "Line": 604,
       "Persisted": true
     },
     {
@@ -5333,7 +5399,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 667
+          "Line": 683
         },
         {
           "Name": "attendeeId",
@@ -5352,7 +5418,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 668
+          "Line": 684
         },
         {
           "Name": "tokenHash",
@@ -5371,7 +5437,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 669
+          "Line": 685
         },
         {
           "Name": "sequence",
@@ -5390,7 +5456,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 670
+          "Line": 686
         },
         {
           "Name": "instanceKey",
@@ -5409,7 +5475,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 671
+          "Line": 687
         },
         {
           "Name": "expiresAt",
@@ -5428,7 +5494,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 672
+          "Line": 688
         },
         {
           "Name": "createdAt",
@@ -5447,241 +5513,16 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 673
+          "Line": 689
         }
       ],
       "Indexes": null,
-      "Line": 666,
+      "Line": 682,
       "Persisted": true
     },
     {
       "Name": "CalendarDispatch",
       "Table": "calendar_dispatch",
-      "Fields": [
-        {
-          "Name": "id",
-          "Type": "uuid",
-          "Optional": false,
-          "Array": false,
-          "ID": true,
-          "Unique": false,
-          "Index": false,
-          "Default": "uuid()",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 676
-        },
-        {
-          "Name": "eventId",
-          "Type": "uuid",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": true,
-          "Default": "",
-          "Ref": "CalendarEvent",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 677
-        },
-        {
-          "Name": "sequence",
-          "Type": "int",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 678
-        },
-        {
-          "Name": "instanceKey",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "\"\"",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 679
-        },
-        {
-          "Name": "createdAt",
-          "Type": "time",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "now()",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 680
-        }
-      ],
-      "Indexes": [
-        {
-          "Fields": [
-            "eventId",
-            "sequence",
-            "instanceKey"
-          ],
-          "Unique": true
-        }
-      ],
-      "Line": 675,
-      "Persisted": true
-    },
-    {
-      "Name": "CalendarReminder",
-      "Table": "calendar_reminder",
-      "Fields": [
-        {
-          "Name": "id",
-          "Type": "uuid",
-          "Optional": false,
-          "Array": false,
-          "ID": true,
-          "Unique": false,
-          "Index": false,
-          "Default": "uuid()",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 684
-        },
-        {
-          "Name": "eventId",
-          "Type": "uuid",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": true,
-          "Default": "",
-          "Ref": "CalendarEvent",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 685
-        },
-        {
-          "Name": "subject",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 686
-        },
-        {
-          "Name": "minutesBefore",
-          "Type": "int",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 687
-        },
-        {
-          "Name": "createdAt",
-          "Type": "time",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "now()",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 688
-        }
-      ],
-      "Indexes": [
-        {
-          "Fields": [
-            "eventId",
-            "subject"
-          ],
-          "Unique": true
-        }
-      ],
-      "Line": 683,
-      "Persisted": true
-    },
-    {
-      "Name": "ReminderNotice",
-      "Table": "reminder_notice",
       "Fields": [
         {
           "Name": "id",
@@ -5722,8 +5563,8 @@
           "Line": 693
         },
         {
-          "Name": "subject",
-          "Type": "string",
+          "Name": "sequence",
+          "Type": "int",
           "Optional": false,
           "Array": false,
           "ID": false,
@@ -5741,14 +5582,14 @@
           "Line": 694
         },
         {
-          "Name": "sequence",
-          "Type": "int",
+          "Name": "instanceKey",
+          "Type": "string",
           "Optional": false,
           "Array": false,
           "ID": false,
           "Unique": false,
           "Index": false,
-          "Default": "",
+          "Default": "\"\"",
           "Ref": "",
           "OnDelete": "",
           "Min": null,
@@ -5758,25 +5599,6 @@
           "Timezone": false,
           "Pattern": "",
           "Line": 695
-        },
-        {
-          "Name": "instanceKey",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 696
         },
         {
           "Name": "createdAt",
@@ -5795,7 +5617,251 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 697
+          "Line": 696
+        }
+      ],
+      "Indexes": [
+        {
+          "Fields": [
+            "eventId",
+            "sequence",
+            "instanceKey"
+          ],
+          "Unique": true
+        }
+      ],
+      "Line": 691,
+      "Persisted": true
+    },
+    {
+      "Name": "CalendarReminder",
+      "Table": "calendar_reminder",
+      "Fields": [
+        {
+          "Name": "id",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": true,
+          "Unique": false,
+          "Index": false,
+          "Default": "uuid()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 700
+        },
+        {
+          "Name": "eventId",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": true,
+          "Default": "",
+          "Ref": "CalendarEvent",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 701
+        },
+        {
+          "Name": "subject",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 702
+        },
+        {
+          "Name": "minutesBefore",
+          "Type": "int",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 703
+        },
+        {
+          "Name": "createdAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "now()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 704
+        }
+      ],
+      "Indexes": [
+        {
+          "Fields": [
+            "eventId",
+            "subject"
+          ],
+          "Unique": true
+        }
+      ],
+      "Line": 699,
+      "Persisted": true
+    },
+    {
+      "Name": "ReminderNotice",
+      "Table": "reminder_notice",
+      "Fields": [
+        {
+          "Name": "id",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": true,
+          "Unique": false,
+          "Index": false,
+          "Default": "uuid()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 708
+        },
+        {
+          "Name": "eventId",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": true,
+          "Default": "",
+          "Ref": "CalendarEvent",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 709
+        },
+        {
+          "Name": "subject",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 710
+        },
+        {
+          "Name": "sequence",
+          "Type": "int",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 711
+        },
+        {
+          "Name": "instanceKey",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 712
+        },
+        {
+          "Name": "createdAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "now()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 713
         }
       ],
       "Indexes": [
@@ -5809,7 +5875,7 @@
           "Unique": true
         }
       ],
-      "Line": 691,
+      "Line": 707,
       "Persisted": true
     },
     {
@@ -5833,7 +5899,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 732
+          "Line": 748
         },
         {
           "Name": "workspaceId",
@@ -5852,7 +5918,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 733
+          "Line": 749
         },
         {
           "Name": "matrixRoomId",
@@ -5871,7 +5937,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 734
+          "Line": 750
         },
         {
           "Name": "requestId",
@@ -5890,7 +5956,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 735
+          "Line": 751
         },
         {
           "Name": "name",
@@ -5909,7 +5975,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 736
+          "Line": 752
         },
         {
           "Name": "direct",
@@ -5928,7 +5994,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 737
+          "Line": 753
         },
         {
           "Name": "createdBy",
@@ -5947,7 +6013,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 738
+          "Line": 754
         },
         {
           "Name": "createdAt",
@@ -5966,7 +6032,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 739
+          "Line": 755
         }
       ],
       "Indexes": [
@@ -5978,7 +6044,7 @@
           "Unique": true
         }
       ],
-      "Line": 731,
+      "Line": 747,
       "Persisted": true
     },
     {
@@ -6002,7 +6068,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 743
+          "Line": 759
         },
         {
           "Name": "roomId",
@@ -6021,7 +6087,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 744
+          "Line": 760
         },
         {
           "Name": "subject",
@@ -6040,7 +6106,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 745
+          "Line": 761
         },
         {
           "Name": "createdAt",
@@ -6059,7 +6125,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 746
+          "Line": 762
         }
       ],
       "Indexes": [
@@ -6071,7 +6137,7 @@
           "Unique": true
         }
       ],
-      "Line": 742,
+      "Line": 758,
       "Persisted": true
     },
     {
@@ -6095,7 +6161,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 796
+          "Line": 812
         },
         {
           "Name": "workspaceId",
@@ -6114,7 +6180,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 797
+          "Line": 813
         },
         {
           "Name": "requestId",
@@ -6133,7 +6199,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 798
+          "Line": 814
         },
         {
           "Name": "name",
@@ -6152,7 +6218,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 799
+          "Line": 815
         },
         {
           "Name": "createdBy",
@@ -6171,7 +6237,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 800
+          "Line": 816
         },
         {
           "Name": "endedAt",
@@ -6190,7 +6256,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 801
+          "Line": 817
         },
         {
           "Name": "createdAt",
@@ -6209,7 +6275,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 802
+          "Line": 818
         }
       ],
       "Indexes": [
@@ -6221,7 +6287,7 @@
           "Unique": true
         }
       ],
-      "Line": 795,
+      "Line": 811,
       "Persisted": true
     },
     {
@@ -6245,7 +6311,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 806
+          "Line": 822
         },
         {
           "Name": "meetingId",
@@ -6264,7 +6330,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 807
+          "Line": 823
         },
         {
           "Name": "eventId",
@@ -6283,7 +6349,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 808
+          "Line": 824
         },
         {
           "Name": "code",
@@ -6302,7 +6368,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 809
+          "Line": 825
         },
         {
           "Name": "pinHash",
@@ -6321,7 +6387,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 810
+          "Line": 826
         },
         {
           "Name": "pinSealed",
@@ -6340,7 +6406,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 811
+          "Line": 827
         },
         {
           "Name": "expiresAt",
@@ -6359,11 +6425,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 812
+          "Line": 828
         }
       ],
       "Indexes": null,
-      "Line": 805,
+      "Line": 821,
       "Persisted": true
     },
     {
@@ -6387,7 +6453,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 828
+          "Line": 844
         },
         {
           "Name": "id",
@@ -6406,7 +6472,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 829
+          "Line": 845
         },
         {
           "Name": "meetingId",
@@ -6425,7 +6491,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 830
+          "Line": 846
         },
         {
           "Name": "subject",
@@ -6444,7 +6510,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 831
+          "Line": 847
         },
         {
           "Name": "tokenExpiresAt",
@@ -6463,7 +6529,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 832
+          "Line": 848
         },
         {
           "Name": "joined",
@@ -6482,7 +6548,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 833
+          "Line": 849
         },
         {
           "Name": "sessionId",
@@ -6501,7 +6567,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 834
+          "Line": 850
         },
         {
           "Name": "updatedAt",
@@ -6520,7 +6586,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 835
+          "Line": 851
         }
       ],
       "Indexes": [
@@ -6532,7 +6598,7 @@
           "Unique": true
         }
       ],
-      "Line": 827,
+      "Line": 843,
       "Persisted": true
     },
     {
@@ -6556,7 +6622,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 839
+          "Line": 855
         },
         {
           "Name": "eventId",
@@ -6575,7 +6641,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 840
+          "Line": 856
         },
         {
           "Name": "checksum",
@@ -6594,7 +6660,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 841
+          "Line": 857
         },
         {
           "Name": "createdAt",
@@ -6613,11 +6679,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 842
+          "Line": 858
         }
       ],
       "Indexes": null,
-      "Line": 838,
+      "Line": 854,
       "Persisted": true
     },
     {
@@ -6641,7 +6707,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 866
+          "Line": 882
         },
         {
           "Name": "workspaceId",
@@ -6660,7 +6726,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 867
+          "Line": 883
         },
         {
           "Name": "mailboxId",
@@ -6679,7 +6745,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 868
+          "Line": 884
         },
         {
           "Name": "name",
@@ -6698,7 +6764,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 869
+          "Line": 885
         }
       ],
       "Indexes": [
@@ -6710,7 +6776,7 @@
           "Unique": true
         }
       ],
-      "Line": 865,
+      "Line": 881,
       "Persisted": true
     },
     {
@@ -6734,7 +6800,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 873
+          "Line": 889
         },
         {
           "Name": "itemId",
@@ -6753,7 +6819,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 874
+          "Line": 890
         },
         {
           "Name": "labelId",
@@ -6772,7 +6838,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 875
+          "Line": 891
         }
       ],
       "Indexes": [
@@ -6784,7 +6850,7 @@
           "Unique": true
         }
       ],
-      "Line": 872,
+      "Line": 888,
       "Persisted": true
     },
     {
@@ -6808,7 +6874,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 901
+          "Line": 917
         },
         {
           "Name": "at",
@@ -6827,7 +6893,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 902
+          "Line": 918
         },
         {
           "Name": "actor",
@@ -6846,7 +6912,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 903
+          "Line": 919
         },
         {
           "Name": "action",
@@ -6865,7 +6931,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 904
+          "Line": 920
         },
         {
           "Name": "resource",
@@ -6884,7 +6950,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 905
+          "Line": 921
         },
         {
           "Name": "scope",
@@ -6903,7 +6969,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 906
+          "Line": 922
         },
         {
           "Name": "outcome",
@@ -6922,7 +6988,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 907
+          "Line": 923
         },
         {
           "Name": "requestId",
@@ -6941,7 +7007,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 908
+          "Line": 924
         },
         {
           "Name": "meta",
@@ -6960,7 +7026,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 909
+          "Line": 925
         }
       ],
       "Indexes": [
@@ -6986,7 +7052,7 @@
           "Unique": false
         }
       ],
-      "Line": 900,
+      "Line": 916,
       "Persisted": true
     },
     {
@@ -7010,7 +7076,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 917
+          "Line": 933
         },
         {
           "Name": "workspaceId",
@@ -7029,7 +7095,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 918
+          "Line": 934
         },
         {
           "Name": "peer",
@@ -7048,7 +7114,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 919
+          "Line": 935
         },
         {
           "Name": "stream",
@@ -7067,7 +7133,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 920
+          "Line": 936
         },
         {
           "Name": "sender",
@@ -7086,7 +7152,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 921
+          "Line": 937
         },
         {
           "Name": "recipient",
@@ -7105,7 +7171,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 922
+          "Line": 938
         },
         {
           "Name": "enabled",
@@ -7124,7 +7190,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 923
+          "Line": 939
         },
         {
           "Name": "createdBy",
@@ -7143,7 +7209,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 924
+          "Line": 940
         },
         {
           "Name": "createdAt",
@@ -7162,7 +7228,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 925
+          "Line": 941
         }
       ],
       "Indexes": [
@@ -7175,7 +7241,7 @@
           "Unique": true
         }
       ],
-      "Line": 916,
+      "Line": 932,
       "Persisted": true
     },
     {
@@ -7199,7 +7265,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 929
+          "Line": 945
         },
         {
           "Name": "workspaceId",
@@ -7218,7 +7284,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 930
+          "Line": 946
         },
         {
           "Name": "bindingId",
@@ -7237,7 +7303,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 931
+          "Line": 947
         },
         {
           "Name": "origin",
@@ -7256,7 +7322,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 932
+          "Line": 948
         },
         {
           "Name": "messageId",
@@ -7275,7 +7341,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 933
+          "Line": 949
         },
         {
           "Name": "digest",
@@ -7294,7 +7360,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 934
+          "Line": 950
         },
         {
           "Name": "record",
@@ -7313,7 +7379,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 935
+          "Line": 951
         },
         {
           "Name": "originKey",
@@ -7332,7 +7398,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 936
+          "Line": 952
         },
         {
           "Name": "receiptKey",
@@ -7351,7 +7417,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 937
+          "Line": 953
         },
         {
           "Name": "sender",
@@ -7370,7 +7436,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 938
+          "Line": 954
         },
         {
           "Name": "recipient",
@@ -7389,7 +7455,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 939
+          "Line": 955
         },
         {
           "Name": "stream",
@@ -7408,7 +7474,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 940
+          "Line": 956
         },
         {
           "Name": "body",
@@ -7427,7 +7493,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 941
+          "Line": 957
         },
         {
           "Name": "name",
@@ -7446,7 +7512,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 942
+          "Line": 958
         },
         {
           "Name": "kind",
@@ -7465,7 +7531,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 943
+          "Line": 959
         },
         {
           "Name": "size",
@@ -7484,7 +7550,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 944
+          "Line": 960
         },
         {
           "Name": "importedFileId",
@@ -7503,7 +7569,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 945
+          "Line": 961
         },
         {
           "Name": "importedAt",
@@ -7522,7 +7588,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 946
+          "Line": 962
         },
         {
           "Name": "acceptedAt",
@@ -7541,7 +7607,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 947
+          "Line": 963
         }
       ],
       "Indexes": [
@@ -7553,7 +7619,7 @@
           "Unique": true
         }
       ],
-      "Line": 928,
+      "Line": 944,
       "Persisted": true
     },
     {
@@ -7577,7 +7643,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 988
+          "Line": 1004
         },
         {
           "Name": "origin",
@@ -7596,7 +7662,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 989
+          "Line": 1005
         },
         {
           "Name": "workspaceId",
@@ -7615,7 +7681,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 990
+          "Line": 1006
         },
         {
           "Name": "bindingId",
@@ -7634,7 +7700,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 991
+          "Line": 1007
         },
         {
           "Name": "subject",
@@ -7653,7 +7719,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 992
+          "Line": 1008
         },
         {
           "Name": "packet",
@@ -7672,7 +7738,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 993
+          "Line": 1009
         },
         {
           "Name": "originKey",
@@ -7691,7 +7757,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 994
+          "Line": 1010
         },
         {
           "Name": "receipt",
@@ -7710,7 +7776,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 995
+          "Line": 1011
         },
         {
           "Name": "receiptKey",
@@ -7729,7 +7795,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 996
+          "Line": 1012
         },
         {
           "Name": "kind",
@@ -7748,7 +7814,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 997
+          "Line": 1013
         },
         {
           "Name": "body",
@@ -7767,7 +7833,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 998
+          "Line": 1014
         },
         {
           "Name": "name",
@@ -7786,7 +7852,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 999
+          "Line": 1015
         },
         {
           "Name": "size",
@@ -7805,7 +7871,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1000
+          "Line": 1016
         },
         {
           "Name": "sourceFileId",
@@ -7824,7 +7890,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1001
+          "Line": 1017
         },
         {
           "Name": "state",
@@ -7843,7 +7909,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1002
+          "Line": 1018
         },
         {
           "Name": "reason",
@@ -7862,7 +7928,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1003
+          "Line": 1019
         },
         {
           "Name": "attempts",
@@ -7881,7 +7947,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1004
+          "Line": 1020
         },
         {
           "Name": "attemptId",
@@ -7900,7 +7966,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1005
+          "Line": 1021
         },
         {
           "Name": "lastStatus",
@@ -7919,7 +7985,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1006
+          "Line": 1022
         },
         {
           "Name": "nextAttempt",
@@ -7938,7 +8004,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1007
+          "Line": 1023
         },
         {
           "Name": "createdAt",
@@ -7957,7 +8023,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1008
+          "Line": 1024
         },
         {
           "Name": "updatedAt",
@@ -7976,11 +8042,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1009
+          "Line": 1025
         }
       ],
       "Indexes": null,
-      "Line": 987,
+      "Line": 1003,
       "Persisted": true
     },
     {
@@ -8004,7 +8070,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1042
+          "Line": 1058
         },
         {
           "Name": "subject",
@@ -8023,7 +8089,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1043
+          "Line": 1059
         },
         {
           "Name": "workspaceId",
@@ -8042,7 +8108,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1044
+          "Line": 1060
         },
         {
           "Name": "revision",
@@ -8061,7 +8127,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1045
+          "Line": 1061
         },
         {
           "Name": "publishedRevision",
@@ -8080,7 +8146,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1046
+          "Line": 1062
         },
         {
           "Name": "draft",
@@ -8099,7 +8165,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1047
+          "Line": 1063
         },
         {
           "Name": "published",
@@ -8118,7 +8184,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1048
+          "Line": 1064
         },
         {
           "Name": "step",
@@ -8137,7 +8203,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1049
+          "Line": 1065
         },
         {
           "Name": "publishedAt",
@@ -8156,11 +8222,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1050
+          "Line": 1066
         }
       ],
       "Indexes": null,
-      "Line": 1041,
+      "Line": 1057,
       "Persisted": true
     },
     {
@@ -8184,7 +8250,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1073
+          "Line": 1089
         },
         {
           "Name": "tokenHash",
@@ -8203,7 +8269,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1074
+          "Line": 1090
         },
         {
           "Name": "subject",
@@ -8222,7 +8288,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1075
+          "Line": 1091
         },
         {
           "Name": "claimedAt",
@@ -8241,7 +8307,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1076
+          "Line": 1092
         },
         {
           "Name": "createdAt",
@@ -8260,7 +8326,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1077
+          "Line": 1093
         },
         {
           "Name": "updatedAt",
@@ -8279,11 +8345,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1078
+          "Line": 1094
         }
       ],
       "Indexes": null,
-      "Line": 1072,
+      "Line": 1088,
       "Persisted": true
     },
     {
@@ -8307,7 +8373,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1084
+          "Line": 1100
         },
         {
           "Name": "kind",
@@ -8326,7 +8392,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1085
+          "Line": 1101
         },
         {
           "Name": "subject",
@@ -8345,7 +8411,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1086
+          "Line": 1102
         },
         {
           "Name": "revision",
@@ -8364,7 +8430,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1087
+          "Line": 1103
         },
         {
           "Name": "fingerprint",
@@ -8383,7 +8449,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1088
+          "Line": 1104
         },
         {
           "Name": "state",
@@ -8402,7 +8468,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1089
+          "Line": 1105
         },
         {
           "Name": "createdAt",
@@ -8421,7 +8487,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1090
+          "Line": 1106
         },
         {
           "Name": "updatedAt",
@@ -8440,7 +8506,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1091
+          "Line": 1107
         }
       ],
       "Indexes": [
@@ -8462,7 +8528,7 @@
           "Unique": false
         }
       ],
-      "Line": 1083,
+      "Line": 1099,
       "Persisted": true
     },
     {
@@ -8486,7 +8552,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1119
+          "Line": 1135
         },
         {
           "Name": "contactId",
@@ -8505,7 +8571,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1120
+          "Line": 1136
         },
         {
           "Name": "source",
@@ -8524,7 +8590,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "^(chat|document|meeting|calendar)$",
-          "Line": 1121
+          "Line": 1137
         },
         {
           "Name": "sourceId",
@@ -8543,7 +8609,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1122
+          "Line": 1138
         },
         {
           "Name": "createdBy",
@@ -8562,7 +8628,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1123
+          "Line": 1139
         },
         {
           "Name": "createdAt",
@@ -8581,7 +8647,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1124
+          "Line": 1140
         }
       ],
       "Indexes": [
@@ -8594,7 +8660,7 @@
           "Unique": true
         }
       ],
-      "Line": 1118,
+      "Line": 1134,
       "Persisted": true
     },
     {
@@ -8618,7 +8684,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1134
+          "Line": 1150
         },
         {
           "Name": "labelId",
@@ -8637,7 +8703,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1135
+          "Line": 1151
         },
         {
           "Name": "source",
@@ -8656,7 +8722,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1136
+          "Line": 1152
         },
         {
           "Name": "sourceId",
@@ -8675,7 +8741,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1137
+          "Line": 1153
         }
       ],
       "Indexes": [
@@ -8688,7 +8754,7 @@
           "Unique": true
         }
       ],
-      "Line": 1133,
+      "Line": 1149,
       "Persisted": true
     },
     {
@@ -8712,7 +8778,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1150
+          "Line": 1166
         },
         {
           "Name": "at",
@@ -8731,7 +8797,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1151
+          "Line": 1167
         },
         {
           "Name": "provider",
@@ -8750,7 +8816,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1152
+          "Line": 1168
         },
         {
           "Name": "model",
@@ -8769,7 +8835,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1153
+          "Line": 1169
         },
         {
           "Name": "label",
@@ -8788,7 +8854,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1154
+          "Line": 1170
         },
         {
           "Name": "input",
@@ -8807,7 +8873,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1155
+          "Line": 1171
         },
         {
           "Name": "output",
@@ -8826,7 +8892,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1156
+          "Line": 1172
         },
         {
           "Name": "ms",
@@ -8845,7 +8911,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1157
+          "Line": 1173
         },
         {
           "Name": "status",
@@ -8864,7 +8930,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1158
+          "Line": 1174
         },
         {
           "Name": "error",
@@ -8883,11 +8949,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1159
+          "Line": 1175
         }
       ],
       "Indexes": null,
-      "Line": 1149,
+      "Line": 1165,
       "Persisted": true
     },
     {
@@ -8911,7 +8977,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1180
+          "Line": 1197
         },
         {
           "Name": "workspaceId",
@@ -8930,7 +8996,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1181
+          "Line": 1198
         },
         {
           "Name": "cacheKey",
@@ -8949,7 +9015,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1182
+          "Line": 1199
         },
         {
           "Name": "leaseToken",
@@ -8968,7 +9034,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1183
+          "Line": 1200
         },
         {
           "Name": "text",
@@ -8987,7 +9053,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1184
+          "Line": 1201
         },
         {
           "Name": "model",
@@ -9006,7 +9072,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1185
+          "Line": 1202
         },
         {
           "Name": "createdAt",
@@ -9025,7 +9091,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1186
+          "Line": 1203
         },
         {
           "Name": "expiresAt",
@@ -9044,7 +9110,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1187
+          "Line": 1204
         }
       ],
       "Indexes": [
@@ -9056,7 +9122,7 @@
           "Unique": true
         }
       ],
-      "Line": 1179,
+      "Line": 1196,
       "Persisted": true
     },
     {
@@ -9080,7 +9146,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1213
+          "Line": 1230
         },
         {
           "Name": "secretSealed",
@@ -9099,7 +9165,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1214
+          "Line": 1231
         },
         {
           "Name": "lastStep",
@@ -9118,7 +9184,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1215
+          "Line": 1232
         },
         {
           "Name": "backupCodes",
@@ -9137,7 +9203,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1216
+          "Line": 1233
         },
         {
           "Name": "enabledAt",
@@ -9156,7 +9222,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1217
+          "Line": 1234
         },
         {
           "Name": "failedCount",
@@ -9175,7 +9241,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1218
+          "Line": 1235
         },
         {
           "Name": "failedAt",
@@ -9194,7 +9260,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1219
+          "Line": 1236
         },
         {
           "Name": "createdAt",
@@ -9213,7 +9279,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1220
+          "Line": 1237
         },
         {
           "Name": "updatedAt",
@@ -9232,11 +9298,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1221
+          "Line": 1238
         }
       ],
       "Indexes": null,
-      "Line": 1212,
+      "Line": 1229,
       "Persisted": true
     },
     {
@@ -9260,7 +9326,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1227
+          "Line": 1244
         },
         {
           "Name": "subject",
@@ -9279,7 +9345,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1228
+          "Line": 1245
         },
         {
           "Name": "sessionId",
@@ -9298,7 +9364,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1229
+          "Line": 1246
         },
         {
           "Name": "purpose",
@@ -9317,7 +9383,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1230
+          "Line": 1247
         },
         {
           "Name": "target",
@@ -9336,7 +9402,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1231
+          "Line": 1248
         },
         {
           "Name": "expiresAt",
@@ -9355,7 +9421,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1232
+          "Line": 1249
         },
         {
           "Name": "createdAt",
@@ -9374,7 +9440,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1233
+          "Line": 1250
         }
       ],
       "Indexes": [
@@ -9387,7 +9453,7 @@
           "Unique": true
         }
       ],
-      "Line": 1226,
+      "Line": 1243,
       "Persisted": true
     },
     {
@@ -9411,7 +9477,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1240
+          "Line": 1257
         },
         {
           "Name": "name",
@@ -9430,249 +9496,12 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1241
+          "Line": 1258
         },
         {
           "Name": "createdBy",
           "Type": "string",
           "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1242
-        },
-        {
-          "Name": "createdAt",
-          "Type": "time",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "now()",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1243
-        },
-        {
-          "Name": "updatedAt",
-          "Type": "time",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "now()",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1244
-        }
-      ],
-      "Indexes": null,
-      "Line": 1239,
-      "Persisted": true
-    },
-    {
-      "Name": "AuthInvite",
-      "Table": "auth_invite",
-      "Fields": [
-        {
-          "Name": "id",
-          "Type": "uuid",
-          "Optional": false,
-          "Array": false,
-          "ID": true,
-          "Unique": false,
-          "Index": false,
-          "Default": "uuid()",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1250
-        },
-        {
-          "Name": "workspace",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1251
-        },
-        {
-          "Name": "email",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1252
-        },
-        {
-          "Name": "role",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1253
-        },
-        {
-          "Name": "tokenHash",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": true,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1254
-        },
-        {
-          "Name": "invitedBy",
-          "Type": "string",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1255
-        },
-        {
-          "Name": "expiresAt",
-          "Type": "time",
-          "Optional": false,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1256
-        },
-        {
-          "Name": "acceptedAt",
-          "Type": "time",
-          "Optional": true,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1257
-        },
-        {
-          "Name": "acceptedBy",
-          "Type": "string",
-          "Optional": true,
-          "Array": false,
-          "ID": false,
-          "Unique": false,
-          "Index": false,
-          "Default": "",
-          "Ref": "",
-          "OnDelete": "",
-          "Min": null,
-          "Max": null,
-          "Email": false,
-          "URL": false,
-          "Timezone": false,
-          "Pattern": "",
-          "Line": 1258
-        },
-        {
-          "Name": "revokedAt",
-          "Type": "time",
-          "Optional": true,
           "Array": false,
           "ID": false,
           "Unique": false,
@@ -9706,6 +9535,243 @@
           "Timezone": false,
           "Pattern": "",
           "Line": 1260
+        },
+        {
+          "Name": "updatedAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "now()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1261
+        }
+      ],
+      "Indexes": null,
+      "Line": 1256,
+      "Persisted": true
+    },
+    {
+      "Name": "AuthInvite",
+      "Table": "auth_invite",
+      "Fields": [
+        {
+          "Name": "id",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": true,
+          "Unique": false,
+          "Index": false,
+          "Default": "uuid()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1267
+        },
+        {
+          "Name": "workspace",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1268
+        },
+        {
+          "Name": "email",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1269
+        },
+        {
+          "Name": "role",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1270
+        },
+        {
+          "Name": "tokenHash",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": true,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1271
+        },
+        {
+          "Name": "invitedBy",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1272
+        },
+        {
+          "Name": "expiresAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1273
+        },
+        {
+          "Name": "acceptedAt",
+          "Type": "time",
+          "Optional": true,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1274
+        },
+        {
+          "Name": "acceptedBy",
+          "Type": "string",
+          "Optional": true,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1275
+        },
+        {
+          "Name": "revokedAt",
+          "Type": "time",
+          "Optional": true,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1276
+        },
+        {
+          "Name": "createdAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "now()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1277
         }
       ],
       "Indexes": [
@@ -9716,7 +9782,7 @@
           "Unique": false
         }
       ],
-      "Line": 1249,
+      "Line": 1266,
       "Persisted": true
     }
   ],

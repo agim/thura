@@ -14,7 +14,7 @@ Thura defaults to **Debian Postfix for sending and receiving**. This guide also 
 | Application database | Private database endpoint | Postgres; migrations applied before startup |
 | File and attachment storage | Persistent private disk or private S3 bucket | Official storage pack |
 | Cache/realtime bus | Private endpoint | Valkey when configured; follow deployment settings |
-| Optional editing/chat/meet | Operator-selected endpoints | ONLYOFFICE, Matrix and LiveKit/TURN |
+| Optional editing/chat/meet | Operator-selected endpoints | Collabora, Matrix and LiveKit/TURN |
 
 Provision the application database with a dedicated role and restrict network access to authorized app/migration/backup processes. Give the migration runner the required schema permissions. Keep Postgres and Valkey off public interfaces, or protect remote connections with authentication, TLS and firewall rules. The cloud development containers' trust authentication is not a production configuration.
 
@@ -29,7 +29,7 @@ Configure client authentication, private listeners and TLS for remote clients be
 
 Choose storage before publishing the wizard. Local storage needs persistent disk shared by every node that accesses the same objects; separate local disks on multiple app nodes are insufficient. S3 needs a pre-created private bucket, region/HTTPS endpoint and credentials limited to the app's bucket/prefix. Enable the provider's public-access blocking and choose backup/versioning policies. Thura's storage check does not prove bucket privacy or durability.
 
-Optional services have separate installation guides: [ONLYOFFICE](office.md), [Matrix](chat.md), [LiveKit/TURN](meet.md) and [experimental paired-server SMIP](protocols/smip-thura.md). Leave these disabled until their services and credentials are ready.
+Optional services have separate installation guides: [Collabora](collabora.md), [Matrix](chat.md), [LiveKit/TURN](meet.md) and [experimental paired-server SMIP](protocols/smip-thura.md). Leave these disabled until their services and credentials are ready.
 
 ## 2. Build and install Thura
 

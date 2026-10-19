@@ -15,16 +15,20 @@ export function DriveFileSurface({workspaceId,subject,file,readOnly,onClose,save
  const {setDockHost}=useAssistant()
  const [dockTarget,setDockTarget]=useState<HTMLDivElement|null>(null)
  useEffect(()=>{setDockHost(dockTarget);return()=>setDockHost(null)},[dockTarget,setDockHost])
+ const [officeReadOnly,setOfficeReadOnly]=useState(readOnly)
  const [target,setTarget]=useState<HTMLDivElement|null>(null)
  const shell=useRef<HTMLElement>(null)
  const closeHandler=useRef(onClose)
  const root=document.getElementById('orbit-workspace')
  const html=/\.html?$/i.test(file.name)
- const office=officeFormat(file.name) && !/\.(html?|txt|md)$/i.test(file.name)
+ const capabilities=useQuery({queryKey:['office-capabilities',workspaceId],queryFn:()=>api.getOfficeCapabilities({workspaceId}),staleTime:60000,retry:false})
+ const ext=file.name.split('.').pop()?.toLowerCase() || ''
+ const advertised=capabilities.data && (capabilities.data.extensions.includes(ext) || capabilities.data.contentTypes.includes(file.contentType)) && !file.contentType.startsWith('image/')
+ const office=advertised || officeFormat(file.name) && !/\.(html?|txt|md)$/i.test(file.name)
  useEffect(()=>{if(!root)return;const siblings=[...root.children].filter(node=>node!==shell.current) as HTMLElement[];const previous=siblings.map(node=>node.inert);siblings.forEach(node=>{node.inert=true});return()=>siblings.forEach((node,index)=>{node.inert=previous[index]})},[root])
  useEffect(()=>{shell.current?.focus()},[])
  if(!root)return null
- return createPortal(<section ref={shell} tabIndex={-1} className="drive-fullscreen" aria-label={`${readOnly?'Viewing':'Editing'} ${file.name}`}><header className="drive-file-topbar"><ActionButton aria-label="Back to Drive" onClick={()=>closeHandler.current()}><X size={20}/></ActionButton><div><h2>{file.name}</h2><span>{readOnly?'View only':officeFormat(file.name)?.editable || html?'Editing':'View only'} · Version {file.currentVersion}</span></div></header><div className="drive-file-body"><div ref={setTarget} className="drive-fullscreen-content"/><div ref={setDockTarget} className="drive-file-assistant"/></div>{!readOnly && html ? <DriveDocumentEditor workspaceId={workspaceId} subject={subject} file={file} contentTarget={target} save={save} busy={busy} onClose={onClose} closeHandler={closeHandler}/> : office ? <OfficeEditor workspaceId={workspaceId} fileId={file.id} fileName={file.name} contentTarget={target} readOnly={readOnly}/> : target && createPortal(<RenderedFile workspaceId={workspaceId} file={file} html={html}/>,target)}</section>,root)
+ return createPortal(<section ref={shell} tabIndex={-1} className="drive-fullscreen" aria-label={`${office?officeReadOnly?'Viewing':'Editing':readOnly?'Viewing':'Editing'} ${file.name}`}><header className="drive-file-topbar"><ActionButton aria-label="Back to Drive" onClick={()=>closeHandler.current()}><X size={20}/></ActionButton><div><h2>{file.name}</h2><span>{office?officeReadOnly?'View only':'Editing':readOnly?'View only':html?'Editing':'View only'} · Version {file.currentVersion}</span></div></header><div className="drive-file-body"><div ref={setTarget} className="drive-fullscreen-content"/><div ref={setDockTarget} className="drive-file-assistant"/></div>{!readOnly && html ? <DriveDocumentEditor workspaceId={workspaceId} subject={subject} file={file} contentTarget={target} save={save} busy={busy} onClose={onClose} closeHandler={closeHandler}/> : office ? <OfficeEditor workspaceId={workspaceId} fileId={file.id} fileName={file.name} contentTarget={target} readOnly={readOnly} onMode={setOfficeReadOnly}/> : target && createPortal(<RenderedFile workspaceId={workspaceId} file={file} html={html}/>,target)}</section>,root)
 }
 function RenderedFile({workspaceId,file,html}:{workspaceId:string;file:DriveFile;html:boolean}) {
  const source=useQuery({queryKey:['drive-render',workspaceId,file.id,file.currentVersion],queryFn:()=>api.downloadDriveFile({workspaceId,id:file.id},{query:{version:file.currentVersion}}),retry:false})

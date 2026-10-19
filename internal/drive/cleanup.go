@@ -137,7 +137,7 @@ func Purge(ctx context.Context, w, id string) error {
 			return err
 		}
 	}
-	for _, remove := range []func(context.Context, string) error{queries.DeleteFileShares, queries.DeleteFileOfficeSessions, queries.DeleteFileVersions} {
+	for _, remove := range []func(context.Context, string) error{queries.DeleteWopiLock, queries.DeleteFileShares, queries.DeleteFileOfficeSessions, queries.DeleteFileVersions} {
 		if err = remove(ctx, id); err != nil {
 			return err
 		}

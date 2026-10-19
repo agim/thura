@@ -284,6 +284,13 @@ func Finish(ctx context.Context, w, id string) (schema.DriveFile, error) {
 		f, err = queries.CreateDriveFile(ctx, q.CreateDriveFileParams{WorkspaceID: w, FolderID: u.FolderID, Name: u.Name, ContentType: u.ContentType, Size: u.ExpectedSize})
 	} else {
 		f, err = queries.LockDriveFile(ctx, q.LockDriveFileParams{WorkspaceID: w, ID: *u.FileID})
+		if err == nil {
+			if lock, e := queries.GetWopiLock(ctx, f.ID); e == nil && lock.LockID != "" && lock.ExpiresAt.After(lidza.Now(ctx)) {
+				return schema.DriveFile{}, router.Errorf(409, "This file is open in a document editor. Close it before uploading a replacement")
+			} else if e != nil && !errors.Is(e, pgx.ErrNoRows) {
+				return schema.DriveFile{}, e
+			}
+		}
 		if err == nil && (f.Trashed || f.CurrentVersion != u.BaseVersion) {
 			return schema.DriveFile{}, router.Errorf(409, "newer version exists or file is in trash")
 		}

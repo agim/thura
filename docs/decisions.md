@@ -346,3 +346,17 @@ PDF conversion uses the same self-hosted service. Scanned PDFs use explicitly re
 ## 2026-10-19: Full-screen file opening and shared resource menus
 
 Why: Double-click and Enter open desktop files in a dedicated layout with an X back to Drive. Keep mobile/coarse-pointer opening read-only with the installed Community edition; the user permits ONLYOFFICE’s slim mobile editor when the installed edition supports it. Hide and inert the browse frame, relocate the existing AI dock into the document layout, and preserve HTML draft recovery and versioned saves. Reuse one bounded keyboard-accessible resource menu for file and email commands; keep conversion under Manage file so the existing five-action alignment contract remains intact.
+
+
+## 2026-10-19: Free Collabora editor with mobile saves and discovered formats
+
+Why: Thura is an open-source platform that others may host commercially; the user requires a freely deployable editor with mobile editing. Real desktop DOCX/XLSX edits were saved and reopened. The user's physical Android changes were verified in stored versions: Word version 4 and Excel version 3, B3=7, formula =B3*C3, calculated result 70. Collabora CODE is the sole service; the user explicitly requested complete removal of the previous connector. The demo pins official ARM64 CODE 26.04.5.1.
+
+Use discovered extension/MIME edit/view actions across Writer, Calc, Impress and Draw. Writable native formats retain their format; read-only imports require a separate converted copy. PDF uses Collabora's advertised view_comment action with a read-only grant. Direct PDF-to-DOCX failed the demo fixture, so retain the explicit reviewed-recognition/Word-copy workflow. HTML and images retain Thura's native surfaces. All document conversion uses Collabora.
+
+WOPI grants bind file/member/audience/expiry/read-only state, with current permission checks on every read/write. Row locks and persistent document locks protect immutable versioned saves, quota and duplicate checks, and block conflicting uploads. Browser assets/sockets use the authenticated same-origin proxy with no forwarded app credentials. Keep the service root, WOPI allowlist and trusted TLS deployment configuration in docs/collabora.md; secrets remain encrypted or local ignored infrastructure.
+
+
+## 2026-10-19: Remove the previous editor completely
+
+The user explicitly requests Collabora as the replacement with no alternate editor retained. Remove prior provider code, callback/source/proxy routes, browser SDK, provider selection and credentials, deprecated session bookkeeping and demo container. Replace protocol-specific tests with equivalent Collabora WOPI/iframe/conversion checks, as explicitly approved by the user. Retain original files and immutable versions. One Compose stack may deploy the app and Collabora as separate containers; do not place the office engine in Thura's minimal application image.
