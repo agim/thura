@@ -1286,17 +1286,15 @@ func (v MeetingWebhook) Validate() error {
 
 // MailLabel is a row of the mail_label table.
 type MailLabel struct {
-	ID        string `json:"id" db:"id"`
-	MailboxID string `json:"mailboxId" db:"mailbox_id"`
-	Name      string `json:"name" db:"name"`
+	ID          string  `json:"id" db:"id"`
+	WorkspaceID *string `json:"workspaceId" db:"workspace_id"`
+	MailboxID   *string `json:"mailboxId" db:"mailbox_id"`
+	Name        string  `json:"name" db:"name"`
 }
 
 // Validate applies the rules of MailLabel from schema.lidza.
 func (v MailLabel) Validate() error {
 	var errs validate.Errors
-	if v.MailboxID == "" {
-		errs.Add("mailboxId", "required", "required")
-	}
 	if v.Name == "" {
 		errs.Add("name", "required", "required")
 	}
@@ -1654,6 +1652,32 @@ func (v CorrespondenceLink) Validate() error {
 	}
 	if v.CreatedBy == "" {
 		errs.Add("createdBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// ResourceLabel is a row of the resource_label table.
+type ResourceLabel struct {
+	ID       string `json:"id" db:"id"`
+	LabelID  string `json:"labelId" db:"label_id"`
+	Source   string `json:"source" db:"source"`
+	SourceID string `json:"sourceId" db:"source_id"`
+}
+
+// Validate applies the rules of ResourceLabel from schema.lidza.
+func (v ResourceLabel) Validate() error {
+	var errs validate.Errors
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
+	}
+	if v.Source == "" {
+		errs.Add("source", "required", "required")
+	}
+	if len(v.Source) > 20 {
+		errs.Add("source", "max", "at most 20 character(s)")
+	}
+	if v.SourceID == "" {
+		errs.Add("sourceId", "required", "required")
 	}
 	return errs.Result()
 }
@@ -3981,6 +4005,21 @@ func (v CorrespondenceLinkInput) Validate() error {
 	}
 	if v.SourceID == "" {
 		errs.Add("sourceId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// ResourceLabelInput is an API type.
+type ResourceLabelInput struct {
+	LabelID string `json:"labelId"`
+	Applied bool   `json:"applied"`
+}
+
+// Validate applies the rules of ResourceLabelInput from schema.lidza.
+func (v ResourceLabelInput) Validate() error {
+	var errs validate.Errors
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
 	}
 	return errs.Result()
 }

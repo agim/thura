@@ -1,3 +1,4 @@
+import { ResourceLabels } from './ResourceLabels'
 import { Hash, LockKeyhole, MessageCircle, Paperclip, Send, Video, ArrowDown } from 'lucide-react'
 import { AppSidebar } from './AppSidebar'
 import { displayDate } from '../lib/display-date'
@@ -117,7 +118,7 @@ function ChatConversation({ room, manager, onMeet, initialSearch }: { initialSea
     else if (followLatest.current) el.scrollTop = el.scrollHeight
   }, [latest?.id, all.length])
   return <section className="chat-conversation" aria-label={room.name}>
-    <header className="conversation-heading"><span className="conversation-avatar">{room.direct ? <MessageCircle size={20} /> : <Hash size={20} />}</span><div><h3>{room.name}</h3><small>{room.direct ? 'Private conversation' : 'Workspace channel'}</small></div><div className="conversation-actions"><CompactDisclosure label="Search messages" expanded={!!initialSearch}><ChatSearch room={room} initialSearch={initialSearch} /></CompactDisclosure>{onMeet && <button aria-label="Prepare meeting for this conversation" onClick={() => onMeet(room.name)}><Video size={18} /><span>Meet</span></button>}</div></header>
+    <header className="conversation-heading"><span className="conversation-avatar">{room.direct ? <MessageCircle size={20} /> : <Hash size={20} />}</span><div><h3>{room.name}</h3><small>{room.direct ? 'Private conversation' : 'Workspace channel'}</small></div><div className="conversation-actions"><ResourceLabels workspaceId={room.workspaceId} source="chat" id={room.id} /><CompactDisclosure label="Search messages" expanded={!!initialSearch}><ChatSearch room={room} initialSearch={initialSearch} /></CompactDisclosure>{onMeet && <button aria-label="Prepare meeting for this conversation" onClick={() => onMeet(room.name)}><Video size={18} /><span>Meet</span></button>}</div></header>
     {timeline.isError && <p role="alert">{denied ? 'Conversation access is unavailable' : 'Connection interrupted'}: {userError(timeline.error)}.{!denied && ' Retrying automatically.'}</p>}
     <div className="chat-scroll" ref={scrollRef} onScroll={e => { const el = e.currentTarget; followLatest.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }}>
     <button className="history-action" disabled={denied || backfill.isPending || !cursor} onClick={() => { followLatest.current = false; if (scrollRef.current) olderAnchor.current = { height: scrollRef.current.scrollHeight, top: scrollRef.current.scrollTop }; backfill.mutate() }}>Load older messages</button>

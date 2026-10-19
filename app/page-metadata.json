@@ -123,5 +123,10 @@
     "title": "Join a meeting \u00b7 Thura",
     "description": "Join your invited Thura meeting.",
     "noIndex": true
+  },
+  "/app/settings/labels": {
+    "title": "Labels \u00b7 Thura",
+    "description": "Manage labels shared across your Thura workspace.",
+    "noIndex": true
   }
 }

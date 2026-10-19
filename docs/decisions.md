@@ -280,3 +280,9 @@ Create event/room/grant and optional invitation outbox together, so failures
 cannot leave partial calendar records or send incomplete invites. Camera and
 microphone start off for members and guests. Compose the shared in-call view
 from LiveKit's public components to retain labelled controls at phone sizes.
+
+## Workspace labels shared across resources
+
+A label is workspace-owned and reusable on mail, Drive files, contacts, calendar events, chat rooms and meetings. One shared dialog offers New label first and creates plus assigns it atomically. The catalog and assignment writers serialize on the workspace lock, reuse case-insensitive names on create-and-apply retries, and preserve current workspace membership and resource-specific access checks. Settings → Labels manages the catalog; sharing a label never grants access to its resources.
+
+Keep the existing mail_label and mail_tag table names and old label IDs so stored assignments and mailbox API clients remain compatible. New catalog entries carry workspace_id and no mailbox_id. Existing entries resolve their workspace through their original mailbox, preserving stored data without destructive migration. ResourceLabel records non-mail assignments; mail retains its existing tags and filtering queries. Resource reads always pass through the ordinary access checks, including personal calendars and direct chats.

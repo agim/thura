@@ -477,9 +477,10 @@ type MailItem struct {
 }
 
 type MailLabel struct {
-	ID        string `json:"id"`
-	MailboxID string `json:"mailbox_id"`
-	Name      string `json:"name"`
+	ID          string  `json:"id"`
+	WorkspaceID *string `json:"workspace_id"`
+	MailboxID   *string `json:"mailbox_id"`
+	Name        string  `json:"name"`
 }
 
 type MailMessage struct {
@@ -576,6 +577,13 @@ type ReminderNotice struct {
 	Sequence    int32     `json:"sequence"`
 	InstanceKey string    `json:"instance_key"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type ResourceLabel struct {
+	ID       string `json:"id"`
+	LabelID  string `json:"label_id"`
+	Source   string `json:"source"`
+	SourceID string `json:"source_id"`
 }
 
 type ServerSetup struct {

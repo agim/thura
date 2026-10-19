@@ -854,7 +854,8 @@ type DriveQuota {
 
 model MailLabel {
  id uuid @id @default(uuid())
- mailboxId uuid @ref(Mailbox) @index
+ workspaceId uuid? @ref(Workspace) @index
+ mailboxId uuid? @ref(Mailbox) @index
  name string @min(1) @max(40)
  @@unique(mailboxId,name)
 }
@@ -1116,4 +1117,17 @@ model CorrespondenceLink {
 type CorrespondenceLinkInput {
  source string @pattern("^(chat|document|meeting|calendar)$")
  sourceId uuid
+}
+
+// One shared label catalog; resource assignments never grant resource access.
+model ResourceLabel {
+ id uuid @id @default(uuid())
+ labelId uuid @ref(MailLabel) @index
+ source string @max(20)
+ sourceId uuid @index
+ @@unique(labelId,source,sourceId)
+}
+type ResourceLabelInput {
+ labelId uuid
+ applied bool
 }

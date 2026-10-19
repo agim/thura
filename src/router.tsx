@@ -82,9 +82,10 @@ const appContactsRoute = createRoute({ getParentRoute: () => appRoute, path: '/c
 const settingsRoute = createRoute({ getParentRoute: () => appRoute, path: '/settings', component: () => null })
 const mailSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/mail', component: () => null })
 const memberSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/members', component: () => null })
+const labelSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/labels', component: () => null })
 const calendarSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/calendar', component: () => null })
 const setupRoute = createRoute({ getParentRoute: () => rootRoute, path: "/setup", component: lazyRouteComponent(() => import("./pages/Setup"), "Setup"), staticData: { module: "src/pages/Setup.tsx" } })
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute.addChildren([loopRoute, mailRoute, driveRoute, calendarRoute, chatRoute, meetRoute, appContactsRoute, settingsRoute.addChildren([mailSettingsRoute, calendarSettingsRoute, memberSettingsRoute])]), shareRoute, rsvpRoute, guestMeetRoute, setupRoute])
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute.addChildren([loopRoute, mailRoute, driveRoute, calendarRoute, chatRoute, meetRoute, appContactsRoute, settingsRoute.addChildren([mailSettingsRoute, calendarSettingsRoute, memberSettingsRoute, labelSettingsRoute])]), shareRoute, rsvpRoute, guestMeetRoute, setupRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).

@@ -1,3 +1,4 @@
+import { ResourceLabels } from './ResourceLabels'
 import { AppSidebar } from './AppSidebar'
 import { DetailBack } from './DetailBack'
 import { AppPageHeader, NewAction } from './AppPageHeader'
@@ -9,10 +10,10 @@ import { api, type MailItem, type MailFolder, type DraftInput } from '@lidza/cli
 import { downloadContent } from '../lib/download'
 import { RecipientInput } from './RecipientInput'
 import { DraftAutosave } from '../lib/draft-autosave'
-import { X, Inbox, FilePenLine, Send, Archive, ShieldAlert, Trash2, Paperclip, Star } from 'lucide-react'
+import { X, Inbox, FilePenLine, Send, Archive, ShieldAlert, Trash2, Paperclip, Star, Clock } from 'lucide-react'
 const folderIcons = { inbox: Inbox, drafts: FilePenLine, sent: Send, archive: Archive, spam: ShieldAlert, trash: Trash2 }
 import { MailReader } from './MailReader'
-import { MailOrganization, MailLabelFilter, MailConversation } from './MailTools'
+import { MailLabelFilter, MailConversation } from './MailTools'
 
 export function LiveMail({ workspaceId, initialDraft, initialMessage, search, mailboxId: chosenMailbox, folder, onFolderChange, resetToken }: { workspaceId: string; search: string; mailboxId: string; folder: MailFolder; onFolderChange: (folder: MailFolder) => void; resetToken: number; initialDraft?: MailItem; initialMessage?: { id: string; mailboxId: string } }) {
   const boxes = useQuery({ queryKey: ['mailboxes', workspaceId], queryFn: () => api.listMailboxes({ workspaceId }) })
@@ -61,7 +62,7 @@ function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, quer
         {list.hasNextPage && <button disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>Load more messages</button>}
         <p className="mail-count">{visible.length} {visible.length === 1 ? 'message' : 'messages'}{list.hasNextPage ? ' loaded' : ''}</p>
       </section>
-      <section className="reader" aria-label="Reading pane"><div className="detail-return-row"><DetailBack className="mobile-back" onClick={() => { setSelected(''); setEditing(null) }}>Back to messages</DetailBack>{selected && <MailOrganization scope={{ workspaceId, mailboxId }} selected={selected} filter={labelId} onFilter={setLabelId} />}</div>
+      <section className="reader" aria-label="Reading pane"><div className="detail-return-row"><DetailBack className="mobile-back" onClick={() => { setSelected(''); setEditing(null) }}>Back to messages</DetailBack>{selected && <ResourceLabels workspaceId={workspaceId} source="mail" id={selected} />}</div>
         {editing ? <DraftEditor key={editing.id} item={editing} workspaceId={workspaceId} mailboxId={mailboxId} saved={async i => { setEditing(i.status === 'draft' ? i : null); setNotice(i.status === 'queued' ? 'Queued · undo is available until the scheduled send time.' : 'Draft saved.'); await refresh() }} /> : current ? <>
           <div className="toolbar"><button aria-label={current.starred ? 'Unstar' : 'Star'} title={current.starred ? 'Unstar' : 'Star'} disabled={flags.isPending} onClick={() => flags.mutate({ id: current.id, values: { starred: !current.starred } })}><Star size={18} fill={current.starred ? 'currentColor' : 'none'} /></button><button disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'archive' } })}>Archive</button><button disabled={flags.isPending || current.status === 'queued'} onClick={() => flags.mutate({ id: current.id, values: { folder: 'trash' } })}>Trash</button>{current.folder === 'trash' && <button onClick={() => flags.mutate({ id: current.id, values: { folder: current.status === 'draft' ? 'drafts' : current.status === 'received' ? 'inbox' : 'sent' } })}>Restore</button>}</div>
           <h3 className="title">{current.subject || '(No subject)'}</h3><p className="small quiet">From {current.fromAddress} · To {current.toAddress}</p>
@@ -127,11 +128,14 @@ function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorP
     <ModalAction label="Cc / Bcc"><div className="recipient-extras">{([['cc', 'Cc'], ['bcc', 'Bcc']] as const).map(([field, label]) => <RecipientInput key={field} workspaceId={workspaceId} label={label} disabled={send.isPending} value={input[field] ?? ''} onChange={value => change(field, value)} />)}</div></ModalAction></div>
     <label>Subject<input disabled={send.isPending} value={input.subject ?? ''} onChange={e => change('subject', e.target.value)} /></label>
     <label>Message<textarea disabled={send.isPending} aria-label="Message" value={input.text ?? ''} onChange={e => change('text', e.target.value)} /></label>
-    <button type="button" className="attach-action" disabled={busy} onClick={() => attachmentInput.current?.click()}><Paperclip size={16} />Attach file</button><label className="visually-hidden">Attachments<input ref={attachmentInput} type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
+    <label className="visually-hidden">Attachments<input ref={attachmentInput} type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
     <ul>{detail.data?.attachments.map(a => <li key={a.id}>{a.name} <button type="button" aria-label={`Remove ${a.name}`} disabled={busy} onClick={() => removeAttachment.mutate(a.id)}><X size={14} aria-hidden="true" /></button></li>)}</ul>
-    <ModalAction label="Schedule send"><DateTimeControl label="Send" type="datetime-local" value={schedule} onChange={e => setSchedule(e.target.value)} /></ModalAction>
     {(failure || error) && <p role="alert">{failure?.message || error}</p>}
-    <div className="row composer-actions"><button type="button" disabled={busy} onClick={() => save.mutate()}>Save draft</button><button className="mainaction" disabled={busy}>Send</button></div>
+    <div className="row composer-actions">
+      <button type="button" className="attach-action" aria-label="Attach file" title="Attach file" disabled={busy} onClick={() => attachmentInput.current?.click()}><Paperclip size={16} aria-hidden="true" /><span>Attach file</span></button>
+      <ModalAction className="schedule-action" label="Schedule send" icon={<Clock size={16} aria-hidden="true" />}><DateTimeControl label="Send" type="datetime-local" value={schedule} onChange={e => setSchedule(e.target.value)} /></ModalAction>
+      <button type="button" className="save-draft-action" disabled={busy} onClick={() => save.mutate()}>Save draft</button><button className="mainaction" disabled={busy}>Send</button>
+    </div>
     <p role="status" className="small quiet">{state}. Changes save automatically. Sending has a ten-second undo window.</p>
   </form>
 }

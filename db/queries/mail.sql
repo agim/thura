@@ -60,11 +60,13 @@ SELECT * FROM mail_item WHERE mailbox_id=sqlc.arg(mailbox_id) AND (id=sqlc.arg(i
 AND (sqlc.narg(before_time)::timestamptz IS NULL OR (updated_at,id)<(sqlc.narg(before_time)::timestamptz,sqlc.arg(before_id)::uuid))
 ORDER BY updated_at DESC,id DESC LIMIT sqlc.arg(page_limit);
 -- name: ListMailboxLabels :many
-SELECT * FROM mail_label WHERE mailbox_id=$1 ORDER BY name,id;
+SELECT l.* FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id
+WHERE COALESCE(l.workspace_id,b.workspace_id)=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=$1) ORDER BY l.name,l.id;
 -- name: CreateMailboxLabel :one
 INSERT INTO mail_label(mailbox_id,name) VALUES($1,$2) RETURNING *;
 -- name: GetMailboxLabel :one
-SELECT * FROM mail_label WHERE id=$1 AND mailbox_id=$2;
+SELECT l.* FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id WHERE l.id=sqlc.arg(id)
+AND COALESCE(l.workspace_id,b.workspace_id)=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=sqlc.arg(mailbox_id));
 -- name: ListItemLabels :many
 SELECT l.* FROM mail_label l JOIN mail_tag t ON t.label_id=l.id WHERE t.item_id=$1 ORDER BY l.name,l.id;
 -- name: AddMailTag :exec
@@ -74,4 +76,4 @@ DELETE FROM mail_tag WHERE item_id=$1 AND label_id=$2;
 -- name: DeleteLabelTags :exec
 DELETE FROM mail_tag WHERE label_id=$1;
 -- name: DeleteMailboxLabel :exec
-DELETE FROM mail_label WHERE id=$1 AND mailbox_id=$2;
+DELETE FROM mail_label l WHERE l.id=sqlc.arg(id) AND COALESCE(l.workspace_id,(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=l.mailbox_id))=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=sqlc.arg(mailbox_id));

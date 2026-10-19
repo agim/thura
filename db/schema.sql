@@ -494,9 +494,11 @@ CREATE TABLE meeting_webhook (
 
 CREATE TABLE mail_label (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  mailbox_id uuid NOT NULL REFERENCES mailbox(id),
+  workspace_id uuid REFERENCES workspace(id),
+  mailbox_id uuid REFERENCES mailbox(id),
   name varchar(40) NOT NULL
 );
+CREATE INDEX mail_label_workspace_id_idx ON mail_label (workspace_id);
 CREATE INDEX mail_label_mailbox_id_idx ON mail_label (mailbox_id);
 CREATE UNIQUE INDEX mail_label_mailbox_id_name_key ON mail_label (mailbox_id, name);
 
@@ -633,4 +635,14 @@ CREATE TABLE correspondence_link (
 );
 CREATE INDEX correspondence_link_contact_id_idx ON correspondence_link (contact_id);
 CREATE UNIQUE INDEX correspondence_link_contact_id_source_source_id_key ON correspondence_link (contact_id, source, source_id);
+
+CREATE TABLE resource_label (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  label_id uuid NOT NULL REFERENCES mail_label(id),
+  source varchar(20) NOT NULL,
+  source_id uuid NOT NULL
+);
+CREATE INDEX resource_label_label_id_idx ON resource_label (label_id);
+CREATE INDEX resource_label_source_id_idx ON resource_label (source_id);
+CREATE UNIQUE INDEX resource_label_label_id_source_source_id_key ON resource_label (label_id, source, source_id);
 

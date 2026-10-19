@@ -29,8 +29,8 @@ func TestMailOrganizationRepliesAndScopedThreads(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		for _, sql := range []string{
-			"DELETE FROM mail_tag WHERE label_id IN (SELECT id FROM mail_label WHERE mailbox_id IN (SELECT id FROM mailbox WHERE workspace_id=$1))",
-			"DELETE FROM mail_label WHERE mailbox_id IN (SELECT id FROM mailbox WHERE workspace_id=$1)",
+			"DELETE FROM mail_tag WHERE label_id IN (SELECT id FROM mail_label WHERE workspace_id=$1 OR mailbox_id IN (SELECT id FROM mailbox WHERE workspace_id=$1))",
+			"DELETE FROM mail_label WHERE workspace_id=$1 OR mailbox_id IN (SELECT id FROM mailbox WHERE workspace_id=$1)",
 			"DELETE FROM mail_item WHERE mailbox_id IN (SELECT id FROM mailbox WHERE workspace_id=$1)",
 			"DELETE FROM mailbox WHERE workspace_id=$1", "DELETE FROM auth_member WHERE scope=$1", "DELETE FROM workspace WHERE id=$1",
 		} {
@@ -119,9 +119,16 @@ func TestMailOrganizationRepliesAndScopedThreads(t *testing.T) {
 		t.Fatal("removed assignment remained on message")
 	}
 	request("PATCH", paths[0]+"/messages/"+original.ID+"/labels", schema.MailLabelChange{LabelID: label.ID, Applied: true}, nil, 204)
-	request("GET", paths[1]+"/messages?labelId="+label.ID, nil, nil, 404)
-	request("DELETE", paths[1]+"/labels/"+label.ID, nil, nil, 404)
-	request("DELETE", paths[0]+"/labels/"+label.ID, nil, nil, 204)
+	request("GET", paths[1]+"/messages?labelId="+label.ID, nil, &page, 200)
+	if len(page.Items) != 0 {
+		t.Fatal("shared label exposed messages from another mailbox")
+	}
+	var shared schema.MailLabelList
+	request("GET", paths[1]+"/labels", nil, &shared, 200)
+	if len(shared.Items) != 1 || shared.Items[0].ID != label.ID {
+		t.Fatal("label catalog is not shared across mailboxes")
+	}
+	request("DELETE", paths[1]+"/labels/"+label.ID, nil, nil, 204)
 	request("GET", paths[0]+"/messages/"+original.ID, nil, &detail, 200)
 	if len(detail.Labels) != 0 {
 		t.Fatal("deleted label still applied")

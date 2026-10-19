@@ -53,6 +53,7 @@ test('mail signature, labels and attachment removal persist through reload', asy
     await page.getByLabel('Signature', { exact: true }).fill('Browser team signature')
     await page.getByRole('button', { name: 'Save signature', exact: true }).click()
     await expect(page.getByRole('status')).toContainText('Signature saved')
+    await page.getByRole('link', { name: 'Labels', exact: true }).click()
     await page.getByLabel('New label', { exact: true }).fill(name)
     await page.getByRole('button', { name: 'Add label', exact: true }).click()
     await expect(page.locator('.settings-list-row').filter({ hasText: name })).toBeVisible()
@@ -69,7 +70,7 @@ test('mail signature, labels and attachment removal persist through reload', asy
     await page.getByRole('button', { name: 'Apply labels', exact: true }).click()
 
     let failLabel = true
-    await page.route('**/messages/*/labels', route => {
+    await page.route('**/resources/mail/*/labels', route => {
       if (route.request().method() === 'PATCH' && failLabel) {
         failLabel = false
         return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic unavailable label storage' }) })
@@ -81,8 +82,8 @@ test('mail signature, labels and attachment removal persist through reload', asy
     await expect(page.getByRole('checkbox', { name, exact: true })).not.toBeChecked()
     await page.getByRole('checkbox', { name, exact: true }).check()
     await expect(page.getByRole('checkbox', { name, exact: true })).toBeChecked()
-    await chooseOption(page.getByRole('dialog', { name: 'Apply labels' }).getByRole('combobox', { name: 'Filter by label', exact: true }), { label: name })
     await page.getByRole('button', { name: 'Close Apply labels', exact: true }).click()
+    await chooseOption(page.getByRole('combobox', { name: 'Filter by label', exact: true }), { label: name })
     await expect(page.locator('.mailrow')).toHaveCount(1)
     await page.reload()
     await page.getByRole('button', { name: 'Drafts', exact: true }).click()
@@ -93,6 +94,7 @@ test('mail signature, labels and attachment removal persist through reload', asy
     await expect(page.getByRole('checkbox', { name, exact: true })).toBeChecked()
     await page.getByRole('button', { name: 'Close Apply labels', exact: true }).click()
     await openSettings(page, 'mail')
+    await page.getByRole('link', { name: 'Labels', exact: true }).click()
     await page.getByRole('button', { name: `Delete label ${name}`, exact: true }).click()
     await expect(page.locator('.settings-list-row').filter({ hasText: name })).toHaveCount(0)
   } finally {

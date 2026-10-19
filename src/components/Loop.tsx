@@ -1,3 +1,4 @@
+import { ResourceLabels } from './ResourceLabels'
 import { AppSidebar } from './AppSidebar'
 import { displayDate } from '../lib/display-date'
 import { DetailBack } from './DetailBack'
@@ -23,7 +24,7 @@ export function Loop({ workspaceId, initialContact, onOpen, onContacts, onSelect
         {people.isPending && <p role="status">Loading people…</p>}
         {people.isError && <p role="alert">{people.error.message}</p>}
         <ul>{contacts.map(c => <li key={c.id}><button aria-pressed={person?.id === c.id} onClick={() => { setPerson(c); onSelect(c) }}><span className="person-avatar" aria-hidden="true">{c.name.split(/\s+/).map(n => n[0]).slice(0, 2).join('')}</span><span className="person-copy"><strong>{c.name}</strong><span>{c.email}</span>{c.company && <small>{c.company}</small>}</span></button></li>)}</ul>
-        {!people.isPending && !people.isError && contacts.length === 0 && <p>No contacts found. Add someone to organize their correspondence.</p>}
+        {!people.isPending && !people.isError && contacts.length === 0 && <p>No contacts found. Add someone to start their Loop.</p>}
         {people.hasNextPage && <button disabled={people.isFetchingNextPage} onClick={() => void people.fetchNextPage()}>More people</button>}
       </AppSidebar>
       {person ? <Timeline search={timelineSearch} key={person.id} workspaceId={workspaceId} person={person} onBack={() => { setPerson(undefined); onSelect(undefined) }} onOpen={onOpen} /> : <div className="correspondence-empty"><UserRound size={32} aria-hidden="true" /><h3>Your people, in context</h3><p>Select a person to see their timeline. Personal contacts need no organization.</p></div>}
@@ -42,10 +43,10 @@ function Timeline({ workspaceId, person, onOpen, onBack, search }: { workspaceId
   const items = timeline.isError ? [] : [...new Map(timeline.data?.pages.flatMap(p => p.items).map(i => [`${i.source}:${i.id}`, i]) ?? []).values()]
   return <section className="correspondence-detail" aria-label="Loop timeline"><DetailBack className="mobile-back" onClick={onBack}>Back to people</DetailBack><header className="person-heading"><span className="person-avatar large" aria-hidden="true">{current.name.split(/\s+/).map(n => n[0]).slice(0, 2).join('')}</span><div>
     <h3>{scope === 'organization' ? current.company : current.name}</h3>
-    <p>{scope === 'organization' ? 'Correspondence involving saved contacts with this organization name.' : current.email}</p></div></header>
+    <p>{scope === 'organization' ? 'Activity involving people at this organization.' : current.email}</p></div></header>
     {current.company && <div className="correspondence-scope"><button aria-pressed={scope === 'person'} onClick={() => setScope('person')}>This person</button><button aria-pressed={scope === 'organization'} onClick={() => setScope('organization')}>Organization: {current.company}</button></div>}
     <div className="timeline-tools"><label className="timeline-source"><span className="visually-hidden">Source</span><SelectControl aria-label="Source" value={source} onChange={e => setSource(e.target.value)}><option value="">All sources</option>{sources.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</SelectControl></label>
-    {scope === 'person' && <LinkItems workspaceId={workspaceId} person={current} />}
+    {scope === 'person' && <><LinkItems workspaceId={workspaceId} person={current} /><ResourceLabels workspaceId={workspaceId} source="contact" id={current.id} /></>}
     {unlink.isError && <p role="alert">{unlink.error.message}</p>}
     <button className="secondary" aria-label="Refresh timeline" title="Refresh timeline" onClick={() => void timeline.refetch()} disabled={timeline.isFetching}><RefreshCw size={17} /></button></div>
     {notices.map(notice => <p role="status" key={notice}>{notice}</p>)}
