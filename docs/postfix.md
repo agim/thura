@@ -40,6 +40,8 @@ Use the setup token from your private `.env` to create the administrator. On
 - **Send email through:** `postfix` for direct SMTP delivery, or `provider` to
   select SMTP, Mailgun, SendGrid, Postmark or Resend and enter its credentials.
 
+New and reset wizard drafts recommend Mailgun, with Mailgun/SendGrid/Postmark/Resend listed before SMTP. Existing published choices are preserved.
+
 For example, `Receive: postfix`, `Send: provider`, `Outgoing provider: mailgun`
 receives directly on your server and sends through Mailgun. Other outgoing
 providers work the same way. Selecting Mailgun does not change receiving.

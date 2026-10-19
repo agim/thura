@@ -26,10 +26,10 @@ func Catalog() []Step {
 		}},
 		{ID: "mail", Title: "Email service", Fields: []Field{
 			field("THURA_MAIL_INBOUND", "Receive email through", "select", "relay", "Postfix uses the included Compose service. Relay keeps an independently managed signed MIME relay.", "postfix", "relay"),
-			field("THURA_MAIL_OUTBOUND", "Send email through", "select", "provider", "Choose the included Postfix service or an independent outgoing provider.", "postfix", "provider"),
+			field("THURA_MAIL_OUTBOUND", "Send email through", "select", "provider", "Recommended: an API provider for outgoing delivery. Postfix remains available for direct SMTP sending.", "provider", "postfix"),
 			field("THURA_POSTFIX_HOSTNAME", "Mail server hostname", "text", "", "For example mail.example.org. Point your inbox domain MX record here and this hostname A record at this server."),
 			field("THURA_MAIL_ADDRESS", "Inbox address", "email", "", "Initial shared mailbox; blank uses the sender address. Later mailbox addresses are managed separately."),
-			field("MAIL_PROVIDER", "Outgoing provider", "select", "smtp", "SMTP includes Debian Postfix; other choices use the official mail pack.", "smtp", "mailgun", "sendgrid", "postmark", "resend"),
+			field("MAIL_PROVIDER", "Outgoing provider", "select", "smtp", "API providers are recommended: Mailgun, SendGrid, Postmark or Resend. SMTP is available when needed.", "mailgun", "sendgrid", "postmark", "resend", "smtp"),
 			field("MAIL_FROM", "Sender address", "email", "", "A verified outgoing sender; can differ from the inbox address."),
 			field("MAIL_API_KEY", "Email API key", "secret", "", "Required for API providers. Blank preserves the saved key."),
 			field("MAIL_DOMAIN", "Mailgun sending domain", "text", "", "Verify this domain in the provider console."),
@@ -92,4 +92,12 @@ func stepByID(id string) (Step, bool) {
 		}
 	}
 	return Step{}, false
+}
+
+// New and reset wizard drafts recommend HTTP API delivery. Snapshot defaults
+// stay unchanged so adding this preference never switches an existing server.
+func draftDefaults() map[string]string {
+	v := defaults()
+	v["MAIL_PROVIDER"] = "mailgun"
+	return v
 }

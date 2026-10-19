@@ -61,3 +61,26 @@ func TestPostfixRejectsRemoteSourceEvenWithToken(t *testing.T) {
 		}
 	}
 }
+
+func TestNewWizardRecommendsAPIWithoutChangingExistingSnapshotDefaults(t *testing.T) {
+	if draftDefaults()["MAIL_PROVIDER"] != "mailgun" || draftDefaults()["THURA_MAIL_OUTBOUND"] != "provider" {
+		t.Fatal("new wizard does not recommend API delivery")
+	}
+	if defaults()["MAIL_PROVIDER"] != "smtp" {
+		t.Fatal("compatibility defaults would change existing installations")
+	}
+	mailStep, ok := stepByID("mail")
+	if !ok {
+		t.Fatal("mail step missing")
+	}
+	for _, field := range mailStep.Fields {
+		if field.Name == "MAIL_PROVIDER" {
+			if len(field.Options) != 5 || field.Options[0] != "mailgun" || field.Options[len(field.Options)-1] != "smtp" {
+				t.Fatal("API providers must appear before SMTP")
+			}
+		}
+		if field.Name == "THURA_MAIL_OUTBOUND" && field.Options[0] != "provider" {
+			t.Fatal("external API provider choice should come first")
+		}
+	}
+}
