@@ -1,0 +1,171 @@
+{
+  "candidate": {
+    "repository": "AntiSpamInstitute/spam-detector-bert-MoE-v2.2",
+    "revision": "9527f5d20e700a38e500895c8439fc7d7eb721e7",
+    "labels_from_model_card": [
+      "Not Spam",
+      "Spam"
+    ],
+    "threshold": 0.5,
+    "pooling": "maximum spam probability across every overlapping window",
+    "files": {
+      "model.onnx": {
+        "bytes": 17585384,
+        "sha256": "4cf731b84de57db8d0ef5ab941cef5ae64d682331b2f70a8f2790de3fc6a7c2a"
+      },
+      "model.safetensors": {
+        "bytes": 17549312,
+        "sha256": "5b56b515173c54d053bd8fb7af27ad17a56c4716a048ad243c1511dcb4b16303"
+      },
+      "config.json": {
+        "bytes": 704,
+        "sha256": "e40e4afc068b3a5bc9c290e38aaddd19b9877b27bcaccd7456c31abc9cef14e2"
+      },
+      "tokenizer.json": {
+        "bytes": 711396,
+        "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66"
+      },
+      "README.md": {
+        "bytes": 7933,
+        "sha256": "246ae787df2eb4bfc977ec368cb7ed3c875c38376b1a742a9083cbf42e4badfa"
+      }
+    }
+  },
+  "corpus_sha256": "8fa79da66de455c7cf745cd3bfd5e2eaf38503996ab63e7a2ff19dd1faa39185",
+  "phase": "validation",
+  "startup_seconds": 1.2104767389973858,
+  "cohorts": {
+    "legitimate": {
+      "count": 218,
+      "flagged_as_spam": 205
+    },
+    "spam": {
+      "count": 52,
+      "flagged_as_spam": 48
+    },
+    "phishing": {
+      "count": 706,
+      "flagged_as_spam": 661
+    }
+  },
+  "cgroup": {
+    "memory.max": "1073741824",
+    "memory.peak": "103649280",
+    "memory.swap.max": "0",
+    "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+    "cpu.max": "100000 100000"
+  },
+  "constraints_verified": true,
+  "image_id": "sha256:4669ed8fad223bc5ecdb61d76780ffe0f75762e44319cc539a2006a418a25fc0",
+  "container_state": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-19T20:36:37.823361207Z",
+    "FinishedAt": "2026-10-19T20:37:04.178459786Z"
+  },
+  "latency_ms": {
+    "p50": 17.86657400225522,
+    "p95": 53.63535400101682,
+    "max": 325.216602999717
+  },
+  "native_validation": {
+    "native_legitimate_count": 218,
+    "native_legitimate_flagged_as_spam": 205,
+    "native_onnx_decision_mismatches": 0
+  },
+  "native_onnx_logit_probes": [
+    {
+      "case": 0,
+      "pytorch": [
+        [
+          1.541481614112854,
+          -1.8062845468521118
+        ]
+      ],
+      "onnx": [
+        [
+          1.541481852531433,
+          -1.8062846660614014
+        ]
+      ],
+      "max_abs_error": 2.384185791015625e-07,
+      "predicted_class": 0
+    },
+    {
+      "case": 1,
+      "pytorch": [
+        [
+          -0.08194103091955185,
+          0.09057871997356415
+        ]
+      ],
+      "onnx": [
+        [
+          -0.08194053918123245,
+          0.09057847410440445
+        ]
+      ],
+      "max_abs_error": 4.917383193969727e-07,
+      "predicted_class": 1
+    },
+    {
+      "case": 2,
+      "pytorch": [
+        [
+          -0.1972280591726303,
+          0.058014824986457825
+        ]
+      ],
+      "onnx": [
+        [
+          -0.1972280889749527,
+          0.05801461637020111
+        ]
+      ],
+      "max_abs_error": 2.086162567138672e-07,
+      "predicted_class": 1
+    },
+    {
+      "case": 3,
+      "pytorch": [
+        [
+          -0.893510639667511,
+          0.8755812644958496
+        ]
+      ],
+      "onnx": [
+        [
+          -0.8935109376907349,
+          0.8755816221237183
+        ]
+      ],
+      "max_abs_error": 3.5762786865234375e-07,
+      "predicted_class": 1
+    },
+    {
+      "case": 4,
+      "pytorch": [
+        [
+          -0.5396238565444946,
+          0.5945579409599304
+        ]
+      ],
+      "onnx": [
+        [
+          -0.5396237373352051,
+          0.5945580005645752
+        ]
+      ],
+      "max_abs_error": 1.1920928955078125e-07,
+      "predicted_class": 1
+    }
+  ],
+  "decision": "reject documented default on this validation workload; no integration"
+}

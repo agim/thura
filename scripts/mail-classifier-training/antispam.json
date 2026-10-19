@@ -1,0 +1,24 @@
+{
+  "repository": "AntiSpamInstitute/spam-detector-bert-MoE-v2.2",
+  "revision": "9527f5d20e700a38e500895c8439fc7d7eb721e7",
+  "declared_license": "Apache-2.0",
+  "distribution_cleared": false,
+  "files": {
+    "model.safetensors": {
+      "bytes": 17549312,
+      "sha256": "5b56b515173c54d053bd8fb7af27ad17a56c4716a048ad243c1511dcb4b16303"
+    },
+    "config.json": {
+      "bytes": 704,
+      "sha256": "e40e4afc068b3a5bc9c290e38aaddd19b9877b27bcaccd7456c31abc9cef14e2"
+    },
+    "tokenizer.json": {
+      "bytes": 711396,
+      "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66"
+    },
+    "README.md": {
+      "bytes": 7933,
+      "sha256": "246ae787df2eb4bfc977ec368cb7ed3c875c38376b1a742a9083cbf42e4badfa"
+    }
+  }
+}

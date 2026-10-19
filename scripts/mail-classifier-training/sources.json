@@ -1,0 +1,88 @@
+{
+  "phishing-2022": {
+    "url": "https://monkey.org/~jose/phishing/phishing-2022",
+    "sha256": "a6291e2cb990204766fce425423949b403cce4ae6a660fc8d08812e40a063fa7",
+    "bytes": 4775954
+  },
+  "phishing-2023": {
+    "url": "https://monkey.org/~jose/phishing/phishing-2023",
+    "sha256": "5007f1c1dc91b15e93e988afa3a1cf402e15c88f765d3057be8bfec50dae1fe8",
+    "bytes": 7763704
+  },
+  "phishing-2024": {
+    "url": "https://monkey.org/~jose/phishing/phishing-2024",
+    "sha256": "60afa40a2757170093a2bde31ec9cda4e54d33992203ce04bfbbc86d2e5e5b99",
+    "bytes": 15457816
+  },
+  "phishing-2025": {
+    "url": "https://monkey.org/~jose/phishing/phishing-2025",
+    "sha256": "f1fa7e0fe35c9a16f36d9aa20ade7e1d3908d1d0c1d917b8c53c8aa799ec1c8f",
+    "bytes": 18769863
+  },
+  "nazario-README.txt": {
+    "url": "https://monkey.org/~jose/phishing/README.txt",
+    "sha256": "4589b63a4149bff0b65e82c2110baaebee36e5d9219009a31cc78bb6ab597fab",
+    "bytes": 961
+  },
+  "nazario-LICENSE.txt": {
+    "url": "https://monkey.org/~jose/phishing/LICENSE.txt",
+    "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+    "bytes": 18657
+  },
+  "spam-2024.7z": {
+    "url": "https://untroubled.org/spam/2024.7z",
+    "sha256": "1de672fd034cec6c34944da0fa68d02dc31254340b68696a9013e7ceeb74d238",
+    "bytes": 15080579
+  },
+  "spam-permission.html": {
+    "url": "https://untroubled.org/spam/",
+    "sha256": "5e0dc09ae3df333ca456330aaad029cfc2477fe70c2e7399cd290264e8bca426",
+    "bytes": 8425,
+    "snapshot_only": true
+  },
+  "GPT_Phishing_Email_dataset.csv": {
+    "url": "https://huggingface.co/datasets/Dizzzy0x00/LLMGen-Phishing-Email-Dataset/resolve/d717e5457b71cb44dd038dafe6a81cea5e0badab/GPT_Phishing_Email_dataset.csv",
+    "bytes": 5690445,
+    "sha256": "e3a335c8acacec09afaa4b9a14c7010195063310e4dcfbae38c1fa50b8d48dc3"
+  },
+  "README.md": {
+    "url": "https://huggingface.co/datasets/Dizzzy0x00/LLMGen-Phishing-Email-Dataset/resolve/d717e5457b71cb44dd038dafe6a81cea5e0badab/README.md",
+    "bytes": 2012,
+    "sha256": "d0a7b712aa837b47e7f1dc03cf908e29aa0069aa2d4552692dd536282a9d7e43"
+  },
+  "spam-2023.7z": {
+    "url": "https://untroubled.org/spam/2023.7z",
+    "bytes": 29183084,
+    "sha256": "6032850eff57eefec70208c5e568c73aa3ef1ab7e9d9122eaf67ce77ad4c29d6"
+  },
+  "spam-2025.7z": {
+    "url": "https://untroubled.org/spam/2025.7z",
+    "bytes": 18471207,
+    "sha256": "3d3ad01f6eb7f90bad6a51d653847e2a8f3818e7abdc17efac9d9da021b3860e"
+  },
+  "spam-2022.7z": {
+    "url": "https://untroubled.org/spam/2022.7z",
+    "bytes": 19533792,
+    "sha256": "171f343cc3d359357142374fe98d642f5d95017f07b3e8abe81ba8fe8bd1e1ec"
+  },
+  "spam-2026-01.7z": {
+    "url": "https://untroubled.org/spam/2026-01.7z",
+    "bytes": 2934205,
+    "sha256": "3cc7e8e3206c529c9f758d5f5f540d0a1d9412e0e457cf34a520571d321829c1"
+  },
+  "spam-2026-02.7z": {
+    "url": "https://untroubled.org/spam/2026-02.7z",
+    "bytes": 3042298,
+    "sha256": "e6c626379c902919f4f8f8e88aa77a458b43079280fa6f960de8f241093a0ef6"
+  },
+  "spam-2026-03.7z": {
+    "url": "https://untroubled.org/spam/2026-03.7z",
+    "bytes": 4094958,
+    "sha256": "2e11a746cf473bf3751ebe750cc971b86b25805481b9b3fc2a159a5bbe4569db"
+  },
+  "spam-2026-04.7z": {
+    "url": "https://untroubled.org/spam/2026-04.7z",
+    "bytes": 6627289,
+    "sha256": "85b91f9c853534f23032e310a6603bb016601acc330e1bb5546d280ccd7b2dab"
+  }
+}
