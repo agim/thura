@@ -32,6 +32,7 @@ class ProfileTests(unittest.TestCase):
     def test_deploy_manifest_preserves_compact_service_and_persistence_boundaries(self):
         manifest=json.loads((ROOT/'deploy/lidza.stack.json').read_text())
         self.assertEqual(manifest['version'],1)
+        self.assertEqual(manifest['bootstrap_readiness'],{'path':'/api/v1/health','readyz_body_contains':'Server setup is required','setup_path':'/setup'})
         services={item['role']:item for item in manifest['services']}
         self.assertEqual(set(services),{'app','mail','office'})
         self.assertIn('LIDZA_MASTER_KEY',manifest['required_environment'])

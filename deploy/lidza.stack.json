@@ -127,5 +127,10 @@
         "dockerfile": "deploy/compact/office.Dockerfile"
       }
     }
-  ]
+  ],
+  "bootstrap_readiness": {
+    "path": "/api/v1/health",
+    "readyz_body_contains": "Server setup is required",
+    "setup_path": "/setup"
+  }
 }

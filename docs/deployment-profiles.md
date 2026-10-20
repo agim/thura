@@ -56,7 +56,7 @@ editing. Measure actual load and leave headroom before reducing a profile.
 ## Līdza Deploy integration
 
 `deploy/lidza.stack.json` follows Līdza Deploy's published version-1 stack contract
-(`feat/stack-profiles`, implementation checkpoint `81f1e37`). Select `minimum`, `standard`
+(`feat/stack-profiles`, bootstrap contract checkpoint `4cc4754`). Select `minimum`, `standard`
 or `performance` through Deploy's `runtime_profile` setting. Require the agent's
 settings response to advertise `stack_profiles_supported: true`; older agents do
 not support this manifest. It is separate from the standalone Compose files.
@@ -76,7 +76,11 @@ settings, keeping managed storage and service addresses consistent with the
 published setup. Private HTTP service origins are explicitly allowlisted through
 `THURA_SERVICE_HTTP_ORIGINS`; public app and meeting URLs still require
 HTTPS/WSS. The wizard keeps its real mail and storage probes and environment
-conflict checks. Complete the wizard, publish, then reload through Deploy.
+conflict checks. The explicit `bootstrap_readiness` declaration exposes only a healthy first-run
+installation whose genuine `/readyz` returns the setup-required 503 marker.
+Deploy shows **Setup required** while Thura's API gate remains locked. Complete
+the wizard, publish, then reload through Deploy; normal `/readyz` must then pass.
+Established deployments cannot use this fallback for failures.
 
 The integration must attach the existing managed `DATABASE_URL` and its private
 network instead of creating Thura's standalone PostgreSQL service. Profile
