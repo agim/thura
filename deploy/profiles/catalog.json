@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "profiles": {
+    "minimum": {
+      "name": "Minimum",
+      "host_memory_mib": 4096,
+      "host_cpu": 2,
+      "host_reserve_mib": 512,
+      "validation": "functional_acceptance_passed",
+      "description": "Light small-team use, fewer than 1000 emails/day, occasional document editing and small calls.",
+      "services": {
+        "thura": {
+          "memory_mib": 512,
+          "cpus": 0.5
+        },
+        "postgres": {
+          "memory_mib": 256,
+          "cpus": 0.25
+        },
+        "postfix": {
+          "memory_mib": 1792,
+          "cpus": 0.75
+        },
+        "collabora": {
+          "memory_mib": 1024,
+          "cpus": 0.5
+        }
+      }
+    },
+    "standard": {
+      "name": "Standard",
+      "host_memory_mib": 8192,
+      "host_cpu": 4,
+      "host_reserve_mib": 1024,
+      "validation": "sizing_proposal",
+      "description": "Additional headroom for simultaneous document editing, users and calls; capacity not yet benchmarked.",
+      "services": {
+        "thura": {
+          "memory_mib": 1024,
+          "cpus": 1
+        },
+        "postgres": {
+          "memory_mib": 512,
+          "cpus": 0.5
+        },
+        "postfix": {
+          "memory_mib": 2560,
+          "cpus": 1
+        },
+        "collabora": {
+          "memory_mib": 3072,
+          "cpus": 1.5
+        }
+      }
+    },
+    "performance": {
+      "name": "Performance",
+      "host_memory_mib": 16384,
+      "host_cpu": 8,
+      "host_reserve_mib": 2048,
+      "validation": "sizing_proposal",
+      "description": "More headroom for larger documents and concurrent work; select after observing actual load.",
+      "services": {
+        "thura": {
+          "memory_mib": 2048,
+          "cpus": 2
+        },
+        "postgres": {
+          "memory_mib": 1024,
+          "cpus": 1
+        },
+        "postfix": {
+          "memory_mib": 4096,
+          "cpus": 2
+        },
+        "collabora": {
+          "memory_mib": 7168,
+          "cpus": 3
+        }
+      }
+    }
+  }
+}

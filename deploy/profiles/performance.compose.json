@@ -1,0 +1,24 @@
+{
+  "services": {
+    "thura": {
+      "cpus": 2,
+      "mem_limit": "2048m",
+      "memswap_limit": "2048m"
+    },
+    "postgres": {
+      "cpus": 1,
+      "mem_limit": "1024m",
+      "memswap_limit": "1024m"
+    },
+    "postfix": {
+      "cpus": 2,
+      "mem_limit": "4096m",
+      "memswap_limit": "4096m"
+    },
+    "collabora": {
+      "cpus": 3,
+      "mem_limit": "7168m",
+      "memswap_limit": "7168m"
+    }
+  }
+}

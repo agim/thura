@@ -1,6 +1,8 @@
 # Compact deployment: four containers on a 4 GiB server
 
-`deploy/compose.yaml` is the default small-team profile. It keeps all existing
+`deploy/compose.yaml` is the default small-team profile. See
+[deployment profiles](deployment-profiles.md) for optional 8/16 GiB resource
+overrides and their validation status. It keeps all existing
 services, with two vCPU in aggregate CPU quotas and **3584 MiB of aggregate
 container memory limits**, no swap. Reserve the remaining **512 MiB** of a
 4 GiB Linux server for its kernel, Docker and an existing HTTPS reverse proxy.

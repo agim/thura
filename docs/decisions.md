@@ -421,3 +421,7 @@ Touches: deploy/postfix, deploy/compose.yaml, internal/mailabuse, internal/rspam
 ## 2026-10-20: Consolidate the default deployment into four bounded containers
 
 Why: The user requires a 4 GiB total host budget. Reuse one persistent Valkey with distinct logical databases, serialize ClamAV signature reloads and scans, bound database and document concurrency, and co-locate the SFU with the application. Keep independent-process supervision, non-root app/media workers, private service ports and persistent volumes; retain the separate deployment as an operator alternative.
+
+## 2026-10-20: Separate Thura profile definitions from deployment-platform orchestration
+
+Why: The user has a dedicated Lidza-deploy session and explicitly assigned platform work there. Thura owns resource catalog and Compose overrides, then the application manifest and real integration tests against the published platform contract. Reuse managed PostgreSQL, preserve queues/learning and avoid a second deployment implementation here.

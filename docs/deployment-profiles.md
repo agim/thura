@@ -1,0 +1,89 @@
+# Thura deployment profiles
+
+The standalone minimum remains `deploy/compose.yaml`. Larger profiles are
+optional resource overrides, keeping the same four-container arrangement.
+They do not require a different database schema or move existing volumes.
+
+| Profile | Host CPU | Host RAM | Container limits | Host allowance | Validation |
+|---|---:|---:|---:|---:|---|
+| Minimum | 2 vCPU | 4 GiB | 3.5 GiB | 512 MiB | Small-team functional acceptance passed |
+| Standard | 4 vCPU | 8 GiB | 7 GiB | 1 GiB | Sizing proposal; capacity not benchmarked |
+| Performance | 8 vCPU | 16 GiB | 14 GiB | 2 GiB | Sizing proposal; capacity not benchmarked |
+
+`deploy/profiles/catalog.json` records these budgets and their validation status.
+The service limits are:
+
+| Service | Minimum RAM / CPU | Standard RAM / CPU | Performance RAM / CPU |
+|---|---:|---:|---:|
+| Thura + LiveKit | 512 MiB / 0.50 | 1024 MiB / 1.00 | 2048 MiB / 2.00 |
+| Managed PostgreSQL | 256 MiB / 0.25 | 512 MiB / 0.50 | 1024 MiB / 1.00 |
+| Mail, antivirus, Valkey | 1792 MiB / 0.75 | 2560 MiB / 1.00 | 4096 MiB / 2.00 |
+| Collabora | 1024 MiB / 0.50 | 3072 MiB / 1.50 | 7168 MiB / 3.00 |
+
+The operator should choose based on simultaneous work, not just account count:
+mail volume, open documents and spreadsheet size, simultaneous call participants,
+and whether services are external. More RAM provides headroom; these overrides
+do not automatically change scan concurrency, database tuning or Go heap limits.
+A higher tier is not a claim of a specific supported user count.
+Local model hosting and call recording are not included. The host allowance
+covers Linux/Docker and an existing HTTPS proxy, not a colocated deployment
+control panel and its own database.
+
+## Standalone selection
+
+Keep the same Compose project name and private `.env` used for the installation.
+Configure the required public origins and image digest as described in
+[compact deployment](compact-deployment.md). Minimum uses the base file alone.
+For Standard:
+
+```
+docker compose --env-file .env -f deploy/compose.yaml \
+  -f deploy/profiles/standard.compose.json up -d --build
+```
+
+For Performance:
+
+```
+docker compose --env-file .env -f deploy/compose.yaml \
+  -f deploy/profiles/performance.compose.json up -d --build
+```
+
+Compose accepts the JSON override files directly. Always supply the same override
+for future changes. Back up first, use a maintenance window, and never use
+`down -v`. Changing a limit can recreate a container and interrupt calls or
+editing. Measure actual load and leave headroom before reducing a profile.
+
+## Līdza Deploy integration
+
+Platform implementation belongs to the separate Lidza-deploy session. That
+session received the service, resource, storage, networking, security and
+acceptance requirements. Thura's runtime manifest will follow its published
+contract; this catalog is not a claim that Deploy currently consumes it.
+
+The integration must attach the existing managed `DATABASE_URL` and its private
+network instead of creating Thura's standalone PostgreSQL service. Profile
+budgets include the managed database allocation. Do not silently shrink or tune
+an existing/shared database to fit Minimum: report its real allocation and
+require an appropriate profile or an explicit database migration.
+
+Stable persistent resources are app storage, Postfix queue, Rspamd state,
+ClamAV signatures and Valkey learning. There must never be two active writers
+for a learning or mail volume. Failed updates must preserve volumes and recover
+the previous application stack. Public mail/media ports need conflict checks;
+private Rspamd/controller, antivirus, cache and document ports stay private.
+
+A packaged deployment also needs the repository's existing `LIDZA_MASTER_KEY`
+when it includes sealed credentials. A new random key cannot decrypt an existing
+credential file. No original key, provider credential or generated secret belongs
+in this catalog or runtime manifest.
+
+## Checks
+
+```
+python3 -m unittest discover -s deploy/profiles
+```
+
+The checks resolve the actual Compose files, verify the selected resource limits,
+CPU totals and host allowance, and ensure the stack still has four services with
+the intended private cache/realtime wiring. They do not replace a real deployment
+through Līdza Deploy. Full platform acceptance remains pending its implementation.
