@@ -17,3 +17,6 @@ __pycache__/
 
 # Private deployment certificates and local credentials
 deploy/private/
+
+# Installation-specific sealed credentials must not ship with public source.
+config/credentials.yml.enc

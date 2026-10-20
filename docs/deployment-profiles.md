@@ -63,7 +63,10 @@ not support this manifest. It is separate from the standalone Compose files.
 The manifest deliberately contains three services: Deploy attaches its managed
 PostgreSQL as the fourth container. Do not deploy Compose's PostgreSQL alongside it.
 
-The original repository `LIDZA_MASTER_KEY` is required. Deploy generates the
+A private installation `LIDZA_MASTER_KEY` is required. For a fresh installation,
+generate a 32-byte hex key and back it up separately. Upgrades must retain the
+existing key. Installation-specific `config/credentials.yml.enc` files stay local;
+Thura does not ship the original scaffold ciphertext. Deploy generates the
 missing setup, mail-learning, meeting and document secrets in encrypted state.
 Thura seeds its encrypted first-run wizard draft from catalogued operator
 settings, keeping managed storage and service addresses consistent with the
@@ -84,8 +87,8 @@ for a learning or mail volume. Failed updates must preserve volumes and recover
 the previous application stack. Public mail/media ports need conflict checks;
 private Rspamd/controller, antivirus, cache and document ports stay private.
 
-A packaged deployment also needs the repository's existing `LIDZA_MASTER_KEY`
-when it includes sealed credentials. A new random key cannot decrypt an existing
+An installation that supplies its own sealed credentials must supply its existing
+`LIDZA_MASTER_KEY`. A new random key cannot decrypt an existing
 credential file. No original key, provider credential or generated secret belongs
 in this catalog or runtime manifest.
 
