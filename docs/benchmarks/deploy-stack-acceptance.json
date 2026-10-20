@@ -1,0 +1,130 @@
+{
+  "checks": {
+    "clean_av": "OK",
+    "eicar_av": "FOUND",
+    "rspamd_scan": true,
+    "learning_reversal_and_replay": true,
+    "clamav_reload": true,
+    "managed_postgres_query": true,
+    "real_rtc_route": true
+  },
+  "resources": {
+    "app": {
+      "limit_bytes": 536870912,
+      "cpu_limit": 0.5,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 237043712,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "0",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      }
+    },
+    "mail": {
+      "limit_bytes": 1879048192,
+      "cpu_limit": 0.75,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 1328549888,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "0",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      }
+    },
+    "office": {
+      "limit_bytes": 1073741824,
+      "cpu_limit": 0.5,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 929624064,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "0",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      }
+    },
+    "postgres": {
+      "limit_bytes": 268435456,
+      "cpu_limit": 0.25,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 84766720,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "0",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      }
+    }
+  },
+  "scope": "Actual minimum-profile Deploy stack on a 2-CPU,4-GiB VM; synthetic functional acceptance, not throughput or mail-detection accuracy.",
+  "host": {
+    "nominal_memory_mib": 4096,
+    "cpus": 2,
+    "linux_memtotal_kib": 3998484,
+    "memavailable_kib_after_checks": 1567028,
+    "swap_total_kib": 0,
+    "agent_runs_inside_budget": true,
+    "agent_rss_kib_after_checks": 27184
+  },
+  "date": "2026-10-20",
+  "deployment": {
+    "app_commit": "24e50db794ddf65de38473bb6fe3c713ba06b1f2",
+    "agent_commit": "4cc4754",
+    "architecture": "linux/arm64",
+    "running_service_containers": 4,
+    "managed_postgresql_reused": true,
+    "mode": "production",
+    "test_mode_bypass": false,
+    "bootstrap_to_ready": true,
+    "readyz_status": 200,
+    "ai_calls": 0
+  },
+  "mail": {
+    "smtp_received": true,
+    "public_relay_refused": true,
+    "outgoing_provider_probe_captured": true,
+    "junk_spam_learning": true,
+    "not_spam_restored_and_learned": true,
+    "ai_calls": 0
+  },
+  "rollback": {
+    "rollback_preserved_version_metadata": true,
+    "rollback_preserved_actual_stored_bytes": true,
+    "rollback_preserved_learned_feedback": true,
+    "same_managed_database_attachment": true,
+    "bootstrap_cleared": true,
+    "versions": 4
+  },
+  "office": {
+    "docx_saved_downloaded_xml_verified": true,
+    "xlsx_saved_downloaded_xml_verified": true,
+    "same_tests_passed_after_rollback": true
+  },
+  "limits": [
+    "Functional synthetic acceptance, not user-capacity or detection-quality benchmark.",
+    "ARM64 vendor pin; x86-64 not tested.",
+    "Trusted public DNS/TLS/MX, Internet SMTP delivery and TURN not tested.",
+    "SFU health and RTC route only; no media call or physical Android retest in this run.",
+    "Standard/performance remain unbenchmarked sizing proposals.",
+    "Sum of per-service peaks is not a measured simultaneous host peak."
+  ],
+  "cleanup": {
+    "owned_test_vm_stopped": true,
+    "state_and_volumes_retained": true,
+    "original_demo_untouched": true
+  }
+}

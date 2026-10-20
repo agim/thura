@@ -62,7 +62,7 @@ settings response to advertise `stack_profiles_supported: true`; older agents do
 not support this manifest. It is separate from the standalone Compose files.
 The committed Collabora pin is the ARM64 image exercised in the demo. Before
 using an x86-64 host, select and test the matching official immutable image
-and update the manifest pin; this ARM64 acceptance is not x86-64 evidence.
+and update the office Dockerfile pin; this ARM64 acceptance is not x86-64 evidence.
 The manifest deliberately contains three services: Deploy attaches its managed
 PostgreSQL as the fourth container. Do not deploy Compose's PostgreSQL alongside it.
 
@@ -108,4 +108,7 @@ python3 -m unittest discover -s deploy/profiles
 The checks resolve the actual Compose files, verify the selected resource limits,
 CPU totals and host allowance, and ensure the stack still has four services with
 the intended private cache/realtime wiring. They do not replace a real deployment
-through Līdza Deploy. Full platform acceptance remains pending its implementation.
+through Līdza Deploy. The actual minimum-profile deployment passed production setup, document saves,
+mail learning and rollback in a 2-CPU / 4-GiB Linux VM. See the
+[acceptance report](deploy-stack-acceptance.md) for measured resources,
+reproduction and the remaining deployment-specific checks.
