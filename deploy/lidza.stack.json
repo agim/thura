@@ -108,7 +108,6 @@
       "name": "office",
       "role": "office",
       "policy": "office",
-      "image": "collabora/code@sha256:b4cc44e40658d662275bb955c683a254c86148165c587f881711ad4924b4be6b",
       "command": [
         "--o:ssl.enable=false",
         "--o:ssl.termination=true",
@@ -122,11 +121,11 @@
         "--o:per_document.max_concurrency=1"
       ],
       "health_command": [
-        "curl",
-        "--fail",
-        "--silent",
-        "http://127.0.0.1:9980/hosting/discovery"
-      ]
+        "/usr/local/bin/thura-office-health"
+      ],
+      "build": {
+        "dockerfile": "deploy/compact/office.Dockerfile"
+      }
     }
   ]
 }

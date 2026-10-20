@@ -60,6 +60,9 @@ editing. Measure actual load and leave headroom before reducing a profile.
 or `performance` through Deploy's `runtime_profile` setting. Require the agent's
 settings response to advertise `stack_profiles_supported: true`; older agents do
 not support this manifest. It is separate from the standalone Compose files.
+The committed Collabora pin is the ARM64 image exercised in the demo. Before
+using an x86-64 host, select and test the matching official immutable image
+and update the manifest pin; this ARM64 acceptance is not x86-64 evidence.
 The manifest deliberately contains three services: Deploy attaches its managed
 PostgreSQL as the fourth container. Do not deploy Compose's PostgreSQL alongside it.
 

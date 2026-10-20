@@ -1,6 +1,7 @@
 """Check resource budgets against real Compose merging, without starting services."""
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -48,7 +49,11 @@ class ProfileTests(unittest.TestCase):
             self.assertNotIn('privileged',service)
             for volume in service.get('volumes',[]):
                 self.assertNotIn('source',volume)
-        self.assertRegex(services['office']['image'],r'^collabora/code@sha256:[a-f0-9]{64}$')
+        office_dockerfile=ROOT/services['office']['build']['dockerfile']
+        vendor=re.search(r'^FROM (collabora/code@sha256:[a-f0-9]{64})$',office_dockerfile.read_text(),re.M)
+        self.assertIsNotNone(vendor)
+        self.assertRegex(vendor.group(1),r'^collabora/code@sha256:[a-f0-9]{64}$')
+        self.assertEqual(services['office']['health_command'],['/usr/local/bin/thura-office-health'])
 
     def test_compose_resolves_to_exactly_four_services_with_the_selected_limits(self):
         executable = shutil.which('docker-compose')

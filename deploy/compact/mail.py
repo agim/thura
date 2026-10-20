@@ -32,15 +32,18 @@ def health():
 
 
 def main():
-    root = Path('/var/lib/thura-valkey')
-    root.mkdir(mode=0o700, exist_ok=True)
-    account = pwd.getpwnam('valkey')
-    # Existing standalone Valkey images use another UID. Preserve their AOF
-    # data while transferring ownership, without following volume symlinks.
-    for directory, _children, files in os.walk(root, followlinks=False):
-        os.chown(directory, account.pw_uid, account.pw_gid, follow_symlinks=False)
-        for name in files:
-            os.chown(Path(directory) / name, account.pw_uid, account.pw_gid, follow_symlinks=False)
+    # Deploy creates empty named volumes without copying image directory
+    # ownership. Existing Valkey volumes can also use another image's UID.
+    # Preserve state while assigning each tree to its service account; never
+    # follow links out of a persistent volume.
+    for name, user in [('/var/lib/thura-valkey', 'valkey'), ('/var/lib/rspamd', '_rspamd')]:
+        root = Path(name)
+        root.mkdir(mode=0o700, exist_ok=True)
+        account = pwd.getpwnam(user)
+        for directory, _children, files in os.walk(root, followlinks=False):
+            os.chown(directory, account.pw_uid, account.pw_gid, follow_symlinks=False)
+            for filename in files:
+                os.chown(Path(directory) / filename, account.pw_uid, account.pw_gid, follow_symlinks=False)
     for directory in ['/var/lib/clamav', '/run/clamav']:
         Path(directory).mkdir(exist_ok=True)
         account = pwd.getpwnam('clamav')
