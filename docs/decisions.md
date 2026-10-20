@@ -399,3 +399,9 @@ Why: One self-hosted installation and one administrator manage all teams. Bind e
 ## 2026-10-19: Keep class-only Llama v2 disabled after constrained CPU regression
 
 Why: The corrected one-decision three-class objective trained successfully and eliminated legitimate-mail false positives on this fixture, but the Q4 CPU service detected only 22/44 phishing cases and failed instruction/tail gates and conservative memory headroom. Native same-corpus scoring reached 41/44, below target, and fusion probes preserved native predictions; export/runtime parity remains unresolved. Retain the Mail toggle and assistant separation, preserve the unchanged quality gates, and do not activate or redistribute weights. See docs/llama-classification-v2.md.
+
+## 2026-10-19: Preserve class-only Llama CPU accuracy with explicit precision and bounded serving state
+
+Why: The unchanged v2 adapters agree between Mac and unquantized CPU probes, while Q4 loses phishing detections even on exact Mac tokens. Q8 restores the diagnostic decisions and reaches 42/44 in the first exposed regression, without changing training or quality gates. Freeze the template date and Go evidence encoding, disable weight repacking, and explicitly disable the runtime RAM prompt cache rather than accepting its 8-GiB default under a 2-GiB service cap. Keep every experiment and resource failure visible, and keep the classifier disabled unless independent quality and resource validation permits release.
+
+The final stateless Q8 run passed all existing pilot gates: 42/44 phishing, 0/32 legitimate false positives, 20/20 spam, 8/8 instruction and 4/4 tail challenges, with 1.47 GiB peak and no memory-limit events on 2 vCPU / 2 GiB. Keep production disabled pending fresh independent validation; see docs/llama-cpu-parity.md.

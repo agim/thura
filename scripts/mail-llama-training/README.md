@@ -64,6 +64,42 @@ native development scores are not substituted for it. Nothing enables integratio
 The following original JSON-completion procedure remains available to reproduce
 the earlier failed checkpoint; do not mix its data, prompt or objective with v2.
 
+## CPU export parity investigation
+
+Measured results and remaining release conditions: [CPU parity report](../../docs/llama-cpu-parity.md).
+
+The original Q4 artifact is retained. For the unchanged v2 adapters, export a
+separate higher-precision artifact without overwriting its provenance:
+
+```sh
+python scripts/mail-llama-training/export.py --root .lidza/llama-decision --base .lidza/llama-training/base --converter-source .lidza/llama-training/llama.cpp --converter-python .lidza/local-mail-training/venv/bin/python --expected-steps 1200 --quantization Q8_0
+python scripts/mail-llama-training/benchmark.py --root .lidza/llama-decision --model .lidza/llama-decision/trained-q8.gguf --provenance .lidza/llama-decision/trained-q8-provenance.json --class-decision --client .lidza/llama-decision/decision-client --serving-profile scripts/mail-llama-training/decision-v2-serving.json --corpus .lidza/local-mail-training/llama-pilot.json --output .lidza/llama-parity/cpu-q8.json
+```
+
+Q8 conversion still has a separate 4-GiB allowance. The deployment benchmark
+retains **2 vCPU / 2 GiB / no swap / no GPU / no network**, unchanged quality and
+challenge gates, and bounded 120-second requests. The serving profile records a
+32-token processing batch, disables weight repacking to avoid a second resident
+weight copy, and freezes the template date to `19 Oct 2026`, matching this
+checkpoint's training-day prompt. Version 2 also sets `--cache-ram 0`,
+`--no-cache-prompt` and `--no-cache-idle-slots`: the runtime's default 8192-MiB
+RAM prompt cache is inappropriate for this 2-GiB stateless classifier. This
+does not disable Thura's separate application-level AI response cache. This profile belongs to the v2 research
+checkpoint; do not silently apply that date to another training run.
+
+While the private benchmark container is running, use `compare_serving.py` with
+`--model`, `--adapters`, `--corpus`, `--container`, `--serving-profile` and `--output`
+to verify every runtime token sequence against the Mac tokenizer and measure
+native predictions on exactly the same Go-encoded evidence. It uses the raw
+server's diagnostic template/tokenization endpoints only; actual CPU predictions
+still pass through the official Go LLM pack. IDs, labels and source metadata do
+not enter requests. The shared encoding test covers Go's HTML/control-character
+escaping so fake chat headers cannot silently change this comparison.
+
+No adapter selection, training, threshold adjustment or acceptance relaxation is
+part of this precision comparison. The exposed regression is diagnostic, and a
+numerical pilot pass is never automatic production approval.
+
 ## Corrected AWS approach
 
 The AWS sample at revision `9e53b98240177b5ca47fdf23b8bd0f722d0ade26`

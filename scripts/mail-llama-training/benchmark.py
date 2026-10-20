@@ -11,6 +11,7 @@ import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'mail-classifier-training'))
 from common import acceptance, metrics
+from serving import load_profile
 
 IMAGE = 'ghcr.io/ggml-org/llama.cpp:server@sha256:143926008cbbbab8fae8fd87809875af3e42d3d676c30c11c55c0f3f683a5a07'
 MEMORY = 2 * 1024 ** 3
@@ -38,11 +39,17 @@ def run(args):
     client = Path(args.client).resolve() if args.client else root / 'llama1b-client'
     if sha(model) != model_sha or not provenance.get('adapter_sha256'):
         raise ValueError('trained artifact differs from frozen provenance')
+    profile, profile_args = load_profile(args.serving_profile)
+    if profile and not args.class_decision:
+        raise ValueError('parity serving profile requires the class-decision contract')
+    batch_size = str(profile.get('batch_size', 128))
     name = 'thura-trained-llama-' + uuid.uuid4().hex[:12]
-    report = {'status': 'failed', 'model': 'Llama-Thura-mail-1B Q4_K_M', 'model_sha256': model_sha,
+    report = {'status': 'failed', 'model': 'Llama-Thura-mail-1B ' + provenance.get('gguf_type', 'Q4_K_M'), 'model_sha256': model_sha,
               'model_bytes': model.stat().st_size, 'corpus_sha256': sha(corpus), 'client_sha256': sha(client),
               'limits': {'cpus': 2, 'memory_bytes': MEMORY, 'swap_bytes': 0}, 'phase': 'trained model: exposed regression plus validation spam pilot',
               'production_acceptance': False, 'training_provenance': provenance}
+    report['serving_profile'] = profile
+    report['serving_profile_sha256'] = sha(Path(args.serving_profile)) if args.serving_profile else None
     report['latency_budget_seconds'] = args.latency_budget_seconds
     try:
         grammar_args = ['--grammar', 'root ::= "A" | "B" | "C"'] if args.class_decision else []
@@ -55,7 +62,7 @@ def run(args):
                '--mount', f'type=bind,src={client},dst=/bench,readonly',
                IMAGE, '--model', '/models/model.gguf', '--alias', 'thura-mail-llama1b', '--host', '127.0.0.1', '--port', '8080',
                '--ctx-size', '4096', '--parallel', '1', '--threads', '2', '--threads-batch', '2', '--n-gpu-layers', '0',
-               '--batch-size', '128', '--ubatch-size', '128', '--fit', 'off', '--no-context-shift', '--no-webui', '--jinja', '--seed', '42', *grammar_args)
+               '--batch-size', batch_size, '--ubatch-size', batch_size, '--fit', 'off', '--no-context-shift', '--no-webui', '--jinja', '--seed', '42', *profile_args, *grammar_args)
         inspection = json.loads(docker('inspect', name).stdout)[0]
         host = inspection['HostConfig']
         if host['NanoCpus'] != 2000000000 or host['Memory'] != MEMORY or host['MemorySwap'] != MEMORY or host['NetworkMode'] != 'none':
@@ -121,6 +128,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', required=True)
     parser.add_argument('--provenance', required=True)
     parser.add_argument('--client')
+    parser.add_argument('--serving-profile', help='Frozen date/batch/repacking contract; retained in measurements')
     parser.add_argument('--class-decision', action='store_true')
     parser.add_argument('--latency-budget-seconds', type=float, default=30)
     parser.add_argument('--corpus', required=True)

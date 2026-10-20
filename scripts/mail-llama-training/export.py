@@ -24,9 +24,13 @@ def main():
     parser.add_argument('--converter-python', required=True)
     parser.add_argument('--base')
     parser.add_argument('--converter-source')
+    parser.add_argument('--quantization', choices=['Q4_K_M', 'Q8_0'], default='Q4_K_M')
     parser.add_argument('--expected-steps', type=int, default=600)
     args = parser.parse_args()
     root = Path(args.root).resolve()
+    suffix = 'q4' if args.quantization == 'Q4_K_M' else 'q8'
+    target = root / f'trained-{suffix}.gguf'
+    report_name = 'trained-provenance.json' if suffix == 'q4' else 'trained-q8-provenance.json'
     training = json.loads((root / 'training.json').read_text())
     if training['exit_code'] != 0 or training['steps'] != args.expected_steps or training.get('objective_code_changed_during_run'):
         raise ValueError('the predeclared training schedule did not complete')
@@ -48,17 +52,18 @@ def main():
     subprocess.run(['docker', 'run', '--rm', '--network', 'none', '--cpus', '2', '--memory', '4g',
                     '--memory-swap', '4g', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
                     '--mount', f'type=bind,src={root},dst=/models', '--entrypoint', '/app/llama', IMAGE,
-                    'quantize', '/models/trained-f16.gguf', '/models/trained-q4.gguf', 'Q4_K_M', '2'], check=True)
+                    'quantize', '/models/trained-f16.gguf', f'/models/{target.name}', args.quantization, '2'], check=True)
     provenance = {'kind': 'locally-fine-tuned', 'name': 'Llama-Thura-mail-1B',
-                  'model_sha256': sha(root / 'trained-q4.gguf'),
-                  'model_bytes': (root / 'trained-q4.gguf').stat().st_size,
+                  'model_sha256': sha(target),
+                  'model_bytes': target.stat().st_size,
                   'adapter_sha256': sha(root / 'trained-adapters/adapters.safetensors'),
                   'data_manifest_sha256': sha(root / 'data/manifest.json'),
                   'acceptance_sha256': sha(root / 'acceptance-before-test.json'),
                   'training_report': training,
                   'base_manifest': json.loads(Path(__file__).with_name('base.json').read_text()),
                   'converter_revision': REVISION, 'runtime_image': IMAGE,
-                  'quantization': 'QLoRA trained on MLX 4bit; dequantized fusion then Q4_K_M',
+                  'gguf_type': args.quantization,
+                  'quantization': 'QLoRA trained on MLX 4bit; dequantized fusion then ' + args.quantization,
                   'license': 'Llama-3.2 Community License and Acceptable Use Policy',
                   'production_enabled': False}
     provenance['objective'] = training.get('objective', 'json-token')
@@ -68,7 +73,7 @@ def main():
             raise ValueError('serving prompt differs from training contract')
         provenance['prompt_sha256'] = sha(prompt_path)
         provenance['decision_contract'] = json.loads(prompt_path.read_text())
-    (root / 'trained-provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')
+    (root / report_name).write_text(json.dumps(provenance, indent=2) + '\n')
     print(json.dumps({'model_bytes': provenance['model_bytes'], 'model_sha256': provenance['model_sha256']}))
 
 
