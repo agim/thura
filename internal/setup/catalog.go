@@ -1,5 +1,7 @@
 package setup
 
+import "os"
+
 // Only this allowlist can enter the published server configuration.
 type Field struct {
 	Name, Label, Kind, Default, Help string
@@ -71,10 +73,10 @@ func Catalog() []Step {
 			field("MATRIX_SERVER_URL", "Matrix HTTPS URL", "url", "", "Optional; configure the application service on the homeserver."),
 			field("MATRIX_SERVER_NAME", "Matrix server identity", "text", "", "Homeserver DNS identity."),
 			field("MATRIX_AS_TOKEN", "Matrix application-service token", "secret", "", "Required when Matrix is enabled."),
-			field("COLLABORA_SERVER_URL", "Collabora HTTPS URL", "url", "", "Configure the service root /api/v1/collabora and permit this Thura installation as a WOPI host."),
-			field("COLLABORA_APP_URL", "Collabora-accessible Thura HTTPS URL", "url", "", "Thura address reachable by the document server."),
+			field("COLLABORA_SERVER_URL", "Collabora server URL", "url", "", "Public services require HTTPS; deployment-managed private origins are preconfigured. Use service root /api/v1/collabora and permit this Thura installation as a WOPI host."),
+			field("COLLABORA_APP_URL", "Collabora-accessible Thura URL", "url", "", "Thura address reachable by the document server. Public origins require HTTPS; deployment-managed private origins are preconfigured."),
 			field("COLLABORA_TOKEN_SECRET", "Collabora access-token secret", "secret", "", "At least 32 characters; used by Thura to sign file-scoped access."),
-			field("LIVEKIT_SERVER_URL", "LiveKit HTTPS API URL", "url", "", "Optional SFU; TURN and device checks remain deployment tasks."),
+			field("LIVEKIT_SERVER_URL", "LiveKit server URL", "url", "", "Public services require HTTPS; deployment-managed private origins are preconfigured. TURN and device checks remain deployment tasks."),
 			field("LIVEKIT_PUBLIC_URL", "LiveKit public WSS URL", "text", "", "Browser-reachable secure WebSocket endpoint."),
 			field("LIVEKIT_API_KEY", "LiveKit API key", "secret", "", "Required with LiveKit."),
 			field("LIVEKIT_API_SECRET", "LiveKit API secret", "secret", "", "Required with LiveKit."),
@@ -108,4 +110,18 @@ func draftDefaults() map[string]string {
 	v := defaults()
 	v["MAIL_PROVIDER"] = "mailgun"
 	return v
+}
+
+// Bootstrap uses explicit operator environment values, not browser input. This
+// keeps managed infrastructure and the encrypted wizard snapshot in agreement.
+func bootstrapDraft() map[string]string {
+	values := draftDefaults()
+	for _, step := range Catalog() {
+		for _, field := range step.Fields {
+			if value, present := os.LookupEnv(field.Name); present {
+				values[field.Name] = value
+			}
+		}
+	}
+	return values
 }

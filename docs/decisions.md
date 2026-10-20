@@ -425,3 +425,7 @@ Why: The user requires a 4 GiB total host budget. Reuse one persistent Valkey wi
 ## 2026-10-20: Separate Thura profile definitions from deployment-platform orchestration
 
 Why: The user has a dedicated Lidza-deploy session and explicitly assigned platform work there. Thura owns resource catalog and Compose overrides, then the application manifest and real integration tests against the published platform contract. Reuse managed PostgreSQL, preserve queues/learning and avoid a second deployment implementation here.
+
+## 2026-10-20: Consume Deploy's bounded stack contract and bootstrap managed settings
+
+Why: Deploy owns managed PostgreSQL and stack lifecycle. Thura supplies `deploy/lidza.stack.json`, three service definitions and tested image pins, with the database attached by Deploy rather than Compose. Seed only catalogued operator environment settings into encrypted setup drafts so managed storage and integration origins can pass the real wizard without environment conflicts. Permit private HTTP integration origins only through an explicit operator allowlist; keep public HTTPS/WSS, probe and publication requirements unchanged.

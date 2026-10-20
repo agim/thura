@@ -28,6 +28,28 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(CATALOG['standard']['validation'],'sizing_proposal')
         self.assertEqual(CATALOG['performance']['validation'],'sizing_proposal')
 
+    def test_deploy_manifest_preserves_compact_service_and_persistence_boundaries(self):
+        manifest=json.loads((ROOT/'deploy/lidza.stack.json').read_text())
+        self.assertEqual(manifest['version'],1)
+        services={item['role']:item for item in manifest['services']}
+        self.assertEqual(set(services),{'app','mail','office'})
+        self.assertIn('LIDZA_MASTER_KEY',manifest['required_environment'])
+        self.assertNotIn('LIDZA_MASTER_KEY',manifest['generated_secrets'])
+        app=services['app']
+        self.assertEqual(app['build']['target'],'compact')
+        self.assertEqual(app['environment']['CACHE_URL'],'redis://127.0.0.1:6379/1')
+        self.assertEqual(app['environment']['REALTIME_BUS_URL'],'redis://127.0.0.1:6379/2')
+        self.assertNotIn('DATABASE_URL',app['environment'])
+        self.assertEqual({(p['port'],p['protocol']) for p in app['public_ports']},{(25,'tcp'),(7881,'tcp'),(7882,'udp')})
+        self.assertTrue(services['mail']['share_app_network'])
+        self.assertEqual({v['name'] for v in services['mail']['volumes']},{'postfix-queue','rspamd-state','clamav-signatures','mail-filter-learning'})
+        for service in services.values():
+            self.assertNotIn('host_network',service)
+            self.assertNotIn('privileged',service)
+            for volume in service.get('volumes',[]):
+                self.assertNotIn('source',volume)
+        self.assertRegex(services['office']['image'],r'^collabora/code@sha256:[a-f0-9]{64}$')
+
     def test_compose_resolves_to_exactly_four_services_with_the_selected_limits(self):
         executable = shutil.which('docker-compose')
         command = [executable] if executable else ['docker','compose']

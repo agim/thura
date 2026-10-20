@@ -55,10 +55,22 @@ editing. Measure actual load and leave headroom before reducing a profile.
 
 ## Līdza Deploy integration
 
-Platform implementation belongs to the separate Lidza-deploy session. That
-session received the service, resource, storage, networking, security and
-acceptance requirements. Thura's runtime manifest will follow its published
-contract; this catalog is not a claim that Deploy currently consumes it.
+`deploy/lidza.stack.json` follows Līdza Deploy's published version-1 stack contract
+(`feat/stack-profiles`, implementation checkpoint `81f1e37`). Select `minimum`, `standard`
+or `performance` through Deploy's `runtime_profile` setting. Require the agent's
+settings response to advertise `stack_profiles_supported: true`; older agents do
+not support this manifest. It is separate from the standalone Compose files.
+The manifest deliberately contains three services: Deploy attaches its managed
+PostgreSQL as the fourth container. Do not deploy Compose's PostgreSQL alongside it.
+
+The original repository `LIDZA_MASTER_KEY` is required. Deploy generates the
+missing setup, mail-learning, meeting and document secrets in encrypted state.
+Thura seeds its encrypted first-run wizard draft from catalogued operator
+settings, keeping managed storage and service addresses consistent with the
+published setup. Private HTTP service origins are explicitly allowlisted through
+`THURA_SERVICE_HTTP_ORIGINS`; public app and meeting URLs still require
+HTTPS/WSS. The wizard keeps its real mail and storage probes and environment
+conflict checks. Complete the wizard, publish, then reload through Deploy.
 
 The integration must attach the existing managed `DATABASE_URL` and its private
 network instead of creating Thura's standalone PostgreSQL service. Profile

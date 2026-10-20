@@ -158,7 +158,7 @@ func Claim(ctx context.Context, in schema.SetupClaimInput) (schema.SetupStatus, 
 	if _, e = queries.CreateInvitedAccount(ctx, q.CreateInvitedAccountParams{Subject: subject, Email: stringPointer(auth.NormalizeEmail(in.Email)), Name: stringPointer(strings.TrimSpace(in.Name)), PasswordHash: &hash}); e != nil {
 		return schema.SetupStatus{}, router.Errorf(409, "account could not be created")
 	}
-	v := draftDefaults()
+	v := bootstrapDraft()
 	v["THURA_OPERATOR_EMAIL"] = auth.NormalizeEmail(in.Email)
 	sealed, e := seal(v)
 	if e != nil {
@@ -213,7 +213,7 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 	}
 	action := "server.setup.save"
 	if restart {
-		v = draftDefaults()
+		v = bootstrapDraft()
 		step = "server"
 		action = "server.setup.restart"
 	} else {

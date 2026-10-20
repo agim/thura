@@ -8,6 +8,8 @@ import (
 	"net"
 	"net/mail"
 	"net/url"
+	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"thura/internal/federation"
@@ -122,8 +124,8 @@ func validate(v map[string]string) error {
 		if v[group[0]] == "" {
 			continue
 		}
-		if !httpsOrigin(v[group[0]]) {
-			return fmt.Errorf("%s requires an HTTPS origin", group[0])
+		if !integrationOrigin(group[0], v[group[0]]) {
+			return fmt.Errorf("%s requires HTTPS or an explicitly configured private service origin", group[0])
 		}
 		for _, n := range group[1:] {
 			if v[n] == "" {
@@ -132,7 +134,7 @@ func validate(v map[string]string) error {
 		}
 	}
 
-	if v["COLLABORA_SERVER_URL"] != "" && (!httpsOrigin(v["COLLABORA_APP_URL"]) || len(v["COLLABORA_TOKEN_SECRET"]) < 32) {
+	if v["COLLABORA_SERVER_URL"] != "" && (!integrationOrigin("COLLABORA_APP_URL", v["COLLABORA_APP_URL"]) || len(v["COLLABORA_TOKEN_SECRET"]) < 32) {
 		return errors.New("collabora requires an HTTPS app origin and a secret of at least 32 characters")
 	}
 	if v["LIVEKIT_SERVER_URL"] != "" {
@@ -177,4 +179,32 @@ func validate(v map[string]string) error {
 		}
 	}
 	return nil
+}
+
+var serviceAlias = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
+
+// Only the deployment operator can allow private cleartext service origins.
+// Public app URLs, Matrix and object-storage endpoints retain HTTPS validation.
+func integrationOrigin(name, raw string) bool {
+	if httpsOrigin(raw) {
+		return true
+	}
+	if name != "COLLABORA_SERVER_URL" && name != "COLLABORA_APP_URL" && name != "LIVEKIT_SERVER_URL" {
+		return false
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "http" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	ip := net.ParseIP(host)
+	if !serviceAlias.MatchString(host) && (ip == nil || (!ip.IsLoopback() && !ip.IsPrivate())) {
+		return false
+	}
+	for _, allowed := range strings.Split(os.Getenv("THURA_SERVICE_HTTP_ORIGINS"), ",") {
+		if strings.TrimSuffix(strings.TrimSpace(allowed), "/") == strings.TrimSuffix(raw, "/") {
+			return true
+		}
+	}
+	return false
 }

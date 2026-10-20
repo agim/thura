@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "required_environment": [
+    "LIDZA_MASTER_KEY"
+  ],
+  "generated_secrets": [
+    "THURA_SETUP_TOKEN",
+    "THURA_POSTFIX_TOKEN",
+    "MAIL_RSPAMD_PASSWORD",
+    "LIVEKIT_API_KEY",
+    "LIVEKIT_API_SECRET",
+    "COLLABORA_TOKEN_SECRET"
+  ],
+  "services": [
+    {
+      "name": "app",
+      "role": "app",
+      "policy": "init",
+      "build": {
+        "dockerfile": "Dockerfile",
+        "target": "compact"
+      },
+      "aliases": [
+        "thura"
+      ],
+      "environment": {
+        "DB_MIGRATE": "true",
+        "DB_MAX_CONNS": "8",
+        "CACHE_URL": "redis://127.0.0.1:6379/1",
+        "REALTIME_BUS_URL": "redis://127.0.0.1:6379/2",
+        "MAIL_CLAMD_ADDRESS": "127.0.0.1:3310",
+        "MAIL_RSPAMD_URL": "http://127.0.0.1:11333",
+        "MAIL_RSPAMD_CONTROLLER_URL": "http://127.0.0.1:11334",
+        "LIVEKIT_SERVER_URL": "http://127.0.0.1:7880",
+        "LIVEKIT_PUBLIC_URL": "wss://${APP_DOMAIN}/rtc",
+        "COLLABORA_SERVER_URL": "http://office:9980",
+        "COLLABORA_APP_URL": "http://thura:3000",
+        "THURA_PUBLIC_HOSTS": "thura,${APP_DOMAIN}",
+        "THURA_SERVICE_HTTP_ORIGINS": "http://127.0.0.1:7880,http://office:9980,http://thura:3000",
+        "THURA_MAIL_INBOUND": "postfix",
+        "STORAGE_PROVIDER": "local"
+      },
+      "public_ports": [
+        {
+          "port": 25,
+          "protocol": "tcp"
+        },
+        {
+          "port": 7881,
+          "protocol": "tcp"
+        },
+        {
+          "port": 7882,
+          "protocol": "udp"
+        }
+      ],
+      "http_routes": [
+        {
+          "prefix": "/rtc",
+          "port": 7880,
+          "strip_prefix": true
+        }
+      ],
+      "health_command": [
+        "python3",
+        "/opt/thura/app.py",
+        "--health"
+      ]
+    },
+    {
+      "name": "mail",
+      "role": "mail",
+      "policy": "mail",
+      "build": {
+        "dockerfile": "deploy/compact/mail.Dockerfile"
+      },
+      "share_app_network": true,
+      "environment": {
+        "THURA_POSTFIX_MANAGED": "true",
+        "THURA_POSTFIX_TOKEN": "${THURA_POSTFIX_TOKEN}",
+        "MAIL_RSPAMD_PASSWORD": "${MAIL_RSPAMD_PASSWORD}"
+      },
+      "volumes": [
+        {
+          "name": "postfix-queue",
+          "target": "/var/spool/postfix"
+        },
+        {
+          "name": "rspamd-state",
+          "target": "/var/lib/rspamd"
+        },
+        {
+          "name": "clamav-signatures",
+          "target": "/var/lib/clamav"
+        },
+        {
+          "name": "mail-filter-learning",
+          "target": "/var/lib/thura-valkey"
+        }
+      ],
+      "health_command": [
+        "python3",
+        "/opt/thura/compact.py",
+        "--health"
+      ]
+    },
+    {
+      "name": "office",
+      "role": "office",
+      "policy": "office",
+      "image": "collabora/code@sha256:b4cc44e40658d662275bb955c683a254c86148165c587f881711ad4924b4be6b",
+      "command": [
+        "--o:ssl.enable=false",
+        "--o:ssl.termination=true",
+        "--o:net.service_root=/api/v1/collabora",
+        "--o:storage.wopi.alias_groups[@mode]=groups",
+        "--o:storage.wopi.alias_groups.group[0].host=http://thura:3000",
+        "--o:storage.wopi.alias_groups.group[0].host[@allow]=true",
+        "--o:admin_console.enable=false",
+        "--o:logging.level=warning",
+        "--o:num_prespawn_children=1",
+        "--o:per_document.max_concurrency=1"
+      ],
+      "health_command": [
+        "curl",
+        "--fail",
+        "--silent",
+        "http://127.0.0.1:9980/hosting/discovery"
+      ]
+    }
+  ]
+}
