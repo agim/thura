@@ -417,3 +417,7 @@ Touches: scripts/mail-rspamd-evaluation, docs/rspamd-codex-evaluation.md
 Why: The user explicitly requested shipment with user-correctable filtering and Rspamd in the Postfix container. Keep Valkey statistics persistent and team-scoped, serialize reversible feedback through the jobs pack, and return mail to Inbox independently of learning availability while retaining malware and approval gates.
 
 Touches: deploy/postfix, deploy/compose.yaml, internal/mailabuse, internal/rspamd
+
+## 2026-10-20: Consolidate the default deployment into four bounded containers
+
+Why: The user requires a 4 GiB total host budget. Reuse one persistent Valkey with distinct logical databases, serialize ClamAV signature reloads and scans, bound database and document concurrency, and co-locate the SFU with the application. Keep independent-process supervision, non-root app/media workers, private service ports and persistent volumes; retain the separate deployment as an operator alternative.

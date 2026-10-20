@@ -2,8 +2,8 @@
 
 Thura ships **Postfix and Rspamd together in the `postfix` container**. Postfix
 keeps its durable mail queue; Rspamd provides local spam rules and Bayesian
-learning from user corrections. A separate private Valkey service persists the
-learning data. No fine-tuned Llama model, custom training pipeline or paid feed
+learning from user corrections. The compact deployment runs Valkey in the mail container and persists its
+learning data in a separate volume. No fine-tuned Llama model, custom training pipeline or paid feed
 is required by this deployment.
 
 In the Spam/Junk mailbox, open a message and select **Not spam**. Thura restores
@@ -41,7 +41,7 @@ docker compose --env-file .env -f deploy/compose.yaml up -d --build
 For an existing private `.env`, add only the new generated controller secret:
 
 ```
-python3 scripts/init-compose.py --upgrade-mail
+python3 scripts/init-compose.py --upgrade-compact
 docker compose --env-file .env -f deploy/compose.yaml up -d --build
 ```
 
@@ -62,11 +62,12 @@ Compose restarts the container. Its health check verifies both supervised proces
 and Rspamd readiness. Mail provider and receiving choices remain in the existing
 setup wizard; Postfix receiving can still be combined with API-based sending.
 
-The combined Postfix/Rspamd service has 1.75 vCPU / 1536 MiB, and its learning
-Valkey has 0.25 vCPU / 512 MiB: **2 vCPU / 2 GiB total, no swap**, separate from
-Thura, Postgres, ClamAV and any configured external LLM. Back up `postfix-queue`,
-`rspamd-state`, `mail-filter-learning`, the database and the deployment's existing
-private object storage. Do not discard the learning volume during upgrades.
+The default [compact profile](compact-deployment.md) puts Postfix, Rspamd,
+ClamAV and Valkey under one 1792 MiB / 0.75-vCPU limit. Learning remains in
+Valkey database 0; app cache and realtime use databases 1 and 2. The complete
+four-container stack has 3584 MiB of limits, leaving 512 MiB for a 4 GiB host.
+Back up the mail queue, signatures, learning volume, database and private storage.
+The earlier split arrangement remains in `deploy/compose.separate.yaml`.
 
 The default profile uses free local rules and explicit user feedback. Restricted
 third-party reputation feeds and automatic training from model guesses are off.

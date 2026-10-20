@@ -7,7 +7,7 @@ distributions. Deployment supplies every hostname, domain and mailbox; the app
 has no fixed public origin. Postfix is a separate SMTP service with a durable
 queue. Thura remains a Līdza Go application using the official mail pack.
 
-The supplied container uses Debian 13's pinned base image and installs the
+The supplied container uses a pinned official Rspamd image on Debian 13 and installs the
 distribution's current Postfix/Python/CA packages. Rebuild for security updates;
 record the resulting image digest and package versions for a release. The
 integration fixture tested Postfix 3.10.13. The same adapter can run beside
@@ -29,7 +29,10 @@ existing file. If `.env` already exists, privately add `POSTGRES_PASSWORD`,
 Postgres password. Keep the setup token and master key backed up separately.
 Never commit this file. The Compose stack includes Thura, Postgres, Valkey,
 a private storage volume and a separate Postfix container with a persistent
-queue. Optional document and media services remain separate deployment choices.
+queue. The default [compact deployment](compact-deployment.md) includes document and
+media services in four containers, with antivirus and shared Valkey in the
+Postfix container. Configure the public origins and Collabora image as described
+there before starting the default stack.
 
 Put your HTTPS reverse proxy in front of `127.0.0.1:8080` and open `/setup`.
 Use the setup token from your private `.env` to create the administrator. On
@@ -225,10 +228,12 @@ queue/log evidence remain in ignored test storage. No internet recipient is used
 
 ## Compose acceptance fixture
 
+This historical transport fixture uses the separate-service profile; the compact
+profile has additional [bounded functional checks](compact-deployment.md).
 After building the stack images under the isolated project name, run:
 
 ```sh
-docker compose --env-file .env -f deploy/compose.yaml -p thura-postfix-acceptance build
+docker compose --env-file .env -f deploy/compose.separate.yaml -p thura-postfix-acceptance build
 python3 scripts/postfix-compose-fixture.py --keep
 npx playwright test --config scripts/postfix/playwright.config.ts
 ```

@@ -1,0 +1,89 @@
+{
+  "checks": {
+    "clean_av": "OK",
+    "eicar_av": "FOUND",
+    "rspamd_scan": true,
+    "learning_reversal_and_replay": true,
+    "clamav_reload": true
+  },
+  "resources": {
+    "thura": {
+      "limit_bytes": 536870912,
+      "cpu_limit": 0.5,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 270372864,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "0",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      }
+    },
+    "postgres": {
+      "limit_bytes": 268435456,
+      "cpu_limit": 0.25,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 62849024,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "0",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      }
+    },
+    "postfix": {
+      "limit_bytes": 1879048192,
+      "cpu_limit": 0.75,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 1173594112,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "0",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      }
+    },
+    "collabora": {
+      "limit_bytes": 1073741824,
+      "cpu_limit": 0.5,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 1073741824,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "1409",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      }
+    }
+  },
+  "scope": "Synthetic functional smoke; not a capacity or detection-quality benchmark",
+  "sum_individual_peaks_bytes": 2580557824,
+  "sum_individual_peaks_gib": 2.403,
+  "browser_checks": {
+    "docx_edit_save_and_inspect": true,
+    "xlsx_edit_save_and_inspect": true,
+    "desktop_mobile_real_media": true,
+    "physical_android_this_run": false
+  },
+  "learning_persistence_after_restart_and_uid_migration": true,
+  "date": "2026-10-20",
+  "host_scope": "Container limits total 3.5 GiB; 512 MiB host allowance is a budget, not a measurement of this Docker Desktop host.",
+  "compact_antivirus": {
+    "scan_threads": 1,
+    "concurrent_database_reload": false,
+    "freshclam_duplicate_test_engine": false,
+    "standard_signature_databases": true
+  }
+}

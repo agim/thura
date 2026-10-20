@@ -1,16 +1,18 @@
-# Generate private .env with: python3 scripts/init-compose.py
-# Start behind your HTTPS reverse proxy: docker compose --env-file .env -f deploy/compose.yaml up -d --build
+# Compact small-team deployment: four containers, 3.5 GiB limits + 512 MiB host.
+# Generate private .env with scripts/init-compose.py; see docs/compact-deployment.md.
 services:
   thura:
-    build: ..
+    build:
+      context: ..
+      target: compact
     restart: unless-stopped
+    cpus: 0.50
+    mem_limit: 512m
+    memswap_limit: 512m
+    stop_grace_period: 35s
     depends_on:
       postgres:
         condition: service_healthy
-      valkey:
-        condition: service_healthy
-      storage-init:
-        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgres://thura:${POSTGRES_PASSWORD:?Run scripts/init-compose.py}@postgres:5432/thura?sslmode=disable
       AUTH_SECRET: ${AUTH_SECRET:?Run scripts/init-compose.py}
@@ -18,60 +20,81 @@ services:
       THURA_SETUP_TOKEN: ${THURA_SETUP_TOKEN:?Run scripts/init-compose.py}
       THURA_POSTFIX_TOKEN: ${THURA_POSTFIX_TOKEN:?Run scripts/init-compose.py}
       DB_MIGRATE: "true"
+      DB_MAX_CONNS: "8"
       LIDZA_ADDR: 0.0.0.0:3000
-      THURA_PUBLIC_HOSTS: ${THURA_PUBLIC_HOSTS:-}
+      THURA_PUBLIC_HOSTS: thura,${THURA_PUBLIC_HOSTS:-}
       THURA_TENANT_SMTP_HOSTS: ${THURA_TENANT_SMTP_HOSTS:-}
       STORAGE_PROVIDER: local
-      MAIL_CLAMD_ADDRESS: clamav:3310
+      STORAGE_DIR: /app/storage
+      MAIL_CLAMD_ADDRESS: 127.0.0.1:3310
       MAIL_RSPAMD_URL: http://127.0.0.1:11333
       MAIL_RSPAMD_CONTROLLER_URL: http://127.0.0.1:11334
-      MAIL_RSPAMD_PASSWORD: ${THURA_RSPAMD_PASSWORD:?Add a private Rspamd password using docs/mail-junk.md}
-      STORAGE_DIR: storage
-      CACHE_URL: redis://valkey:6379/0
-      REALTIME_BUS_URL: redis://valkey:6379/1
+      MAIL_RSPAMD_PASSWORD: ${THURA_RSPAMD_PASSWORD:?Run scripts/init-compose.py --upgrade-mail}
+      CACHE_URL: redis://127.0.0.1:6379/1
+      REALTIME_BUS_URL: redis://127.0.0.1:6379/2
+      LIVEKIT_SERVER_URL: http://127.0.0.1:7880
+      LIVEKIT_PUBLIC_URL: ${LIVEKIT_PUBLIC_URL:-}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?Run scripts/init-compose.py --upgrade-compact}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?Run scripts/init-compose.py --upgrade-compact}
+      THURA_RTC_NODE_IP: ${THURA_RTC_NODE_IP:-}
+      COLLABORA_SERVER_URL: http://collabora:9980
+      COLLABORA_APP_URL: ${THURA_WOPI_ORIGIN:-http://thura:3000}
+      COLLABORA_TOKEN_SECRET: ${COLLABORA_TOKEN_SECRET:?Run scripts/init-compose.py --upgrade-compact}
     ports:
       - "127.0.0.1:${THURA_HTTP_PORT:-8080}:3000"
-      # Postfix shares this network namespace. Port 2525 stays private.
       - "${THURA_SMTP_BIND:-0.0.0.0}:${THURA_SMTP_PORT:-25}:25"
-    networks: [default, mail-filter-private]
+      - "127.0.0.1:${THURA_MEET_HTTP_PORT:-7880}:7880"
+      - "${THURA_RTC_BIND:-0.0.0.0}:7881:7881"
+      - "${THURA_RTC_BIND:-0.0.0.0}:7882:7882/udp"
     volumes:
       - thura-storage:/app/storage
+    healthcheck:
+      test: ["CMD", "python3", "/opt/thura/app.py", "--health"]
+      interval: 15s
+      timeout: 8s
+      retries: 4
+      start_period: 45s
   postfix:
-    build: ./postfix
+    build:
+      context: ..
+      dockerfile: deploy/compact/mail.Dockerfile
     restart: unless-stopped
-    stop_grace_period: 40s
-    cpus: 1.75
-    mem_limit: 1536m
-    memswap_limit: 1536m
+    stop_grace_period: 50s
+    cpus: 0.75
+    mem_limit: 1792m
+    memswap_limit: 1792m
     depends_on:
       thura:
         condition: service_started
         restart: true
-      mail-filter-cache:
-        condition: service_healthy
     network_mode: service:thura
     environment:
       THURA_POSTFIX_MANAGED: "true"
-      MAIL_RSPAMD_PASSWORD: ${THURA_RSPAMD_PASSWORD:?Add a private Rspamd password using docs/mail-junk.md}
+      MAIL_RSPAMD_PASSWORD: ${THURA_RSPAMD_PASSWORD:?Run scripts/init-compose.py --upgrade-mail}
       THURA_POSTFIX_TOKEN: ${THURA_POSTFIX_TOKEN:?Run scripts/init-compose.py}
     volumes:
       - postfix-queue:/var/spool/postfix
       - rspamd-state:/var/lib/rspamd
-      # Optional smtp-cert.pem and smtp-key.pem; private key remains read-only.
+      - clamav-signatures:/var/lib/clamav
+      - mail-filter-learning:/var/lib/thura-valkey
       - ${SMTP_TLS_DIR:-./private/smtp}:/run/secrets:ro
     healthcheck:
-      test: ["CMD", "python3", "/opt/thura/supervise.py", "--health"]
-      interval: 15s
-      timeout: 5s
-      retries: 4
-      start_period: 30s
+      test: ["CMD", "python3", "/opt/thura/compact.py", "--health"]
+      interval: 30s
+      timeout: 12s
+      retries: 5
+      start_period: 300s
   postgres:
     image: postgres:17
     restart: unless-stopped
+    cpus: 0.25
+    mem_limit: 256m
+    memswap_limit: 256m
     environment:
       POSTGRES_DB: thura
       POSTGRES_USER: thura
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/init-compose.py}
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "work_mem=2MB", "-c", "maintenance_work_mem=32MB", "-c", "max_connections=40"]
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -79,59 +102,31 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-  valkey:
-    image: valkey/valkey:8
+  collabora:
+    image: ${COLLABORA_IMAGE:?Set COLLABORA_IMAGE to a tested official digest; see docs/collabora.md}
     restart: unless-stopped
-    command: ["valkey-server", "--appendonly", "yes"]
-    volumes:
-      - valkey-data:/data
+    cpus: 0.50
+    mem_limit: 1024m
+    memswap_limit: 1024m
+    ports:
+      - "127.0.0.1:${THURA_OFFICE_PORT:-8091}:9980"
+    command:
+      - --o:ssl.enable=false
+      - --o:ssl.termination=true
+      - --o:net.service_root=/api/v1/collabora
+      - --o:storage.wopi.alias_groups[@mode]=groups
+      - --o:storage.wopi.alias_groups.group[0].host=${THURA_WOPI_ORIGIN:-http://thura:3000}
+      - --o:storage.wopi.alias_groups.group[0].host[@allow]=true
+      - --o:admin_console.enable=false
+      - --o:logging.level=warning
+      - --o:num_prespawn_children=1
+      - --o:per_document.max_concurrency=1
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-  clamav:
-    build: ./clamav
-    restart: unless-stopped
-    volumes:
-      - clamav-signatures:/var/lib/clamav
-    # Private service only: no published ports or mail-storage mounts.
-    healthcheck:
-      test: ["CMD-SHELL", "printf 'zPING\\0' | nc -w 3 127.0.0.1 3310 | tr -d '\\000' | grep -q PONG"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 300s
-  mail-filter-cache:
-    image: valkey/valkey@sha256:081c2f5cb575efc901aa80ff9cdbd1ec6a301682fd35e1ebb4b0990a4a4a8507
-    restart: unless-stopped
-    cpus: 0.25
-    mem_limit: 512m
-    memswap_limit: 512m
-    command: ["valkey-server", "--appendonly", "yes", "--maxmemory", "192mb", "--maxmemory-policy", "noeviction"]
-    networks: [mail-filter-private]
-    volumes:
-      - mail-filter-learning:/data
-    healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-  storage-init:
-    image: busybox:1.37.0
-    restart: "no"
-    user: "0:0"
-    command: ["sh", "-c", "chown 65532:65532 /storage && chmod 0700 /storage"]
-    volumes:
-      - thura-storage:/storage
+      disable: true
 volumes:
   postgres-data:
-  valkey-data:
   thura-storage:
   postfix-queue:
   clamav-signatures:
   rspamd-state:
   mail-filter-learning:
-networks:
-  mail-filter-private:
-    internal: true

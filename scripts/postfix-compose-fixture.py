@@ -116,8 +116,11 @@ def main():
     root.mkdir(mode=0o700, exist_ok=True)
     env = root / 'compose.env'
     if not env.exists():
-        env.write_text('\n'.join(name+'='+secrets.token_hex(32) for name in ('POSTGRES_PASSWORD','AUTH_SECRET','LIDZA_MASTER_KEY','THURA_SETUP_TOKEN','THURA_POSTFIX_TOKEN'))+'\nTHURA_HTTP_PORT=8082\nTHURA_SMTP_BIND=127.0.0.1\nTHURA_SMTP_PORT=2528\nSMTP_TLS_DIR=./private/smtp\n')
+        env.write_text('\n'.join(name+'='+secrets.token_hex(32) for name in ('POSTGRES_PASSWORD','AUTH_SECRET','LIDZA_MASTER_KEY','THURA_SETUP_TOKEN','THURA_POSTFIX_TOKEN','THURA_RSPAMD_PASSWORD'))+'\nTHURA_HTTP_PORT=8082\nTHURA_SMTP_BIND=127.0.0.1\nTHURA_SMTP_PORT=2528\nSMTP_TLS_DIR=./private/smtp\n')
         env.chmod(0o600)
+    if 'THURA_RSPAMD_PASSWORD=' not in env.read_text():
+        with env.open('a') as stream:
+            stream.write('THURA_RSPAMD_PASSWORD='+secrets.token_hex(32)+'\n')
     values = dict(line.split('=',1) for line in env.read_text().splitlines() if '=' in line)
     (root / 'sink.py').write_text(SINK)
     (root / 'override.json').write_text(json.dumps({'services': {
@@ -125,7 +128,7 @@ def main():
         'sink': {'image': PROJECT+'-postfix', 'network_mode': 'service:thura', 'depends_on': {'thura': {'condition': 'service_started', 'restart': True}},
                  'entrypoint': ['python3','/fixture/sink.py'], 'volumes': [str(root)+':/fixture']}
     }}))
-    compose = shlex.split(args.compose) + ['--env-file',str(env),'-f',str(ROOT/'deploy/compose.yaml'),'-f',str(root/'override.json'),'-p',PROJECT]
+    compose = shlex.split(args.compose) + ['--env-file',str(env),'-f',str(ROOT/'deploy/compose.separate.yaml'),'-f',str(root/'override.json'),'-p',PROJECT]
 
     def run(*cmd):
         subprocess.run(compose+list(cmd),cwd=ROOT,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)

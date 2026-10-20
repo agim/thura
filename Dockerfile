@@ -21,7 +21,8 @@ RUN go mod download
 COPY package.json package-lock.json* ./
 RUN npm ci --no-fund --no-audit || npm install --no-fund --no-audit
 COPY . .
-RUN mkdir -p db mail admin config && lidza build --out /out/thura
+RUN mkdir -p db mail admin config && lidza build --out /out/thura \
+    && chmod -R a+rX db mail admin config
 
 # Runtime: the binary and what it reads from disk: the migrations (applied
 # with DB_MIGRATE=true or `lidza db migrate`), the mail templates (mail/),
@@ -31,7 +32,7 @@ RUN mkdir -p db mail admin config && lidza build --out /out/thura
 # Node at runtime: use node:22-bookworm-slim here instead and copy dist/.server.
 # The local storage provider writes to STORAGE_DIR, which this read-only
 # image has no room for: use STORAGE_PROVIDER=s3, or mount a volume there.
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian12:nonroot AS standalone
 WORKDIR /app
 COPY --from=build /out/thura /app/thura
 COPY --from=build /src/db /app/db
@@ -43,3 +44,17 @@ COPY --from=build /src/config /app/config
 ENV LIDZA_ADDR=0.0.0.0:3000
 EXPOSE 3000 80 443
 ENTRYPOINT ["/app/thura"]
+
+# Compact deployment: the same application binary plus the local SFU. The
+# supervisor initializes the storage mount, then both services run as UID 65532.
+FROM livekit/livekit-server@sha256:d0c04791bf63ca8dcea123571827d56ba9504bd57c8d5de60ee03b5408cc3154 AS meeting
+FROM debian:trixie-slim AS compact
+RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=standalone /app /app
+COPY --from=meeting /livekit-server /usr/local/bin/livekit-server
+COPY deploy/compact/app.py /opt/thura/app.py
+ENV LIDZA_ADDR=0.0.0.0:3000 GOMEMLIMIT=256MiB GOMAXPROCS=2
+EXPOSE 3000 7880 7881 7882/udp
+ENTRYPOINT ["python3", "/opt/thura/app.py"]

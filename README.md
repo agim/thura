@@ -36,6 +36,10 @@ import).
 
 ## Deploy
 
+For the default **four-container, 4 GiB small-team deployment**, follow
+[Compact deployment](docs/compact-deployment.md). It includes mail protection,
+document editing and the local meeting server.
+
 Follow [Install and configure a Thura server](docs/install-server.md) for services, DNS/MX, Mailgun or SMTP, private storage, first-administrator setup and user invitations. Existing deployments must apply pending migrations before restarting.
 
 ```sh
