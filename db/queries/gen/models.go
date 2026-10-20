@@ -546,6 +546,20 @@ type MailDelivery struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
+type MailFilterFeedback struct {
+	ID              string    `json:"id"`
+	WorkspaceID     string    `json:"workspace_id"`
+	ItemID          string    `json:"item_id"`
+	Classification  string    `json:"classification"`
+	Revision        int32     `json:"revision"`
+	LearnedRevision int32     `json:"learned_revision"`
+	State           string    `json:"state"`
+	Actor           string    `json:"actor"`
+	Attempts        int32     `json:"attempts"`
+	NextAttempt     time.Time `json:"next_attempt"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
 type MailIntakeRate struct {
 	ID          string    `json:"id"`
 	WorkspaceID string    `json:"workspace_id"`

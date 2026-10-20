@@ -61,7 +61,8 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 			return err
 		}
 	}
-	jobs.FromServices(s).Handle(mailabuse.ScreenJob, mailabuse.Screen, jobs.Concurrency(2))
+	jobs.FromServices(s).Handle(mailabuse.ScreenJob, mailabuse.Screen, jobs.Concurrency(1))
+	jobs.FromServices(s).Handle(mailabuse.FeedbackJob, mailabuse.LearnFeedback, jobs.Concurrency(1))
 	jobs.FromServices(s).Handle(mailabuse.ReconcileJob, mailabuse.Reconcile, jobs.Concurrency(1))
 	if err := jobs.FromServices(s).Schedule(mailabuse.ReconcileJob, jobs.Every(time.Minute), nil); err != nil {
 		return err

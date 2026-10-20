@@ -13,6 +13,7 @@ import (
 	"github.com/agim/lidza/pkg/router"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/rspamd"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -61,7 +62,11 @@ func Settings(ctx context.Context, w, subject string) (schema.MailProtectionView
 	if err != nil {
 		return schema.MailProtectionView{}, err
 	}
-	return schema.MailProtectionView{AiEnabled: p.AiEnabled, ApproveUnknown: p.ApproveUnknown, SenderPerHour: int(p.SenderPerHour), DomainPerHour: int(p.DomainPerHour), SpamThreshold: int(p.SpamThreshold), Revision: int(p.Revision), CanConfigure: can, AiReady: aiReady(ctx), AntivirusConfigured: cfg.Clamd != ""}, nil
+	local, err := rspamd.Configuration()
+	if err != nil {
+		return schema.MailProtectionView{}, err
+	}
+	return schema.MailProtectionView{AiEnabled: p.AiEnabled, ApproveUnknown: p.ApproveUnknown, SenderPerHour: int(p.SenderPerHour), DomainPerHour: int(p.DomainPerHour), SpamThreshold: int(p.SpamThreshold), Revision: int(p.Revision), CanConfigure: can, AiReady: aiReady(ctx), AntivirusConfigured: cfg.Clamd != "", LocalFilterConfigured: local.URL != ""}, nil
 }
 func SaveSettings(ctx context.Context, w, subject string, in schema.MailProtectionInput) (schema.MailProtectionView, error) {
 	if err := in.Validate(); err != nil {

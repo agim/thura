@@ -174,6 +174,7 @@ func TestMailAbuseUnknownApprovalComplaintsAndWorkspaceIsolation(t *testing.T) {
 	n.request(t, "GET", "/api/v1/workspaces/"+n.workspace.ID+"/mail-protection", nil, nil, 404)
 	n.request(t, "GET", n.base()+"/"+item.ID, nil, nil, 404)
 	reviewAbuse(t, n, item, "release", 404)
+	reviewAbuse(t, n, item, "not-spam", 404)
 }
 func TestMailAbuseAIInvalidOutputAndRescanCannotBypassFindings(t *testing.T) {
 	n := abuseNode(t, "findings.example")

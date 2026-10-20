@@ -11614,8 +11614,8 @@
       "Persisted": true
     },
     {
-      "Name": "MailIntakeRate",
-      "Table": "mail_intake_rate",
+      "Name": "MailFilterFeedback",
+      "Table": "mail_filter_feedback",
       "Fields": [
         {
           "Name": "id",
@@ -11643,7 +11643,7 @@
           "Array": false,
           "ID": false,
           "Unique": false,
-          "Index": false,
+          "Index": true,
           "Default": "",
           "Ref": "Workspace",
           "OnDelete": "cascade",
@@ -11654,6 +11654,232 @@
           "Timezone": false,
           "Pattern": "",
           "Line": 1414
+        },
+        {
+          "Name": "itemId",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": true,
+          "Index": false,
+          "Default": "",
+          "Ref": "MailItem",
+          "OnDelete": "cascade",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1415
+        },
+        {
+          "Name": "classification",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1416
+        },
+        {
+          "Name": "revision",
+          "Type": "int",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "1",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1417
+        },
+        {
+          "Name": "learnedRevision",
+          "Type": "int",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "0",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1418
+        },
+        {
+          "Name": "state",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "\"pending\"",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1419
+        },
+        {
+          "Name": "actor",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1420
+        },
+        {
+          "Name": "attempts",
+          "Type": "int",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "0",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1421
+        },
+        {
+          "Name": "nextAttempt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1422
+        },
+        {
+          "Name": "updatedAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1423
+        }
+      ],
+      "Indexes": [
+        {
+          "Fields": [
+            "state",
+            "nextAttempt"
+          ],
+          "Unique": false
+        }
+      ],
+      "Line": 1412,
+      "Persisted": true
+    },
+    {
+      "Name": "MailIntakeRate",
+      "Table": "mail_intake_rate",
+      "Fields": [
+        {
+          "Name": "id",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": true,
+          "Unique": false,
+          "Index": false,
+          "Default": "uuid()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1427
+        },
+        {
+          "Name": "workspaceId",
+          "Type": "uuid",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "Workspace",
+          "OnDelete": "cascade",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1428
         },
         {
           "Name": "key",
@@ -11672,7 +11898,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1415
+          "Line": 1429
         },
         {
           "Name": "bucket",
@@ -11691,7 +11917,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1416
+          "Line": 1430
         },
         {
           "Name": "count",
@@ -11710,7 +11936,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1417
+          "Line": 1431
         }
       ],
       "Indexes": [
@@ -11723,7 +11949,7 @@
           "Unique": true
         }
       ],
-      "Line": 1412,
+      "Line": 1426,
       "Persisted": true
     },
     {
@@ -11747,7 +11973,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1474
+          "Line": 1489
         },
         {
           "Name": "workspaceId",
@@ -11766,7 +11992,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1475
+          "Line": 1490
         },
         {
           "Name": "name",
@@ -11785,7 +12011,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1476
+          "Line": 1491
         },
         {
           "Name": "challenge",
@@ -11804,7 +12030,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1477
+          "Line": 1492
         },
         {
           "Name": "verification",
@@ -11823,7 +12049,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1478
+          "Line": 1493
         },
         {
           "Name": "status",
@@ -11842,7 +12068,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1479
+          "Line": 1494
         },
         {
           "Name": "web",
@@ -11861,7 +12087,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1480
+          "Line": 1495
         },
         {
           "Name": "mail",
@@ -11880,7 +12106,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1481
+          "Line": 1496
         },
         {
           "Name": "verifiedAt",
@@ -11899,7 +12125,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1482
+          "Line": 1497
         },
         {
           "Name": "checkedAt",
@@ -11918,7 +12144,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1483
+          "Line": 1498
         },
         {
           "Name": "validUntil",
@@ -11937,7 +12163,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1484
+          "Line": 1499
         },
         {
           "Name": "createdAt",
@@ -11956,7 +12182,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1485
+          "Line": 1500
         }
       ],
       "Indexes": [
@@ -11968,7 +12194,7 @@
           "Unique": true
         }
       ],
-      "Line": 1473,
+      "Line": 1488,
       "Persisted": true
     },
     {
@@ -11992,7 +12218,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1489
+          "Line": 1504
         },
         {
           "Name": "name",
@@ -12011,7 +12237,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1490
+          "Line": 1505
         },
         {
           "Name": "workspaceId",
@@ -12030,7 +12256,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1491
+          "Line": 1506
         },
         {
           "Name": "domainId",
@@ -12049,11 +12275,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1492
+          "Line": 1507
         }
       ],
       "Indexes": null,
-      "Line": 1488,
+      "Line": 1503,
       "Persisted": true
     },
     {
@@ -12077,7 +12303,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1495
+          "Line": 1510
         },
         {
           "Name": "primaryDomain",
@@ -12096,7 +12322,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1496
+          "Line": 1511
         },
         {
           "Name": "status",
@@ -12115,7 +12341,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1497
+          "Line": 1512
         },
         {
           "Name": "updatedAt",
@@ -12134,11 +12360,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1498
+          "Line": 1513
         }
       ],
       "Indexes": null,
-      "Line": 1494,
+      "Line": 1509,
       "Persisted": true
     },
     {
@@ -12162,7 +12388,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1501
+          "Line": 1516
         },
         {
           "Name": "workspaceId",
@@ -12181,7 +12407,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1502
+          "Line": 1517
         },
         {
           "Name": "provider",
@@ -12200,7 +12426,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1503
+          "Line": 1518
         },
         {
           "Name": "sealed",
@@ -12219,7 +12445,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1504
+          "Line": 1519
         },
         {
           "Name": "enabled",
@@ -12238,7 +12464,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1505
+          "Line": 1520
         },
         {
           "Name": "smip",
@@ -12257,7 +12483,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1506
+          "Line": 1521
         },
         {
           "Name": "postfix",
@@ -12276,7 +12502,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1507
+          "Line": 1522
         },
         {
           "Name": "updatedAt",
@@ -12295,11 +12521,11 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 1508
+          "Line": 1523
         }
       ],
       "Indexes": null,
-      "Line": 1500,
+      "Line": 1515,
       "Persisted": true
     }
   ],

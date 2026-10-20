@@ -88,6 +88,57 @@ func (q *Queries) EnsureMailProtection(ctx context.Context, arg EnsureMailProtec
 	return err
 }
 
+const finishMailFilterFeedback = `-- name: FinishMailFilterFeedback :exec
+UPDATE mail_filter_feedback SET state=$2,learned_revision=$3,attempts=$4,next_attempt=$5,updated_at=$6
+WHERE item_id=$1 AND revision=$7
+`
+
+type FinishMailFilterFeedbackParams struct {
+	ItemID          string    `json:"item_id"`
+	State           string    `json:"state"`
+	LearnedRevision int32     `json:"learned_revision"`
+	Attempts        int32     `json:"attempts"`
+	NextAttempt     time.Time `json:"next_attempt"`
+	UpdatedAt       time.Time `json:"updated_at"`
+	Revision        int32     `json:"revision"`
+}
+
+func (q *Queries) FinishMailFilterFeedback(ctx context.Context, arg FinishMailFilterFeedbackParams) error {
+	_, err := q.db.Exec(ctx, finishMailFilterFeedback,
+		arg.ItemID,
+		arg.State,
+		arg.LearnedRevision,
+		arg.Attempts,
+		arg.NextAttempt,
+		arg.UpdatedAt,
+		arg.Revision,
+	)
+	return err
+}
+
+const getMailFilterFeedback = `-- name: GetMailFilterFeedback :one
+SELECT id, workspace_id, item_id, classification, revision, learned_revision, state, actor, attempts, next_attempt, updated_at FROM mail_filter_feedback WHERE item_id=$1
+`
+
+func (q *Queries) GetMailFilterFeedback(ctx context.Context, itemID string) (MailFilterFeedback, error) {
+	row := q.db.QueryRow(ctx, getMailFilterFeedback, itemID)
+	var i MailFilterFeedback
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ItemID,
+		&i.Classification,
+		&i.Revision,
+		&i.LearnedRevision,
+		&i.State,
+		&i.Actor,
+		&i.Attempts,
+		&i.NextAttempt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getMailProtection = `-- name: GetMailProtection :one
 SELECT id, workspace_id, ai_enabled, approve_unknown, sender_per_hour, domain_per_hour, spam_threshold, revision, updated_at FROM mail_protection WHERE workspace_id=$1
 `
@@ -158,6 +209,29 @@ func (q *Queries) GetMailSenderPolicy(ctx context.Context, arg GetMailSenderPoli
 		&i.Identity,
 		&i.Decision,
 		&i.UpdatedBy,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const lockMailFilterFeedback = `-- name: LockMailFilterFeedback :one
+SELECT id, workspace_id, item_id, classification, revision, learned_revision, state, actor, attempts, next_attempt, updated_at FROM mail_filter_feedback WHERE item_id=$1 FOR UPDATE
+`
+
+func (q *Queries) LockMailFilterFeedback(ctx context.Context, itemID string) (MailFilterFeedback, error) {
+	row := q.db.QueryRow(ctx, lockMailFilterFeedback, itemID)
+	var i MailFilterFeedback
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ItemID,
+		&i.Classification,
+		&i.Revision,
+		&i.LearnedRevision,
+		&i.State,
+		&i.Actor,
+		&i.Attempts,
+		&i.NextAttempt,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -241,6 +315,30 @@ func (q *Queries) MailDomainComplaintCount(ctx context.Context, arg MailDomainCo
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const mailFilterFeedbackDue = `-- name: MailFilterFeedbackDue :many
+SELECT item_id FROM mail_filter_feedback WHERE state IN ('pending','error') AND next_attempt<=$1 ORDER BY next_attempt,item_id LIMIT 50
+`
+
+func (q *Queries) MailFilterFeedbackDue(ctx context.Context, nextAttempt time.Time) ([]string, error) {
+	rows, err := q.db.Query(ctx, mailFilterFeedbackDue, nextAttempt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var item_id string
+		if err := rows.Scan(&item_id); err != nil {
+			return nil, err
+		}
+		items = append(items, item_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const mailItemComplaintCount = `-- name: MailItemComplaintCount :one
@@ -410,6 +508,49 @@ func (q *Queries) SaveMailComplaint(ctx context.Context, arg SaveMailComplaintPa
 		arg.UpdatedAt,
 	)
 	return err
+}
+
+const saveMailFilterFeedback = `-- name: SaveMailFilterFeedback :one
+INSERT INTO mail_filter_feedback(workspace_id,item_id,classification,actor,next_attempt,updated_at)
+VALUES($1,$2,$3,$4,$5,$5)
+ON CONFLICT(item_id) DO UPDATE SET classification=EXCLUDED.classification,actor=EXCLUDED.actor,
+revision=CASE WHEN mail_filter_feedback.classification<>EXCLUDED.classification THEN mail_filter_feedback.revision+1 ELSE mail_filter_feedback.revision END,
+state=CASE WHEN mail_filter_feedback.classification=EXCLUDED.classification AND mail_filter_feedback.state IN ('learned','recorded') THEN mail_filter_feedback.state ELSE 'pending' END,
+attempts=0,next_attempt=EXCLUDED.next_attempt,updated_at=EXCLUDED.updated_at
+WHERE mail_filter_feedback.workspace_id=EXCLUDED.workspace_id RETURNING id, workspace_id, item_id, classification, revision, learned_revision, state, actor, attempts, next_attempt, updated_at
+`
+
+type SaveMailFilterFeedbackParams struct {
+	WorkspaceID    string    `json:"workspace_id"`
+	ItemID         string    `json:"item_id"`
+	Classification string    `json:"classification"`
+	Actor          string    `json:"actor"`
+	NextAttempt    time.Time `json:"next_attempt"`
+}
+
+func (q *Queries) SaveMailFilterFeedback(ctx context.Context, arg SaveMailFilterFeedbackParams) (MailFilterFeedback, error) {
+	row := q.db.QueryRow(ctx, saveMailFilterFeedback,
+		arg.WorkspaceID,
+		arg.ItemID,
+		arg.Classification,
+		arg.Actor,
+		arg.NextAttempt,
+	)
+	var i MailFilterFeedback
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ItemID,
+		&i.Classification,
+		&i.Revision,
+		&i.LearnedRevision,
+		&i.State,
+		&i.Actor,
+		&i.Attempts,
+		&i.NextAttempt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const saveMailProtection = `-- name: SaveMailProtection :one

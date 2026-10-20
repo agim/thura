@@ -2207,6 +2207,42 @@ func (v MailComplaint) Validate() error {
 	return errs.Result()
 }
 
+// MailFilterFeedback is a row of the mail_filter_feedback table.
+type MailFilterFeedback struct {
+	ID              string    `json:"id" db:"id"`
+	WorkspaceID     string    `json:"workspaceId" db:"workspace_id"`
+	ItemID          string    `json:"itemId" db:"item_id"`
+	Classification  string    `json:"classification" db:"classification"`
+	Revision        int       `json:"revision" db:"revision"`
+	LearnedRevision int       `json:"learnedRevision" db:"learned_revision"`
+	State           string    `json:"state" db:"state"`
+	Actor           string    `json:"actor" db:"actor"`
+	Attempts        int       `json:"attempts" db:"attempts"`
+	NextAttempt     time.Time `json:"nextAttempt" db:"next_attempt"`
+	UpdatedAt       time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of MailFilterFeedback from schema.lidza.
+func (v MailFilterFeedback) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.ItemID == "" {
+		errs.Add("itemId", "required", "required")
+	}
+	if v.Classification == "" {
+		errs.Add("classification", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.Actor == "" {
+		errs.Add("actor", "required", "required")
+	}
+	return errs.Result()
+}
+
 // MailIntakeRate is a row of the mail_intake_rate table.
 type MailIntakeRate struct {
 	ID          string    `json:"id" db:"id"`
@@ -5035,15 +5071,16 @@ func (v MailProtectionInput) Validate() error {
 
 // MailProtectionView is an API type.
 type MailProtectionView struct {
-	AiEnabled           bool `json:"aiEnabled"`
-	ApproveUnknown      bool `json:"approveUnknown"`
-	SenderPerHour       int  `json:"senderPerHour"`
-	DomainPerHour       int  `json:"domainPerHour"`
-	SpamThreshold       int  `json:"spamThreshold"`
-	Revision            int  `json:"revision"`
-	CanConfigure        bool `json:"canConfigure"`
-	AiReady             bool `json:"aiReady"`
-	AntivirusConfigured bool `json:"antivirusConfigured"`
+	AiEnabled             bool `json:"aiEnabled"`
+	ApproveUnknown        bool `json:"approveUnknown"`
+	SenderPerHour         int  `json:"senderPerHour"`
+	DomainPerHour         int  `json:"domainPerHour"`
+	SpamThreshold         int  `json:"spamThreshold"`
+	Revision              int  `json:"revision"`
+	CanConfigure          bool `json:"canConfigure"`
+	AiReady               bool `json:"aiReady"`
+	AntivirusConfigured   bool `json:"antivirusConfigured"`
+	LocalFilterConfigured bool `json:"localFilterConfigured"`
 }
 
 // Validate applies the rules of MailProtectionView from schema.lidza.
@@ -5089,6 +5126,7 @@ type MailScreeningView struct {
 	ApprovalRequired bool          `json:"approvalRequired"`
 	Released         bool          `json:"released"`
 	CanManage        bool          `json:"canManage"`
+	FeedbackState    string        `json:"feedbackState"`
 	UpdatedAt        time.Time     `json:"updatedAt"`
 }
 
@@ -5115,6 +5153,9 @@ func (v MailScreeningView) Validate() error {
 	}
 	if v.Reputation == "" {
 		errs.Add("reputation", "required", "required")
+	}
+	if v.FeedbackState == "" {
+		errs.Add("feedbackState", "required", "required")
 	}
 	return errs.Result()
 }

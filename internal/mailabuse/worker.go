@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
 	"thura/internal/assistant"
+	"thura/internal/rspamd"
 	"thura/schema"
 )
 
@@ -94,6 +95,45 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	ai, av := "disabled", "not_configured"
 	failed := readFailure
 	deferred := false
+	locallyHeld := false
+	localFailed := false
+	localConfig, err := rspamd.Configuration()
+	if err != nil {
+		return err
+	}
+	if localConfig.URL != "" {
+		stream, _, xerr := storage.From(ctx).Get(ctx, item.RawKey)
+		if xerr != nil {
+			localFailed = true
+		} else {
+			raw, readErr := io.ReadAll(io.LimitReader(stream, (20<<20)+1))
+			readErr = errors.Join(readErr, stream.Close())
+			if readErr != nil || len(raw) > 20<<20 {
+				localFailed = true
+			} else {
+				result, scanErr := rspamd.Scan(ctx, localConfig, s.WorkspaceID, raw)
+				if scanErr != nil {
+					localFailed = true
+				} else {
+					locallyHeld = result.Score >= 6 || result.Action == "reject"
+					for _, symbol := range []string{"PHISHING", "PHISHED_URL", "PHISHED_GENERIC_SERVICE", "PHISHED_OPENPHISH", "PHISHED_PHISHTANK"} {
+						if _, ok := result.Symbols[symbol]; ok {
+							locallyHeld = true
+						}
+					}
+					if locallyHeld {
+						e.add("rspamd_spam", "danger", "Local spam filter flagged this email", 100)
+					}
+				}
+			}
+		}
+		if localFailed {
+			failed = true
+			e.add("rspamd_unavailable", "warning", "Local spam checks could not complete; retrying", 0)
+		}
+		// Native deterministic findings are also part of the first line of defense.
+		locallyHeld = locallyHeld || e.Score >= int(p.SpamThreshold)
+	}
 	if readFailure {
 		e.add("attachment_unavailable", "warning", "An attachment could not be inspected", 0)
 		av = "error"
@@ -128,7 +168,10 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	if p.AiEnabled && livePolicy.Revision == p.Revision {
+	if p.AiEnabled && (locallyHeld || av == "infected") {
+		ai = "skipped_local"
+	}
+	if p.AiEnabled && !locallyHeld && !localFailed && av != "infected" && livePolicy.Revision == p.Revision {
 		ai = "error"
 		payload, xerr := json.Marshal(struct {
 			From, Subject, Text, HTML string
@@ -160,6 +203,10 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 			e.add("ai_unavailable", "warning", xerr.Error(), 0)
 		} else {
 			ai = "complete"
+			if classification.Category == "unknown" {
+				failed = true
+				ai = "uncertain"
+			}
 			severity := "info"
 			if classification.Risk >= int(p.SpamThreshold) {
 				severity = "danger"
@@ -286,7 +333,7 @@ func Reconcile(ctx context.Context, _ json.RawMessage) error {
 			return err
 		}
 	}
-	return nil
+	return ReconcileFeedback(ctx)
 }
 
 func reserveAI(ctx context.Context, w string, limit int) (bool, error) {

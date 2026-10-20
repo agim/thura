@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"thura/internal/federation"
+	"thura/internal/rspamd"
 	"thura/internal/smipmail"
 	"time"
 )
@@ -150,6 +151,9 @@ func validate(v map[string]string) error {
 		if _, e := federation.NewGateway(cfg); e != nil {
 			return errors.New("invalid SMIP pairing configuration")
 		}
+	}
+	if err := (rspamd.Config{URL: v["MAIL_RSPAMD_URL"], Controller: v["MAIL_RSPAMD_CONTROLLER_URL"], Password: v["MAIL_RSPAMD_PASSWORD"]}).Validate(); err != nil {
+		return err
 	}
 	if err := bounded(v, "MAIL_AI_PER_HOUR", 1, 10000); err != nil {
 		return err

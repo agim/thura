@@ -23,6 +23,9 @@ services:
       THURA_TENANT_SMTP_HOSTS: ${THURA_TENANT_SMTP_HOSTS:-}
       STORAGE_PROVIDER: local
       MAIL_CLAMD_ADDRESS: clamav:3310
+      MAIL_RSPAMD_URL: http://127.0.0.1:11333
+      MAIL_RSPAMD_CONTROLLER_URL: http://127.0.0.1:11334
+      MAIL_RSPAMD_PASSWORD: ${THURA_RSPAMD_PASSWORD:?Add a private Rspamd password using docs/mail-junk.md}
       STORAGE_DIR: storage
       CACHE_URL: redis://valkey:6379/0
       REALTIME_BUS_URL: redis://valkey:6379/1
@@ -30,23 +33,38 @@ services:
       - "127.0.0.1:${THURA_HTTP_PORT:-8080}:3000"
       # Postfix shares this network namespace. Port 2525 stays private.
       - "${THURA_SMTP_BIND:-0.0.0.0}:${THURA_SMTP_PORT:-25}:25"
+    networks: [default, mail-filter-private]
     volumes:
       - thura-storage:/app/storage
   postfix:
     build: ./postfix
     restart: unless-stopped
+    stop_grace_period: 40s
+    cpus: 1.75
+    mem_limit: 1536m
+    memswap_limit: 1536m
     depends_on:
       thura:
         condition: service_started
         restart: true
+      mail-filter-cache:
+        condition: service_healthy
     network_mode: service:thura
     environment:
       THURA_POSTFIX_MANAGED: "true"
+      MAIL_RSPAMD_PASSWORD: ${THURA_RSPAMD_PASSWORD:?Add a private Rspamd password using docs/mail-junk.md}
       THURA_POSTFIX_TOKEN: ${THURA_POSTFIX_TOKEN:?Run scripts/init-compose.py}
     volumes:
       - postfix-queue:/var/spool/postfix
+      - rspamd-state:/var/lib/rspamd
       # Optional smtp-cert.pem and smtp-key.pem; private key remains read-only.
       - ${SMTP_TLS_DIR:-./private/smtp}:/run/secrets:ro
+    healthcheck:
+      test: ["CMD", "python3", "/opt/thura/supervise.py", "--health"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 30s
   postgres:
     image: postgres:17
     restart: unless-stopped
@@ -84,6 +102,21 @@ services:
       timeout: 5s
       retries: 5
       start_period: 300s
+  mail-filter-cache:
+    image: valkey/valkey@sha256:081c2f5cb575efc901aa80ff9cdbd1ec6a301682fd35e1ebb4b0990a4a4a8507
+    restart: unless-stopped
+    cpus: 0.25
+    mem_limit: 512m
+    memswap_limit: 512m
+    command: ["valkey-server", "--appendonly", "yes", "--maxmemory", "192mb", "--maxmemory-policy", "noeviction"]
+    networks: [mail-filter-private]
+    volumes:
+      - mail-filter-learning:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
   storage-init:
     image: busybox:1.37.0
     restart: "no"
@@ -97,3 +130,8 @@ volumes:
   thura-storage:
   postfix-queue:
   clamav-signatures:
+  rspamd-state:
+  mail-filter-learning:
+networks:
+  mail-filter-private:
+    internal: true

@@ -1409,6 +1409,20 @@ model MailComplaint {
  @@unique(itemId, subject)
  @@index(workspaceId, identity, active)
 }
+model MailFilterFeedback {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace, cascade) @index
+ itemId uuid @ref(MailItem, cascade) @unique
+ classification string
+ revision int @default(1)
+ learnedRevision int @default(0)
+ state string @default("pending")
+ actor string
+ attempts int @default(0)
+ nextAttempt time
+ updatedAt time
+ @@index(state, nextAttempt)
+}
 model MailIntakeRate {
  id uuid @id @default(uuid())
  workspaceId uuid @ref(Workspace, cascade)
@@ -1435,6 +1449,7 @@ type MailProtectionView {
  canConfigure bool
  aiReady bool
  antivirusConfigured bool
+ localFilterConfigured bool
 }
 type MailFinding {
  code string
@@ -1455,6 +1470,7 @@ type MailScreeningView {
  approvalRequired bool
  released bool
  canManage bool
+ feedbackState string
  updatedAt time
 }
 type MailReviewInput {

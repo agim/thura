@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-19",
+  "verdict": "do_not_enable",
+  "production_enabled": false,
+  "experiment": "Rspamd recorded local stage plus blinded Codex review of all remaining mail; batch pilot only",
+  "codex": {
+    "cli": "0.162.0-alpha.17.2",
+    "model": "gpt-6.1-sol",
+    "provider": "openai",
+    "reasoning_effort": "none (CLI default)",
+    "mode": "one independent blinded batch of 33 items; no tools or history; existing ChatGPT sign-in",
+    "batch_seconds": 22.995081708068028,
+    "reviewed_real_mail": 21,
+    "correct_real_mail": 21,
+    "correct_challenges": 12,
+    "challenge_count": 12
+  },
+  "combined_pilot": {
+    "legitimate": {
+      "spam": 1,
+      "legitimate": 9
+    },
+    "spam": {
+      "spam": 10
+    },
+    "phishing": {
+      "phishing": 6,
+      "spam": 4
+    }
+  },
+  "review_only_pilot": {
+    "legitimate": {
+      "legitimate": 9
+    },
+    "spam": {
+      "spam": 7
+    },
+    "phishing": {
+      "phishing": 5
+    }
+  },
+  "challenges": {
+    "instruction": {
+      "phishing": 8
+    },
+    "tail": {
+      "phishing": 4
+    }
+  },
+  "release_targets": {
+    "phishing_recall_min": 0.95,
+    "legitimate_false_positive_rate_max": 0.02,
+    "spam_recall_min": 0.9,
+    "spam_as_phishing_rate_max": 0.05,
+    "errors_allowed": 0
+  },
+  "planned_real_cohort": {
+    "legitimate": 150,
+    "spam": 75,
+    "phishing": 75
+  },
+  "actual_real_cases": 30,
+  "full_cohort_complete": false,
+  "gate_findings": {
+    "strict_phishing_classification": "fails: 4 phishing cases already held as generic spam; at most 71/75 could receive correct phishing label, below 95%",
+    "legitimate_false_positives": "1/10 in pilot, caused by Rspamd; insufficient evidence for <=2% full-cohort rate",
+    "spam_separation": "10/10 in pilot; full 75-case gate unverified",
+    "instruction_and_tail_challenges": "8/8 and 4/4 detected in blinded Codex probe",
+    "harmful_mail_quarantine": "All 20 spam/phishing cases in this pilot were flagged; secondary safety measure, not a replacement for existing class gates"
+  },
+  "local_stage_resources": {
+    "image": "sha256:d9ba76612f2762d205d8f65ad1f44694bed0867c7e245e5450799b51b7b4f594",
+    "cpus": 2,
+    "memory_limit_bytes": 2147483648,
+    "peak_bytes": 1055391744,
+    "swap_bytes": 0,
+    "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+    "scope": "Rspamd, Valkey, Unbound and local-model evaluation clients together; reused local-stage outcomes for Codex comparison. Host Codex client outside the measured cgroup; this is not a production API resource benchmark."
+  },
+  "limitations": [
+    "Historical raw MIME lacks trustworthy live SMTP envelope/authentication context.",
+    "Public archives may occur in model pretraining; absence cannot be established.",
+    "The first 30 local-stage outcomes were already exposed; a model-blind comparison is not a fresh independent deployment validation.",
+    "Batch latency cannot establish per-message API latency.",
+    "No production Codex/OpenAI API integration, provider switch or automatic enablement.",
+    "No antivirus coverage claim; no custom training or paid threat feeds."
+  ],
+  "provenance": {
+    "codex_contract_sha256": "284ad898f6aba541c6b58205153a49ab0c33bd8623c55ee6b75cee8de11a32ee",
+    "hybrid_contract_sha256": "f8c43388ae949ee45c50972e777a96c4d9bb4b319bd0abb36f72bca3c872cd75",
+    "baseline_contract_sha256": "d9e7260c7568422e6863c253b1f9ef06a7baa29d27d9f5b5a58fdb3f76f78081",
+    "codex_answers_sha256": "2dbabe46e92b98fb7c83b30d2c306fb5e3a2c0fcc548ca2bec80539d42e94b07"
+  }
+}

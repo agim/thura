@@ -42,3 +42,25 @@ SELECT COUNT(DISTINCT c.item_id) FROM mail_complaint c JOIN mail_screening s ON 
 
 -- name: MailActorComplaint :one
 SELECT EXISTS(SELECT 1 FROM mail_complaint WHERE item_id=$1 AND subject=$2 AND active=true)::boolean;
+
+-- name: SaveMailFilterFeedback :one
+INSERT INTO mail_filter_feedback(workspace_id,item_id,classification,actor,next_attempt,updated_at)
+VALUES($1,$2,$3,$4,$5,$5)
+ON CONFLICT(item_id) DO UPDATE SET classification=EXCLUDED.classification,actor=EXCLUDED.actor,
+revision=CASE WHEN mail_filter_feedback.classification<>EXCLUDED.classification THEN mail_filter_feedback.revision+1 ELSE mail_filter_feedback.revision END,
+state=CASE WHEN mail_filter_feedback.classification=EXCLUDED.classification AND mail_filter_feedback.state IN ('learned','recorded') THEN mail_filter_feedback.state ELSE 'pending' END,
+attempts=0,next_attempt=EXCLUDED.next_attempt,updated_at=EXCLUDED.updated_at
+WHERE mail_filter_feedback.workspace_id=EXCLUDED.workspace_id RETURNING *;
+
+-- name: LockMailFilterFeedback :one
+SELECT * FROM mail_filter_feedback WHERE item_id=$1 FOR UPDATE;
+
+-- name: GetMailFilterFeedback :one
+SELECT * FROM mail_filter_feedback WHERE item_id=$1;
+
+-- name: MailFilterFeedbackDue :many
+SELECT item_id FROM mail_filter_feedback WHERE state IN ('pending','error') AND next_attempt<=$1 ORDER BY next_attempt,item_id LIMIT 50;
+
+-- name: FinishMailFilterFeedback :exec
+UPDATE mail_filter_feedback SET state=$2,learned_revision=$3,attempts=$4,next_attempt=$5,updated_at=$6
+WHERE item_id=$1 AND revision=$7;

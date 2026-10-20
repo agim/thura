@@ -59,7 +59,14 @@ func View(ctx context.Context, item, subject string) (*schema.MailScreeningView,
 	if err != nil {
 		return nil, err
 	}
-	return &schema.MailScreeningView{State: s.State, Score: int(s.Score), Findings: findings, AiState: s.AiState, AvState: s.AvState, Authenticated: s.Authenticated, Sender: s.Sender, Reputation: rep, Complaints: count, Reported: reported, ApprovalRequired: s.ApprovalRequired, Released: s.Released, CanManage: can, UpdatedAt: s.UpdatedAt}, nil
+	feedback := ""
+	f, err := queries.GetMailFilterFeedback(ctx, item)
+	if err == nil {
+		feedback = f.State
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	return &schema.MailScreeningView{State: s.State, Score: int(s.Score), Findings: findings, AiState: s.AiState, AvState: s.AvState, Authenticated: s.Authenticated, Sender: s.Sender, Reputation: rep, Complaints: count, Reported: reported, ApprovalRequired: s.ApprovalRequired, Released: s.Released, CanManage: can, FeedbackState: feedback, UpdatedAt: s.UpdatedAt}, nil
 }
 
 // Review is called only after mailbox.ItemAccess; it fences role changes and
@@ -67,7 +74,7 @@ func View(ctx context.Context, item, subject string) (*schema.MailScreeningView,
 // lets a benign model verdict override a detected virus.
 func Review(ctx context.Context, w, item, subject, action string) error {
 	switch action {
-	case "report-spam", "not-spam", "approve-sender", "block-sender", "release", "rescan":
+	case "report-spam", "not-spam", "mark-safe", "approve-sender", "block-sender", "release", "rescan":
 	default:
 		return router.Errorf(422, "Unknown mail review action")
 	}
@@ -91,7 +98,7 @@ func Review(ctx context.Context, w, item, subject, action string) error {
 	if !member {
 		return router.Errorf(404, "Message not found")
 	}
-	if action != "report-spam" && action != "not-spam" && !can {
+	if action != "report-spam" && action != "not-spam" && action != "mark-safe" && !can {
 		return router.Errorf(403, "Workspace administrator required for mail approval")
 	}
 	i, err := queries.LockMailItem(ctx, item)
@@ -115,7 +122,15 @@ func Review(ctx context.Context, w, item, subject, action string) error {
 			return xerr
 		}
 		sender, domain, _ := address(i.FromAddress)
-		s, err = queries.AddMailScreening(ctx, q.AddMailScreeningParams{ItemID: item, WorkspaceID: w, Sender: sender, Domain: registrable(domain), Identity: identity(sender, false), State: "quarantined", Findings: "[]", AiState: "pending", AvState: "pending", PolicyRevision: p.Revision, NextAttempt: lidza.Now(ctx)})
+		cfg, xerr := configuration()
+		if xerr != nil {
+			return xerr
+		}
+		av := "not_configured"
+		if cfg.Clamd != "" {
+			av = "pending"
+		}
+		s, err = queries.AddMailScreening(ctx, q.AddMailScreeningParams{ItemID: item, WorkspaceID: w, Sender: sender, Domain: registrable(domain), Identity: identity(sender, false), State: "quarantined", Findings: "[]", AiState: "pending", AvState: av, PolicyRevision: p.Revision, NextAttempt: lidza.Now(ctx)})
 	}
 	if err != nil {
 		return err
@@ -129,7 +144,7 @@ func Review(ctx context.Context, w, item, subject, action string) error {
 	}
 	now := lidza.Now(ctx)
 	switch action {
-	case "report-spam", "not-spam":
+	case "report-spam", "not-spam", "mark-safe":
 		if err = queries.SaveMailComplaint(ctx, q.SaveMailComplaintParams{WorkspaceID: w, ItemID: item, Identity: s.Identity, Subject: subject, Active: action == "report-spam", UpdatedAt: now}); err != nil {
 			return err
 		}
@@ -138,6 +153,47 @@ func Review(ctx context.Context, w, item, subject, action string) error {
 			s.Released = false
 			s.AttemptID = ""
 			i.Folder = q.MailFolderSpam
+			if err = queueFeedback(ctx, tx, w, item, subject, "spam"); err != nil {
+				return err
+			}
+		} else {
+			if s.AvState == "infected" || s.AvState == "pending" || s.AvState == "error" {
+				return router.Errorf(409, "Attachment safety checks must complete before marking this message safe")
+			}
+			rep, _, xerr := reputation(ctx, queries, w, s.Identity)
+			if xerr != nil {
+				return xerr
+			}
+			if rep == "blocked" {
+				return router.Errorf(409, "Approve the blocked sender before releasing mail")
+			}
+			if p.ApproveUnknown && !can {
+				known, xerr := knownSender(ctx, queries, w, s, rep)
+				if xerr != nil {
+					return xerr
+				}
+				if !known {
+					return router.Errorf(403, "An administrator must approve this unknown sender's message")
+				}
+			}
+			count, xerr := queries.MailItemComplaintCount(ctx, item)
+			if xerr != nil {
+				return xerr
+			}
+			if count > 0 && !can {
+				return router.Errorf(409, "Other team members reported this message; an administrator must review it")
+			}
+			s.State = "released"
+			s.Released = true
+			s.AttemptID = ""
+			s.ApprovalRequired = false
+			if p.AiEnabled && s.AiState != "complete" {
+				s.AiState = "manual_review"
+			}
+			i.Folder = q.MailFolderInbox
+			if err = queueFeedback(ctx, tx, w, item, subject, "ham"); err != nil {
+				return err
+			}
 		}
 	case "block-sender", "approve-sender":
 		decision := "blocked"
@@ -166,20 +222,13 @@ func Review(ctx context.Context, w, item, subject, action string) error {
 		if s.AvState == "infected" {
 			return router.Errorf(409, "Antivirus detected malware; this attachment cannot be released")
 		}
-		if (p.AiEnabled && s.AiState != "complete") || s.AvState == "pending" || s.AvState == "error" || s.State == "scanning" {
+		if (p.AiEnabled && s.AiState != "complete" && s.AiState != "skipped_local") || s.AvState == "pending" || s.AvState == "error" || s.State == "scanning" {
 			return router.Errorf(409, "Required scans have not completed; rescan after fixing the service or changing settings")
 		}
 		if p.ApproveUnknown {
-			known := rep == "trusted"
-			if s.Authenticated {
-				directory, err := people(ctx, queries, w)
-				if err != nil {
-					return err
-				}
-				for _, person := range directory {
-					sender, _, _ := address(person.Email)
-					known = known || sender == s.Sender
-				}
+			known, err := knownSender(ctx, queries, w, s, rep)
+			if err != nil {
+				return err
 			}
 			if !known {
 				return router.Errorf(409, "Approve this unknown sender before releasing the message")
@@ -189,6 +238,9 @@ func Review(ctx context.Context, w, item, subject, action string) error {
 		s.State = "released"
 		s.AttemptID = ""
 		i.Folder = q.MailFolderInbox
+		if err = queueFeedback(ctx, tx, w, item, subject, "ham"); err != nil {
+			return err
+		}
 	case "rescan":
 		s.State = "pending"
 		s.Released = false
@@ -236,4 +288,24 @@ func HoldMove(ctx context.Context, queries *q.Queries, s q.MailScreening) error 
 	s.Released = false
 	s.AttemptID = ""
 	return save(ctx, queries, s)
+}
+
+func knownSender(ctx context.Context, queries *q.Queries, workspace string, screening q.MailScreening, rep string) (bool, error) {
+	if rep == "trusted" {
+		return true, nil
+	}
+	if !screening.Authenticated {
+		return false, nil
+	}
+	directory, err := people(ctx, queries, workspace)
+	if err != nil {
+		return false, err
+	}
+	for _, person := range directory {
+		sender, _, _ := address(person.Email)
+		if sender == screening.Sender {
+			return true, nil
+		}
+	}
+	return false, nil
 }

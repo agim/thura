@@ -10,6 +10,7 @@ import (
 	"github.com/agim/lidza/pkg/router"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/rspamd"
 	"thura/schema"
 )
 
@@ -101,6 +102,13 @@ func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q
 		state = "quarantined"
 	}
 	if ai == "pending" || av == "pending" {
+		state = "pending"
+	}
+	local, err := rspamd.Configuration()
+	if err != nil {
+		return item, err
+	}
+	if local.URL != "" {
 		state = "pending"
 	}
 	findingJSON, err := json.Marshal(e.Findings)

@@ -856,6 +856,22 @@ CREATE INDEX mail_complaint_workspace_id_idx ON mail_complaint (workspace_id);
 CREATE UNIQUE INDEX mail_complaint_item_id_subject_key ON mail_complaint (item_id, subject);
 CREATE INDEX mail_complaint_workspace_id_identity_active_idx ON mail_complaint (workspace_id, identity, active);
 
+CREATE TABLE mail_filter_feedback (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+  item_id uuid NOT NULL UNIQUE REFERENCES mail_item(id) ON DELETE CASCADE,
+  classification text NOT NULL,
+  revision integer NOT NULL DEFAULT 1,
+  learned_revision integer NOT NULL DEFAULT 0,
+  state text NOT NULL DEFAULT 'pending',
+  actor text NOT NULL,
+  attempts integer NOT NULL DEFAULT 0,
+  next_attempt timestamptz NOT NULL,
+  updated_at timestamptz NOT NULL
+);
+CREATE INDEX mail_filter_feedback_workspace_id_idx ON mail_filter_feedback (workspace_id);
+CREATE INDEX mail_filter_feedback_state_next_attempt_idx ON mail_filter_feedback (state, next_attempt);
+
 CREATE TABLE mail_intake_rate (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
