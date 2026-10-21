@@ -84,7 +84,7 @@ def start(binary):
     pidfile=shlex.quote(str(STATE/'agent-linux.pid'))
     guard='if [ -f '+pidfile+' ]; then pid=$(cat '+pidfile+'); if kill -0 "$pid" 2>/dev/null; then exit 9; fi; fi; '
     command=guard+'umask 077; nohup env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_CONFIG '+shlex.quote(binary)+' -config '+shlex.quote(str(STATE/'agent.json'))+' > '+shlex.quote(str(STATE/'agent-linux.log'))+' 2>&1 < /dev/null & echo $! > '+shlex.quote(str(STATE/'agent-linux.pid'))
-    subprocess.run(['colima','-p','thura-deploy-acceptance','ssh','--','sh','-c',command],check=True,capture_output=True,text=True,timeout=30)
+    subprocess.run(['colima','-p','thura-deploy-acceptance','ssh','--','sudo','sh','-c',command],check=True,capture_output=True,text=True,timeout=30)
     eventually(lambda:Client('http://127.0.0.1:19090').call('/health'),'isolated Linux agent')
 
 
@@ -92,7 +92,7 @@ def stop():
     pidfile=shlex.quote(str(STATE/'agent-linux.pid'))
     expected=shlex.quote(str(STATE/'agent-linux'))
     command='pid=$(cat '+pidfile+'); test "$(readlink /proc/$pid/exe)" = '+expected+' || exit 9; kill -TERM "$pid"; for n in $(seq 1 60); do kill -0 "$pid" 2>/dev/null || exit 0; sleep 1; done; exit 10'
-    subprocess.run(['colima','-p','thura-deploy-acceptance','ssh','--','sh','-c',command],check=True,capture_output=True,text=True,timeout=70)
+    subprocess.run(['colima','-p','thura-deploy-acceptance','ssh','--','sudo','sh','-c',command],check=True,capture_output=True,text=True,timeout=70)
 
 
 def provision(branch):

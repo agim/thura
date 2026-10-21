@@ -70,6 +70,7 @@ class ProfileTests(unittest.TestCase):
         self.assertIsNotNone(vendor)
         self.assertRegex(vendor.group(1),r'^collabora/code@sha256:[a-f0-9]{64}$')
         self.assertEqual(services['office']['health_command'],['/usr/local/bin/thura-office-health'])
+        self.assertIn('CMD ["/usr/local/bin/thura-office-health"]',office_dockerfile.read_text())
 
     def test_first_install_delegates_required_mail_and_ai_setup_to_thura(self):
         manifest=json.loads((ROOT/'deploy/lidza.stack.json').read_text())

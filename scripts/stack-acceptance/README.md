@@ -10,7 +10,9 @@ Prerequisites: use a released Deploy v0.2.102+ agent into
 `.lidza/deploy-stack-acceptance/agent-linux` (cross-compile for the VM
 architecture if necessary); ensure Docker's buildx plugin is available inside the VM; create the
 owned VM (`colima start thura-deploy-acceptance --activate=false --cpu 2 --memory 4`).
-The agent runs inside that same VM, so its memory is included in the host
+The agent runs as root inside that same owned VM, matching the production
+system service and allowing it to verify/install Docker firewall rules. It does
+not bypass the required rootful iptables/DOCKER-USER checks. Its memory is included in the host
 budget. The host driver uses a private Docker config and the exact owned VM
 socket. Do not modify another installation's Docker configuration.
 
