@@ -37,7 +37,8 @@ SELECT * FROM smip_mail_receipt WHERE domain=$1 AND origin=$2 AND message_id=$3;
 -- name: AddSmipMailReceipt :exec
 INSERT INTO smip_mail_receipt(domain,origin,message_id,recipient,digest,receipt,item_id,accepted_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8);
 -- name: FindSmipReceivingMailbox :many
-SELECT * FROM mailbox WHERE lower(address)=lower($1) ORDER BY id LIMIT 2;
+SELECT b.* FROM mailbox b WHERE lower(b.address)=lower($1)
+OR EXISTS(SELECT 1 FROM mailbox_alias a WHERE a.mailbox_id=b.id AND lower(a.address)=lower($1)) ORDER BY b.id LIMIT 2;
 
 -- name: SetMailMessageIdentity :exec
 UPDATE mail_item SET message_id=$2,thread_id=CASE WHEN thread_id='' THEN $2 ELSE thread_id END WHERE id=$1;

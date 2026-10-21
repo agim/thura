@@ -18,6 +18,12 @@
     show(['MAIL_INBOUND_SECRET'], !localIn);
   };
   updateMailFields();
+  const updateAIFields = () => {
+    const provider = document.getElementById('LLM_PROVIDER')?.value;
+    const field = document.querySelector('[data-setup-field="LLM_API_KEY"]');
+    if (field) field.hidden = provider === 'ollama';
+  };
+  updateAIFields();
   for (const select of document.querySelectorAll('.setup-select')) {
     const trigger = select.querySelector('[role="combobox"]');
     const list = select.querySelector('[role="listbox"]');
@@ -44,6 +50,7 @@
         options.forEach(o => o.setAttribute('aria-selected', String(o === option)));
         close(true);
         updateMailFields();
+        updateAIFields();
       });
       option.addEventListener('keydown', e => {
         const keys = {ArrowDown: (index + 1) % options.length, ArrowUp: (index - 1 + options.length) % options.length, Home: 0, End: options.length - 1};

@@ -154,6 +154,12 @@ model Mailbox {
   signature text @default("")
   createdAt time @default(now())
 }
+model MailboxAlias {
+  id uuid @id @default(uuid())
+  mailboxId uuid @ref(Mailbox) @index
+  address string @email @max(254) @unique
+  createdAt time @default(now())
+}
 model MailItem {
   id uuid @id @default(uuid())
   mailboxId uuid @ref(Mailbox) @index

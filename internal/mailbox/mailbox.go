@@ -51,6 +51,11 @@ func Provision(ctx context.Context, in schema.ProvisionMailboxInput) (schema.Mai
 	if err = tenancy.LockDomain(ctx, tx, domainName); err != nil {
 		return schema.Mailbox{}, err
 	}
+	if exists, err := q.TeamMailboxAddressExists(ctx, strings.ToLower(in.Address)); err != nil {
+		return schema.Mailbox{}, err
+	} else if exists {
+		return schema.Mailbox{}, router.Errorf(409, "This email address is already assigned to a mailbox or alias")
+	}
 	if d, e := q.BoundTeamDomain(ctx, domainName); e == nil && d.WorkspaceID != in.WorkspaceID {
 		return schema.Mailbox{}, router.Errorf(409, "This email domain belongs to another team")
 	} else if e != nil && !errors.Is(e, pgx.ErrNoRows) {

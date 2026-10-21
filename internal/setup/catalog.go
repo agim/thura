@@ -69,8 +69,16 @@ func Catalog() []Step {
 			field("THURA_ALLOW_ANONYMOUS_SHARES", "Allow anonymous file links", "select", "false", "Email-restricted shares still require the matching signed-in account.", "false", "true"),
 			field("MAIL_MAX_RECIPIENTS", "Maximum recipients per email", "number", "50", "1–50 across To, Cc and Bcc."),
 		}},
-		{ID: "integrations", Title: "Optional integrations", Fields: []Field{
-			field("MATRIX_SERVER_URL", "Matrix HTTPS URL", "url", "", "Optional; configure the application service on the homeserver."),
+		{ID: "ai", Title: "AI service", Fields: []Field{
+			field("THURA_AI_ENABLED", "AI assistance", "select", "false", "AI is a core service and must be enabled before publishing setup.", "true", "false"),
+			field("LLM_PROVIDER", "AI provider", "select", "", "Use a local model service or a hosted API provider.", "", "ollama", "openai", "anthropic", "google", "compatible"),
+			field("LLM_MODEL", "Model name", "text", "", "The model ID installed locally or available to your provider account."),
+			field("LLM_BASE_URL", "Model service URL", "text", "", "Use the provider default or a server reachable from Thura. Container localhost is not the host machine."),
+			field("LLM_API_KEY", "Model API key", "secret", "", "Required for hosted providers. Blank preserves the saved key."),
+			field("LLM_MAX_TOKENS", "Maximum output tokens", "number", "1024", "128–4096 output tokens per request."),
+		}},
+		{ID: "integrations", Title: "Chat, documents, meetings and SMIP", Fields: []Field{
+			field("MATRIX_SERVER_URL", "Matrix HTTPS URL", "url", "", "Required for chat; configure the application service on the homeserver."),
 			field("MATRIX_SERVER_NAME", "Matrix server identity", "text", "", "Homeserver DNS identity."),
 			field("MATRIX_AS_TOKEN", "Matrix application-service token", "secret", "", "Required when Matrix is enabled."),
 			field("COLLABORA_SERVER_URL", "Collabora server URL", "url", "", "Public services require HTTPS; deployment-managed private origins are preconfigured. Use service root /api/v1/collabora and permit this Thura installation as a WOPI host."),
@@ -80,7 +88,7 @@ func Catalog() []Step {
 			field("LIVEKIT_PUBLIC_URL", "LiveKit public WSS URL", "text", "", "Browser-reachable secure WebSocket endpoint."),
 			field("LIVEKIT_API_KEY", "LiveKit API key", "secret", "", "Required with LiveKit."),
 			field("LIVEKIT_API_SECRET", "LiveKit API secret", "secret", "", "Required with LiveKit."),
-			field("SMIP_ENABLED", "Enable experimental SMIP", "select", "false", "Requires explicit operator-paired configuration on both servers.", "false", "true"),
+			field("SMIP_ENABLED", "SMIP chat and files", "select", "false", "Required before publishing. Pair with a trusted server using the current SMIP transport contract.", "false", "true"),
 			field("SMIP_CONFIG", "SMIP pairing JSON", "secret", "", "Private signing seed, pinned peer keys and origins; stored encrypted."),
 		}},
 		{ID: "review", Title: "Review and publish"},
@@ -109,6 +117,10 @@ func stepByID(id string) (Step, bool) {
 func draftDefaults() map[string]string {
 	v := defaults()
 	v["MAIL_PROVIDER"] = "mailgun"
+	v["THURA_AI_ENABLED"] = "true"
+	v["LLM_PROVIDER"] = "ollama"
+	v["SMIP_ENABLED"] = "true"
+	v["SMIP_MAIL_ENABLED"] = "true"
 	return v
 }
 
@@ -126,8 +138,9 @@ func bootstrapDraft() map[string]string {
 	return values
 }
 
-// The setup row ID belongs to the installation database, not its display name.
-// Only first-account creation calls this: existing snapshots retain their keys.
+// A fresh random installation ID is generated on first-account creation and
+// persisted in the encrypted draft. The singleton setup row ID is not unique
+// across databases. Existing snapshots retain their original object keys.
 func installationDraft(id string) map[string]string {
 	values := bootstrapDraft()
 	if _, explicit := os.LookupEnv("STORAGE_PREFIX"); !explicit {

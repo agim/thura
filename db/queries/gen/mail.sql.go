@@ -187,6 +187,27 @@ func (q *Queries) CreateMailbox(ctx context.Context, arg CreateMailboxParams) (M
 	return i, err
 }
 
+const createMailboxAlias = `-- name: CreateMailboxAlias :one
+INSERT INTO mailbox_alias(mailbox_id,address) VALUES($1,$2) RETURNING id, mailbox_id, address, created_at
+`
+
+type CreateMailboxAliasParams struct {
+	MailboxID string `json:"mailbox_id"`
+	Address   string `json:"address"`
+}
+
+func (q *Queries) CreateMailboxAlias(ctx context.Context, arg CreateMailboxAliasParams) (MailboxAlias, error) {
+	row := q.db.QueryRow(ctx, createMailboxAlias, arg.MailboxID, arg.Address)
+	var i MailboxAlias
+	err := row.Scan(
+		&i.ID,
+		&i.MailboxID,
+		&i.Address,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createMailboxLabel = `-- name: CreateMailboxLabel :one
 INSERT INTO mail_label(mailbox_id,name) VALUES($1,$2) RETURNING id, workspace_id, mailbox_id, name
 `
@@ -798,6 +819,35 @@ func (q *Queries) ListMailboxes(ctx context.Context, workspaceID string) ([]Mail
 			&i.Address,
 			&i.ConfigPrefix,
 			&i.Signature,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPostfixAliases = `-- name: ListPostfixAliases :many
+SELECT id, mailbox_id, address, created_at FROM mailbox_alias ORDER BY address LIMIT 10001
+`
+
+func (q *Queries) ListPostfixAliases(ctx context.Context) ([]MailboxAlias, error) {
+	rows, err := q.db.Query(ctx, listPostfixAliases)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MailboxAlias
+	for rows.Next() {
+		var i MailboxAlias
+		if err := rows.Scan(
+			&i.ID,
+			&i.MailboxID,
+			&i.Address,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

@@ -158,7 +158,7 @@ func Claim(ctx context.Context, in schema.SetupClaimInput) (schema.SetupStatus, 
 	if _, e = queries.CreateInvitedAccount(ctx, q.CreateInvitedAccountParams{Subject: subject, Email: stringPointer(auth.NormalizeEmail(in.Email)), Name: stringPointer(strings.TrimSpace(in.Name)), PasswordHash: &hash}); e != nil {
 		return schema.SetupStatus{}, router.Errorf(409, "account could not be created")
 	}
-	v := installationDraft(row.ID)
+	v := installationDraft(uuid.NewString())
 	v["THURA_OPERATOR_EMAIL"] = auth.NormalizeEmail(in.Email)
 	sealed, e := seal(v)
 	if e != nil {
@@ -221,6 +221,10 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 		step = "server"
 		action = "server.setup.restart"
 	} else {
+		if step == "ai" && form.Get("LLM_PROVIDER") != v["LLM_PROVIDER"] && strings.TrimSpace(form.Get("LLM_API_KEY")) == "" {
+			// Never send one vendor's saved credential to a different provider.
+			v["LLM_API_KEY"] = ""
+		}
 		for _, f := range s.Fields {
 			// Older wizard clients do not know these optional routing fields.
 			if !form.Has(f.Name) && (strings.HasPrefix(f.Name, "THURA_MAIL_") || f.Name == "THURA_POSTFIX_HOSTNAME") {
@@ -283,6 +287,9 @@ func Publish(ctx context.Context, revision string) error {
 		return e
 	}
 	if e = validate(v); e != nil {
+		return e
+	}
+	if e = validateCoreFeatures(v); e != nil {
 		return e
 	}
 	if e = requireProviderChecks(ctx, queries, v); e != nil {
@@ -350,7 +357,11 @@ func Publish(ctx context.Context, revision string) error {
 		if e = queries.GrantWorkspaceOwner(ctx, q.GrantWorkspaceOwnerParams{Subject: subject, Scope: workspace.ID}); e != nil {
 			return e
 		}
-		if _, e = queries.CreateMailbox(ctx, q.CreateMailboxParams{WorkspaceID: workspace.ID, Name: "Team mail", Address: inboxAddress(v), ConfigPrefix: ""}); e != nil {
+		mailbox, err := queries.CreateMailbox(ctx, q.CreateMailboxParams{WorkspaceID: workspace.ID, Name: "Team mail", Address: inboxAddress(v), ConfigPrefix: ""})
+		if err != nil {
+			return err
+		}
+		if e = createOperatorAliases(ctx, tx, mailbox); e != nil {
 			return e
 		}
 	} else {
@@ -401,8 +412,18 @@ func Activate(ctx context.Context, s *lidza.Services) error {
 	if e = validate(v); e != nil {
 		return errors.New("published server setup is invalid")
 	}
+	if v["LLM_PROVIDER"] != "" {
+		if e = validateModel(v); e != nil {
+			return errors.New("published AI configuration is invalid")
+		}
+	}
 	overrides := credentials.Overrides()
 	for _, step := range Catalog() {
+		// Older published snapshots predate wizard-owned AI. Do not disable or
+		// replace the model already configured through application Settings.
+		if step.ID == "ai" && v["LLM_PROVIDER"] == "" {
+			continue
+		}
 		for _, f := range step.Fields {
 			overrides[f.Name] = v[f.Name]
 		}
@@ -412,6 +433,11 @@ func Activate(ctx context.Context, s *lidza.Services) error {
 	overrides["MAIL_BASE_URL"] = ""
 	overrides["STORAGE_PUBLIC_URL"] = ""
 	overrides["STORAGE_PATH_STYLE"] = ""
+	if v["LLM_PROVIDER"] != "" {
+		overrides["EMBED_PROVIDER"] = "none"
+		overrides["LLM_TIMEOUT"] = "30s"
+		overrides["LLM_MAX_ATTEMPTS"] = "1"
+	}
 	credentials.SetOverrides(overrides)
 	if e = lidza.Reconfigure(ctx, s); e != nil {
 		return errors.New("published providers could not be initialized; check server settings")

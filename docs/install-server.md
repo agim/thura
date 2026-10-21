@@ -14,7 +14,7 @@ Thura defaults to **Debian Postfix for sending and receiving**. This guide also 
 | Application database | Private database endpoint | Postgres; migrations applied before startup |
 | File and attachment storage | Persistent private disk or private S3 bucket | Official storage pack |
 | Cache/realtime bus | Private endpoint | Valkey when configured; follow deployment settings |
-| Optional editing/chat/meet | Operator-selected endpoints | Collabora, Matrix and LiveKit/TURN |
+| Core editing/chat/meet/AI | Operator-selected endpoints | Collabora, Matrix, LiveKit/TURN and a local or hosted model |
 
 Provision the application database with a dedicated role and restrict network access to authorized app/migration/backup processes. Give the migration runner the required schema permissions. Keep Postgres and Valkey off public interfaces, or protect remote connections with authentication, TLS and firewall rules. The cloud development containers' trust authentication is not a production configuration.
 
@@ -29,7 +29,7 @@ Configure client authentication, private listeners and TLS for remote clients be
 
 Choose storage before publishing the wizard. Local storage needs persistent disk shared by every node that accesses the same objects; separate local disks on multiple app nodes are insufficient. S3 needs a pre-created private bucket, region/HTTPS endpoint and credentials limited to the app's bucket/prefix. Enable the provider's public-access blocking and choose backup/versioning policies. Thura's storage check does not prove bucket privacy or durability.
 
-Optional services have separate installation guides: [Collabora](collabora.md), [Matrix](chat.md), [LiveKit/TURN](meet.md) and [experimental paired-server SMIP](protocols/smip-thura.md). Leave these disabled until their services and credentials are ready.
+Core services have separate installation guides: [Collabora](collabora.md), [Matrix](chat.md), [LiveKit/TURN](meet.md) and [paired-server SMIP](protocols/smip-thura.md). Complete these services and AI provider/model configuration in the wizard before publishing. The SMIP protocol still has the interoperability and deployment boundaries documented in its guide. Incomplete drafts can be saved and resumed.
 
 ## 2. Build and install Thura
 
@@ -123,7 +123,7 @@ The administrator enters `/admin/setup` inside the official admin frame. Complet
 2. Chosen outbound email service, sender address and separate inbound signing secret.
 3. Persistent private local directory or S3 connection settings.
 4. Storage quota, member/pending-invitation limit, invitation authority and sharing restrictions.
-5. Optional service endpoints/credentials, or leave them disabled.
+5. AI provider/model and core chat, document, meeting and SMIP endpoints/credentials. All are required before publication.
 6. Review, explicitly run mail/storage checks, and publish.
 
 Saved drafts can be resumed or restarted. Blank secret fields preserve saved values; use the clear checkbox to remove a secret. Confirm the test email actually reaches your administrator inbox: provider acceptance alone is insufficient. Storage checks must finish successfully, including deletion. Both results must match the saved provider settings and be less than 24 hours old.

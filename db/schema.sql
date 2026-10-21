@@ -79,6 +79,14 @@ CREATE TABLE mailbox (
 );
 CREATE INDEX mailbox_workspace_id_idx ON mailbox (workspace_id);
 
+CREATE TABLE mailbox_alias (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  mailbox_id uuid NOT NULL REFERENCES mailbox(id),
+  address varchar(254) NOT NULL UNIQUE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX mailbox_alias_mailbox_id_idx ON mailbox_alias (mailbox_id);
+
 CREATE TABLE mail_item (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   mailbox_id uuid NOT NULL REFERENCES mailbox(id),

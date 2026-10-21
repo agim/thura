@@ -343,6 +343,20 @@ func (q *Queries) SupersedeSetupProbeSuccesses(ctx context.Context, arg Supersed
 	return err
 }
 
+const updateSetupModelSettings = `-- name: UpdateSetupModelSettings :exec
+UPDATE server_setup SET draft=$1,published=$2,revision=revision+1 WHERE id='00000000-0000-4000-8000-000000000001'
+`
+
+type UpdateSetupModelSettingsParams struct {
+	Draft     string `json:"draft"`
+	Published string `json:"published"`
+}
+
+func (q *Queries) UpdateSetupModelSettings(ctx context.Context, arg UpdateSetupModelSettingsParams) error {
+	_, err := q.db.Exec(ctx, updateSetupModelSettings, arg.Draft, arg.Published)
+	return err
+}
+
 const updateSetupWorkspace = `-- name: UpdateSetupWorkspace :exec
 UPDATE workspace SET name=$2 WHERE id=$1
 `

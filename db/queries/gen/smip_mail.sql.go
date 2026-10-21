@@ -173,7 +173,8 @@ func (q *Queries) FindMailTransmission(ctx context.Context, id string) (MailTran
 }
 
 const findSmipReceivingMailbox = `-- name: FindSmipReceivingMailbox :many
-SELECT id, workspace_id, name, address, config_prefix, signature, created_at FROM mailbox WHERE lower(address)=lower($1) ORDER BY id LIMIT 2
+SELECT b.id, b.workspace_id, b.name, b.address, b.config_prefix, b.signature, b.created_at FROM mailbox b WHERE lower(b.address)=lower($1)
+OR EXISTS(SELECT 1 FROM mailbox_alias a WHERE a.mailbox_id=b.id AND lower(a.address)=lower($1)) ORDER BY b.id LIMIT 2
 `
 
 func (q *Queries) FindSmipReceivingMailbox(ctx context.Context, lower string) ([]Mailbox, error) {

@@ -105,8 +105,14 @@ func TestPostfixBootstrapPublicationActivationAndHybridSending(t *testing.T) {
 		t.Fatal(err)
 	}
 	refreshed, _ := postfixConfig(t, active, postfixFixtureToken, 200)
-	if refreshed.Config.Mailboxes["added@setup.example"].ID != additional || len(refreshed.Config.Mailboxes) != 2 {
+	if refreshed.Config.Mailboxes["added@setup.example"].ID != additional || len(refreshed.Config.Mailboxes) != 12 {
 		t.Fatal("new mailbox was not discovered")
+	}
+	for _, local := range []string{"postmaster", "abuse", "hostmaster", "webmaster", "security", "noc", "admin", "administrator", "root", "mailer-daemon"} {
+		alias, ok := refreshed.Config.Mailboxes[local+"@setup.example"]
+		if !ok || alias.ID != entry.ID || alias.Secret != entry.Secret {
+			t.Fatal("operator alias did not retain the administrator mailbox route", local)
+		}
 	}
 	// A draft provider change never changes active ingress or exposes its API key.
 	saveStep(t, active, "mail", map[string]string{"THURA_MAIL_INBOUND": "postfix", "THURA_POSTFIX_HOSTNAME": "different.example", "MAIL_PROVIDER": "mailgun", "MAIL_FROM": "sender@setup.example", "MAIL_DOMAIN": "setup.example", "MAIL_API_KEY": "PUBLIC-hybrid-private-key"})

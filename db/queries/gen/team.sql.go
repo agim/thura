@@ -595,7 +595,8 @@ func (q *Queries) SuspendTeamDomain(ctx context.Context, arg SuspendTeamDomainPa
 }
 
 const teamMailboxAddressExists = `-- name: TeamMailboxAddressExists :one
-SELECT EXISTS(SELECT 1 FROM mailbox WHERE lower(address)=lower($1))
+SELECT EXISTS(SELECT 1 FROM mailbox WHERE lower(address)=lower($1)
+UNION ALL SELECT 1 FROM mailbox_alias WHERE lower(address)=lower($1))
 `
 
 func (q *Queries) TeamMailboxAddressExists(ctx context.Context, lower string) (bool, error) {

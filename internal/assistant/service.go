@@ -124,6 +124,9 @@ func Save(ctx context.Context, w string, in schema.AISettingsInput) (schema.AISe
 	if err == nil {
 		err = store.Save(ctx, "THURA_AI_ENABLED", strconv.FormatBool(in.Enabled))
 	}
+	if err == nil {
+		err = setup.RememberModelSettings(ctx, desired)
+	}
 	configuration.Unlock()
 	if err != nil {
 		return schema.AISettings{}, router.Errorf(503, "The model configuration could not be activated. AI remains disabled")

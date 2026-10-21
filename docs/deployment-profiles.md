@@ -73,9 +73,12 @@ Thura does not ship the original scaffold ciphertext. Deploy generates the
 missing setup, mail-learning, meeting and document secrets in encrypted state.
 The manifest's `configuration` declarations require the master key before
 deployment, delegate `MAIL_PROVIDER` and `MAIL_FROM` to Thura's setup wizard,
-and mark `LLM_PROVIDER` as optional. Operators do not need to configure a mail
-provider or AI provider in Deploy merely to start the wizard. AI remains disabled
-until configured and enabled in Thura. Upgrade both the agent and control panel
+and delegate `LLM_PROVIDER` to required AI setup. Operators do not need to
+configure a mail provider or AI provider in Deploy merely to start the wizard.
+Thura requires all core services before publication. An external or separately
+hosted Matrix homeserver and AI provider are required in addition to this compact
+stack; their resources are not included in its four-container acceptance.
+Upgrade both the agent and control panel
 to Lidza Deploy v0.2.98 or newer (PR #20); older agents reject the new field.
 Declared setup ownership never unlocks ordinary application APIs or bypasses
 published-configuration validation and genuine readiness after setup.

@@ -700,6 +700,13 @@ type Mailbox struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+type MailboxAlias struct {
+	ID        string    `json:"id"`
+	MailboxID string    `json:"mailbox_id"`
+	Address   string    `json:"address"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Meeting struct {
 	ID          string     `json:"id"`
 	WorkspaceID string     `json:"workspace_id"`

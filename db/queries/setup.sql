@@ -13,6 +13,8 @@ SELECT COUNT(*) FROM auth_user;
 UPDATE server_setup SET subject=$1,draft=$2,revision=revision+1 WHERE id='00000000-0000-4000-8000-000000000001';
 -- name: SaveServerSetup :exec
 UPDATE server_setup SET draft=$1,step=$2,revision=revision+1 WHERE id='00000000-0000-4000-8000-000000000001';
+-- name: UpdateSetupModelSettings :exec
+UPDATE server_setup SET draft=$1,published=$2,revision=revision+1 WHERE id='00000000-0000-4000-8000-000000000001';
 -- name: PublishServerSetup :exec
 UPDATE server_setup SET published=draft,published_revision=revision,published_at=$1,workspace_id=$2 WHERE id='00000000-0000-4000-8000-000000000001';
 -- name: SetupHasStoredContent :one

@@ -441,3 +441,15 @@ Why: Deploy's generic production preflight otherwise requires mail and AI settin
 ## 2026-10-20: Give fresh installations stable storage namespaces
 
 Why: Multiple Thura installations may share an S3 bucket, so the common app name is insufficient. First-account setup seeds `thura/<server-setup-uuid>/` and preserves it across draft resets. Explicit operator prefixes and existing published snapshots, including empty prefixes, retain their original locations. Continue freezing storage after publication and require prefix-scoped bucket permissions; restoration keeps its namespace and independent clones require an explicit migration.
+
+## 2026-10-20: Require the complete core feature set before setup publication
+
+Why: The user explicitly requires every previously optional feature before publishing. Add encrypted AI provider/model setup and require Matrix, Collabora, LiveKit and both SMIP transports alongside mail/storage. Keep partial draft saves, existing snapshot activation and user-controlled mail screening settings; never invent a peer, call a paid model during a form save or label configuration validation as an end-to-end connection test. Existing AI Settings changes must survive restart of a wizard-configured installation. Matrix and model-service resources remain outside the compact four-container measurement.
+
+## 2026-10-20: Deliver standard mail-operator addresses to the initial administrator mailbox
+
+Why: The first administrator must receive mail-server operational notices. Create exact persistent aliases on the initial inbox domain, route Postfix and SMIP to the initial workspace mailbox, preserve original recipients and ordinary abuse screening, and refuse collisions rather than taking another mailbox's address. This retains workspace mailbox permissions and does not introduce external forwarding or catch-all receiving.
+
+## 2026-10-20: Correct the fresh-storage namespace identity
+
+Why: The setup row uses a fixed singleton ID in every database, so it cannot identify an installation. Generate an independent random UUID on first-account creation and persist the resulting prefix. The user explicitly approved correcting the erroneous test; verify two independent setup databases have distinct prefixes, while retaining reset/override and shared-bucket assertions. Preserve all existing saved prefixes rather than moving files during upgrade.

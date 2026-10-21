@@ -25,9 +25,9 @@
     },
     {
       "name": "LLM_PROVIDER",
-      "stage": "optional",
+      "stage": "setup",
       "label": "AI provider",
-      "help": "AI remains disabled until a provider is configured and enabled in Thura Settings."
+      "help": "Configure and enable the required AI provider and model in Thura's setup wizard."
     }
   ],
   "generated_secrets": [

@@ -4,6 +4,10 @@ INSERT INTO mailbox(workspace_id,name,address,config_prefix) VALUES($1,$2,$3,$4)
 SELECT * FROM mailbox WHERE workspace_id=$1 ORDER BY name,id;
 -- name: GetMailbox :one
 SELECT * FROM mailbox WHERE id=$1;
+-- name: CreateMailboxAlias :one
+INSERT INTO mailbox_alias(mailbox_id,address) VALUES($1,$2) RETURNING *;
+-- name: ListPostfixAliases :many
+SELECT * FROM mailbox_alias ORDER BY address LIMIT 10001;
 -- name: LockMailbox :one
 SELECT * FROM mailbox WHERE id=$1 FOR UPDATE;
 -- name: FindInboundMail :one

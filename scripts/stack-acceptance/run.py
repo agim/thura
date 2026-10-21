@@ -2,7 +2,7 @@
 """Drive an isolated, real Deploy agent. Never contacts the production console.
 
 Keep credentials and agent state under .lidza; stdout contains status only.
-Requires a built stack-capable agent and the original sealed-credentials key.
+Requires a configuration-contract-capable agent and installation master key.
 """
 import argparse
 import ast
@@ -98,7 +98,7 @@ def provision(branch):
     key_path=STATE/'application-master.key'
     if not key_path.exists():key_path.write_text(secrets.token_hex(32));key_path.chmod(0o600)
     key=key_path.read_text().strip()
-    environment={'LIDZA_MASTER_KEY':key,'APP_URL':'https://'+DOMAIN,'LLM_PROVIDER':'ollama','EMBED_PROVIDER':'none','THURA_AI_ENABLED':'false','MAIL_AI_SCREENING':'false','AUTH_COOKIE_SECURE':'false','JOBS_WORKERS':'1','THURA_RTC_NODE_IP':'127.0.0.1','THURA_TENANT_SMTP_HOSTS':'127.0.0.1','MAIL_PROVIDER':'smtp','MAIL_FROM':'notifications@team.example','MAIL_SMTP_HOST':'127.0.0.1','MAIL_SMTP_PORT':'2526','MAIL_SMTP_SECURITY':'none'}
+    environment={'LIDZA_MASTER_KEY':key,'APP_URL':'https://'+DOMAIN,'EMBED_PROVIDER':'none','MAIL_AI_SCREENING':'false','AUTH_COOKIE_SECURE':'false','JOBS_WORKERS':'1','THURA_RTC_NODE_IP':'127.0.0.1','THURA_TENANT_SMTP_HOSTS':'127.0.0.1'}
     agent().call('/v1/apps/'+APP_ID,{'repository':'agim/thura','branch':branch,'domain':DOMAIN,'runtime_profile':'minimum','env':environment},method='PUT')
     settings=agent().call('/v1/apps/'+APP_ID+'/settings')
     if not settings.get('stack_profiles_supported'):raise RuntimeError('Agent does not advertise stack support')
@@ -129,7 +129,20 @@ def start_sink():
     docker('exec','-d','--user','0',mail,'python3','/fixture/sink.py')
 
 
-def bootstrap():
+def bootstrap(core_path):
+    if not core_path:raise RuntimeError('Supply --core-config with real AI, Matrix and SMIP service configuration; core features cannot be skipped')
+    path=Path(core_path)
+    if path.stat().st_mode & 0o077:raise RuntimeError('Core-service credentials file must be private (chmod 600)')
+    if path.stat().st_size>131072:raise RuntimeError('Core-service configuration exceeds its size limit')
+    core=json.loads(path.read_text())
+    allowed={
+        'ai':{'THURA_AI_ENABLED','LLM_PROVIDER','LLM_MODEL','LLM_BASE_URL','LLM_API_KEY','LLM_MAX_TOKENS'},
+        'integrations':{'MATRIX_SERVER_URL','MATRIX_SERVER_NAME','MATRIX_AS_TOKEN','COLLABORA_SERVER_URL','COLLABORA_APP_URL','COLLABORA_TOKEN_SECRET','LIVEKIT_SERVER_URL','LIVEKIT_PUBLIC_URL','LIVEKIT_API_KEY','LIVEKIT_API_SECRET','SMIP_ENABLED','SMIP_CONFIG'},
+        'mail':{'SMIP_MAIL_ENABLED','SMIP_MAIL_CONFIG'},
+    }
+    if not isinstance(core,dict) or set(core)!=set(allowed):raise RuntimeError('Core configuration needs ai, integrations and mail objects')
+    for step,values in core.items():
+        if not isinstance(values,dict) or not set(values)<=allowed[step] or not all(isinstance(value,str) for value in values.values()):raise RuntimeError('Core configuration contains unsupported fields or values')
     start_sink()
     application=Client('http://127.0.0.1:19881',host=DOMAIN)
     token=agent().call('/v1/apps/'+APP_ID+'/environment/THURA_SETUP_TOKEN')['value']
@@ -142,8 +155,10 @@ def bootstrap():
         'mail':{'THURA_MAIL_INBOUND':'postfix','THURA_MAIL_OUTBOUND':'provider','THURA_POSTFIX_HOSTNAME':'mail.team.example','THURA_MAIL_ADDRESS':'inbox@team.example','MAIL_FROM':'notifications@team.example','MAIL_PROVIDER':'smtp','MAIL_REGION':'us','MAIL_SMTP_HOST':'127.0.0.1','MAIL_SMTP_PORT':'2526','MAIL_SMTP_SECURITY':'none','MAIL_AI_SCREENING':'false'},
         'storage':{'STORAGE_PROVIDER':'local','STORAGE_DIR':'/var/lib/lidza-storage','STORAGE_ENDPOINT':'https://s3.amazonaws.com','STORAGE_REGION':'us-east-1'},
         'policy':{'DRIVE_QUOTA_BYTES':'1073741824','THURA_MAX_MEMBERS':'100','THURA_ADMIN_INVITES':'true','THURA_ALLOW_SHARES':'true','THURA_ALLOW_ANONYMOUS_SHARES':'false','MAIL_MAX_RECIPIENTS':'50'},
-        'integrations':{'SMIP_ENABLED':'false'},
+        'ai':{},
+        'integrations':{},
     }
+    for step,values in core.items():steps[step].update(values)
     Wizard(application,restart).bootstrap(token,EMAIL,PASSWORD,steps)
 
 
@@ -215,14 +230,15 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=['initialize','start','stop','provision','deploy','status','bootstrap','smoke','mail-flow'])
     parser.add_argument('--agent',default=str(STATE/'agent-linux'))
-    parser.add_argument('--branch',default='feat/thura-deployment-profiles')
+    parser.add_argument('--branch',default='main')
+    parser.add_argument('--core-config',help='Private JSON file containing required core-service wizard fields')
     args=parser.parse_args()
     if args.action=='initialize':initialize(args.agent)
     elif args.action=='start':start(args.agent)
     elif args.action=='stop':stop()
     elif args.action=='provision':provision(args.branch)
     elif args.action=='deploy':deploy()
-    elif args.action=='bootstrap':bootstrap()
+    elif args.action=='bootstrap':bootstrap(args.core_config)
     elif args.action=='smoke':smoke()
     elif args.action=='mail-flow':mail_flow()
     else:

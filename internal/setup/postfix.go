@@ -158,6 +158,26 @@ func PostfixConfig(w http.ResponseWriter, r *http.Request) {
 				}
 				result.Config.Mailboxes[mailbox.Address] = postfixMailbox{ID: mailbox.ID, Secret: secret}
 			}
+			aliases, err := queries.ListPostfixAliases(r.Context())
+			if err != nil || len(aliases) > 10000 {
+				http.Error(w, "Mail alias configuration unavailable", http.StatusServiceUnavailable)
+				return
+			}
+			targets := map[string]postfixMailbox{}
+			for _, route := range result.Config.Mailboxes {
+				targets[route.ID] = route
+			}
+			for _, alias := range aliases {
+				target, managed := targets[alias.MailboxID]
+				if !managed {
+					continue
+				}
+				if old, exists := result.Config.Mailboxes[alias.Address]; exists && old.ID != target.ID {
+					http.Error(w, "Conflicting receiving alias", http.StatusServiceUnavailable)
+					return
+				}
+				result.Config.Mailboxes[alias.Address] = target
+			}
 			if len(result.Config.Mailboxes) > 0 {
 				result.Listen = "25"
 				result.Enabled = true

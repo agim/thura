@@ -15,7 +15,7 @@ An existing deployment cannot reopen first-account creation. Its operator explic
 ## Steps
 
 Fresh installations prefill the storage prefix with `thura/<installation-id>/`,
-using the setup row's random UUID rather than a shared app name. Independent
+using a new random installation UUID rather than the singleton setup row ID or a shared app name. Independent
 databases can share a private S3 bucket without using the same object namespace.
 Explicit `STORAGE_PREFIX` environment overrides are preserved. The prefix survives
 wizard draft resets and is frozen with the storage location after publication.
@@ -24,16 +24,36 @@ Restrict each installation's S3 credentials to its prefix; a prefix alone is not
 an access-control boundary. Restoring a database preserves its namespace; a
 separate clone needs an explicit storage migration rather than a renamed prefix.
 
-The wizard covers the initial server, mail, storage, access and service settings
-below. Host infrastructure is provisioned by Deploy. AI provider/model settings
-are currently configured separately in Thura Settings after initial setup.
+The wizard covers server, mail, storage, access, AI and all core service settings
+below. Host infrastructure is provisioned by Deploy. Publication requires chat,
+document editing, meetings, AI, SMIP mail and paired SMIP chat/files to be
+configured and enabled; partial drafts can still be saved and resumed. Existing
+published installations continue to boot on upgrade, but their next publication
+must complete the core-service configuration. AI can use an existing local Ollama
+service or a hosted API; setup does not silently provision a model, purchase API
+access, or invent a trusted SMIP peer. The four-container compact deployment
+supplies Collabora, LiveKit, mail/filtering and storage; a Matrix homeserver and
+an AI model service must also be reachable. Their resources are additional to
+the compact stack if hosted on the same machine.
 
 1. **Server and workspace:** operator-selected public HTTPS origin, initial workspace name, operator contact, IANA timezone, backup and retention plan.
 2. **Email:** SMTP (including Debian Postfix), Mailgun, SendGrid, Postmark or Resend; verified sender, region/domain, API key or SMTP host/port/encryption and credentials. Receiving and sending are independent: select the included managed Postfix service for receiving and either Postfix or a hosted/SMTP provider for sending. The Compose sidecar receives exact mailbox mappings automatically after publication and activation. External raw-MIME relays still require their own signed configuration; hosted-provider-native ingress webhooks are not provisioned. See [Postfix Compose deployment](postfix.md).
 3. **Storage:** private persistent local directory or S3-compatible endpoint, region, private bucket/prefix and access/secret keys. Pre-create the bucket and give its key only the required bucket/prefix permissions. The framework selects virtual-host requests for AWS and path-style requests for other endpoints; this wizard does not expose the unsupported pointer-valued environment override in Līdza v0.1.90.
 4. **Quotas and access:** retained/reserved Drive bytes per workspace (1 MiB–1 TiB), maximum members plus live pending invitations (1–1000), owner-only versus admin invitations, external/anonymous sharing restrictions, email recipient limit (1–50). Owner/admin/member permissions remain the implemented role model; no arbitrary permission editor is implied. Uploads stay bounded at 10 MiB, and shares at 30 days. Anonymous links default off for wizard-published deployments; existing deployments retain their prior behavior until configured.
-5. **Optional integrations:** Matrix homeserver/application-service credentials, Collabora service/app URLs and access-token signing secret, LiveKit API/browser endpoints and credentials, or experimental SMIP's encrypted pairing configuration. Leaving URLs empty disables the optional integrations; enabling them requires their related fields. Provider-side service setup, TURN and device acceptance remain necessary.
-6. **Review:** required-field validation, stored secret names, explicit email/storage checks and deployment checklist; publish confirmation.
+5. **AI service:** Ollama, OpenAI, Anthropic, Gemini or an OpenAI-compatible service; model name, service URL, API credentials and output-token limit. All are saved encrypted with the wizard. No inference is performed merely by saving configuration. Subsequent AI Settings changes are retained across restarts.
+6. **Chat, documents, meetings and SMIP:** Matrix homeserver/application-service credentials, Collabora service/app URLs and access-token signing secret, LiveKit API/browser endpoints and credentials, and SMIP's encrypted pairing configuration. SMIP mail identity is configured in the email step. All are required for publication. Provider-side service setup, TURN, trusted peer agreement and device acceptance remain necessary.
+7. **Review:** core-service validation, stored secret names, explicit email/storage checks and deployment checklist; publish confirmation. Configuration validation does not prove external service connectivity, public DNS or end-to-end call/peer interoperability.
+
+On first publication, `postmaster`, `abuse`, `hostmaster`, `webmaster`, `security`,
+`noc`, `admin`, `administrator`, `root` and `mailer-daemon` on the initial inbox
+domain become exact aliases of the initial workspace mailbox. The first server
+administrator owns that workspace and can read these notices. Existing workspace
+mailbox permissions still apply; this does not create a separate private inbox.
+Aliases do not create external forwarding or a catch-all. Postfix and SMIP use
+the same target mailbox, retain the original message recipient and run normal
+abuse screening. Conflicting addresses prevent publication rather than taking
+another mailbox's address. External relay operators must direct the same role
+addresses to that mailbox's signed ingress endpoint.
 
 Save a step before leaving it. Returning to any step restores non-secret fields and shows whether each secret is saved. Blank secret input preserves its value; the separate clear checkbox removes it. No secret is rendered into HTML, returned by the bootstrap API or stored in browser persistence. Draft values are not used by running providers. Saving an old revision returns a conflict; reload instead of overwriting another tab's work.
 

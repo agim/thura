@@ -11,6 +11,15 @@ on `feat/stack-profiles`. The manifest is `deploy/lidza.stack.json`. Machine
 measurements and assertions are in
 [deploy-stack-acceptance.json](benchmarks/deploy-stack-acceptance.json).
 
+This is historical acceptance of the source commit above. Subsequent setup now
+requires AI, Matrix and both SMIP transports before publication, and declares
+wizard-owned production settings through Deploy v0.2.98. The updated harness
+accepts private real core-service configuration instead of disabling them. The
+four-GiB deployment run below has not been repeated with that expanded setup;
+Matrix and a local model hosted on the same machine would require additional
+resource measurements. New wizard/alias/namespace behaviour has separate unit,
+integration and desktop/mobile checks.
+
 ## What passed
 
 - The actual agent provisioned a private managed PostgreSQL database at the

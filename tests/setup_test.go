@@ -143,6 +143,13 @@ func saveStep(t *testing.T, s *lidzatest.Server, step string, values map[string]
 	for name, value := range values {
 		v.Set(name, value)
 	}
+	// Mail's SMIP identity is now required for publication. Supply a valid
+	// synthetic identity without enabling any real network delivery in fixtures.
+	if step == "mail" {
+		_, identity := coreSMIPFixture(t)
+		v.Set("SMIP_MAIL_ENABLED", "true")
+		v.Set("SMIP_MAIL_CONFIG", identity)
+	}
 	r := setupForm(t, s, "save", v)
 	if strings.Contains(r.Header.Get("Location"), "error=") {
 		t.Fatal("save failed: " + r.Header.Get("Location"))
@@ -155,7 +162,14 @@ func completeSetup(t *testing.T, s *lidzatest.Server) {
 	saveStep(t, s, "mail", map[string]string{"MAIL_FROM": "team@setup.example", "MAIL_SMTP_HOST": "127.0.0.1", "MAIL_SMTP_PORT": port, "MAIL_SMTP_SECURITY": "none", "MAIL_INBOUND_SECRET": "PUBLIC-inbound-test-secret-with-32-characters"})
 	saveStep(t, s, "storage", map[string]string{"STORAGE_DIR": t.TempDir()})
 	saveStep(t, s, "policy", nil)
-	saveStep(t, s, "integrations", nil)
+	chat, _ := coreSMIPFixture(t)
+	saveStep(t, s, "ai", map[string]string{"THURA_AI_ENABLED": "true", "LLM_PROVIDER": "ollama", "LLM_MODEL": "synthetic-local-model", "LLM_MAX_TOKENS": "1024"})
+	saveStep(t, s, "integrations", map[string]string{
+		"MATRIX_SERVER_URL": "https://matrix.setup.example", "MATRIX_SERVER_NAME": "setup.example", "MATRIX_AS_TOKEN": "PUBLIC-synthetic-matrix-token-at-least-32",
+		"COLLABORA_SERVER_URL": "https://office.setup.example", "COLLABORA_APP_URL": "https://setup.example", "COLLABORA_TOKEN_SECRET": "PUBLIC-synthetic-collabora-secret-at-least-32",
+		"LIVEKIT_SERVER_URL": "https://meet.setup.example", "LIVEKIT_PUBLIC_URL": "wss://meet.setup.example", "LIVEKIT_API_KEY": "synthetic", "LIVEKIT_API_SECRET": "PUBLIC-synthetic-livekit-secret-at-least-32",
+		"SMIP_ENABLED": "true", "SMIP_CONFIG": chat,
+	})
 	runSetupChecks(t, s)
 }
 func TestSetupFirstAdminTokenAndConcurrentClaim(t *testing.T) {

@@ -65,6 +65,8 @@ func Page() admin.Page {
 			}
 			if e := validate(v); e != nil {
 				view.Validation = e.Error()
+			} else if e := validateCoreFeatures(v); e != nil {
+				view.Validation = e.Error()
 			} else if e := requireProviderChecks(r.Context(), q.New(db.From(r.Context())), v); e != nil {
 				view.Validation = e.Error()
 			}

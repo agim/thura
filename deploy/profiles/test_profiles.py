@@ -56,13 +56,13 @@ class ProfileTests(unittest.TestCase):
         self.assertRegex(vendor.group(1),r'^collabora/code@sha256:[a-f0-9]{64}$')
         self.assertEqual(services['office']['health_command'],['/usr/local/bin/thura-office-health'])
 
-    def test_first_install_delegates_mail_and_optional_ai_to_thura(self):
+    def test_first_install_delegates_required_mail_and_ai_setup_to_thura(self):
         manifest=json.loads((ROOT/'deploy/lidza.stack.json').read_text())
         settings={item['name']:item for item in manifest['configuration']}
         self.assertEqual(len(settings),len(manifest['configuration']))
         self.assertEqual({name:item['stage'] for name,item in settings.items()}, {
             'LIDZA_MASTER_KEY':'deploy', 'MAIL_PROVIDER':'setup',
-            'MAIL_FROM':'setup', 'LLM_PROVIDER':'optional'})
+            'MAIL_FROM':'setup', 'LLM_PROVIDER':'setup'})
         self.assertTrue(settings['LIDZA_MASTER_KEY']['secret'])
         for name in ['MAIL_PROVIDER','MAIL_FROM','LLM_PROVIDER']:
             self.assertNotIn(name,manifest['required_environment'])

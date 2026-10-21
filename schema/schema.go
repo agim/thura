@@ -279,6 +279,32 @@ func (v Mailbox) Validate() error {
 	return errs.Result()
 }
 
+// MailboxAlias is a row of the mailbox_alias table.
+type MailboxAlias struct {
+	ID        string    `json:"id" db:"id"`
+	MailboxID string    `json:"mailboxId" db:"mailbox_id"`
+	Address   string    `json:"address" db:"address"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of MailboxAlias from schema.lidza.
+func (v MailboxAlias) Validate() error {
+	var errs validate.Errors
+	if v.MailboxID == "" {
+		errs.Add("mailboxId", "required", "required")
+	}
+	if v.Address == "" {
+		errs.Add("address", "required", "required")
+	}
+	if len(v.Address) > 254 {
+		errs.Add("address", "max", "at most 254 character(s)")
+	}
+	if v.Address != "" && !validate.Email(v.Address) {
+		errs.Add("address", "email", "not an email address")
+	}
+	return errs.Result()
+}
+
 // MailItem is a row of the mail_item table.
 type MailItem struct {
 	ID               string     `json:"id" db:"id"`

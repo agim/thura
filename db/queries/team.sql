@@ -35,7 +35,8 @@ SELECT * FROM team_domain WHERE status='verified' AND verification='dns' AND (ch
 -- name: AllTeamMailConfigs :many
 SELECT c.* FROM team_mail_config c JOIN team_domain d ON c.domain_id=d.id WHERE d.status='verified' AND c.enabled=true AND c.smip=true;
 -- name: TeamMailboxAddressExists :one
-SELECT EXISTS(SELECT 1 FROM mailbox WHERE lower(address)=lower($1));
+SELECT EXISTS(SELECT 1 FROM mailbox WHERE lower(address)=lower($1)
+UNION ALL SELECT 1 FROM mailbox_alias WHERE lower(address)=lower($1));
 -- name: DueAllMailTransmissions :many
 SELECT id FROM mail_transmission WHERE state IN ('planning','pending') ORDER BY updated_at,id LIMIT 50;
 -- name: ConflictingTeamDomainMailboxes :one
