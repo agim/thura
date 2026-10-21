@@ -83,10 +83,12 @@ trusted peers. Cross-server exchange still requires explicit pairing, consent
 and workspace bindings. Existing identities are retained. The separate SMIP
 mail identity is retained with its domain provider configuration.
 
-The current Caddy-to-HTTP deployment cannot prove SMIP's required authenticated
-TLS transport. Publication remains blocked by the real SMIP probe until the
-released framework/deployment transport contract is available. Forwarded scheme
-headers never satisfy this check. Track [framework issue 73](https://github.com/agim/lidza/issues/73).
+The manifest opts into the released framework v0.1.125 / Lidza-deploy
+v0.2.103 protected gateway contract. Both deployment components must be current
+and the host's Caddy-to-agent mTLS ingress must be configured; upgrading the panel
+alone is insufficient. Original-client TLS evidence remains distinct from
+backend TLS. Forwarded scheme headers never satisfy the check. See
+[the rollout instructions](server-setup.md#smip-transport-behind-lidza-deploy).
 
 ## Current acceptance evidence
 
@@ -104,3 +106,21 @@ reclaim. That Office pressure requires real edit/save and concurrency acceptance
 before promoting this budget. Conversion is not proof of editing/saving. These
 measurements do not establish AMD64, sustained load, media connectivity or
 production deployment acceptance. The profile remains `candidate_unverified`.
+
+### October 21 protected gateway follow-up
+
+Thura `2ecaac3` deployed through the real v0.2.103 agent against the existing
+managed PostgreSQL attachment in the same bounded VM. A stock Caddy 2.10.2 edge
+with verified private-hop mTLS returned HTTP 200 for an original TLS 1.3 setup
+challenge; original TLS 1.2 with forged evidence and direct plaintext with forged
+forwarding headers both returned HTTP 403. The fixture trusts its private edge
+CA explicitly, without disabling certificate verification. All seven real saved
+setup checks then passed in Chrome on desktop and a 390px mobile viewport, with
+no horizontal overflow. The three service containers were healthy and database
+bindings remained identical. [Sanitized results](benchmarks/gateway-acceptance.json).
+
+This closes the local transport/publication-check gap. It does not establish
+production host ingress, Internet SMIP delivery between paired servers, expanded
+concurrency, physical-phone media, or production readiness. Production ingress
+repair still requires the operator's MFA-protected root console. The isolated
+fixture currently remains running with its retained private state for that work.

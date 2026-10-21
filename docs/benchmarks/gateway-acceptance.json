@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-21",
+  "commit": "2ecaac3",
+  "agent_version": "v0.2.103",
+  "framework_version": "v0.1.125",
+  "deployment": "e843ab1e2f46f4ca7aa32687",
+  "managed_database_preserved": true,
+  "health": {
+    "app": "healthy",
+    "mail": "healthy",
+    "office": "healthy"
+  },
+  "transport_results": [
+    {
+      "test": "verified_tls13",
+      "status": 200
+    },
+    {
+      "test": "tls12_forged_origin",
+      "status": 403
+    },
+    {
+      "test": "plaintext_forged_origin",
+      "status": 403
+    }
+  ],
+  "browser": {
+    "desktop_all_seven_passed": true,
+    "mobile_width": 390,
+    "mobile_no_horizontal_overflow": true
+  },
+  "production": "pending MFA-protected host ingress configuration"
+}
