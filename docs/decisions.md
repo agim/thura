@@ -519,3 +519,6 @@ See docs/server-setup.md for primary provider references and test boundaries.
 
 ### Persist safe setup check diagnostics
 Failed checks retain a bounded classification of the failing operation, HTTP status/provider code, network/TLS/filesystem cause and check ID in PostgreSQL. Review, history and replay show the same diagnostic after refresh. Raw provider bodies, signed URLs and credentials never enter that field; unknown errors direct the administrator to logs with the check ID. Existing attempts without diagnostics explicitly explain that a new retry is needed.
+
+### Enable released protected deployment transport for SMIP
+The v2 deployment manifest now declares /api/v1/smip and /api/v1/setup/transport as protected prefixes using Lidza-deploy v0.2.103's released gateway contract. Agent and control panel must both be upgraded and the host's authenticated Caddy-to-agent ingress configured before deploying this manifest. The existing SDK v0.1.125 adapter verifies original TLS 1.3 independently of backend TLS, with exact authority and shared replay claims. Port 3001 stays private; deployment generates credentials. Ordinary forwarding headers cannot satisfy publication.

@@ -72,6 +72,13 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(services['office']['health_command'],['/usr/local/bin/thura-office-health'])
         self.assertIn('CMD ["/usr/local/bin/thura-office-health"]',office_dockerfile.read_text())
 
+    def test_smip_uses_protected_gateway_without_exposing_private_listener(self):
+        manifest=json.loads((ROOT/'deploy/lidza.stack.json').read_text())
+        self.assertEqual(manifest['gateway_transport'], {'version':1,'paths':['/api/v1/smip','/api/v1/setup/transport']})
+        for service in manifest['services']:
+            self.assertNotIn(3001,{port['port'] for port in service.get('public_ports',[])})
+            self.assertFalse(any(name.startswith('DEPLOY_GATEWAY_') for name in service.get('environment',{})))
+
     def test_first_install_delegates_required_mail_and_ai_setup_to_thura(self):
         manifest=json.loads((ROOT/'deploy/lidza.stack.json').read_text())
         settings={item['name']:item for item in manifest['configuration']}

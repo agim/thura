@@ -228,5 +228,12 @@
         "cpus": "1"
       }
     }
+  },
+  "gateway_transport": {
+    "version": 1,
+    "paths": [
+      "/api/v1/smip",
+      "/api/v1/setup/transport"
+    ]
   }
 }

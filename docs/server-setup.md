@@ -134,3 +134,9 @@ Profile defaults follow the [AWS S3 endpoint reference](https://docs.aws.amazon.
 and [Google XML API interoperability guide](https://docs.cloud.google.com/storage/docs/aws-simple-migration).
 Protocol tests use isolated TLS/XML fixtures; they are not claims of live
 acceptance against accounts at all three providers.
+
+## SMIP transport behind Lidza-deploy
+
+Thura's manifest requires Lidza-deploy agent **and** control panel v0.2.103 or later. Updating only the control panel does not configure transport. Prepare the host gateway with the released helper, merge its private agent configuration, and install the reviewed Caddy mTLS snippet into the existing HTTPS site without changing HTTP domain verification or ACME. See the [released gateway rollout](https://github.com/agim/lidza-deploy/blob/v0.2.103/docs/gateway-transport.md). Deployment supplies Thura's private listener credentials automatically. No private listener port is opened publicly.
+
+A review error `public SMIP route does not prove TLS 1.3; HTTP 400` means the public challenge failed its transport gate. Check that the agent is updated, host mTLS ingress is active, and the current Thura release declares the protected manifest paths. A valid browser HTTPS certificate alone does not prove transport to Thura. Retry Secure delivery after fixing the route; never bypass it with forwarded HTTPS headers or mark the result passed manually.
