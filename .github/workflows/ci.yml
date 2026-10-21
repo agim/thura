@@ -54,6 +54,8 @@ jobs:
       - name: Staticcheck with Go export-data support
         run: bash scripts/install-analysis-tools.sh
       - run: npm ci --no-fund --no-audit
+      - name: Native AMD64 and ARM64 runtime image pins
+        run: python3 scripts/check-runtime-images.py
       - name: npm audit (runtime dependencies, high and critical)
         run: npm audit --omit=dev --audit-level=high
       - name: lidza verify --strict

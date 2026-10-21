@@ -453,3 +453,7 @@ Why: The first administrator must receive mail-server operational notices. Creat
 ## 2026-10-20: Correct the fresh-storage namespace identity
 
 Why: The setup row uses a fixed singleton ID in every database, so it cannot identify an installation. Generate an independent random UUID on first-account creation and persist the resulting prefix. The user explicitly approved correcting the erroneous test; verify two independent setup databases have distinct prefixes, while retaining reset/override and shared-bucket assertions. Preserve all existing saved prefixes rather than moving files during upgrade.
+
+## 2026-10-21: Distribute native runtime images for both server architectures
+
+Why: The production AMD64 deployment attempted to run Collabora's ARM64 child manifest and the editor restarted continuously. Pin the immutable vendor index that includes both AMD64 and the same tested ARM64 child. Check actual registry indexes for every distributed pinned runtime in CI, rejecting single-platform children even when local emulation could mask the mistake. Keep historical ARM64 acceptance distinct from native AMD64 runtime verification.

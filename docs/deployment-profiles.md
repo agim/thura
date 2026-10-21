@@ -60,9 +60,10 @@ editing. Measure actual load and leave headroom before reducing a profile.
 or `performance` through Deploy's `runtime_profile` setting. Require the agent's
 settings response to advertise `stack_profiles_supported: true`; older agents do
 not support this manifest. It is separate from the standalone Compose files.
-The committed Collabora pin is the ARM64 image exercised in the demo. Before
-using an x86-64 host, select and test the matching official immutable image
-and update the office Dockerfile pin; this ARM64 acceptance is not x86-64 evidence.
+The committed Collabora pin is an immutable multi-architecture vendor index,
+including native AMD64 and the previously tested ARM64 image. CI checks the real
+registry indexes for Collabora, Rspamd and LiveKit on both CPU architectures.
+The earlier four-GiB ARM64 acceptance is not AMD64 runtime acceptance evidence.
 The manifest deliberately contains three services: Deploy attaches its managed
 PostgreSQL as the fourth container. Do not deploy Compose's PostgreSQL alongside it.
 
