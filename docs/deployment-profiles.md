@@ -71,6 +71,14 @@ generate a 32-byte hex key and back it up separately. Upgrades must retain the
 existing key. Installation-specific `config/credentials.yml.enc` files stay local;
 Thura does not ship the original scaffold ciphertext. Deploy generates the
 missing setup, mail-learning, meeting and document secrets in encrypted state.
+The manifest's `configuration` declarations require the master key before
+deployment, delegate `MAIL_PROVIDER` and `MAIL_FROM` to Thura's setup wizard,
+and mark `LLM_PROVIDER` as optional. Operators do not need to configure a mail
+provider or AI provider in Deploy merely to start the wizard. AI remains disabled
+until configured and enabled in Thura. Use an agent and control panel containing
+Lidza Deploy PR #20's configuration contract; older agents reject the new field.
+Declared setup ownership never unlocks ordinary application APIs or bypasses
+published-configuration validation and genuine readiness after setup.
 Thura seeds its encrypted first-run wizard draft from catalogued operator
 settings, keeping managed storage and service addresses consistent with the
 published setup. Private HTTP service origins are explicitly allowlisted through

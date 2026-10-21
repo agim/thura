@@ -3,6 +3,33 @@
   "required_environment": [
     "LIDZA_MASTER_KEY"
   ],
+  "configuration": [
+    {
+      "name": "LIDZA_MASTER_KEY",
+      "stage": "deploy",
+      "label": "Application master key",
+      "help": "Generate a new key for a fresh database. Keep the original key for upgrades and restores.",
+      "secret": true
+    },
+    {
+      "name": "MAIL_PROVIDER",
+      "stage": "setup",
+      "label": "Outgoing mail provider",
+      "help": "Choose and test your sending provider in Thura's setup wizard. Receiving is configured separately."
+    },
+    {
+      "name": "MAIL_FROM",
+      "stage": "setup",
+      "label": "Sender address",
+      "help": "Configure and verify the sender in Thura's setup wizard."
+    },
+    {
+      "name": "LLM_PROVIDER",
+      "stage": "optional",
+      "label": "AI provider",
+      "help": "AI remains disabled until a provider is configured and enabled in Thura Settings."
+    }
+  ],
   "generated_secrets": [
     "THURA_SETUP_TOKEN",
     "THURA_POSTFIX_TOKEN",

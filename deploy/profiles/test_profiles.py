@@ -56,6 +56,24 @@ class ProfileTests(unittest.TestCase):
         self.assertRegex(vendor.group(1),r'^collabora/code@sha256:[a-f0-9]{64}$')
         self.assertEqual(services['office']['health_command'],['/usr/local/bin/thura-office-health'])
 
+    def test_first_install_delegates_mail_and_optional_ai_to_thura(self):
+        manifest=json.loads((ROOT/'deploy/lidza.stack.json').read_text())
+        settings={item['name']:item for item in manifest['configuration']}
+        self.assertEqual(len(settings),len(manifest['configuration']))
+        self.assertEqual({name:item['stage'] for name,item in settings.items()}, {
+            'LIDZA_MASTER_KEY':'deploy', 'MAIL_PROVIDER':'setup',
+            'MAIL_FROM':'setup', 'LLM_PROVIDER':'optional'})
+        self.assertTrue(settings['LIDZA_MASTER_KEY']['secret'])
+        for name in ['MAIL_PROVIDER','MAIL_FROM','LLM_PROVIDER']:
+            self.assertNotIn(name,manifest['required_environment'])
+            self.assertNotIn(name,manifest['generated_secrets'])
+            for service in manifest['services']:
+                self.assertNotIn(name,service.get('environment',{}))
+        self.assertEqual(manifest['bootstrap_readiness']['setup_path'],'/setup')
+        for item in settings.values():
+            self.assertTrue(item['label'])
+            self.assertTrue(item['help'])
+
     def test_compose_resolves_to_exactly_four_services_with_the_selected_limits(self):
         executable = shutil.which('docker-compose')
         command = [executable] if executable else ['docker','compose']

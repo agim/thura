@@ -433,3 +433,7 @@ Why: Deploy owns managed PostgreSQL and stack lifecycle. Thura supplies `deploy/
 ## 2026-10-20: Keep installation credentials out of the distributable source
 
 Why: Actual Deploy preflight rejected the initial scaffold ciphertext because its original key is unavailable. Shipping one developer's encrypted credentials makes every fresh self-hosted deployment depend on that developer's key. Preserve the original ciphertext in Git history and a private local backup, remove it from distribution, and ignore local sealed credentials. Fresh installations use their own backed-up master key; existing installations must preserve theirs. Do not weaken Deploy's decryption checks when an operator supplies a sealed file.
+
+## 2026-10-20: Declare configuration ownership for first-install deployment
+
+Why: Deploy's generic production preflight otherwise requires mail and AI settings before Thura's wizard can collect them. Use the app-owned configuration contract from Lidza Deploy PR #20: master key is required at deployment, sender/provider are setup-owned, and AI is optional. Keep infrastructure requirements, original-key decryption, setup publication probes and established-release readiness strict; never supply dummy providers to start setup.
