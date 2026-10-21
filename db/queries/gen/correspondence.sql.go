@@ -43,7 +43,7 @@ WITH people AS (
  left(m.text_body,1000)::text AS preview, m.from_address,m.to_address,m.cc,m.bcc,m.status::text AS status,
  m.created_at AS at, 'Email participant'::text AS reason
  FROM mail_item m JOIN mailbox b ON b.id=m.mailbox_id
- WHERE b.workspace_id=$10 AND NOT $5::boolean
+ WHERE b.workspace_id=$10 AND (NOT b.private OR b.owner_subject=$13::text) AND NOT $5::boolean
  AND m.status IN ('received','sent','captured') AND m.folder NOT IN ('trash','spam')
  AND EXISTS (SELECT 1 FROM people p WHERE strpos(lower(m.from_address || ' ' || m.to_address || ' ' || m.cc || ' ' || m.bcc),lower(p.email))>0)
  AND ($4::text='' OR strpos(lower(m.subject || ' ' || m.text_body || ' ' || m.from_address || ' ' || m.to_address),lower($4))>0)

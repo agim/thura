@@ -25,11 +25,26 @@ CREATE TABLE contact (
 );
 CREATE INDEX contact_workspace_id_idx ON contact (workspace_id);
 
+CREATE TABLE mailbox (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  name varchar(120) NOT NULL,
+  address varchar(254) NOT NULL,
+  config_prefix varchar(100) NOT NULL,
+  private boolean NOT NULL DEFAULT false,
+  owner_subject text,
+  signature text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX mailbox_workspace_id_idx ON mailbox (workspace_id);
+CREATE INDEX mailbox_owner_subject_idx ON mailbox (owner_subject);
+
 CREATE TABLE invitation (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspace(id),
   email varchar(254) NOT NULL,
   role workspace_role NOT NULL,
+  mailbox_id uuid REFERENCES mailbox(id),
   token_hash text NOT NULL UNIQUE,
   invited_by text NOT NULL,
   expires_at timestamptz NOT NULL,
@@ -67,17 +82,6 @@ CREATE TABLE drive_preview (
   updated_at timestamptz NOT NULL DEFAULT now(),
   job_id text NOT NULL DEFAULT ''
 );
-
-CREATE TABLE mailbox (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspace(id),
-  name varchar(120) NOT NULL,
-  address varchar(254) NOT NULL,
-  config_prefix varchar(100) NOT NULL,
-  signature text NOT NULL DEFAULT '',
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX mailbox_workspace_id_idx ON mailbox (workspace_id);
 
 CREATE TABLE mailbox_alias (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

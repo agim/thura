@@ -82,7 +82,7 @@ func ListTeamMailboxes(ctx context.Context, r *router.Request[router.None]) (sch
 	}
 	rows, e := q.New(db.From(ctx)).ListMailboxes(ctx, id)
 	for _, m := range rows {
-		out.Items = append(out.Items, schema.Mailbox{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Signature: m.Signature, CreatedAt: m.CreatedAt})
+		out.Items = append(out.Items, schema.Mailbox{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Private: m.Private, OwnerSubject: m.OwnerSubject, CreatedAt: m.CreatedAt})
 	}
 	return out, e
 }

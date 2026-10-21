@@ -95,8 +95,9 @@ func runSetupChecks(t *testing.T, s *lidzatest.Server) {
 			t.Fatal("provider check: " + r.Header.Get("Location"))
 		}
 	}
+	runIntegrationChecks(t, s)
 	var count int
-	if err := db.From(s.Context()).QueryRow(s.Context(), "SELECT count(*) FROM setup_probe WHERE state='succeeded'").Scan(&count); err != nil || count < 2 {
+	if err := db.From(s.Context()).QueryRow(s.Context(), "SELECT count(*) FROM setup_probe WHERE state='succeeded'").Scan(&count); err != nil || count < 7 {
 		t.Fatalf("provider checks did not succeed: %d %v", count, err)
 	}
 }

@@ -22,6 +22,7 @@ type View struct {
 	Secrets                                     []string
 	Probes                                      []ProbeView
 	MailCheckID, StorageCheckID                 string
+	IntegrationChecks                           []IntegrationCheckView
 }
 
 //go:embed admin-controls.js
@@ -53,8 +54,15 @@ func Page() admin.Page {
 		}
 		state, _ := lidza.Optional[runtimeState](r.Context())
 		view := View{MailIdentity: mailIdentityView(v), MailCheckID: uuid.NewString(), StorageCheckID: uuid.NewString(), ActiveRevision: state.Revision, Revision: row.Revision, PublishedRevision: row.PublishedRevision, Step: step, Steps: Catalog()}
+		for _, kind := range integrationKinds() {
+			view.IntegrationChecks = append(view.IntegrationChecks, IntegrationCheckView{Kind: kind, ID: uuid.NewString()})
+		}
 		for i, f := range step.Fields {
 			view.Step.Fields[i].Saved = v[f.Name] != ""
+			view.Step.Fields[i].Managed = managedField(f.Name)
+			if managedField(f.Name) {
+				view.Step.Fields[i].ManagedTitle = managedTitle(f.Name)
+			}
 			if f.Kind != "secret" {
 				view.Step.Fields[i].Value = v[f.Name]
 			}
@@ -105,6 +113,16 @@ func Page() admin.Page {
 			}
 			return Probe(r.Context(), "storage", r.Form.Get("revision"), r.Form.Get("check_id"))
 		},
+		"check-integration": func(r *http.Request) (string, error) {
+			if r.Form.Get("confirm") != "check" {
+				return "", fmt.Errorf("confirm the live integration check; AI uses one small provider request")
+			}
+			kind := r.Form.Get("kind")
+			if len(checkNames(kind)) == 0 {
+				return "", fmt.Errorf("unknown integration")
+			}
+			return Probe(r.Context(), kind, r.Form.Get("revision"), r.Form.Get("check_id"))
+		},
 		"publish": func(r *http.Request) (string, error) {
 			if r.Form.Get("confirm") != "publish" {
 				return "", fmt.Errorf("type publish to confirm this configuration")
@@ -114,3 +132,5 @@ func Page() admin.Page {
 		},
 	}}
 }
+
+type IntegrationCheckView struct{ Kind, ID string }

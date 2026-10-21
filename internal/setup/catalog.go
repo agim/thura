@@ -8,6 +8,8 @@ type Field struct {
 	Options                          []string
 	Value                            string
 	Saved                            bool
+	Managed                          bool
+	ManagedTitle                     string
 }
 type Step struct {
 	ID, Title string
@@ -30,7 +32,7 @@ func Catalog() []Step {
 			field("THURA_MAIL_INBOUND", "Receive email through", "select", "relay", "Postfix uses the included Compose service. Relay keeps an independently managed signed MIME relay.", "postfix", "relay"),
 			field("THURA_MAIL_OUTBOUND", "Send email through", "select", "provider", "Recommended: an API provider for outgoing delivery. Postfix remains available for direct SMTP sending.", "provider", "postfix"),
 			field("THURA_POSTFIX_HOSTNAME", "Mail server hostname", "text", "", "For example mail.example.org. Point your inbox domain MX record here and this hostname A record at this server."),
-			field("THURA_MAIL_ADDRESS", "Inbox address", "email", "", "Initial shared mailbox; blank uses the sender address. Later mailbox addresses are managed separately."),
+			field("THURA_MAIL_ADDRESS", "Administrator inbox address", "email", "", "Private inbox for the first administrator; blank uses the sender address. New members receive personal inboxes through invitations."),
 			field("MAIL_PROVIDER", "Outgoing provider", "select", "smtp", "API providers are recommended: Mailgun, SendGrid, Postmark or Resend. SMTP is available when needed.", "mailgun", "sendgrid", "postmark", "resend", "smtp"),
 			field("MAIL_FROM", "Sender address", "email", "", "A verified outgoing sender; can differ from the inbox address."),
 			field("MAIL_API_KEY", "Email API key", "secret", "", "Required for API providers. Blank preserves the saved key."),
@@ -88,8 +90,8 @@ func Catalog() []Step {
 			field("LIVEKIT_PUBLIC_URL", "LiveKit public WSS URL", "text", "", "Browser-reachable secure WebSocket endpoint."),
 			field("LIVEKIT_API_KEY", "LiveKit API key", "secret", "", "Required with LiveKit."),
 			field("LIVEKIT_API_SECRET", "LiveKit API secret", "secret", "", "Required with LiveKit."),
-			field("SMIP_ENABLED", "SMIP chat and files", "select", "false", "Required before publishing. Pair with a trusted server using the current SMIP transport contract.", "false", "true"),
-			field("SMIP_CONFIG", "SMIP pairing JSON", "secret", "", "Private signing seed, pinned peer keys and origins; stored encrypted."),
+			field("SMIP_ENABLED", "SMIP chat and files", "select", "false", "Required before publishing. Thura generates this server’s identity; pair trusted servers explicitly when enabling cross-server exchange.", "false", "true"),
+			field("SMIP_CONFIG", "Secure chat and file identity", "secret", "", "Generated and encrypted by Thura. Remote peers still require explicit pairing and consent; no remote server is trusted automatically."),
 		}},
 		{ID: "review", Title: "Review and publish"},
 	}
@@ -135,6 +137,8 @@ func bootstrapDraft() map[string]string {
 			}
 		}
 	}
+	fillManaged(values)
+	localModelDefaults(values)
 	return values
 }
 

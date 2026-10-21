@@ -519,6 +519,30 @@ func (q *Queries) LockTeamDomain(ctx context.Context, arg LockTeamDomainParams) 
 	return i, err
 }
 
+const readyTeamWorkspaces = `-- name: ReadyTeamWorkspaces :many
+SELECT workspace_id FROM team_setup WHERE status='ready' ORDER BY workspace_id
+`
+
+func (q *Queries) ReadyTeamWorkspaces(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, readyTeamWorkspaces)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var workspace_id string
+		if err := rows.Scan(&workspace_id); err != nil {
+			return nil, err
+		}
+		items = append(items, workspace_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const saveTeamMailConfig = `-- name: SaveTeamMailConfig :one
 INSERT INTO team_mail_config(domain_id,workspace_id,provider,sealed,enabled,smip,postfix) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(domain_id) DO UPDATE SET provider=EXCLUDED.provider,sealed=EXCLUDED.sealed,enabled=EXCLUDED.enabled,smip=EXCLUDED.smip,postfix=EXCLUDED.postfix,updated_at=now() WHERE team_mail_config.workspace_id=EXCLUDED.workspace_id RETURNING domain_id, workspace_id, provider, sealed, enabled, smip, postfix, updated_at
 `

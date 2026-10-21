@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+import matrix
 
 
 def configure(directory=Path('/run/thura')):
@@ -42,7 +43,12 @@ def configure(directory=Path('/run/thura')):
 def health():
     for pid in json.loads(Path('/run/thura/processes.json').read_text()).values():
         os.kill(pid, 0)
-    for url in ['http://127.0.0.1:3000/api/v1/health', 'http://127.0.0.1:7880/']:
+    urls=['http://127.0.0.1:3000/api/v1/health', 'http://127.0.0.1:7880/']
+    if os.environ.get('THURA_MANAGED_MATRIX') == 'true':
+        urls.append('http://127.0.0.1:8008/_matrix/client/versions')
+    if os.environ.get('THURA_MANAGED_OLLAMA') == 'true':
+        urls.append('http://127.0.0.1:11434/api/tags')
+    for url in urls:
         with urllib.request.urlopen(url, timeout=3) as response:
             if response.status != 200:
                 raise RuntimeError('Application or meeting server unavailable')
@@ -71,8 +77,20 @@ def main():
                 time.sleep(.25)
         if stopping:
             return
-        for command in [['/app/thura'], ['/usr/local/bin/livekit-server', '--config', str(config)]]:
+        commands=[['/app/thura'], ['/usr/local/bin/livekit-server', '--config', str(config)]]
+        if os.environ.get('THURA_MANAGED_MATRIX') == 'true':
+            matrix_config=matrix.configure()
+            subprocess.run(['/usr/local/bin/python', '-m', 'synapse.app.homeserver', '--generate-keys', '--config-path', str(matrix_config)], user=65532, group=65532, extra_groups=[], check=True)
+            commands.append(['/usr/local/bin/python', '-m', 'synapse.app.homeserver', '--config-path', str(matrix_config)])
+        if os.environ.get('THURA_MANAGED_OLLAMA') == 'true':
+            model_state=Path('/app/models')
+            model_state.mkdir(mode=0o700, parents=True, exist_ok=True)
+            os.chown(model_state,65532,65532)
+            commands.append(['/usr/local/bin/ollama','serve'])
+        for command in commands:
             environment = dict(os.environ)
+            if 'ollama' in command[0]:
+                environment.update({'HOME':'/app/models','OLLAMA_MODELS':'/app/models/models','OLLAMA_HOST':'127.0.0.1:11434','OLLAMA_NO_CLOUD':'1','OLLAMA_CONTEXT_LENGTH':'2048','OLLAMA_NUM_PARALLEL':'1','OLLAMA_MAX_LOADED_MODELS':'1','OLLAMA_MAX_QUEUE':'2','OLLAMA_KEEP_ALIVE':'0'})
             environment['GOMEMLIMIT'] = '96MiB' if 'livekit-server' in command[0] else '256MiB'
             children.append(subprocess.Popen(command, user=65532, group=65532, extra_groups=[], env=environment))
         Path('/run/thura/processes.json').write_text(json.dumps({str(index): child.pid for index, child in enumerate(children)}))

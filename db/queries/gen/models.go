@@ -463,6 +463,7 @@ type Invitation struct {
 	WorkspaceID string        `json:"workspace_id"`
 	Email       string        `json:"email"`
 	Role        WorkspaceRole `json:"role"`
+	MailboxID   *string       `json:"mailbox_id"`
 	TokenHash   string        `json:"token_hash"`
 	InvitedBy   string        `json:"invited_by"`
 	ExpiresAt   time.Time     `json:"expires_at"`
@@ -696,6 +697,8 @@ type Mailbox struct {
 	Name         string    `json:"name"`
 	Address      string    `json:"address"`
 	ConfigPrefix string    `json:"config_prefix"`
+	Private      bool      `json:"private"`
+	OwnerSubject *string   `json:"owner_subject"`
 	Signature    string    `json:"signature"`
 	CreatedAt    time.Time `json:"created_at"`
 }

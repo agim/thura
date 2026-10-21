@@ -48,13 +48,16 @@ ENTRYPOINT ["/app/thura"]
 # Compact deployment: the same application binary plus the local SFU. The
 # supervisor initializes the storage mount, then both services run as UID 65532.
 FROM livekit/livekit-server@sha256:d0c04791bf63ca8dcea123571827d56ba9504bd57c8d5de60ee03b5408cc3154 AS meeting
-FROM debian:trixie-slim AS compact
-RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+FROM ollama/ollama@sha256:2e6cc92ffa43b4b1a2e70e315407e00ac97ec125afc71277d73c7efe01c4f31b AS localmodel
+RUN rm -rf /usr/lib/ollama/cuda* /usr/lib/ollama/rocm* /usr/lib/ollama/vulkan*
+FROM ghcr.io/element-hq/synapse@sha256:97665cd4539dcf107c69fb6afdb720e1d1c9c09fb2b5701fb13d6c33b22cd8f0 AS compact
+USER root
 WORKDIR /app
 COPY --from=standalone /app /app
 COPY --from=meeting /livekit-server /usr/local/bin/livekit-server
-COPY deploy/compact/app.py /opt/thura/app.py
+COPY --from=localmodel /bin/ollama /usr/local/bin/ollama
+COPY --from=localmodel /usr/lib/ollama /usr/local/lib/ollama
+COPY deploy/compact/app.py deploy/compact/matrix.py /opt/thura/
 ENV LIDZA_ADDR=0.0.0.0:3000 GOMEMLIMIT=256MiB GOMAXPROCS=2
 EXPOSE 3000 7880 7881 7882/udp
 ENTRYPOINT ["python3", "/opt/thura/app.py"]

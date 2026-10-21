@@ -16,6 +16,7 @@ import (
 	"github.com/agim/lidza/pkg/credentials"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/mailaccess"
 	"thura/internal/smip"
 )
 
@@ -41,6 +42,9 @@ func Prepare(ctx context.Context, tx pgx.Tx, mailbox q.Mailbox, item q.MailItem,
 	allowed, err := queries.IsWorkspaceMember(ctx, q.IsWorkspaceMemberParams{Scope: mailbox.WorkspaceID, Subject: item.AuthorID})
 	if err != nil || !allowed {
 		return q.MailTransmission{}, errors.New("mail sender is no longer a workspace member")
+	}
+	if err = mailaccess.Check(ctx, queries, mailbox, item.AuthorID); err != nil {
+		return q.MailTransmission{}, err
 	}
 	addresses, err := recipients(msg)
 	if err != nil {
@@ -254,6 +258,13 @@ func (g *Gateway) plan(ctx context.Context, initial q.MailTransmission) error {
 func eligible(ctx context.Context, queries *q.Queries, row q.MailTransmission) (bool, error) {
 	g, identityErr := forDomain(ctx, row.WorkspaceID, row.Origin)
 	if identityErr != nil || !g.Enabled() || row.Origin != g.domain {
+		return false, nil
+	}
+	box, err := queries.GetMailbox(ctx, row.MailboxID)
+	if err != nil {
+		return false, err
+	}
+	if !mailaccess.Owns(box, row.AuthorID) {
 		return false, nil
 	}
 	return queries.IsWorkspaceMember(ctx, q.IsWorkspaceMemberParams{Scope: row.WorkspaceID, Subject: row.AuthorID})

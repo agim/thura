@@ -178,7 +178,7 @@ func (q *Queries) HasSuccessfulSetupProbe(ctx context.Context, arg HasSuccessful
 }
 
 const listPostfixMailboxes = `-- name: ListPostfixMailboxes :many
-SELECT id, workspace_id, name, address, config_prefix, signature, created_at FROM mailbox ORDER BY address,id LIMIT 1001
+SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox ORDER BY address,id LIMIT 1001
 `
 
 func (q *Queries) ListPostfixMailboxes(ctx context.Context) ([]Mailbox, error) {
@@ -196,6 +196,8 @@ func (q *Queries) ListPostfixMailboxes(ctx context.Context) ([]Mailbox, error) {
 			&i.Name,
 			&i.Address,
 			&i.ConfigPrefix,
+			&i.Private,
+			&i.OwnerSubject,
 			&i.Signature,
 			&i.CreatedAt,
 		); err != nil {
@@ -274,6 +276,23 @@ type PublishServerSetupParams struct {
 
 func (q *Queries) PublishServerSetup(ctx context.Context, arg PublishServerSetupParams) error {
 	_, err := q.db.Exec(ctx, publishServerSetup, arg.PublishedAt, arg.WorkspaceID)
+	return err
+}
+
+const reconcileServerSetup = `-- name: ReconcileServerSetup :exec
+UPDATE server_setup SET draft=$1,published=$2,revision=revision+1,
+published_revision=CASE WHEN $3::boolean THEN revision+1 ELSE published_revision END
+WHERE id='00000000-0000-4000-8000-000000000001'
+`
+
+type ReconcileServerSetupParams struct {
+	Draft           string `json:"draft"`
+	Published       string `json:"published"`
+	RepairPublished bool   `json:"repair_published"`
+}
+
+func (q *Queries) ReconcileServerSetup(ctx context.Context, arg ReconcileServerSetupParams) error {
+	_, err := q.db.Exec(ctx, reconcileServerSetup, arg.Draft, arg.Published, arg.RepairPublished)
 	return err
 }
 

@@ -7,7 +7,8 @@ AND role IN ('owner','admin','member')
 ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END LIMIT 1;
 
 -- name: ListWorkspaceMembers :many
-SELECT m.subject, coalesce(u.email,'')::text AS email, coalesce(u.name,'')::text AS name, m.role
+SELECT m.subject, coalesce(u.email,'')::text AS email, coalesce(u.name,'')::text AS name, m.role,
+coalesce((SELECT b.address FROM mailbox b WHERE b.workspace_id::text=m.scope AND b.private AND b.owner_subject=m.subject ORDER BY b.created_at,b.id LIMIT 1),'')::text AS mailbox_address
 FROM auth_member m JOIN auth_user u ON u.subject=m.subject
 WHERE m.scope=$1 AND m.role IN ('owner','admin','member')
 ORDER BY m.role,u.email;
@@ -23,8 +24,8 @@ INSERT INTO auth_member(scope,subject,role,granted_by) VALUES($1,$2,$3,$4)
 ON CONFLICT (subject,scope,role) DO NOTHING;
 
 -- name: CreateInvitation :one
-INSERT INTO invitation(workspace_id,email,role,token_hash,invited_by,expires_at)
-VALUES($1,$2,$3,$4,$5,$6) RETURNING *;
+INSERT INTO invitation(workspace_id,email,role,token_hash,invited_by,expires_at,mailbox_id)
+VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *;
 
 -- name: ListInvitations :many
 SELECT * FROM invitation WHERE workspace_id=$1 ORDER BY created_at DESC LIMIT 100;

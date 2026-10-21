@@ -54,7 +54,10 @@ func probeFingerprint(v map[string]string, kind string) (string, error) {
 			names = append(names, "STORAGE_ENDPOINT", "STORAGE_REGION", "STORAGE_BUCKET", "STORAGE_ACCESS_KEY", "STORAGE_SECRET_KEY")
 		}
 	default:
-		return "", errors.New("unknown provider check")
+		names = checkNames(kind)
+		if len(names) == 0 {
+			return "", errors.New("unknown provider check")
+		}
 	}
 	for _, name := range names {
 		selected[name] = v[name]
@@ -79,7 +82,10 @@ func probeMessage(kind, state string) string {
 		if kind == "mail" {
 			return "Mail provider accepted the test email. Confirm it arrived in your administrator inbox; acceptance does not establish delivery."
 		}
-		return "Storage write, read, metadata, listing and deletion checks passed. Bucket privacy, durability and backups still require deployment verification."
+		if kind == "storage" {
+			return "Storage write, read, metadata, listing and deletion checks passed. Bucket privacy, durability and backups still require deployment verification."
+		}
+		return map[string]string{"matrix": "Matrix application-service registration and authenticated identity checks passed.", "collabora": "Collabora discovery confirms Word and Excel editing. Actual document saves and mobile rendering still require acceptance.", "livekit": "LiveKit authenticated room creation and deletion passed. Camera, microphone and mobile network calls still require acceptance.", "ai": "The selected AI model returned an actual response to a connection test.", "smip": "SMIP identity validation and public TLS 1.3 transport challenge passed. Peer delivery still requires a two-server acceptance test."}[kind]
 	case "superseded":
 		return "A later check replaced this result. Complete the newer check before publishing."
 	case "failed":
@@ -159,15 +165,17 @@ func Probe(ctx context.Context, kind, revision, requestID string) (string, error
 	if err = tx.Commit(ctx); err != nil {
 		return "", err
 	}
-	bounded, cancel := context.WithTimeout(ctx, 15*time.Second)
+	bounded, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 	state := "failed"
 	if kind == "mail" {
 		if checkMail(bounded, v, recipient) == nil {
 			state = "succeeded"
 		}
-	} else {
+	} else if kind == "storage" {
 		state = checkStorage(bounded, v, id.String())
+	} else if checkIntegration(bounded, kind, v, id.String()) == nil {
+		state = "succeeded"
 	}
 	// Complete independently of a disconnected browser, with a short deadline.
 	finish, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -277,7 +285,7 @@ func checkStorage(ctx context.Context, v map[string]string, id string) (state st
 }
 
 func requireProviderChecks(ctx context.Context, queries *q.Queries, v map[string]string) error {
-	for _, kind := range []string{"mail", "storage"} {
+	for _, kind := range append([]string{"mail", "storage"}, integrationKinds()...) {
 		fingerprint, err := probeFingerprint(v, kind)
 		if err != nil {
 			return err
@@ -306,7 +314,7 @@ func probeViews(ctx context.Context, v map[string]string) ([]ProbeView, error) {
 		return nil, err
 	}
 	fingerprints := map[string]string{}
-	for _, kind := range []string{"mail", "storage"} {
+	for _, kind := range append([]string{"mail", "storage"}, integrationKinds()...) {
 		fingerprints[kind], err = probeFingerprint(v, kind)
 		if err != nil {
 			return nil, err

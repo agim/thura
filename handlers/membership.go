@@ -19,7 +19,7 @@ func ListMembers(ctx context.Context, r *router.Request[router.None]) (schema.Me
 	rows, err := queries.New(db.From(ctx)).ListWorkspaceMembers(ctx, id)
 	out := schema.MemberList{Items: []schema.MemberView{}}
 	for _, m := range rows {
-		out.Items = append(out.Items, schema.MemberView{Subject: m.Subject, Email: m.Email, Name: m.Name, Role: schema.WorkspaceRole(m.Role)})
+		out.Items = append(out.Items, schema.MemberView{MailboxAddress: m.MailboxAddress, Subject: m.Subject, Email: m.Email, Name: m.Name, Role: schema.WorkspaceRole(m.Role)})
 	}
 	return out, err
 }

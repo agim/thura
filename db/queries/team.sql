@@ -55,3 +55,6 @@ SELECT workspace_id FROM calendar WHERE id=$1;
 INSERT INTO team_setup(workspace_id) VALUES($1) ON CONFLICT(workspace_id) DO NOTHING;
 -- name: ListAllSmipMailDomains :many
 SELECT * FROM smip_mail_domain ORDER BY origin,domain LIMIT 1000;
+
+-- name: ReadyTeamWorkspaces :many
+SELECT workspace_id FROM team_setup WHERE status='ready' ORDER BY workspace_id;

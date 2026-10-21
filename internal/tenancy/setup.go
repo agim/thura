@@ -113,6 +113,9 @@ func Publish(ctx context.Context, id string, in schema.TeamPublishInput) (schema
 	if _, e = queries.SaveTeamSetup(ctx, q.SaveTeamSetupParams{WorkspaceID: id, PrimaryDomain: name, Status: "ready"}); e != nil {
 		return schema.TeamSetupView{}, e
 	}
+	if e = EnsurePersonalMailboxes(ctx, tx, id); e != nil {
+		return schema.TeamSetupView{}, e
+	}
 	if e = record(ctx, tx, id, "team.setup.publish", id); e != nil {
 		return schema.TeamSetupView{}, e
 	}

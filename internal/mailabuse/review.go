@@ -12,6 +12,7 @@ import (
 	"github.com/agim/lidza/pkg/router"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/mailaccess"
 	"thura/schema"
 )
 
@@ -20,6 +21,17 @@ func record(ctx context.Context, tx pgx.Tx, w, subject, action, resource string)
 }
 func View(ctx context.Context, item, subject string) (*schema.MailScreeningView, error) {
 	queries := q.New(db.From(ctx))
+	i, err := queries.GetMailItem(ctx, item)
+	if err != nil {
+		return nil, err
+	}
+	box, err := queries.GetMailbox(ctx, i.MailboxID)
+	if err != nil {
+		return nil, err
+	}
+	if err = mailaccess.Check(ctx, queries, box, subject); err != nil {
+		return nil, err
+	}
 	s, err := queries.GetMailScreening(ctx, item)
 	if errors.Is(err, pgx.ErrNoRows) {
 		i, err := queries.GetMailItem(ctx, item)
@@ -103,6 +115,16 @@ func Review(ctx context.Context, w, item, subject, action string) error {
 	}
 	i, err := queries.LockMailItem(ctx, item)
 	if err != nil {
+		return err
+	}
+	box, err := queries.GetMailbox(ctx, i.MailboxID)
+	if err != nil {
+		return err
+	}
+	if box.WorkspaceID != w {
+		return router.Errorf(404, "Message not found")
+	}
+	if err = mailaccess.Check(ctx, queries, box, subject); err != nil {
 		return err
 	}
 	s, err := queries.LockMailScreening(ctx, item)

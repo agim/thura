@@ -15,7 +15,7 @@ import (
 // publications immediately; never cache redirects in a browser or proxy.
 func Gate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if setupResource(r) || (r.Method == http.MethodGet && r.URL.Path == "/api/v1/setup/postfix") {
+		if setupResource(r) || (r.Method == http.MethodGet && (r.URL.Path == "/api/v1/setup/postfix" || r.URL.Path == "/api/v1/setup/transport")) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -49,7 +49,7 @@ func Gate(next http.Handler) http.Handler {
 			if status.Claimed && status.Administrator {
 				target = "/admin/setup"
 			}
-			if path == target || (status.Claimed && auth.CurrentUser(r.Context()) != nil && (path == "/admin/setup" || path == "/admin/setup/controls.js" || path == "/admin/setup/save" || path == "/admin/setup/restart" || path == "/admin/setup/publish" || path == "/admin/setup/check-mail" || path == "/admin/setup/check-storage")) {
+			if path == target || (status.Claimed && auth.CurrentUser(r.Context()) != nil && (path == "/admin/setup" || path == "/admin/setup/controls.js" || path == "/admin/setup/save" || path == "/admin/setup/restart" || path == "/admin/setup/publish" || path == "/admin/setup/check-mail" || path == "/admin/setup/check-storage" || path == "/admin/setup/check-integration")) {
 				// The official admin handler retains its authorization and CSRF checks.
 				next.ServeHTTP(w, r)
 				return

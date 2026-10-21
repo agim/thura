@@ -31,8 +31,8 @@ func (q *Queries) CountWorkspaceOwners(ctx context.Context, scope string) (int64
 }
 
 const createInvitation = `-- name: CreateInvitation :one
-INSERT INTO invitation(workspace_id,email,role,token_hash,invited_by,expires_at)
-VALUES($1,$2,$3,$4,$5,$6) RETURNING id, workspace_id, email, role, token_hash, invited_by, expires_at, accepted_at, revoked_at, created_at
+INSERT INTO invitation(workspace_id,email,role,token_hash,invited_by,expires_at,mailbox_id)
+VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id, workspace_id, email, role, mailbox_id, token_hash, invited_by, expires_at, accepted_at, revoked_at, created_at
 `
 
 type CreateInvitationParams struct {
@@ -42,6 +42,7 @@ type CreateInvitationParams struct {
 	TokenHash   string        `json:"token_hash"`
 	InvitedBy   string        `json:"invited_by"`
 	ExpiresAt   time.Time     `json:"expires_at"`
+	MailboxID   *string       `json:"mailbox_id"`
 }
 
 func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationParams) (Invitation, error) {
@@ -52,6 +53,7 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 		arg.TokenHash,
 		arg.InvitedBy,
 		arg.ExpiresAt,
+		arg.MailboxID,
 	)
 	var i Invitation
 	err := row.Scan(
@@ -59,6 +61,7 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 		&i.WorkspaceID,
 		&i.Email,
 		&i.Role,
+		&i.MailboxID,
 		&i.TokenHash,
 		&i.InvitedBy,
 		&i.ExpiresAt,
@@ -94,7 +97,7 @@ func (q *Queries) CreateInvitedAccount(ctx context.Context, arg CreateInvitedAcc
 }
 
 const findInvitation = `-- name: FindInvitation :one
-SELECT id, workspace_id, email, role, token_hash, invited_by, expires_at, accepted_at, revoked_at, created_at FROM invitation WHERE token_hash=$1
+SELECT id, workspace_id, email, role, mailbox_id, token_hash, invited_by, expires_at, accepted_at, revoked_at, created_at FROM invitation WHERE token_hash=$1
 `
 
 func (q *Queries) FindInvitation(ctx context.Context, tokenHash string) (Invitation, error) {
@@ -105,6 +108,7 @@ func (q *Queries) FindInvitation(ctx context.Context, tokenHash string) (Invitat
 		&i.WorkspaceID,
 		&i.Email,
 		&i.Role,
+		&i.MailboxID,
 		&i.TokenHash,
 		&i.InvitedBy,
 		&i.ExpiresAt,
@@ -149,7 +153,7 @@ func (q *Queries) GrantWorkspaceMember(ctx context.Context, arg GrantWorkspaceMe
 }
 
 const listInvitations = `-- name: ListInvitations :many
-SELECT id, workspace_id, email, role, token_hash, invited_by, expires_at, accepted_at, revoked_at, created_at FROM invitation WHERE workspace_id=$1 ORDER BY created_at DESC LIMIT 100
+SELECT id, workspace_id, email, role, mailbox_id, token_hash, invited_by, expires_at, accepted_at, revoked_at, created_at FROM invitation WHERE workspace_id=$1 ORDER BY created_at DESC LIMIT 100
 `
 
 func (q *Queries) ListInvitations(ctx context.Context, workspaceID string) ([]Invitation, error) {
@@ -166,6 +170,7 @@ func (q *Queries) ListInvitations(ctx context.Context, workspaceID string) ([]In
 			&i.WorkspaceID,
 			&i.Email,
 			&i.Role,
+			&i.MailboxID,
 			&i.TokenHash,
 			&i.InvitedBy,
 			&i.ExpiresAt,
@@ -184,17 +189,19 @@ func (q *Queries) ListInvitations(ctx context.Context, workspaceID string) ([]In
 }
 
 const listWorkspaceMembers = `-- name: ListWorkspaceMembers :many
-SELECT m.subject, coalesce(u.email,'')::text AS email, coalesce(u.name,'')::text AS name, m.role
+SELECT m.subject, coalesce(u.email,'')::text AS email, coalesce(u.name,'')::text AS name, m.role,
+coalesce((SELECT b.address FROM mailbox b WHERE b.workspace_id::text=m.scope AND b.private AND b.owner_subject=m.subject ORDER BY b.created_at,b.id LIMIT 1),'')::text AS mailbox_address
 FROM auth_member m JOIN auth_user u ON u.subject=m.subject
 WHERE m.scope=$1 AND m.role IN ('owner','admin','member')
 ORDER BY m.role,u.email
 `
 
 type ListWorkspaceMembersRow struct {
-	Subject string `json:"subject"`
-	Email   string `json:"email"`
-	Name    string `json:"name"`
-	Role    string `json:"role"`
+	Subject        string `json:"subject"`
+	Email          string `json:"email"`
+	Name           string `json:"name"`
+	Role           string `json:"role"`
+	MailboxAddress string `json:"mailbox_address"`
 }
 
 func (q *Queries) ListWorkspaceMembers(ctx context.Context, scope string) ([]ListWorkspaceMembersRow, error) {
@@ -211,6 +218,7 @@ func (q *Queries) ListWorkspaceMembers(ctx context.Context, scope string) ([]Lis
 			&i.Email,
 			&i.Name,
 			&i.Role,
+			&i.MailboxAddress,
 		); err != nil {
 			return nil, err
 		}
@@ -223,7 +231,7 @@ func (q *Queries) ListWorkspaceMembers(ctx context.Context, scope string) ([]Lis
 }
 
 const lockInvitation = `-- name: LockInvitation :one
-SELECT id, workspace_id, email, role, token_hash, invited_by, expires_at, accepted_at, revoked_at, created_at FROM invitation WHERE token_hash=$1 FOR UPDATE
+SELECT id, workspace_id, email, role, mailbox_id, token_hash, invited_by, expires_at, accepted_at, revoked_at, created_at FROM invitation WHERE token_hash=$1 FOR UPDATE
 `
 
 func (q *Queries) LockInvitation(ctx context.Context, tokenHash string) (Invitation, error) {
@@ -234,6 +242,7 @@ func (q *Queries) LockInvitation(ctx context.Context, tokenHash string) (Invitat
 		&i.WorkspaceID,
 		&i.Email,
 		&i.Role,
+		&i.MailboxID,
 		&i.TokenHash,
 		&i.InvitedBy,
 		&i.ExpiresAt,

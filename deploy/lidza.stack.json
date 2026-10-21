@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "required_environment": [
     "LIDZA_MASTER_KEY"
   ],
@@ -36,7 +36,9 @@
     "MAIL_RSPAMD_PASSWORD",
     "LIVEKIT_API_KEY",
     "LIVEKIT_API_SECRET",
-    "COLLABORA_TOKEN_SECRET"
+    "COLLABORA_TOKEN_SECRET",
+    "THURA_SERVICE_MATRIX_AS_TOKEN",
+    "THURA_SERVICE_MATRIX_HS_TOKEN"
   ],
   "services": [
     {
@@ -63,9 +65,13 @@
         "COLLABORA_SERVER_URL": "http://office:9980",
         "COLLABORA_APP_URL": "http://thura:3000",
         "THURA_PUBLIC_HOSTS": "thura,${APP_DOMAIN}",
-        "THURA_SERVICE_HTTP_ORIGINS": "http://127.0.0.1:7880,http://office:9980,http://thura:3000",
+        "THURA_SERVICE_HTTP_ORIGINS": "http://127.0.0.1:7880,http://office:9980,http://thura:3000,http://127.0.0.1:8008",
         "THURA_MAIL_INBOUND": "postfix",
-        "STORAGE_PROVIDER": "local"
+        "THURA_MANAGED_MATRIX": "true",
+        "THURA_MANAGED_SETTINGS": "MATRIX_SERVER_URL,MATRIX_SERVER_NAME,MATRIX_AS_TOKEN,COLLABORA_SERVER_URL,COLLABORA_APP_URL,COLLABORA_TOKEN_SECRET,LIVEKIT_SERVER_URL,LIVEKIT_PUBLIC_URL,LIVEKIT_API_KEY,LIVEKIT_API_SECRET,MAIL_RSPAMD_URL,MAIL_RSPAMD_CONTROLLER_URL,MAIL_RSPAMD_PASSWORD,MAIL_CLAMD_ADDRESS",
+        "THURA_SERVICE_MATRIX_SERVER_URL": "http://127.0.0.1:8008",
+        "THURA_SERVICE_MATRIX_SERVER_NAME": "${APP_DOMAIN}",
+        "THURA_MANAGED_OLLAMA": "true"
       },
       "public_ports": [
         {
@@ -92,6 +98,16 @@
         "python3",
         "/opt/thura/app.py",
         "--health"
+      ],
+      "volumes": [
+        {
+          "name": "matrix-state",
+          "target": "/app/matrix"
+        },
+        {
+          "name": "model-state",
+          "target": "/app/models"
+        }
       ]
     },
     {
@@ -159,5 +175,67 @@
     "path": "/api/v1/health",
     "readyz_body_contains": "Server setup is required",
     "setup_path": "/setup"
+  },
+  "profile_resources": {
+    "minimum": {
+      "services": {
+        "app": {
+          "memory_mib": 1024,
+          "cpus": "0.75"
+        },
+        "mail": {
+          "memory_mib": 1536,
+          "cpus": "0.5"
+        },
+        "office": {
+          "memory_mib": 768,
+          "cpus": "0.5"
+        }
+      },
+      "database": {
+        "memory_mib": 256,
+        "cpus": "0.25"
+      }
+    },
+    "standard": {
+      "services": {
+        "app": {
+          "memory_mib": 2048,
+          "cpus": "1.5"
+        },
+        "mail": {
+          "memory_mib": 2560,
+          "cpus": "1"
+        },
+        "office": {
+          "memory_mib": 2048,
+          "cpus": "1"
+        }
+      },
+      "database": {
+        "memory_mib": 512,
+        "cpus": "0.5"
+      }
+    },
+    "performance": {
+      "services": {
+        "app": {
+          "memory_mib": 4096,
+          "cpus": "3"
+        },
+        "mail": {
+          "memory_mib": 4096,
+          "cpus": "2"
+        },
+        "office": {
+          "memory_mib": 5120,
+          "cpus": "2"
+        }
+      },
+      "database": {
+        "memory_mib": 1024,
+        "cpus": "1"
+      }
+    }
   }
 }

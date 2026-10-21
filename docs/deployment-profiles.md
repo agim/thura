@@ -6,7 +6,7 @@ They do not require a different database schema or move existing volumes.
 
 | Profile | Host CPU | Host RAM | Container limits | Host allowance | Validation |
 |---|---:|---:|---:|---:|---|
-| Minimum | 2 vCPU | 4 GiB | 3.5 GiB | 512 MiB | Small-team functional acceptance passed |
+| Minimum | 2 vCPU | 4 GiB | 3.5 GiB | 512 MiB | Expanded bundle: acceptance in progress |
 | Standard | 4 vCPU | 8 GiB | 7 GiB | 1 GiB | Sizing proposal; capacity not benchmarked |
 | Performance | 8 vCPU | 16 GiB | 14 GiB | 2 GiB | Sizing proposal; capacity not benchmarked |
 
@@ -15,17 +15,17 @@ The service limits are:
 
 | Service | Minimum RAM / CPU | Standard RAM / CPU | Performance RAM / CPU |
 |---|---:|---:|---:|
-| Thura + LiveKit | 512 MiB / 0.50 | 1024 MiB / 1.00 | 2048 MiB / 2.00 |
+| Thura + LiveKit + Matrix + optional local model | 1024 MiB / 0.75 | 2048 MiB / 1.50 | 4096 MiB / 3.00 |
 | Managed PostgreSQL | 256 MiB / 0.25 | 512 MiB / 0.50 | 1024 MiB / 1.00 |
-| Mail, antivirus, Valkey | 1792 MiB / 0.75 | 2560 MiB / 1.00 | 4096 MiB / 2.00 |
-| Collabora | 1024 MiB / 0.50 | 3072 MiB / 1.50 | 7168 MiB / 3.00 |
+| Mail, antivirus, Valkey | 1536 MiB / 0.50 | 2560 MiB / 1.00 | 4096 MiB / 2.00 |
+| Collabora | 768 MiB / 0.50 | 2048 MiB / 1.00 | 5120 MiB / 2.00 |
 
 The operator should choose based on simultaneous work, not just account count:
 mail volume, open documents and spreadsheet size, simultaneous call participants,
 and whether services are external. More RAM provides headroom; these overrides
 do not automatically change scan concurrency, database tuning or Go heap limits.
 A higher tier is not a claim of a specific supported user count.
-Local model hosting and call recording are not included. The host allowance
+A small local assistant model is included as an explicit Ollama choice; larger models and call recording are not included. The host allowance
 covers Linux/Docker and an existing HTTPS proxy, not a colocated deployment
 control panel and its own database.
 
@@ -55,14 +55,15 @@ editing. Measure actual load and leave headroom before reducing a profile.
 
 ## Līdza Deploy integration
 
-`deploy/lidza.stack.json` follows Līdza Deploy's published version-1 stack contract
-(`feat/stack-profiles`, bootstrap contract checkpoint `4cc4754`). Select `minimum`, `standard`
+`deploy/lidza.stack.json` follows Līdza Deploy's published version-2 stack contract
+(Lidza-deploy v0.2.102, PR #26, `bf89fdd`). Explicit `profile_resources` budgets
+match the Compose catalog, including string-valued CPU quotas. Select `minimum`, `standard`
 or `performance` through Deploy's `runtime_profile` setting. Require the agent's
 settings response to advertise `stack_profiles_supported: true`; older agents do
 not support this manifest. It is separate from the standalone Compose files.
 The committed Collabora pin is an immutable multi-architecture vendor index,
-including native AMD64 and the previously tested ARM64 image. CI checks the real
-registry indexes for Collabora, Rspamd and LiveKit on both CPU architectures.
+including native AMD64 and ARM64 images. CI checks the real registry indexes
+for Collabora, Rspamd, LiveKit, Synapse and Ollama on both CPU architectures.
 The earlier four-GiB ARM64 acceptance is not AMD64 runtime acceptance evidence.
 The manifest deliberately contains three services: Deploy attaches its managed
 PostgreSQL as the fourth container. Do not deploy Compose's PostgreSQL alongside it.
@@ -76,19 +77,20 @@ The manifest's `configuration` declarations require the master key before
 deployment, delegate `MAIL_PROVIDER` and `MAIL_FROM` to Thura's setup wizard,
 and delegate `LLM_PROVIDER` to required AI setup. Operators do not need to
 configure a mail provider or AI provider in Deploy merely to start the wizard.
-Thura requires all core services before publication. An external or separately
-hosted Matrix homeserver and AI provider are required in addition to this compact
-stack; their resources are not included in its four-container acceptance.
+Thura requires all core services before publication. The application container now includes a private Matrix homeserver and an
+idle local Ollama daemon. Cloud AI remains an operator choice; choosing a cloud
+provider does not download or load local model weights. See
+[managed services](managed-services.md) for persistence and upgrade behavior.
 Upgrade both the agent and control panel
-to Lidza Deploy v0.2.98 or newer (PR #20); older agents reject the new field.
+to Lidza Deploy v0.2.102 or newer (PR #26); older agents reject this contract.
 Declared setup ownership never unlocks ordinary application APIs or bypasses
 published-configuration validation and genuine readiness after setup.
 Thura seeds its encrypted first-run wizard draft from catalogued operator
 settings, keeping managed storage and service addresses consistent with the
 published setup. Private HTTP service origins are explicitly allowlisted through
 `THURA_SERVICE_HTTP_ORIGINS`; public app and meeting URLs still require
-HTTPS/WSS. The wizard keeps its real mail and storage probes and environment
-conflict checks. The explicit `bootstrap_readiness` declaration exposes only a healthy first-run
+HTTPS/WSS. Publication requires successful mail, storage, Matrix, Collabora, LiveKit, AI
+and SMIP checks against the saved settings, plus environment conflict checks. The explicit `bootstrap_readiness` declaration exposes only a healthy first-run
 installation whose genuine `/readyz` returns the setup-required 503 marker.
 Deploy shows **Setup required** while Thura's API gate remains locked. Complete
 the wizard, publish, then reload through Deploy; normal `/readyz` must then pass.
@@ -100,7 +102,7 @@ budgets include the managed database allocation. Do not silently shrink or tune
 an existing/shared database to fit Minimum: report its real allocation and
 require an appropriate profile or an explicit database migration.
 
-Stable persistent resources are app storage, Postfix queue, Rspamd state,
+Stable persistent resources are app storage, Matrix state, local model weights, Postfix queue, Rspamd state,
 ClamAV signatures and Valkey learning. There must never be two active writers
 for a learning or mail volume. Failed updates must preserve volumes and recover
 the previous application stack. Public mail/media ports need conflict checks;
@@ -120,7 +122,8 @@ python3 -m unittest discover -s deploy/profiles
 The checks resolve the actual Compose files, verify the selected resource limits,
 CPU totals and host allowance, and ensure the stack still has four services with
 the intended private cache/realtime wiring. They do not replace a real deployment
-through Līdza Deploy. The actual minimum-profile deployment passed production setup, document saves,
-mail learning and rollback in a 2-CPU / 4-GiB Linux VM. See the
+through Līdza Deploy. The previous minimum bundle passed setup, document saves, mail learning and
+rollback in a 2-CPU / 4-GiB Linux VM. That result does not validate the expanded
+Matrix/local-model bundle or its reduced Office/mail allocations. See the
 [acceptance report](deploy-stack-acceptance.md) for measured resources,
 reproduction and the remaining deployment-specific checks.

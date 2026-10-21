@@ -26,7 +26,7 @@ func ListMailboxes(ctx context.Context, r *router.Request[router.None]) (schema.
 	if err := workspace.RequireMember(ctx, id); err != nil {
 		return schema.MailboxList{}, err
 	}
-	rows, err := queries.New(db.From(ctx)).ListMailboxes(ctx, id)
+	rows, err := queries.New(db.From(ctx)).ListVisibleMailboxes(ctx, queries.ListVisibleMailboxesParams{WorkspaceID: id, Subject: &auth.CurrentUser(ctx).ID})
 	out := schema.MailboxList{Items: []schema.Mailbox{}}
 	for _, m := range rows {
 		out.Items = append(out.Items, mailbox.ViewMailbox(m))

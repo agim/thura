@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/agim/lidza"
+	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/jobs"
 	"github.com/agim/lidza/packs/mail"
@@ -20,6 +21,7 @@ import (
 	"strings"
 	queries "thura/db/queries/gen"
 	"thura/internal/mailabuse"
+	"thura/internal/mailaccess"
 	"thura/internal/platform/objectstore"
 	"thura/internal/richtext"
 	"thura/internal/smipmail"
@@ -79,6 +81,9 @@ func Access(ctx context.Context, workspaceID, mailboxID string) (queries.Mailbox
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && m.WorkspaceID != workspaceID) {
 		return m, router.Errorf(404, "mailbox not found")
 	}
+	if err == nil {
+		err = mailaccess.Check(ctx, queries.New(db.From(ctx)), m, auth.CurrentUser(ctx).ID)
+	}
 	return m, err
 }
 func ItemAccess(ctx context.Context, workspaceID, mailboxID, itemID string) (queries.MailItem, error) {
@@ -101,7 +106,7 @@ func Text(s *string) string {
 	return *s
 }
 func ViewMailbox(m queries.Mailbox) schema.Mailbox {
-	return schema.Mailbox{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Signature: m.Signature, CreatedAt: m.CreatedAt}
+	return schema.Mailbox{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Private: m.Private, OwnerSubject: m.OwnerSubject, Signature: m.Signature, CreatedAt: m.CreatedAt}
 }
 func View(i queries.MailItem) schema.MailItem {
 	formatted := ReaderHTML(i.HTMLBody)
@@ -262,6 +267,9 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 	if err != nil {
 		return err
 	}
+	if err = mailaccess.Check(ctx, q, m, i.AuthorID); err != nil {
+		return err
+	}
 	cfg, managed, err := tenancy.ResolveMail(ctx, m)
 	if !managed && err == nil {
 		cfg, err = Config(m)
@@ -416,6 +424,16 @@ func Lock(ctx context.Context, workspaceID, mailboxID, itemID string) (pgx.Tx, *
 		return nil, nil, queries.MailItem{}, err
 	}
 	q := queries.New(tx)
+	if _, err := q.LockWorkspace(ctx, workspaceID); err != nil {
+		return nil, nil, queries.MailItem{}, errors.Join(err, tx.Rollback(ctx))
+	}
+	box, err := q.GetMailbox(ctx, mailboxID)
+	if err == nil {
+		err = mailaccess.Check(ctx, q, box, auth.CurrentUser(ctx).ID)
+	}
+	if err != nil {
+		return nil, nil, queries.MailItem{}, errors.Join(err, tx.Rollback(ctx))
+	}
 	item, err := q.LockMailItem(ctx, itemID)
 	if err != nil {
 		return nil, nil, item, errors.Join(err, tx.Rollback(ctx))

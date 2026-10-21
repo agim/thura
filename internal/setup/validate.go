@@ -184,12 +184,17 @@ func validate(v map[string]string) error {
 var serviceAlias = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
 
 // Only the deployment operator can allow private cleartext service origins.
-// Public app URLs, Matrix and object-storage endpoints retain HTTPS validation.
+// Public app URLs and object-storage endpoints retain HTTPS validation.
 func integrationOrigin(name, raw string) bool {
 	if httpsOrigin(raw) {
 		return true
 	}
-	if name != "COLLABORA_SERVER_URL" && name != "COLLABORA_APP_URL" && name != "LIVEKIT_SERVER_URL" {
+	// Matrix's private origin is a deployment-owned registration, not a general
+	// exception for an operator-entered public homeserver URL.
+	if name == "MATRIX_SERVER_URL" && !managedField(name) {
+		return false
+	}
+	if name != "COLLABORA_SERVER_URL" && name != "COLLABORA_APP_URL" && name != "LIVEKIT_SERVER_URL" && name != "MATRIX_SERVER_URL" {
 		return false
 	}
 	u, err := url.Parse(raw)

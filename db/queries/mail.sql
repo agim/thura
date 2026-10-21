@@ -81,3 +81,28 @@ DELETE FROM mail_tag WHERE item_id=$1 AND label_id=$2;
 DELETE FROM mail_tag WHERE label_id=$1;
 -- name: DeleteMailboxLabel :exec
 DELETE FROM mail_label l WHERE l.id=sqlc.arg(id) AND COALESCE(l.workspace_id,(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=l.mailbox_id))=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=sqlc.arg(mailbox_id));
+
+-- name: ListVisibleMailboxes :many
+SELECT * FROM mailbox WHERE workspace_id=sqlc.arg(workspace_id)
+AND (NOT private OR owner_subject=sqlc.arg(subject)) ORDER BY name,id;
+-- name: ReservePersonalMailbox :one
+INSERT INTO mailbox(workspace_id,name,address,config_prefix,private)
+VALUES($1,$2,$3,'',true) RETURNING *;
+-- name: AssignPersonalMailbox :execrows
+UPDATE mailbox SET owner_subject=sqlc.arg(subject) WHERE id=sqlc.arg(id)
+AND workspace_id=sqlc.arg(workspace_id) AND private AND owner_subject IS NULL;
+
+-- name: ClaimInitialMailbox :execrows
+UPDATE mailbox SET private=true,owner_subject=sqlc.arg(subject)::text
+WHERE workspace_id=sqlc.arg(workspace_id) AND address=sqlc.arg(address)
+AND owner_subject IS NULL;
+
+-- name: ReusableInvitationMailbox :one
+SELECT b.* FROM mailbox b WHERE b.workspace_id=sqlc.arg(workspace_id) AND b.address=sqlc.arg(address)
+AND b.private AND b.owner_subject IS NULL
+AND EXISTS(SELECT 1 FROM invitation i WHERE i.mailbox_id=b.id AND i.email=sqlc.arg(email))
+AND NOT EXISTS(SELECT 1 FROM invitation i WHERE i.mailbox_id=b.id AND (i.accepted_at IS NOT NULL OR (i.revoked_at IS NULL AND i.expires_at>sqlc.arg(now)::timestamptz)))
+FOR UPDATE;
+
+-- name: RevokeReservedMailboxInvitations :exec
+UPDATE invitation SET revoked_at=now() WHERE workspace_id=$1 AND mailbox_id=$2 AND accepted_at IS NULL AND revoked_at IS NULL;

@@ -26,6 +26,7 @@ func routes(r *router.Router) {
 	r.HandleFunc("GET /api/v1/smip/v0.2/capabilities", smipmail.Capabilities)
 	r.HandleFunc("POST /api/v1/smip/v0.2/mail", smipmail.Receive)
 	r.HandleFunc("GET /api/v1/setup/postfix", setup.PostfixConfig)
+	r.HandleFunc("GET /api/v1/setup/transport", setup.TransportCheck)
 	router.Route(r, "GET /api/v1/setup/status", handlers.SetupStatus, auth.Optional())
 	router.Route(r, "POST /api/v1/setup/claim", handlers.ClaimSetup, auth.Throttle())
 	// Versioned peer wire endpoint; all application routes stay under /api.

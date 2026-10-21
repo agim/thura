@@ -59,6 +59,25 @@ func (q *Queries) AddMailTag(ctx context.Context, arg AddMailTagParams) error {
 	return err
 }
 
+const assignPersonalMailbox = `-- name: AssignPersonalMailbox :execrows
+UPDATE mailbox SET owner_subject=$1 WHERE id=$2
+AND workspace_id=$3 AND private AND owner_subject IS NULL
+`
+
+type AssignPersonalMailboxParams struct {
+	Subject     *string `json:"subject"`
+	ID          string  `json:"id"`
+	WorkspaceID string  `json:"workspace_id"`
+}
+
+func (q *Queries) AssignPersonalMailbox(ctx context.Context, arg AssignPersonalMailboxParams) (int64, error) {
+	result, err := q.db.Exec(ctx, assignPersonalMailbox, arg.Subject, arg.ID, arg.WorkspaceID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const cancelMailItem = `-- name: CancelMailItem :one
 UPDATE mail_item SET status='draft',send_at=NULL,updated_at=now() WHERE id=$1 AND status='queued' RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at
 `
@@ -93,6 +112,26 @@ func (q *Queries) CancelMailItem(ctx context.Context, id string) (MailItem, erro
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const claimInitialMailbox = `-- name: ClaimInitialMailbox :execrows
+UPDATE mailbox SET private=true,owner_subject=$1::text
+WHERE workspace_id=$2 AND address=$3
+AND owner_subject IS NULL
+`
+
+type ClaimInitialMailboxParams struct {
+	Subject     string `json:"subject"`
+	WorkspaceID string `json:"workspace_id"`
+	Address     string `json:"address"`
+}
+
+func (q *Queries) ClaimInitialMailbox(ctx context.Context, arg ClaimInitialMailboxParams) (int64, error) {
+	result, err := q.db.Exec(ctx, claimInitialMailbox, arg.Subject, arg.WorkspaceID, arg.Address)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const createDraft = `-- name: CreateDraft :one
@@ -157,7 +196,7 @@ func (q *Queries) CreateDraft(ctx context.Context, arg CreateDraftParams) (MailI
 }
 
 const createMailbox = `-- name: CreateMailbox :one
-INSERT INTO mailbox(workspace_id,name,address,config_prefix) VALUES($1,$2,$3,$4) RETURNING id, workspace_id, name, address, config_prefix, signature, created_at
+INSERT INTO mailbox(workspace_id,name,address,config_prefix) VALUES($1,$2,$3,$4) RETURNING id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at
 `
 
 type CreateMailboxParams struct {
@@ -181,6 +220,8 @@ func (q *Queries) CreateMailbox(ctx context.Context, arg CreateMailboxParams) (M
 		&i.Name,
 		&i.Address,
 		&i.ConfigPrefix,
+		&i.Private,
+		&i.OwnerSubject,
 		&i.Signature,
 		&i.CreatedAt,
 	)
@@ -407,7 +448,7 @@ func (q *Queries) GetMailItem(ctx context.Context, id string) (MailItem, error) 
 }
 
 const getMailbox = `-- name: GetMailbox :one
-SELECT id, workspace_id, name, address, config_prefix, signature, created_at FROM mailbox WHERE id=$1
+SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox WHERE id=$1
 `
 
 func (q *Queries) GetMailbox(ctx context.Context, id string) (Mailbox, error) {
@@ -419,6 +460,8 @@ func (q *Queries) GetMailbox(ctx context.Context, id string) (Mailbox, error) {
 		&i.Name,
 		&i.Address,
 		&i.ConfigPrefix,
+		&i.Private,
+		&i.OwnerSubject,
 		&i.Signature,
 		&i.CreatedAt,
 	)
@@ -800,7 +843,7 @@ func (q *Queries) ListMailboxLabels(ctx context.Context, id string) ([]MailLabel
 }
 
 const listMailboxes = `-- name: ListMailboxes :many
-SELECT id, workspace_id, name, address, config_prefix, signature, created_at FROM mailbox WHERE workspace_id=$1 ORDER BY name,id
+SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox WHERE workspace_id=$1 ORDER BY name,id
 `
 
 func (q *Queries) ListMailboxes(ctx context.Context, workspaceID string) ([]Mailbox, error) {
@@ -818,6 +861,8 @@ func (q *Queries) ListMailboxes(ctx context.Context, workspaceID string) ([]Mail
 			&i.Name,
 			&i.Address,
 			&i.ConfigPrefix,
+			&i.Private,
+			&i.OwnerSubject,
 			&i.Signature,
 			&i.CreatedAt,
 		); err != nil {
@@ -848,6 +893,46 @@ func (q *Queries) ListPostfixAliases(ctx context.Context) ([]MailboxAlias, error
 			&i.ID,
 			&i.MailboxID,
 			&i.Address,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listVisibleMailboxes = `-- name: ListVisibleMailboxes :many
+SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox WHERE workspace_id=$1
+AND (NOT private OR owner_subject=$2) ORDER BY name,id
+`
+
+type ListVisibleMailboxesParams struct {
+	WorkspaceID string  `json:"workspace_id"`
+	Subject     *string `json:"subject"`
+}
+
+func (q *Queries) ListVisibleMailboxes(ctx context.Context, arg ListVisibleMailboxesParams) ([]Mailbox, error) {
+	rows, err := q.db.Query(ctx, listVisibleMailboxes, arg.WorkspaceID, arg.Subject)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Mailbox
+	for rows.Next() {
+		var i Mailbox
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.Address,
+			&i.ConfigPrefix,
+			&i.Private,
+			&i.OwnerSubject,
+			&i.Signature,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -897,7 +982,7 @@ func (q *Queries) LockMailItem(ctx context.Context, id string) (MailItem, error)
 }
 
 const lockMailbox = `-- name: LockMailbox :one
-SELECT id, workspace_id, name, address, config_prefix, signature, created_at FROM mailbox WHERE id=$1 FOR UPDATE
+SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox WHERE id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockMailbox(ctx context.Context, id string) (Mailbox, error) {
@@ -909,6 +994,8 @@ func (q *Queries) LockMailbox(ctx context.Context, id string) (Mailbox, error) {
 		&i.Name,
 		&i.Address,
 		&i.ConfigPrefix,
+		&i.Private,
+		&i.OwnerSubject,
 		&i.Signature,
 		&i.CreatedAt,
 	)
@@ -967,6 +1054,85 @@ type RemoveMailTagParams struct {
 
 func (q *Queries) RemoveMailTag(ctx context.Context, arg RemoveMailTagParams) error {
 	_, err := q.db.Exec(ctx, removeMailTag, arg.ItemID, arg.LabelID)
+	return err
+}
+
+const reservePersonalMailbox = `-- name: ReservePersonalMailbox :one
+INSERT INTO mailbox(workspace_id,name,address,config_prefix,private)
+VALUES($1,$2,$3,'',true) RETURNING id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at
+`
+
+type ReservePersonalMailboxParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Name        string `json:"name"`
+	Address     string `json:"address"`
+}
+
+func (q *Queries) ReservePersonalMailbox(ctx context.Context, arg ReservePersonalMailboxParams) (Mailbox, error) {
+	row := q.db.QueryRow(ctx, reservePersonalMailbox, arg.WorkspaceID, arg.Name, arg.Address)
+	var i Mailbox
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Address,
+		&i.ConfigPrefix,
+		&i.Private,
+		&i.OwnerSubject,
+		&i.Signature,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const reusableInvitationMailbox = `-- name: ReusableInvitationMailbox :one
+SELECT b.id, b.workspace_id, b.name, b.address, b.config_prefix, b.private, b.owner_subject, b.signature, b.created_at FROM mailbox b WHERE b.workspace_id=$1 AND b.address=$2
+AND b.private AND b.owner_subject IS NULL
+AND EXISTS(SELECT 1 FROM invitation i WHERE i.mailbox_id=b.id AND i.email=$3)
+AND NOT EXISTS(SELECT 1 FROM invitation i WHERE i.mailbox_id=b.id AND (i.accepted_at IS NOT NULL OR (i.revoked_at IS NULL AND i.expires_at>$4::timestamptz)))
+FOR UPDATE
+`
+
+type ReusableInvitationMailboxParams struct {
+	WorkspaceID string    `json:"workspace_id"`
+	Address     string    `json:"address"`
+	Email       string    `json:"email"`
+	Now         time.Time `json:"now"`
+}
+
+func (q *Queries) ReusableInvitationMailbox(ctx context.Context, arg ReusableInvitationMailboxParams) (Mailbox, error) {
+	row := q.db.QueryRow(ctx, reusableInvitationMailbox,
+		arg.WorkspaceID,
+		arg.Address,
+		arg.Email,
+		arg.Now,
+	)
+	var i Mailbox
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Address,
+		&i.ConfigPrefix,
+		&i.Private,
+		&i.OwnerSubject,
+		&i.Signature,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const revokeReservedMailboxInvitations = `-- name: RevokeReservedMailboxInvitations :exec
+UPDATE invitation SET revoked_at=now() WHERE workspace_id=$1 AND mailbox_id=$2 AND accepted_at IS NULL AND revoked_at IS NULL
+`
+
+type RevokeReservedMailboxInvitationsParams struct {
+	WorkspaceID string  `json:"workspace_id"`
+	MailboxID   *string `json:"mailbox_id"`
+}
+
+func (q *Queries) RevokeReservedMailboxInvitations(ctx context.Context, arg RevokeReservedMailboxInvitationsParams) error {
+	_, err := q.db.Exec(ctx, revokeReservedMailboxInvitations, arg.WorkspaceID, arg.MailboxID)
 	return err
 }
 
@@ -1146,7 +1312,7 @@ func (q *Queries) UpdateMailFlags(ctx context.Context, arg UpdateMailFlagsParams
 }
 
 const updateMailboxSignature = `-- name: UpdateMailboxSignature :one
-UPDATE mailbox SET signature=$2 WHERE id=$1 RETURNING id, workspace_id, name, address, config_prefix, signature, created_at
+UPDATE mailbox SET signature=$2 WHERE id=$1 RETURNING id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at
 `
 
 type UpdateMailboxSignatureParams struct {
@@ -1163,6 +1329,8 @@ func (q *Queries) UpdateMailboxSignature(ctx context.Context, arg UpdateMailboxS
 		&i.Name,
 		&i.Address,
 		&i.ConfigPrefix,
+		&i.Private,
+		&i.OwnerSubject,
 		&i.Signature,
 		&i.CreatedAt,
 	)

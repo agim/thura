@@ -73,7 +73,7 @@ func Configure(s *lidza.Services) error {
 
 func NewGateway(cfg Config) (*Gateway, error) {
 	seed, err := base64.RawURLEncoding.DecodeString(cfg.Seed)
-	if err != nil || len(seed) != ed25519.SeedSize || base64.RawURLEncoding.EncodeToString(seed) != cfg.Seed || len(cfg.Peers) == 0 || len(cfg.Peers) > 100 {
+	if err != nil || len(seed) != ed25519.SeedSize || base64.RawURLEncoding.EncodeToString(seed) != cfg.Seed || len(cfg.Peers) > 100 {
 		return nil, errors.New("invalid SMIP operator configuration")
 	}
 	g := &Gateway{domain: cfg.Domain, signer: smip.SigningKey{Private: ed25519.NewKeyFromSeed(seed), NotBefore: cfg.NotBefore, NotAfter: cfg.NotAfter}, peers: map[string]map[string]smip.Key{}, slots: make(chan struct{}, 2)}

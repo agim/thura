@@ -91,12 +91,16 @@ func Invite(ctx context.Context, id string, in schema.InviteInput) (schema.Invit
 	if actorRole != "owner" && in.Role != schema.WorkspaceRoleMember {
 		return schema.InviteView{}, router.Errorf(http.StatusForbidden, "only owners can invite administrators or owners")
 	}
+	mailboxID, delivery, err := invitationMailbox(ctx, tx, q, id, in)
+	if err != nil {
+		return schema.InviteView{}, err
+	}
 	raw := make([]byte, 32)
 	if _, err = rand.Read(raw); err != nil {
 		return schema.InviteView{}, err
 	}
 	token := base64.RawURLEncoding.EncodeToString(raw)
-	inv, err := q.CreateInvitation(ctx, queries.CreateInvitationParams{WorkspaceID: id, Email: in.Email, Role: queries.WorkspaceRole(in.Role), TokenHash: hashToken(token), InvitedBy: auth.CurrentUser(ctx).ID, ExpiresAt: lidza.Now(ctx).Add(72 * time.Hour)})
+	inv, err := q.CreateInvitation(ctx, queries.CreateInvitationParams{WorkspaceID: id, Email: in.Email, Role: queries.WorkspaceRole(in.Role), TokenHash: hashToken(token), InvitedBy: auth.CurrentUser(ctx).ID, ExpiresAt: lidza.Now(ctx).Add(72 * time.Hour), MailboxID: mailboxID})
 	if err != nil {
 		return schema.InviteView{}, err
 	}
@@ -104,7 +108,7 @@ func Invite(ctx context.Context, id string, in schema.InviteInput) (schema.Invit
 	if err != nil {
 		return schema.InviteView{}, err
 	}
-	_, err = teammail.SendTx(ctx, tx, id, auth.CurrentUser(ctx).ID, mail.Message{To: in.Email, Subject: "Invitation to " + w.Name, Text: "You have been invited to " + w.Name + " on Thura.\n\n" + tenancy.Link(ctx, id, "/invite?token="+token) + "\n\nThis invitation expires in 72 hours. If you did not expect it, ignore this email."})
+	_, err = teammail.SendTx(ctx, tx, id, auth.CurrentUser(ctx).ID, mail.Message{To: delivery, Subject: "Invitation to " + w.Name, Text: "You have been invited to " + w.Name + " on Thura.\n\n" + tenancy.Link(ctx, id, "/invite?token="+token) + "\n\nThis invitation expires in 72 hours. If you did not expect it, ignore this email."})
 	if err != nil {
 		return schema.InviteView{}, err
 	}
@@ -207,6 +211,20 @@ func Accept(ctx context.Context, in schema.AcceptInviteInput) (schema.Workspace,
 		}
 	} else if err != nil {
 		return schema.Workspace{}, err
+	}
+	if inv.MailboxID != nil {
+		n, e := q.AssignPersonalMailbox(ctx, queries.AssignPersonalMailboxParams{ID: *inv.MailboxID, WorkspaceID: inv.WorkspaceID, Subject: &subject})
+		if e != nil {
+			return schema.Workspace{}, e
+		}
+		if n != 1 {
+			return schema.Workspace{}, router.Errorf(409, "Personal mailbox reservation is no longer available")
+		}
+	}
+	if inv.MailboxID == nil {
+		if err = legacyInvitationMailbox(ctx, tx, q, inv.WorkspaceID, inv.Email, subject); err != nil {
+			return schema.Workspace{}, err
+		}
 	}
 	if err = q.AcceptInvitation(ctx, inv.ID); err != nil {
 		return schema.Workspace{}, err

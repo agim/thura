@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"strings"
 	q "thura/db/queries/gen"
+	"thura/internal/mailaccess"
 	"thura/internal/smipmail"
 	"thura/internal/tenancy"
 )
@@ -31,6 +32,9 @@ func SendTx(ctx context.Context, tx pgx.Tx, id, author string, msg mail.Message)
 	var box q.Mailbox
 	var cfg mail.Config
 	for _, m := range boxes {
+		if !mailaccess.Owns(m, author) {
+			continue
+		}
 		resolved, managed, err := tenancy.ResolveMail(ctx, m)
 		if managed && err == nil {
 			box = m

@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/tenancy"
 	"thura/schema"
 )
 
@@ -226,6 +227,9 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 			v["LLM_API_KEY"] = ""
 		}
 		for _, f := range s.Fields {
+			if managedField(f.Name) {
+				continue
+			}
 			// Older wizard clients do not know these optional routing fields.
 			if !form.Has(f.Name) && (strings.HasPrefix(f.Name, "THURA_MAIL_") || f.Name == "THURA_POSTFIX_HOSTNAME") {
 				continue
@@ -263,6 +267,9 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 			v["MAIL_SMTP_SECURITY"] = "none"
 			v["MAIL_SMTP_USERNAME"], v["MAIL_SMTP_PASSWORD"] = "", ""
 		}
+	}
+	if _, e = configureFederationIdentity(v, lidza.Now(ctx)); e != nil {
+		return e
 	}
 	sealed, e := seal(v)
 	if e != nil {
@@ -364,6 +371,9 @@ func Publish(ctx context.Context, revision string) error {
 		if err != nil {
 			return err
 		}
+		if e = claimInitialMailbox(ctx, queries, workspace.ID, mailbox.Address, subject); e != nil {
+			return e
+		}
 		if e = createOperatorAliases(ctx, tx, mailbox); e != nil {
 			return e
 		}
@@ -371,6 +381,12 @@ func Publish(ctx context.Context, revision string) error {
 		if e = queries.UpdateSetupWorkspace(ctx, q.UpdateSetupWorkspaceParams{ID: *w, Name: v["THURA_WORKSPACE_NAME"]}); e != nil {
 			return e
 		}
+	}
+	if e = initialTeam(ctx, tx, *w, v); e != nil {
+		return e
+	}
+	if e = tenancy.EnsurePersonalMailboxes(ctx, tx, *w); e != nil {
+		return e
 	}
 	if e = queries.PublishServerSetup(ctx, q.PublishServerSetupParams{PublishedAt: timePointer(lidza.Now(ctx)), WorkspaceID: w}); e != nil {
 		return e
@@ -387,6 +403,9 @@ func Activate(ctx context.Context, s *lidza.Services) error {
 	lidza.Provide(s, runtimeState{})
 	queries := q.New(db.From(ctx))
 	if e := queries.EnsureServerSetup(ctx); e != nil {
+		return e
+	}
+	if e := ReconcileManaged(ctx); e != nil {
 		return e
 	}
 	row, e := queries.GetServerSetup(ctx)
@@ -419,6 +438,31 @@ func Activate(ctx context.Context, s *lidza.Services) error {
 		if e = validateModel(v); e != nil {
 			return errors.New("published AI configuration is invalid")
 		}
+	}
+	if row.WorkspaceID != nil {
+		tx, err := db.From(ctx).Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback(ctx)
+		tq := q.New(tx)
+		if _, err = tq.LockWorkspace(ctx, *row.WorkspaceID); err != nil {
+			return err
+		}
+		if err = initialTeam(ctx, tx, *row.WorkspaceID, v); err != nil {
+			return err
+		}
+		if row.Subject != "" {
+			if err = claimInitialMailbox(ctx, tq, *row.WorkspaceID, inboxAddress(v), row.Subject); err != nil {
+				return err
+			}
+		}
+		if err = tx.Commit(ctx); err != nil {
+			return err
+		}
+	}
+	if err := tenancy.ReconcilePersonalMailboxes(ctx); err != nil {
+		return err
 	}
 	overrides := credentials.Overrides()
 	for _, step := range Catalog() {

@@ -11,13 +11,13 @@ limits. Docker Desktop's own VM overhead is not included in this Linux sizing.
 
 | Container | Processes | CPU limit | RAM limit |
 |---|---|---:|---:|
-| `thura` | Thura + LiveKit | 0.50 | 512 MiB |
+| `thura` | Thura + LiveKit + Matrix + optional local Ollama | 0.75 | 1024 MiB |
 | `postgres` | PostgreSQL | 0.25 | 256 MiB |
-| `postfix` | Postfix + Rspamd + ClamAV + Freshclam + Valkey | 0.75 | 1792 MiB |
-| `collabora` | Collabora CODE | 0.50 | 1024 MiB |
+| `postfix` | Postfix + Rspamd + ClamAV + Freshclam + Valkey | 0.50 | 1536 MiB |
+| `collabora` | Collabora CODE | 0.50 | 768 MiB |
 
 There is no storage-initialization container: the application supervisor
-initializes the volume mount before dropping both application processes to UID
+initializes the volume mount before dropping application processes to UID
 65532. Each container's supervisor exits if a supervised service dies so Docker
 can restart it. Health checks verify local application/media and mail services.
 Postgres has a bounded pool, 64 MiB shared buffers and conservative work memory.
@@ -26,7 +26,9 @@ This profile is for light, small-team use: fewer than 1,000 emails/day, roughly
 one or two documents open at once, and small calls. The acceptance test uses a two-participant call. It is not a capacity guarantee
 for 100 simultaneous members,
 large spreadsheets, PDF conversions and video calls at once. Recordings and
-local LLM hosting are excluded. Optional AI uses the setup-configured API.
+larger local models are excluded. AI uses either the chosen API provider or the
+small managed Ollama model. The expanded bundle is pending full acceptance;
+previous acceptance measurements used the smaller app and larger Office/mail budgets.
 Consolidating services alone does not halve RAM: the limits and concurrency
 settings provide the actual budget.
 
@@ -52,13 +54,12 @@ User corrections remain durable in Postgres and retry when learning is unavailab
 
 ```
 python3 scripts/init-compose.py
-# Privately edit .env with COLLABORA_IMAGE, THURA_WOPI_ORIGIN,
-# LIVEKIT_PUBLIC_URL and your public domains/ports.
+# Privately edit .env with APP_DOMAIN and the public origins/ports.
 docker compose --env-file .env -f deploy/compose.yaml up -d --build
 ```
 
-Choose a tested official Collabora digest for the server architecture, as described
-in [Collabora deployment](collabora.md). `THURA_WOPI_ORIGIN` defaults to the private
+The default build uses the committed multi-architecture Collabora digest, as
+described in [Collabora deployment](collabora.md). `THURA_WOPI_ORIGIN` defaults to the private
 `http://thura:3000` callback; Thura explicitly recognizes that internal host alias.
 Use a public HTTPS origin instead when your domain/proxy configuration requires
 it. Collabora's service port and LiveKit signaling port are published only on
@@ -70,7 +71,7 @@ Expose TCP 7881 and UDP 7882 directly for media. On a NAT host, set
 `THURA_RTC_NODE_IP` to its reachable public IP when automatic discovery is unsuitable.
 TURN for restrictive client networks needs separate operator configuration; this
 profile does not promise universal connectivity or include a recording service.
-The existing setup wizard still chooses receiving, API sending and optional AI.
+The existing setup wizard still chooses receiving, API sending and the required AI provider.
 
 ## Existing installations
 
@@ -80,7 +81,7 @@ volumes. Add only missing credentials:
 
 ```
 python3 scripts/init-compose.py --upgrade-compact
-# Privately configure the public origins and tested Collabora digest.
+# Privately configure public domains/origins; retain existing secrets.
 docker compose --env-file .env -f deploy/compose.yaml down
 docker compose --env-file .env -f deploy/compose.yaml up -d --build
 ```
@@ -118,3 +119,6 @@ limits, CPU quotas and OOM counters. Browser checks edit/save and inspect actual
 DOCX/XLSX output, and exchange real media between desktop and a phone-sized
 Chromium browser. Phone viewport emulation is not a new physical Android test.
 See [recorded acceptance evidence](benchmarks/compact-deployment.json).
+
+See [managed services](managed-services.md) for automatic service registration,
+private inbox migration, invitations, local model limits and upgrade safety.

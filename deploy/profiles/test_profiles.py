@@ -31,7 +31,20 @@ class ProfileTests(unittest.TestCase):
 
     def test_deploy_manifest_preserves_compact_service_and_persistence_boundaries(self):
         manifest=json.loads((ROOT/'deploy/lidza.stack.json').read_text())
-        self.assertEqual(manifest['version'],1)
+        self.assertEqual(manifest['version'],2)
+        self.assertEqual(set(manifest['profile_resources']),set(CATALOG))
+        roles={'app':'thura','mail':'postfix','office':'collabora'}
+        for name,profile in CATALOG.items():
+            budgets=manifest['profile_resources'][name]
+            self.assertEqual(set(budgets['services']),set(roles))
+            for role,service in roles.items():
+                budget=budgets['services'][role]
+                self.assertEqual(budget['memory_mib'],profile['services'][service]['memory_mib'])
+                self.assertIsInstance(budget['cpus'],str)
+                self.assertEqual(float(budget['cpus']),profile['services'][service]['cpus'])
+            self.assertEqual(budgets['database']['memory_mib'],profile['services']['postgres']['memory_mib'])
+            self.assertIsInstance(budgets['database']['cpus'],str)
+            self.assertEqual(float(budgets['database']['cpus']),profile['services']['postgres']['cpus'])
         self.assertEqual(manifest['bootstrap_readiness'],{'path':'/api/v1/health','readyz_body_contains':'Server setup is required','setup_path':'/setup'})
         services={item['role']:item for item in manifest['services']}
         self.assertEqual(set(services),{'app','mail','office'})
@@ -78,8 +91,9 @@ class ProfileTests(unittest.TestCase):
         executable = shutil.which('docker-compose')
         command = [executable] if executable else ['docker','compose']
         environment = dict(os.environ)
-        for key in ['POSTGRES_PASSWORD','AUTH_SECRET','LIDZA_MASTER_KEY','THURA_SETUP_TOKEN','THURA_POSTFIX_TOKEN','THURA_RSPAMD_PASSWORD','LIVEKIT_API_KEY','LIVEKIT_API_SECRET','COLLABORA_TOKEN_SECRET']:
+        for key in ['POSTGRES_PASSWORD','AUTH_SECRET','LIDZA_MASTER_KEY','THURA_SETUP_TOKEN','THURA_POSTFIX_TOKEN','THURA_RSPAMD_PASSWORD','LIVEKIT_API_KEY','LIVEKIT_API_SECRET','COLLABORA_TOKEN_SECRET','MATRIX_AS_TOKEN','MATRIX_HS_TOKEN']:
             environment[key] = 'synthetic-profile-validation-value-0123456789'
+        environment['APP_DOMAIN']='thura.example.test'
         environment['COLLABORA_IMAGE']='collabora/code@sha256:'+'0'*64
         for name,profile in CATALOG.items():
             args = command + ['-f',str(ROOT/'deploy/compose.yaml')]

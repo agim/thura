@@ -6,23 +6,23 @@
       "host_memory_mib": 4096,
       "host_cpu": 2,
       "host_reserve_mib": 512,
-      "validation": "functional_acceptance_passed",
-      "description": "Light small-team use, fewer than 1000 emails/day, occasional document editing and small calls.",
+      "validation": "candidate_unverified",
+      "description": "Candidate complete 4 GiB runtime including private Matrix chat and an opt-in small local model. Whole-stack acceptance required.",
       "services": {
         "thura": {
-          "memory_mib": 512,
-          "cpus": 0.5
+          "memory_mib": 1024,
+          "cpus": 0.75
         },
         "postgres": {
           "memory_mib": 256,
           "cpus": 0.25
         },
         "postfix": {
-          "memory_mib": 1792,
-          "cpus": 0.75
+          "memory_mib": 1536,
+          "cpus": 0.5
         },
         "collabora": {
-          "memory_mib": 1024,
+          "memory_mib": 768,
           "cpus": 0.5
         }
       }
@@ -36,8 +36,8 @@
       "description": "Additional headroom for simultaneous document editing, users and calls; capacity not yet benchmarked.",
       "services": {
         "thura": {
-          "memory_mib": 1024,
-          "cpus": 1
+          "memory_mib": 2048,
+          "cpus": 1.5
         },
         "postgres": {
           "memory_mib": 512,
@@ -48,8 +48,8 @@
           "cpus": 1
         },
         "collabora": {
-          "memory_mib": 3072,
-          "cpus": 1.5
+          "memory_mib": 2048,
+          "cpus": 1
         }
       }
     },
@@ -62,8 +62,8 @@
       "description": "More headroom for larger documents and concurrent work; select after observing actual load.",
       "services": {
         "thura": {
-          "memory_mib": 2048,
-          "cpus": 2
+          "memory_mib": 4096,
+          "cpus": 3
         },
         "postgres": {
           "memory_mib": 1024,
@@ -74,8 +74,8 @@
           "cpus": 2
         },
         "collabora": {
-          "memory_mib": 7168,
-          "cpus": 3
+          "memory_mib": 5120,
+          "cpus": 2
         }
       }
     }

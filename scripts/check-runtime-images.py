@@ -19,7 +19,7 @@ def main():
     pins = set()
     for name in ['Dockerfile', 'deploy/compact/mail.Dockerfile', 'deploy/compact/office.Dockerfile']:
         pins.update(re.findall(r'^FROM ([^\s]+@sha256:[a-f0-9]{64})(?:\s|$)', (ROOT/name).read_text(), re.M))
-    required = {'collabora/code', 'rspamd/rspamd', 'livekit/livekit-server'}
+    required = {'collabora/code', 'rspamd/rspamd', 'livekit/livekit-server', 'ghcr.io/element-hq/synapse', 'ollama/ollama'}
     if not required <= {pin.split('@')[0] for pin in pins}:
         raise RuntimeError('A required runtime image no longer has an immutable pin')
     for pin in sorted(pins):

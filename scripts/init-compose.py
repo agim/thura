@@ -14,7 +14,7 @@ if '--upgrade-mail' in sys.argv or '--upgrade-compact' in sys.argv:
         raise SystemExit('Make .env private (chmod 600 .env) before adding a secret.')
     names = ['THURA_RSPAMD_PASSWORD']
     if '--upgrade-compact' in sys.argv:
-        names += ['LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'COLLABORA_TOKEN_SECRET']
+        names += ['LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'COLLABORA_TOKEN_SECRET', 'MATRIX_AS_TOKEN', 'MATRIX_HS_TOKEN']
     present = {line.split('=', 1)[0].strip() for line in path.read_text().splitlines() if '=' in line}
     missing = [name for name in names if name not in present]
     if not missing:
@@ -25,7 +25,7 @@ if '--upgrade-mail' in sys.argv or '--upgrade-compact' in sys.argv:
     raise SystemExit(0)
 body = '# Private Compose bootstrap values. Back up the master key separately.\n' + '\n'.join(
     name + '=' + (secrets.token_hex(32) if name == 'LIDZA_MASTER_KEY' else secrets.token_urlsafe(36))
-    for name in ('POSTGRES_PASSWORD', 'AUTH_SECRET', 'LIDZA_MASTER_KEY', 'THURA_SETUP_TOKEN', 'THURA_POSTFIX_TOKEN', 'THURA_RSPAMD_PASSWORD', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'COLLABORA_TOKEN_SECRET')
+    for name in ('POSTGRES_PASSWORD', 'AUTH_SECRET', 'LIDZA_MASTER_KEY', 'THURA_SETUP_TOKEN', 'THURA_POSTFIX_TOKEN', 'THURA_RSPAMD_PASSWORD', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'COLLABORA_TOKEN_SECRET', 'MATRIX_AS_TOKEN', 'MATRIX_HS_TOKEN')
 ) + '\n'
 try:
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)

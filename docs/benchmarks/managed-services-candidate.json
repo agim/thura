@@ -1,0 +1,125 @@
+{
+  "checks": {
+    "clean_av": "OK",
+    "eicar_av": "FOUND",
+    "rspamd_scan": true,
+    "learning_reversal_and_replay": true,
+    "clamav_reload": true
+  },
+  "resources": {
+    "thura": {
+      "limit_bytes": 1073741824,
+      "cpu_limit": 0.75,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 968650752,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "0",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      },
+      "image_id": "sha256:64c9600ef438c5b6114f753e38b2de29c95e779c0f389238de24843712862d66"
+    },
+    "postgres": {
+      "limit_bytes": 268435456,
+      "cpu_limit": 0.25,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 90177536,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "0",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      },
+      "image_id": "sha256:a63c1ea3f6a3a5a1621f97d2aba3b30faecfab4224c1b0000cc85ced57bb1939"
+    },
+    "postfix": {
+      "limit_bytes": 1610612736,
+      "cpu_limit": 0.5,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 1348071424,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "0",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      },
+      "image_id": "sha256:b897c0fd6f1408b464f0f97c9f301c4fab2cfc6527dc697bff51d4e36cf8bdef"
+    },
+    "collabora": {
+      "limit_bytes": 805306368,
+      "cpu_limit": 0.5,
+      "oom_killed": false,
+      "restarts": 0,
+      "peak_bytes": 805306368,
+      "memory_events": {
+        "low": "0",
+        "high": "0",
+        "max": "3110",
+        "oom": "0",
+        "oom_kill": "0",
+        "oom_group_kill": "0"
+      },
+      "image_id": "sha256:f910014be557ee4a36e335a6542a21d8ee7240d1376f0c0d227862677efa022e"
+    }
+  },
+  "scope": "Synthetic functional smoke; not a capacity or detection-quality benchmark",
+  "concurrent_runtime": {
+    "model": {
+      "actual_response": true,
+      "seconds": 5.286,
+      "tokens": 19
+    },
+    "word_conversion": {
+      "actual_conversion": true,
+      "pdf_bytes": 12004,
+      "seconds": 0.612
+    },
+    "excel_conversion": {
+      "actual_conversion": true,
+      "pdf_bytes": 11829,
+      "seconds": 0.686
+    },
+    "matrix": {
+      "two_user_message_received": true
+    },
+    "antivirus": {
+      "clean_scan": true
+    },
+    "total_seconds": 5.291
+  },
+  "limitations": [
+    "Runtime services exercised directly; product publication remains blocked by SMIP transport.",
+    "Word/Excel conversion is not document editing and saving acceptance.",
+    "No new physical-device media call or sustained capacity claim.",
+    "Collabora hit its memory limit and reclaimed pages (memory.events.max=3110); no OOM occurred. Full edit/save concurrency remains unverified.",
+    "Lidza-deploy production deployment and protected SMIP transport are not covered by this local Compose evidence."
+  ],
+  "recorded_utc": "2026-10-21T08:22:00Z",
+  "validation": "candidate_not_promoted",
+  "environment": {
+    "architecture": "linux/arm64",
+    "vcpus": 2,
+    "host_memory_mib": 4096,
+    "aggregate_container_memory_mib": 3584,
+    "swap": "disabled per container"
+  },
+  "setup_probes": {
+    "mail": "succeeded",
+    "storage": "succeeded",
+    "matrix": "succeeded",
+    "collabora": "succeeded",
+    "livekit": "succeeded",
+    "ai": "succeeded",
+    "smip": "failed"
+  }
+}

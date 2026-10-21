@@ -157,6 +157,7 @@ type Invitation struct {
 	WorkspaceID string        `json:"workspaceId" db:"workspace_id"`
 	Email       string        `json:"email" db:"email"`
 	Role        WorkspaceRole `json:"role" db:"role"`
+	MailboxID   *string       `json:"mailboxId" db:"mailbox_id"`
 	TokenHash   string        `json:"tokenHash" db:"token_hash"`
 	InvitedBy   string        `json:"invitedBy" db:"invited_by"`
 	ExpiresAt   time.Time     `json:"expiresAt" db:"expires_at"`
@@ -242,6 +243,8 @@ type Mailbox struct {
 	Name         string    `json:"name" db:"name"`
 	Address      string    `json:"address" db:"address"`
 	ConfigPrefix string    `json:"configPrefix" db:"config_prefix"`
+	Private      bool      `json:"private" db:"private"`
+	OwnerSubject *string   `json:"ownerSubject" db:"owner_subject"`
 	Signature    string    `json:"signature" db:"signature"`
 	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
 }
@@ -2588,8 +2591,10 @@ func (v CreateWorkspaceInput) Validate() error {
 
 // InviteInput is an API type.
 type InviteInput struct {
-	Email string        `json:"email"`
-	Role  WorkspaceRole `json:"role"`
+	Email          string        `json:"email"`
+	MailboxAddress *string       `json:"mailboxAddress"`
+	DeliveryEmail  *string       `json:"deliveryEmail"`
+	Role           WorkspaceRole `json:"role"`
 }
 
 // Validate applies the rules of InviteInput from schema.lidza.
@@ -2603,6 +2608,24 @@ func (v InviteInput) Validate() error {
 	}
 	if v.Email != "" && !validate.Email(v.Email) {
 		errs.Add("email", "email", "not an email address")
+	}
+	if v.MailboxAddress != nil {
+		x := *v.MailboxAddress
+		if len(x) > 254 {
+			errs.Add("mailboxAddress", "max", "at most 254 character(s)")
+		}
+		if x != "" && !validate.Email(x) {
+			errs.Add("mailboxAddress", "email", "not an email address")
+		}
+	}
+	if v.DeliveryEmail != nil {
+		x := *v.DeliveryEmail
+		if len(x) > 254 {
+			errs.Add("deliveryEmail", "max", "at most 254 character(s)")
+		}
+		if x != "" && !validate.Email(x) {
+			errs.Add("deliveryEmail", "email", "not an email address")
+		}
 	}
 	if v.Role == "" {
 		errs.Add("role", "required", "required")
@@ -2694,15 +2717,19 @@ func (v AcceptInviteInput) Validate() error {
 
 // MemberView is an API type.
 type MemberView struct {
-	Subject string        `json:"subject"`
-	Email   string        `json:"email"`
-	Name    string        `json:"name"`
-	Role    WorkspaceRole `json:"role"`
+	MailboxAddress string        `json:"mailboxAddress"`
+	Subject        string        `json:"subject"`
+	Email          string        `json:"email"`
+	Name           string        `json:"name"`
+	Role           WorkspaceRole `json:"role"`
 }
 
 // Validate applies the rules of MemberView from schema.lidza.
 func (v MemberView) Validate() error {
 	var errs validate.Errors
+	if v.MailboxAddress == "" {
+		errs.Add("mailboxAddress", "required", "required")
+	}
 	if v.Subject == "" {
 		errs.Add("subject", "required", "required")
 	}

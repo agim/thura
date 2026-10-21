@@ -13,7 +13,8 @@ test('owner can invite and revoke, and cannot remove the last owner', async ({ p
   await expect(page.getByRole('alert')).toContainText('at least one owner')
   const email = `browser-invite-${Date.now()}@example.com`
   await page.getByRole('button', { name: 'Invite a member', exact: true }).click()
-  await page.getByLabel('Invite email', { exact: true }).fill(email)
+  await page.getByLabel('New team email address', { exact: true }).fill(email)
+  await page.getByLabel('Deliver invitation to an existing email', { exact: true }).fill(`reachable-${Date.now()}@outside.example`)
   await page.getByRole('button', { name: 'Send invitation', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Invite a member', exact: true })).toHaveCount(0)
   await expect(page.getByText('Invitation queued for delivery.')).toBeVisible()
