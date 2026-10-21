@@ -36,7 +36,7 @@ func validate(v map[string]string) error {
 			if len(value) > 32768 {
 				return errors.New("a setup field exceeds its size limit")
 			}
-			if len(f.Options) > 0 {
+			if len(f.Options) > 0 && f.Kind != "choice" {
 				ok := false
 				for _, choice := range f.Options {
 					ok = ok || value == choice

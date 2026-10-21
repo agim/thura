@@ -465,3 +465,36 @@ Why: The server wizard exposed signing seeds and validity timestamps as a raw JS
 ## 2026-10-21: Private inbox ownership and deployment-managed service reconciliation
 
 Why: Personal mail must be owner-scoped across Loop and all mail APIs, not merely filtered in the inbox UI. Reserve private inboxes before invitation delivery and activate ownership transactionally; backfill configured teams without stealing existing addresses. Reconcile only missing deployment-owned settings and preserve operator choices and keys. Bundle private Matrix and optional small local Ollama inside the four-container profile, consuming Lidza-deploy v2 resource budgets and managed PostgreSQL. Require seven real setup probes; keep SMIP transport publication blocked until a released framework contract proves it. See docs/managed-services.md; expanded 4 GiB runtime acceptance remains in progress.
+
+## 2026-10-21: Pack cache added
+
+Why: Use the official shared Valkey cache counter for atomic gateway-evidence nonce claims across replicas; reuse the existing private mail-container Valkey without another container.
+
+Touches: lidza.json, packs.go
+
+## Automatic, compact setup review and selection controls (2026-10-21)
+
+Review checks the saved draft automatically, one service at a time to avoid
+memory spikes on the minimum profile. A transaction on the setup row reuses the
+latest matching attempt across tabs; only expired successful results renew
+automatically. Failed and uncertain attempts never renew automatically, even
+when old. Retry is explicit, intent IDs remain durable, and publication still
+requires all seven fresh successful checks. The main page shows seven status
+rows, publication and expandable failure details; history and deployment notes
+stay collapsed. This supersedes the earlier type-to-confirm provider-check UI.
+Timezone lookup uses bundled public-domain IANA zone.tab names, and backup
+retention uses presets while retaining existing saved plans. A retention choice
+records the plan; it does not claim to configure or execute deployment backups.
+
+## Deployment-authenticated original TLS evidence (2026-10-21)
+
+Upgrade Lidza to v0.1.125 and Go to the patched 1.27.3 toolchain. The published
+gateway package verifies the original client transport across Caddy and the
+agent using a separate mutual-TLS listener, pinned gateway keys, exact app
+authorities and shared Valkey nonce claims. Both HTTP and private listeners
+protect all SMIP routes and the setup transport challenge; forwarded headers
+or backend TLS alone cannot establish original TLS 1.3. Partial deployment
+configuration fails startup. Ordinary service HTTP and authenticated private
+health checks remain available. The upstream Deploy gateway opt-in is still
+unreleased, so this adapter alone does not establish production transport
+acceptance or permit publication of the current HTTP-only deployment.

@@ -177,6 +177,31 @@ func (q *Queries) HasSuccessfulSetupProbe(ctx context.Context, arg HasSuccessful
 	return succeeded, err
 }
 
+const latestMatchingSetupProbe = `-- name: LatestMatchingSetupProbe :one
+SELECT id, kind, subject, revision, fingerprint, state, created_at, updated_at FROM setup_probe WHERE kind=$1 AND fingerprint=$2 ORDER BY created_at DESC,id DESC LIMIT 1
+`
+
+type LatestMatchingSetupProbeParams struct {
+	Kind        string `json:"kind"`
+	Fingerprint string `json:"fingerprint"`
+}
+
+func (q *Queries) LatestMatchingSetupProbe(ctx context.Context, arg LatestMatchingSetupProbeParams) (SetupProbe, error) {
+	row := q.db.QueryRow(ctx, latestMatchingSetupProbe, arg.Kind, arg.Fingerprint)
+	var i SetupProbe
+	err := row.Scan(
+		&i.ID,
+		&i.Kind,
+		&i.Subject,
+		&i.Revision,
+		&i.Fingerprint,
+		&i.State,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listPostfixMailboxes = `-- name: ListPostfixMailboxes :many
 SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox ORDER BY address,id LIMIT 1001
 `

@@ -89,7 +89,10 @@ func probeMessage(kind, state string) string {
 	case "superseded":
 		return "A later check replaced this result. Complete the newer check before publishing."
 	case "failed":
-		return "Provider check failed or timed out. Verify the saved settings and provider logs before starting a new check. Email acceptance may be uncertain; this attempt will not be resent."
+		if kind == "mail" {
+			return "Mail check failed or timed out. Email acceptance may be uncertain; this attempt will not be resent. Check your inbox and provider logs before retrying."
+		}
+		return "Connection check failed or timed out. Verify the saved settings and service logs before retrying."
 	case "cleanup_required":
 		return "Storage check could not confirm deletion. Remove only the object _thura_setup_checks/<check ID> under the configured prefix, then retry with a new check."
 	default:
@@ -101,6 +104,10 @@ func probeMessage(kind, state string) string {
 // form ID never repeat a mail send or storage operation, including after a
 // crash, client disconnect or failed completion commit.
 func Probe(ctx context.Context, kind, revision, requestID string) (string, error) {
+	return runProbe(ctx, kind, revision, requestID, false)
+}
+
+func runProbe(ctx context.Context, kind, revision, requestID string, automatic bool) (string, error) {
 	id, err := uuid.Parse(requestID)
 	if err != nil || id == uuid.Nil {
 		return "", errors.New("reload the setup page to obtain a valid check ID")
@@ -128,11 +135,25 @@ func Probe(ctx context.Context, kind, revision, requestID string) (string, error
 	if err = validate(v); err != nil {
 		return "", err
 	}
+	if automatic {
+		if err := validateCoreFeatures(v); err != nil {
+			return "", err
+		}
+	}
 	fingerprint, err := probeFingerprint(v, kind)
 	if err != nil {
 		return "", err
 	}
 	now := lidza.Now(ctx)
+	if automatic {
+		prior, err := queries.LatestMatchingSetupProbe(ctx, q.LatestMatchingSetupProbeParams{Kind: kind, Fingerprint: fingerprint})
+		if err == nil && (prior.State != "succeeded" || prior.CreatedAt.After(now.Add(-24*time.Hour))) {
+			return probeMessage(prior.Kind, prior.State), nil
+		}
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return "", err
+		}
+	}
 	count, err := queries.CountRecentSetupProbes(ctx, q.CountRecentSetupProbesParams{Subject: subject, Kind: kind, CreatedAt: now.Add(-15 * time.Minute)})
 	if err != nil {
 		return "", err

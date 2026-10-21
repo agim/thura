@@ -1,7 +1,6 @@
 package smipmail
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io"
@@ -14,6 +13,7 @@ import (
 	"github.com/agim/lidza/pkg/router"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/platform/ingress"
 	"thura/internal/smip"
 )
 
@@ -23,7 +23,7 @@ func (g *Gateway) receive(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "SMIP mail disabled", http.StatusServiceUnavailable)
 		return
 	}
-	if r.TLS == nil || r.TLS.Version < tls.VersionTLS13 {
+	if !ingress.TLS13(r) {
 		http.Error(w, "TLS 1.3 required", http.StatusBadRequest)
 		return
 	}

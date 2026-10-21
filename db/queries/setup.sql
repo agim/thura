@@ -47,3 +47,6 @@ SELECT * FROM mailbox ORDER BY address,id LIMIT 1001;
 UPDATE server_setup SET draft=sqlc.arg(draft),published=sqlc.arg(published),revision=revision+1,
 published_revision=CASE WHEN sqlc.arg(repair_published)::boolean THEN revision+1 ELSE published_revision END
 WHERE id='00000000-0000-4000-8000-000000000001';
+
+-- name: LatestMatchingSetupProbe :one
+SELECT * FROM setup_probe WHERE kind=$1 AND fingerprint=$2 ORDER BY created_at DESC,id DESC LIMIT 1;

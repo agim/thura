@@ -13,7 +13,8 @@
     "lidza/mail",
     "lidza/storage",
     "lidza/audit",
-    "lidza/llm"
+    "lidza/llm",
+    "lidza/cache"
   ],
   "sdk": {},
   "deploy": {},

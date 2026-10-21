@@ -1,16 +1,20 @@
 package setup
 
 import (
+	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/admin"
 	"github.com/agim/lidza/packs/db"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"io"
 	"log/slog"
 	"net/http"
 	q "thura/db/queries/gen"
+	"time"
 )
 
 type View struct {
@@ -23,6 +27,8 @@ type View struct {
 	Probes                                      []ProbeView
 	MailCheckID, StorageCheckID                 string
 	IntegrationChecks                           []IntegrationCheckView
+	ReviewChecks                                []ReviewCheckView
+	ConfigurationError                          string
 }
 
 //go:embed admin-controls.js
@@ -59,6 +65,15 @@ func Page() admin.Page {
 		}
 		for i, f := range step.Fields {
 			view.Step.Fields[i].Saved = v[f.Name] != ""
+			if f.Kind == "choice" && v[f.Name] != "" {
+				found := false
+				for _, option := range f.Options {
+					found = found || option == v[f.Name]
+				}
+				if !found {
+					view.Step.Fields[i].Options = append(append([]string{}, f.Options...), v[f.Name])
+				}
+			}
 			view.Step.Fields[i].Managed = managedField(f.Name)
 			if managedField(f.Name) {
 				view.Step.Fields[i].ManagedTitle = managedTitle(f.Name)
@@ -74,10 +89,16 @@ func Page() admin.Page {
 			}
 			if e := validate(v); e != nil {
 				view.Validation = e.Error()
+				view.ConfigurationError = e.Error()
 			} else if e := validateCoreFeatures(v); e != nil {
 				view.Validation = e.Error()
+				view.ConfigurationError = e.Error()
 			} else if e := requireProviderChecks(r.Context(), q.New(db.From(r.Context())), v); e != nil {
 				view.Validation = e.Error()
+			}
+			view.ReviewChecks, e = reviewChecks(r.Context(), v)
+			if e != nil {
+				return nil, e
 			}
 			for _, s := range Catalog() {
 				for _, f := range s.Fields {
@@ -100,6 +121,13 @@ func Page() admin.Page {
 			}
 			e := Save(r.Context(), r.Form, true)
 			return "Draft restarted; published settings were preserved.", e
+		},
+		"auto-check": func(r *http.Request) (string, error) {
+			kind := r.Form.Get("kind")
+			if kind != "mail" && kind != "storage" && len(checkNames(kind)) == 0 {
+				return "", fmt.Errorf("unknown integration")
+			}
+			return runProbe(r.Context(), kind, r.Form.Get("revision"), r.Form.Get("check_id"), true)
 		},
 		"check-mail": func(r *http.Request) (string, error) {
 			if r.Form.Get("confirm") != "send" {
@@ -134,3 +162,39 @@ func Page() admin.Page {
 }
 
 type IntegrationCheckView struct{ Kind, ID string }
+
+// Review uses the latest matching attempt, including uncertain failures. Opening
+// another tab or reloading never implicitly retries a provider operation.
+type ReviewCheckView struct {
+	Kind, Title, ID, State, Message, Action, Confirm string
+	Automatic                                        bool
+}
+
+func reviewChecks(ctx context.Context, v map[string]string) ([]ReviewCheckView, error) {
+	titles := map[string]string{"mail": "Email", "storage": "Storage", "matrix": "Chat", "collabora": "Documents", "livekit": "Meetings", "ai": "AI", "smip": "Secure delivery"}
+	var out []ReviewCheckView
+	for _, kind := range append([]string{"mail", "storage"}, integrationKinds()...) {
+		c := ReviewCheckView{Kind: kind, Title: titles[kind], ID: uuid.NewString(), State: "pending", Automatic: true, Action: "check-integration", Confirm: "check"}
+		if kind == "mail" {
+			c.Action = "check-mail"
+			c.Confirm = "send"
+		}
+		if kind == "storage" {
+			c.Action = "check-storage"
+		}
+		fingerprint, err := probeFingerprint(v, kind)
+		if err != nil {
+			return nil, err
+		}
+		prior, err := q.New(db.From(ctx)).LatestMatchingSetupProbe(ctx, q.LatestMatchingSetupProbeParams{Kind: kind, Fingerprint: fingerprint})
+		if err == nil && (prior.State != "succeeded" || prior.CreatedAt.After(lidza.Now(ctx).Add(-24*time.Hour))) {
+			c.State = prior.State
+			c.Message = probeMessage(kind, prior.State)
+			c.Automatic = false
+		} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, nil
+}

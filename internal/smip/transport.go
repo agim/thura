@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"thura/internal/platform/ingress"
 	"time"
 )
 
@@ -112,7 +113,7 @@ func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if req.TLS == nil || req.TLS.Version < tls.VersionTLS13 {
+	if !ingress.TLS13(req) {
 		http.Error(w, "TLS 1.3 required", http.StatusBadRequest)
 		return
 	}

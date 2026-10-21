@@ -74,3 +74,27 @@
 .setup-mail-identity th,.setup-mail-identity td {padding:10px 6px;text-align:left;border-bottom:1px solid var(--admin-line);overflow-wrap:anywhere}
 .setup-mail-identity th:first-child {width:18%}
 .setup-mail-identity code {overflow-wrap:anywhere;white-space:normal}
+
+/* Review stays compact; only actionable failures expand. */
+.setup-checks {display:grid;gap:0;border:1px solid var(--admin-line);border-radius:10px;overflow:hidden;margin:16px 0}
+.setup-check {padding:10px 14px;border-bottom:1px solid var(--admin-line);min-width:0}
+.setup-check:last-child {border-bottom:0}
+.setup-check-heading {display:flex;align-items:center;gap:12px;min-height:36px}
+.setup-check-heading strong {flex:1}
+.setup-check-heading [data-check-status] {font-size:13px;color:var(--admin-muted)}
+.setup-panel .setup-check form {padding:0;margin:0;border:0}
+.setup-panel .setup-check form .btn {margin:0;padding:6px 12px;min-height:32px}
+.setup-check details {font-size:13px;margin-top:6px}
+.setup-check details p {margin:6px 0;overflow-wrap:anywhere}
+.setup-check[data-check-state="succeeded"] [data-check-status] {color:var(--admin-fg)}
+.setup-publish {display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.setup-panel .setup-publish form .btn {margin:0}
+.setup-publish span {font-size:12px;color:var(--admin-muted)}
+.setup-review-details {margin-top:20px;font-size:13px}
+.setup-review-details summary,.setup-check summary {cursor:pointer}
+
+.setup-options button[hidden],.setup-choice-search[hidden] {display:none}
+.setup-choice-search {margin-top:6px}
+
+.setup-select-trigger span:first-child {min-width:0;overflow-wrap:anywhere}
+.setup-options {max-height:min(240px,40dvh)}

@@ -1,9 +1,9 @@
 module thura
 
-go 1.27.2
+go 1.27.3
 
 require (
-	github.com/agim/lidza v0.1.123
+	github.com/agim/lidza v0.1.125
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.11.0
@@ -73,6 +73,7 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/twitchtv/twirp v8.1.3+incompatible // indirect
+	github.com/valkey-io/valkey-go v1.0.78 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect

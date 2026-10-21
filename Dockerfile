@@ -6,13 +6,13 @@
 # the framework at a local checkout (--lidza-dir) cannot build here: pin a
 # published version first.
 
-FROM golang:1.27-bookworm AS build
+FROM golang:1.27.3-bookworm AS build
 ENV CGO_ENABLED=0
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
  && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
  && apt-get install -y --no-install-recommends nodejs \
  && rm -rf /var/lib/apt/lists/*
-RUN go install github.com/agim/lidza/cmd/lidza@v0.1.123
+RUN go install github.com/agim/lidza/cmd/lidza@v0.1.125
 # lidza build regenerates SQL-backed queries; sqlc requires CGO while building.
 RUN CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 WORKDIR /src

@@ -1,6 +1,15 @@
 package setup
 
-import "os"
+import (
+	_ "embed"
+	"os"
+	"strings"
+)
+
+// IANA zone.tab timezone identifiers; data is public domain.
+//
+//go:embed timezones.txt
+var timezoneCatalog string
 
 // Only this allowlist can enter the published server configuration.
 type Field struct {
@@ -25,8 +34,8 @@ func Catalog() []Step {
 			field("APP_URL", "Public HTTPS address", "url", "", "The address users open; no fixed Thura domain."),
 			field("THURA_WORKSPACE_NAME", "Initial workspace name", "text", "My workspace", "Created with the administrator as owner on first publish."),
 			field("THURA_OPERATOR_EMAIL", "Operator contact email", "email", "", "For deployment and incident ownership."),
-			field("THURA_TIMEZONE", "Default server timezone", "text", "UTC", "IANA timezone; calendar users keep their own timezone."),
-			field("THURA_BACKUP_PLAN", "Backup and retention plan", "textarea", "", "Describe protected database, object, provider and separate master-key backups; no automatic backup or deletion is implied."),
+			field("THURA_TIMEZONE", "Default server timezone", "choice", "UTC", "Search by city or region. Calendar users keep their own timezone.", strings.Fields(timezoneCatalog)...),
+			field("THURA_BACKUP_PLAN", "Backup retention plan", "choice", "", "Planning preference only; deployment must separately configure and verify database, file and encrypted key backups. Selecting a plan does not schedule backups or delete data.", "Daily backups · retain 7 days", "Daily backups · retain 30 days", "Daily backups · retain 90 days", "Daily backups · retain 365 days"),
 		}},
 		{ID: "mail", Title: "Email service", Fields: []Field{
 			field("THURA_MAIL_INBOUND", "Receive email through", "select", "relay", "Postfix uses the included Compose service. Relay keeps an independently managed signed MIME relay.", "postfix", "relay"),

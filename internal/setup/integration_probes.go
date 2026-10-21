@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"thura/internal/platform/ingress"
 	"thura/internal/providers/collabora"
 	"thura/internal/providers/livekit"
 	"thura/internal/providers/matrix"
@@ -139,7 +140,7 @@ func checkIntegration(ctx context.Context, kind string, v map[string]string, id 
 // a cached success from disguising a broken deployment transport.
 func TransportCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
-	if r.TLS == nil || r.TLS.Version < tls.VersionTLS13 {
+	if !ingress.TLS13(r) {
 		http.Error(w, "Direct TLS 1.3 is required for SMIP", 400)
 		return
 	}

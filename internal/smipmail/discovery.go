@@ -20,6 +20,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/platform/ingress"
 	"thura/internal/smip"
 )
 
@@ -93,7 +94,7 @@ func (g *Gateway) capabilities(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if r.TLS == nil || r.TLS.Version < 0x0304 {
+	if !ingress.TLS13(r) {
 		http.Error(w, "TLS 1.3 required", http.StatusBadRequest)
 		return
 	}

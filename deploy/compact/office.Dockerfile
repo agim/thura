@@ -1,6 +1,6 @@
 # Add only a static health probe; keep the official image's non-root USER,
 # entrypoint, editor and bundled libraries unchanged.
-FROM golang:1.27-bookworm AS health
+FROM golang:1.27.3-bookworm AS health
 WORKDIR /src
 COPY scripts/stack-office-health/main.go ./main.go
 RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /health main.go

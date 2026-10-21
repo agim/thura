@@ -394,7 +394,7 @@ func TestSetupProviderChecksRejectNonAdministratorAndFreezeStorageLocation(t *te
 	}
 }
 
-func TestSetupReviewShowsExplicitProviderChecksAndResumesResults(t *testing.T) {
+func TestSetupReviewShowsAutomaticCompactChecksAndResumesResults(t *testing.T) {
 	s := setupServer(t)
 	claimSetup(t, s)
 	res, err := s.Client().Get(s.URL + "/admin/setup?step=review")
@@ -406,11 +406,20 @@ func TestSetupReviewShowsExplicitProviderChecksAndResumesResults(t *testing.T) {
 	if err != nil || res.StatusCode != 200 {
 		t.Fatalf("review page: %d %v", res.StatusCode, err)
 	}
-	for _, text := range []string{"Send test email", "Check storage", "Type send", "Type check", "No provider checks recorded.", "name=\"check_id\""} {
-		// Confirmation, intent IDs and controls must be in the real admin template.
+	for _, text := range []string{"data-setup-review", "data-auto-check", "data-check-row=\"mail\"", "data-check-row=\"storage\"", "No checks recorded.", "name=\"check_id\""} {
+		// Automatic controls and durable intent IDs belong in the real admin template.
 		if !strings.Contains(string(body), text) {
 			t.Fatalf("review missing %q", text)
 		}
+	}
+	if strings.Contains(string(body), "Type send") || strings.Contains(string(body), "Type check") || strings.Contains(string(body), "Type publish") {
+		t.Fatal("obsolete typed confirmations remain")
+	}
+	if strings.Count(string(body), "data-check-row=") != 7 {
+		t.Fatal("review must show exactly seven compact service rows")
+	}
+	if !strings.Contains(string(body), "<details class=\"setup-review-details\">") {
+		t.Fatal("history should be collapsed by default")
 	}
 	completeSetup(t, s)
 	res, err = s.Client().Get(s.URL + "/admin/setup?step=review")
@@ -419,7 +428,7 @@ func TestSetupReviewShowsExplicitProviderChecksAndResumesResults(t *testing.T) {
 	}
 	body, err = io.ReadAll(res.Body)
 	res.Body.Close()
-	if err != nil || !strings.Contains(string(body), "provider checks are complete") || !strings.Contains(string(body), "Mail provider accepted") || !strings.Contains(string(body), "Storage write, read") {
+	if err != nil || !strings.Contains(string(body), "data-publish-button") || strings.Contains(string(body), "data-publish-button disabled") || !strings.Contains(string(body), "Mail provider accepted") || !strings.Contains(string(body), "Storage write, read") {
 		t.Fatalf("saved check results did not resume: %v", err)
 	}
 	if strings.Contains(string(body), "PUBLIC-inbound-test-secret") {
