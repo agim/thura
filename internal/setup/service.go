@@ -249,6 +249,9 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 			}
 		}
 	}
+	// A newly selected managed local provider must work immediately after Save,
+	// without requiring a restart just to discover its model and private origin.
+	localModelDefaults(v)
 	if !restart && step == "mail" {
 		if e = configureMailIdentity(v, form, lidza.Now(ctx)); e != nil {
 			return e

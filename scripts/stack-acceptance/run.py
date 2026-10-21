@@ -19,6 +19,7 @@ import subprocess
 import time
 from client import Client,eventually
 from wizard import Wizard
+from core import configuration
 
 # Acceptance runs on its own bounded VM; never operate on the demo Docker context.
 os.environ.pop('DOCKER_CONTEXT',None)
@@ -130,19 +131,7 @@ def start_sink():
 
 
 def bootstrap(core_path):
-    if not core_path:raise RuntimeError('Supply --core-config with real AI, Matrix and SMIP service configuration; core features cannot be skipped')
-    path=Path(core_path)
-    if path.stat().st_mode & 0o077:raise RuntimeError('Core-service credentials file must be private (chmod 600)')
-    if path.stat().st_size>131072:raise RuntimeError('Core-service configuration exceeds its size limit')
-    core=json.loads(path.read_text())
-    allowed={
-        'ai':{'THURA_AI_ENABLED','LLM_PROVIDER','LLM_MODEL','LLM_BASE_URL','LLM_API_KEY','LLM_MAX_TOKENS'},
-        'integrations':{'MATRIX_SERVER_URL','MATRIX_SERVER_NAME','MATRIX_AS_TOKEN','COLLABORA_SERVER_URL','COLLABORA_APP_URL','COLLABORA_TOKEN_SECRET','LIVEKIT_SERVER_URL','LIVEKIT_PUBLIC_URL','LIVEKIT_API_KEY','LIVEKIT_API_SECRET','SMIP_ENABLED','SMIP_CONFIG'},
-        'mail':{'SMIP_MAIL_ENABLED','SMIP_MAIL_CONFIG'},
-    }
-    if not isinstance(core,dict) or set(core)!=set(allowed):raise RuntimeError('Core configuration needs ai, integrations and mail objects')
-    for step,values in core.items():
-        if not isinstance(values,dict) or not set(values)<=allowed[step] or not all(isinstance(value,str) for value in values.values()):raise RuntimeError('Core configuration contains unsupported fields or values')
+    core=configuration(core_path)
     start_sink()
     application=Client('http://127.0.0.1:19881',host=DOMAIN)
     token=agent().call('/v1/apps/'+APP_ID+'/environment/THURA_SETUP_TOKEN')['value']
@@ -231,7 +220,7 @@ def main():
     parser.add_argument('action',choices=['initialize','start','stop','provision','deploy','status','bootstrap','smoke','mail-flow'])
     parser.add_argument('--agent',default=str(STATE/'agent-linux'))
     parser.add_argument('--branch',default='main')
-    parser.add_argument('--core-config',help='Private JSON file containing required core-service wizard fields')
+    parser.add_argument('--core-config',help='Optional private overrides for the default free local core services')
     args=parser.parse_args()
     if args.action=='initialize':initialize(args.agent)
     elif args.action=='start':start(args.agent)

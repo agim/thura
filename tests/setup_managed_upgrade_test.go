@@ -5,6 +5,7 @@ import (
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/pkg/credentials"
+	"io"
 	"strings"
 	"testing"
 	q "thura/db/queries/gen"
@@ -12,6 +13,35 @@ import (
 	"thura/internal/smipmail"
 	"thura/internal/tenancy"
 )
+
+func TestWizardSelectingManagedLocalModelFillsPrivateDefaultsImmediately(t *testing.T) {
+	t.Setenv("THURA_MANAGED_OLLAMA", "true")
+	s := setupServer(t)
+	claimSetup(t, s)
+	readAIPage := func() string {
+		t.Helper()
+		r, err := s.Client().Get(s.URL + "/admin/setup?step=ai")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer r.Body.Close()
+		body, err := io.ReadAll(r.Body)
+		if err != nil || r.StatusCode != 200 {
+			t.Fatalf("AI setup page: %d %v", r.StatusCode, err)
+		}
+		return string(body)
+	}
+	saveStep(t, s, "ai", map[string]string{"THURA_AI_ENABLED": "true", "LLM_PROVIDER": "ollama", "LLM_MODEL": "", "LLM_BASE_URL": "", "LLM_MAX_TOKENS": "1024"})
+	page := readAIPage()
+	if !strings.Contains(page, `value="qwen2.5:0.5b"`) || !strings.Contains(page, `value="http://127.0.0.1:11434"`) {
+		t.Fatal("saving the local provider did not fill the managed model immediately")
+	}
+	saveStep(t, s, "ai", map[string]string{"THURA_AI_ENABLED": "true", "LLM_PROVIDER": "anthropic", "LLM_MODEL": "operator-chosen-model", "LLM_BASE_URL": "", "LLM_API_KEY": "PUBLIC-synthetic-model-key", "LLM_MAX_TOKENS": "1024"})
+	page = readAIPage()
+	if !strings.Contains(page, `value="operator-chosen-model"`) || strings.Contains(page, `value="http://127.0.0.1:11434"`) {
+		t.Fatal("local defaults replaced the hosted provider's settings")
+	}
+}
 
 func TestUpgradeRepairsInitialTeamRegistrationsAndKeepsSavedProviderAndKeys(t *testing.T) {
 	s := setupServer(t)
