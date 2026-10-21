@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -20,7 +21,11 @@ func Origin(r *http.Request) string {
 		host = ""
 	}
 	ip := net.ParseIP(host)
-	if r.TLS != nil || ip != nil && ip.IsLoopback() && r.Header.Get("X-Forwarded-Proto") == "https" {
+	// APP_URL declares the public browser scheme behind Docker/private HTTP
+	// proxies. It is URL construction policy, never SMIP transport evidence.
+	public, err := url.Parse(os.Getenv("APP_URL"))
+	publicHTTPS := err == nil && public.Scheme == "https" && public.Host != ""
+	if publicHTTPS || r.TLS != nil || ip != nil && ip.IsLoopback() && r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"
 	}
 	return scheme + "://" + r.Host

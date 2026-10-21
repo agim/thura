@@ -522,3 +522,6 @@ Failed checks retain a bounded classification of the failing operation, HTTP sta
 
 ### Enable released protected deployment transport for SMIP
 The v2 deployment manifest now declares /api/v1/smip and /api/v1/setup/transport as protected prefixes using Lidza-deploy v0.2.103's released gateway contract. Agent and control panel must both be upgraded and the host's authenticated Caddy-to-agent ingress configured before deploying this manifest. The existing SDK v0.1.125 adapter verifies original TLS 1.3 independently of backend TLS, with exact authority and shared replay claims. Port 3001 stays private; deployment generates credentials. Ordinary forwarding headers cannot satisfy publication.
+
+### Public document origin follows configured HTTPS behind private HTTP hops
+Collabora's bootstrap downgraded wss to ws because the app saw the Docker peer as HTTP and only recognized loopback forwarding. Build document browser origins from the operator-configured APP_URL scheme when it is HTTPS, retaining the incoming approved hostname. This is browser URL policy, not original-client TLS proof; SMIP still requires the separate verified gateway. Genuine local HTTP development retains its ws bootstrap. Never weaken browser mixed-content protection or expose the private document service.
