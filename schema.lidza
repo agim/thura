@@ -1113,6 +1113,7 @@ model AuthOwnerClaim @table("auth_owner_claim") {
 // No provider response bodies or credentials belong in this table.
 model SetupProbe {
  id uuid @id
+ diagnostic string @default("")
  kind string
  subject string
  revision int

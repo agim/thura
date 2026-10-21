@@ -64,6 +64,8 @@ func Catalog() []Step {
 		}},
 		{ID: "storage", Title: "Private file storage", Fields: []Field{
 			field("STORAGE_PROVIDER", "Storage backend", "select", "local", "Private local disk or an S3-compatible backend.", "local", "s3"),
+			field("THURA_STORAGE_PROFILE", "Cloud storage provider", "select", "custom", "Provider profiles fill in the service endpoint and signing settings. Use a private bucket. Changing providers requires that provider’s keys.", "digitalocean", "aws", "google", "custom"),
+			field("THURA_STORAGE_LOCATION", "Bucket region", "choice", "", "Select the region where you created the bucket. Google uses its global XML API endpoint.", append(storageLocations("aws"), storageLocations("digitalocean")...)...),
 			field("STORAGE_DIR", "Local storage directory", "text", "storage", "Persistent private directory owned by the app's system user."),
 			field("STORAGE_ENDPOINT", "S3 HTTPS endpoint", "url", "https://s3.amazonaws.com", "Explicit bucket service origin; private objects. AWS uses virtual hosts; other endpoints use path-style requests."),
 			field("STORAGE_REGION", "S3 region", "text", "us-east-1", "For AWS or your compatible service."),

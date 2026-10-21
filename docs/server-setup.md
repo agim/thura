@@ -75,12 +75,62 @@ Postgres credentials, Valkey connectivity, operating-system service configuratio
 
 ## Provider checks
 
-Save every step, then open Review. Type **send** to send one test email through the selected official mail provider to the signed-in administrator account's email address; the form cannot select an arbitrary recipient. Type **check** to put, read, inspect, list and delete a unique 34-byte object through the official storage pack. These actions use the saved draft; they never replace running providers or create a bucket. Mail provider acceptance does not prove inbox delivery: confirm receipt yourself. Storage success does not establish bucket privacy, durability or a backup policy.
+Save every step, then open Review. The page checks the saved draft automatically,
+sequentially: email, storage, Matrix, Collabora, LiveKit, AI and secure delivery.
+It reuses current successful checks and never automatically retries failed or
+uncertain attempts. Email sends one test message to the signed-in administrator;
+AI makes one small configured-model request. Provider acceptance does not prove
+inbox delivery. Storage tests a unique private object; success does not prove
+bucket privacy, durability or a backup policy.
 
-Both successful checks must be less than 24 hours old before a new snapshot can be published. Results are bound to relevant connection settings and credentials using a master-key HMAC; changing them requires a new check, while unrelated quota or integration edits preserve matching results. Starting another check supersedes its earlier success, so a later failure cannot be hidden by that result. Checks are limited to three per provider per administrator in fifteen minutes across all nodes. The review page shows the latest twenty recorded intents and their states without secrets, provider response bodies or email message IDs.
+All seven successful checks must be less than 24 hours old before publishing.
+Results are bound to relevant settings and credentials with a master-key HMAC.
+Changing a connection requires a new check. Retrying supersedes earlier success;
+a later failure cannot be hidden by it. Email and AI checks are limited to three
+per administrator in fifteen minutes because they can send messages or incur
+charges. Other service checks allow thirty attempts in that interval to support
+troubleshooting. The limits apply across nodes. The compact review shows current
+results, with failure details and expandable history.
 
-Intent and audit commit before provider contact. Resubmitting the same form ID never repeats its operation, even after restart, a lost response or an uncertain completion. A started result may still be running or may have lost its outcome: inspect the provider/inbox before explicitly starting another intent. Provider operations have a fifteen-second deadline and completion/cleanup have independent five-second deadlines. Failures remain generic in the browser to avoid leaking credentials from a provider's error.
+Intent and audit commit before provider contact. Resubmitting the same ID never
+repeats its operation, even after restart or a lost response. Retry restores its
+button and reads the recorded outcome even when the new result is another
+failure. An uncertain request is followed by reads rather than an automatic
+resend. Inspect the provider/inbox before explicitly retrying an uncertain mail
+attempt. Integration checks are bounded to sixty seconds; individual storage and
+mail operations use fifteen-second deadlines, with independent five-second
+completion/cleanup deadlines. Browser failures remain generic to avoid exposing
+credentials from provider responses.
 
 A storage check always attempts to delete only its own `_thura_setup_checks/<check ID>` object beneath the configured prefix, including after an ambiguous write. If deletion cannot be confirmed, the wizard records **cleanup_required**, refuses to treat it as a successful check, and shows the ID for manual cleanup. A crash during a check can also leave that object; remove only the exact recorded check object after confirming the process is no longer running it. App orphan cleanup does not scan this reserved prefix. The `setup_probe` ledger is durable and retained for replay protection; include it in database backups.
 
 The Email service step also offers the separate opt-in SMIP mail identity. [Provision DNS, signing keys and direct TLS](smip-mail.md) before enabling it. It prefers verified SMIP for Mail messages, keeps learned secure domains from downgrading, and leaves ordinary provider configuration available for unsupported recipient domains.
+
+## Cloud storage profiles
+
+Choose cloud object storage, then select a profile. Existing installations default
+to **Custom S3-compatible**, retaining their saved endpoint, region, credentials
+and namespace until the administrator explicitly changes them. Provider selection
+never creates a bucket, changes its privacy, moves objects or rewrites the unique
+installation prefix. Existing published storage-location migration guards remain.
+
+| Profile | Endpoint and signing | Credentials |
+| --- | --- | --- |
+| AWS S3 | Regional S3 endpoint from the selected AWS bucket region | IAM access key ID and secret with bucket/prefix permissions |
+| DigitalOcean Spaces | Selected Spaces region endpoint; `us-east-1` signing region | Spaces access key pair, not a DigitalOcean personal API token |
+| Google Cloud Storage | `https://storage.googleapis.com`, signing region `auto` | Cloud Storage HMAC access ID and secret, not service-account JSON or an API key |
+| Custom S3-compatible | Operator-supplied HTTPS service origin and signing region | Keys issued by that storage service |
+
+Endpoints for named profiles are derived again on the server, not trusted from
+browser fields. The official storage pack selects bucket addressing from the
+endpoint. Changing providers/hosts does not reuse another vendor’s saved keys;
+enter the new provider’s key pair. A region change within the same known provider
+retains keys. Choose a private existing bucket with access to upload, read,
+inspect, list and delete objects beneath this installation’s prefix. Every actual
+bucket must pass Review’s live storage probe before publication.
+
+Profile defaults follow the [AWS S3 endpoint reference](https://docs.aws.amazon.com/general/latest/gr/s3.html),
+[DigitalOcean Spaces setup](https://docs.digitalocean.com/products/spaces/reference/aws-sdks/)
+and [Google XML API interoperability guide](https://docs.cloud.google.com/storage/docs/aws-simple-migration).
+Protocol tests use isolated TLS/XML fixtures; they are not claims of live
+acceptance against accounts at all three providers.

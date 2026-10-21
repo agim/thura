@@ -788,6 +788,7 @@ type ServerSetup struct {
 
 type SetupProbe struct {
 	ID          string    `json:"id"`
+	Diagnostic  string    `json:"diagnostic"`
 	Kind        string    `json:"kind"`
 	Subject     string    `json:"subject"`
 	Revision    int32     `json:"revision"`

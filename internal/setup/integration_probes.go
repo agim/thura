@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/llm"
 	"github.com/google/uuid"
@@ -119,7 +120,7 @@ func checkIntegration(ctx context.Context, kind string, v map[string]string, id 
 		}
 		defer res.Body.Close()
 		if res.StatusCode != 200 || res.TLS == nil || res.TLS.Version < tls.VersionTLS13 {
-			return errors.New("public SMIP route does not prove TLS 1.3")
+			return fmt.Errorf("public SMIP route does not prove TLS 1.3 (HTTP %d)", res.StatusCode)
 		}
 		var reply struct {
 			Nonce     string `json:"nonce"`

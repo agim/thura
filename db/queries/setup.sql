@@ -30,7 +30,7 @@ SELECT * FROM setup_probe WHERE id=$1;
 -- name: CreateSetupProbe :exec
 INSERT INTO setup_probe(id,kind,subject,revision,fingerprint,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$6);
 -- name: FinishSetupProbe :exec
-UPDATE setup_probe SET state=$2,updated_at=$3 WHERE id=$1 AND state='started';
+UPDATE setup_probe SET state=$2,updated_at=$3,diagnostic=$4 WHERE id=$1 AND state='started';
 -- name: CountRecentSetupProbes :one
 SELECT COUNT(*) FROM setup_probe WHERE subject=$1 AND kind=$2 AND created_at>$3;
 -- name: ListSetupProbes :many

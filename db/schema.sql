@@ -634,6 +634,7 @@ CREATE TABLE auth_owner_claim (
 
 CREATE TABLE setup_probe (
   id uuid PRIMARY KEY,
+  diagnostic text NOT NULL DEFAULT '',
   kind text NOT NULL,
   subject text NOT NULL,
   revision integer NOT NULL,

@@ -123,7 +123,7 @@ func runProbe(ctx context.Context, kind, revision, requestID string, automatic b
 		if prior.Kind != kind || prior.Subject != subject || prior.Revision != row.Revision {
 			return "", router.Errorf(409, "check ID already belongs to another request; reload")
 		}
-		return probeMessage(prior.Kind, prior.State), nil
+		return probeResult(prior.Kind, prior.State, prior.Diagnostic, prior.ID), nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return "", err
@@ -148,7 +148,7 @@ func runProbe(ctx context.Context, kind, revision, requestID string, automatic b
 	if automatic {
 		prior, err := queries.LatestMatchingSetupProbe(ctx, q.LatestMatchingSetupProbeParams{Kind: kind, Fingerprint: fingerprint})
 		if err == nil && (prior.State != "succeeded" || prior.CreatedAt.After(now.Add(-24*time.Hour))) {
-			return probeMessage(prior.Kind, prior.State), nil
+			return probeResult(prior.Kind, prior.State, prior.Diagnostic, prior.ID), nil
 		}
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return "", err
@@ -158,8 +158,9 @@ func runProbe(ctx context.Context, kind, revision, requestID string, automatic b
 	if err != nil {
 		return "", err
 	}
-	if count >= 3 {
-		return "", router.Errorf(429, "at most three checks per provider in fifteen minutes; wait before starting a new check")
+	limit := probeLimit(kind)
+	if count >= limit {
+		return "", router.Errorf(429, "%s checks are limited to %d per administrator in fifteen minutes; wait before starting another", kind, limit)
 	}
 	// Recipient is server-owned account data, never an arbitrary form address.
 	recipient := ""
@@ -189,15 +190,17 @@ func runProbe(ctx context.Context, kind, revision, requestID string, automatic b
 	bounded, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 	state := "failed"
+	var checkErr error
 	if kind == "mail" {
-		if checkMail(bounded, v, recipient) == nil {
+		if checkErr = checkMail(bounded, v, recipient); checkErr == nil {
 			state = "succeeded"
 		}
 	} else if kind == "storage" {
-		state = checkStorage(bounded, v, id.String())
-	} else if checkIntegration(bounded, kind, v, id.String()) == nil {
+		state, checkErr = checkStorage(bounded, v, id.String())
+	} else if checkErr = checkIntegration(bounded, kind, v, id.String()); checkErr == nil {
 		state = "succeeded"
 	}
+	diagnostic := probeDiagnostic(checkErr)
 	// Complete independently of a disconnected browser, with a short deadline.
 	finish, finishCancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer finishCancel()
@@ -206,7 +209,7 @@ func runProbe(ctx context.Context, kind, revision, requestID string, automatic b
 		return "", errors.New("check outcome could not be recorded; do not assume it failed or resend automatically")
 	}
 	defer done.Rollback(finish)
-	if err = q.New(done).FinishSetupProbe(finish, q.FinishSetupProbeParams{ID: id.String(), State: state, UpdatedAt: lidza.Now(ctx)}); err == nil {
+	if err = q.New(done).FinishSetupProbe(finish, q.FinishSetupProbeParams{ID: id.String(), State: state, Diagnostic: diagnostic, UpdatedAt: lidza.Now(ctx)}); err == nil {
 		err = audit.From(ctx).RecordTx(finish, done, audit.Event{Action: "server.setup.check.finish", Resource: "server-setup", Meta: map[string]string{"kind": kind, "check_id": id.String(), "state": state}})
 	}
 	if err == nil {
@@ -215,7 +218,7 @@ func runProbe(ctx context.Context, kind, revision, requestID string, automatic b
 	if err != nil {
 		return "", errors.New("check outcome could not be recorded; reload and inspect the check ID before trying again")
 	}
-	return probeMessage(kind, state), nil
+	return probeResult(kind, state, diagnostic, id.String()), nil
 }
 
 func checkMail(ctx context.Context, v map[string]string, recipient string) error {
@@ -253,56 +256,64 @@ func checkMail(ctx context.Context, v map[string]string, recipient string) error
 	return err
 }
 
-func checkStorage(ctx context.Context, v map[string]string, id string) (state string) {
+func checkStorage(ctx context.Context, v map[string]string, id string) (state string, failure error) {
 	var cfg storage.Config
-	if env.Fill(&cfg, v) != nil {
-		return "failed"
+	if err := env.Fill(&cfg, v); err != nil {
+		return "failed", fmt.Errorf("storage configuration: %w", err)
 	}
 	cfg.Timeout = 15 * time.Second
 	client, err := storage.New(cfg)
 	if err != nil {
-		return "failed"
+		return "failed", fmt.Errorf("storage initialization: %w", err)
 	}
 	key := probePrefix + id
-	// Delete even after an ambiguous Put; the key is unique to this intent.
+	// Always attempt cleanup, even after an ambiguous write.
 	defer func() {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 		if err := client.Delete(cleanup, key); err != nil && !errors.Is(err, storage.ErrNotFound) {
 			state = "cleanup_required"
+			failure = errors.Join(failure, fmt.Errorf("storage deletion: %w", err))
 			return
 		}
 		if _, err := client.Stat(cleanup, key); !errors.Is(err, storage.ErrNotFound) {
 			state = "cleanup_required"
+			failure = errors.Join(failure, errors.New("storage deletion verification: object absence was not confirmed"), err)
 		}
 	}()
 	payload := []byte("Thura private storage setup check\n")
 	if _, err := client.Put(ctx, key, bytes.NewReader(payload), storage.PutOptions{ContentType: "text/plain"}); err != nil {
-		return "failed"
+		return "failed", fmt.Errorf("storage write: %w", err)
 	}
 	reader, object, err := client.Get(ctx, key)
 	if err != nil {
-		return "failed"
+		return "failed", fmt.Errorf("storage read: %w", err)
 	}
 	body, err := io.ReadAll(io.LimitReader(reader, int64(len(payload)+1)))
 	closeErr := reader.Close()
-	if err != nil || closeErr != nil || !bytes.Equal(body, payload) || object.Size != int64(len(payload)) {
-		return "failed"
+	if err != nil || closeErr != nil {
+		return "failed", fmt.Errorf("storage read: %w", errors.Join(err, closeErr))
+	}
+	if !bytes.Equal(body, payload) || object.Size != int64(len(payload)) {
+		return "failed", errors.New("storage read verification: content or size mismatch")
 	}
 	object, err = client.Stat(ctx, key)
-	if err != nil || object.Size != int64(len(payload)) {
-		return "failed"
+	if err != nil {
+		return "failed", fmt.Errorf("storage metadata: %w", err)
+	}
+	if object.Size != int64(len(payload)) {
+		return "failed", errors.New("storage metadata verification: size mismatch")
 	}
 	objects, err := client.List(ctx, key, 2)
 	if err != nil {
-		return "failed"
+		return "failed", fmt.Errorf("storage listing: %w", err)
 	}
 	for _, object := range objects {
 		if object.Key == key {
-			return "succeeded"
+			return "succeeded", nil
 		}
 	}
-	return "failed"
+	return "failed", errors.New("storage listing verification: test object was not returned")
 }
 
 func requireProviderChecks(ctx context.Context, queries *q.Queries, v map[string]string) error {
@@ -343,7 +354,16 @@ func probeViews(ctx context.Context, v map[string]string) ([]ProbeView, error) {
 	}
 	out := make([]ProbeView, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, ProbeView{CreatedAt: row.CreatedAt, ID: row.ID, Kind: row.Kind, State: row.State, Message: probeMessage(row.Kind, row.State), Revision: row.Revision, Current: row.Fingerprint == fingerprints[row.Kind] && row.CreatedAt.After(lidza.Now(ctx).Add(-24*time.Hour))})
+		out = append(out, ProbeView{CreatedAt: row.CreatedAt, ID: row.ID, Kind: row.Kind, State: row.State, Message: probeResult(row.Kind, row.State, row.Diagnostic, row.ID), Revision: row.Revision, Current: row.Fingerprint == fingerprints[row.Kind] && row.CreatedAt.After(lidza.Now(ctx).Add(-24*time.Hour))})
 	}
 	return out, nil
+}
+
+// Email can create a real message and AI can incur API charges. Other checks
+// need room for connection troubleshooting; durable intents still prevent replay.
+func probeLimit(kind string) int64 {
+	if kind == "mail" || kind == "ai" {
+		return 3
+	}
+	return 30
 }

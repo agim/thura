@@ -101,6 +101,9 @@ func validate(v map[string]string) error {
 			return errors.New("mailgun sending domain required")
 		}
 	}
+	if err := validateStorageProfile(v); err != nil {
+		return err
+	}
 	for _, part := range strings.Split(v["STORAGE_PREFIX"], "/") {
 		if part == "." || part == ".." {
 			return errors.New("storage prefix cannot contain traversal segments")

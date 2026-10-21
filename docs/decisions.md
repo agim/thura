@@ -498,3 +498,24 @@ configuration fails startup. Ordinary service HTTP and authenticated private
 health checks remain available. The upstream Deploy gateway opt-in is still
 unreleased, so this adapter alone does not establish production transport
 acceptance or permit publication of the current HTTP-only deployment.
+
+## Recover repeated setup failures and guide cloud storage (2026-10-21)
+
+A retry may finish with the same `failed` state. Refresh its status, durable
+attempt ID, next intent, controls and details regardless of a state transition;
+retain row/control identity and expanded details rather than replacing the row.
+Fetch deadlines and read-only recovery prevent a network loss from leaving a
+permanent Checking state or replaying a submission. Keep a three-check budget for
+mail/paid AI; allow thirty connection checks per fifteen minutes for other
+services so troubleshooting is practical without removing abuse bounds.
+
+Add AWS S3, DigitalOcean Spaces, Google Cloud Storage and Custom profiles to the
+encrypted wizard. Derive canonical endpoints/signing regions on both client and
+server, use region selections and provider-specific credential labels, retain
+existing custom settings and unique prefixes, and clear saved credentials across
+vendor boundaries. Use only the official storage pack, with no vendor SDKs. Real
+cloud accounts still require the existing live write/read/stat/list/delete probe.
+See docs/server-setup.md for primary provider references and test boundaries.
+
+### Persist safe setup check diagnostics
+Failed checks retain a bounded classification of the failing operation, HTTP status/provider code, network/TLS/filesystem cause and check ID in PostgreSQL. Review, history and replay show the same diagnostic after refresh. Raw provider bodies, signed URLs and credentials never enter that field; unknown errors direct the administrator to logs with the check ID. Existing attempts without diagnostics explicitly explain that a new retry is needed.

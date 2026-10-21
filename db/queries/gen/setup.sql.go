@@ -87,17 +87,23 @@ func (q *Queries) EnsureServerSetup(ctx context.Context) error {
 }
 
 const finishSetupProbe = `-- name: FinishSetupProbe :exec
-UPDATE setup_probe SET state=$2,updated_at=$3 WHERE id=$1 AND state='started'
+UPDATE setup_probe SET state=$2,updated_at=$3,diagnostic=$4 WHERE id=$1 AND state='started'
 `
 
 type FinishSetupProbeParams struct {
-	ID        string    `json:"id"`
-	State     string    `json:"state"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         string    `json:"id"`
+	State      string    `json:"state"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	Diagnostic string    `json:"diagnostic"`
 }
 
 func (q *Queries) FinishSetupProbe(ctx context.Context, arg FinishSetupProbeParams) error {
-	_, err := q.db.Exec(ctx, finishSetupProbe, arg.ID, arg.State, arg.UpdatedAt)
+	_, err := q.db.Exec(ctx, finishSetupProbe,
+		arg.ID,
+		arg.State,
+		arg.UpdatedAt,
+		arg.Diagnostic,
+	)
 	return err
 }
 
@@ -141,7 +147,7 @@ func (q *Queries) GetServerSetupRouting(ctx context.Context) (GetServerSetupRout
 }
 
 const getSetupProbe = `-- name: GetSetupProbe :one
-SELECT id, kind, subject, revision, fingerprint, state, created_at, updated_at FROM setup_probe WHERE id=$1
+SELECT id, diagnostic, kind, subject, revision, fingerprint, state, created_at, updated_at FROM setup_probe WHERE id=$1
 `
 
 func (q *Queries) GetSetupProbe(ctx context.Context, id string) (SetupProbe, error) {
@@ -149,6 +155,7 @@ func (q *Queries) GetSetupProbe(ctx context.Context, id string) (SetupProbe, err
 	var i SetupProbe
 	err := row.Scan(
 		&i.ID,
+		&i.Diagnostic,
 		&i.Kind,
 		&i.Subject,
 		&i.Revision,
@@ -178,7 +185,7 @@ func (q *Queries) HasSuccessfulSetupProbe(ctx context.Context, arg HasSuccessful
 }
 
 const latestMatchingSetupProbe = `-- name: LatestMatchingSetupProbe :one
-SELECT id, kind, subject, revision, fingerprint, state, created_at, updated_at FROM setup_probe WHERE kind=$1 AND fingerprint=$2 ORDER BY created_at DESC,id DESC LIMIT 1
+SELECT id, diagnostic, kind, subject, revision, fingerprint, state, created_at, updated_at FROM setup_probe WHERE kind=$1 AND fingerprint=$2 ORDER BY created_at DESC,id DESC LIMIT 1
 `
 
 type LatestMatchingSetupProbeParams struct {
@@ -191,6 +198,7 @@ func (q *Queries) LatestMatchingSetupProbe(ctx context.Context, arg LatestMatchi
 	var i SetupProbe
 	err := row.Scan(
 		&i.ID,
+		&i.Diagnostic,
 		&i.Kind,
 		&i.Subject,
 		&i.Revision,
@@ -237,7 +245,7 @@ func (q *Queries) ListPostfixMailboxes(ctx context.Context) ([]Mailbox, error) {
 }
 
 const listSetupProbes = `-- name: ListSetupProbes :many
-SELECT id, kind, subject, revision, fingerprint, state, created_at, updated_at FROM setup_probe ORDER BY created_at DESC,id DESC LIMIT 20
+SELECT id, diagnostic, kind, subject, revision, fingerprint, state, created_at, updated_at FROM setup_probe ORDER BY created_at DESC,id DESC LIMIT 20
 `
 
 func (q *Queries) ListSetupProbes(ctx context.Context) ([]SetupProbe, error) {
@@ -251,6 +259,7 @@ func (q *Queries) ListSetupProbes(ctx context.Context) ([]SetupProbe, error) {
 		var i SetupProbe
 		if err := rows.Scan(
 			&i.ID,
+			&i.Diagnostic,
 			&i.Kind,
 			&i.Subject,
 			&i.Revision,

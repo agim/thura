@@ -1648,6 +1648,7 @@ func (v AuthOwnerClaim) Validate() error {
 // SetupProbe is a row of the setup_probe table.
 type SetupProbe struct {
 	ID          string    `json:"id" db:"id"`
+	Diagnostic  string    `json:"diagnostic" db:"diagnostic"`
 	Kind        string    `json:"kind" db:"kind"`
 	Subject     string    `json:"subject" db:"subject"`
 	Revision    int       `json:"revision" db:"revision"`
@@ -1660,6 +1661,9 @@ type SetupProbe struct {
 // Validate applies the rules of SetupProbe from schema.lidza.
 func (v SetupProbe) Validate() error {
 	var errs validate.Errors
+	if v.Diagnostic == "" {
+		errs.Add("diagnostic", "required", "required")
+	}
 	if v.Kind == "" {
 		errs.Add("kind", "required", "required")
 	}

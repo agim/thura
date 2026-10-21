@@ -166,8 +166,8 @@ type IntegrationCheckView struct{ Kind, ID string }
 // Review uses the latest matching attempt, including uncertain failures. Opening
 // another tab or reloading never implicitly retries a provider operation.
 type ReviewCheckView struct {
-	Kind, Title, ID, State, Message, Action, Confirm string
-	Automatic                                        bool
+	Kind, Title, ID, State, Message, Action, Confirm, AttemptID string
+	Automatic                                                   bool
 }
 
 func reviewChecks(ctx context.Context, v map[string]string) ([]ReviewCheckView, error) {
@@ -188,8 +188,9 @@ func reviewChecks(ctx context.Context, v map[string]string) ([]ReviewCheckView, 
 		}
 		prior, err := q.New(db.From(ctx)).LatestMatchingSetupProbe(ctx, q.LatestMatchingSetupProbeParams{Kind: kind, Fingerprint: fingerprint})
 		if err == nil && (prior.State != "succeeded" || prior.CreatedAt.After(lidza.Now(ctx).Add(-24*time.Hour))) {
+			c.AttemptID = prior.ID
 			c.State = prior.State
-			c.Message = probeMessage(kind, prior.State)
+			c.Message = probeResult(kind, prior.State, prior.Diagnostic, prior.ID)
 			c.Automatic = false
 		} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return nil, err

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"os"
 	"strconv"
@@ -207,6 +208,7 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 	if e != nil {
 		return e
 	}
+	previous := maps.Clone(v)
 	step := form.Get("step")
 	s, ok := stepByID(step)
 	if !ok {
@@ -231,7 +233,7 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 				continue
 			}
 			// Older wizard clients do not know these optional routing fields.
-			if !form.Has(f.Name) && (strings.HasPrefix(f.Name, "THURA_MAIL_") || f.Name == "THURA_POSTFIX_HOSTNAME") {
+			if !form.Has(f.Name) && (strings.HasPrefix(f.Name, "THURA_MAIL_") || f.Name == "THURA_POSTFIX_HOSTNAME" || strings.HasPrefix(f.Name, "THURA_STORAGE_") || f.Name == "STORAGE_PATH_STYLE") {
 				continue
 			}
 			value := form.Get(f.Name)
@@ -247,6 +249,11 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 			} else {
 				v[f.Name] = strings.TrimSpace(value)
 			}
+		}
+	}
+	if !restart && step == "storage" {
+		if e = configureStorageProfile(v, previous, form); e != nil {
+			return e
 		}
 	}
 	// A newly selected managed local provider must work immediately after Save,

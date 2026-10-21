@@ -367,7 +367,15 @@ func TestSetupS3CheckUsesSignedOperationsAndReportsCleanupFailure(t *testing.T) 
 	if r := setupForm(t, s, "publish", url.Values{"revision": {strconv.Itoa(revision)}, "confirm": {"publish"}}); !strings.Contains(r.Header.Get("Location"), "error=") {
 		t.Fatal("old S3 success hid failed cleanup")
 	}
-	// A fourth storage intent exceeds the shared fifteen-minute budget.
+	// Three intents already exist. Connection troubleshooting can continue up
+	// to thirty; the thirty-first must still be throttled across nodes.
+	refuseDelete.Store(false)
+	for attempt := 3; attempt < 30; attempt++ {
+		if _, err := setup.Probe(probeContext(s), "storage", strconv.Itoa(revision), uuid.NewString()); err != nil {
+			t.Fatalf("storage troubleshooting attempt %d: %v", attempt+1, err)
+		}
+	}
+
 	if _, err := setup.Probe(probeContext(s), "storage", strconv.Itoa(revision), uuid.NewString()); err == nil {
 		t.Fatal("provider check rate limit absent")
 	}
