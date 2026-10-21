@@ -71,7 +71,8 @@
         "THURA_MANAGED_SETTINGS": "MATRIX_SERVER_URL,MATRIX_SERVER_NAME,MATRIX_AS_TOKEN,COLLABORA_SERVER_URL,COLLABORA_APP_URL,COLLABORA_TOKEN_SECRET,LIVEKIT_SERVER_URL,LIVEKIT_PUBLIC_URL,LIVEKIT_API_KEY,LIVEKIT_API_SECRET,MAIL_RSPAMD_URL,MAIL_RSPAMD_CONTROLLER_URL,MAIL_RSPAMD_PASSWORD,MAIL_CLAMD_ADDRESS",
         "THURA_SERVICE_MATRIX_SERVER_URL": "http://127.0.0.1:8008",
         "THURA_SERVICE_MATRIX_SERVER_NAME": "${APP_DOMAIN}",
-        "THURA_MANAGED_OLLAMA": "true"
+        "THURA_MANAGED_OLLAMA": "true",
+        "THURA_MANAGED_STATE_IN_STORAGE": "true"
       },
       "public_ports": [
         {
@@ -98,16 +99,6 @@
         "python3",
         "/opt/thura/app.py",
         "--health"
-      ],
-      "volumes": [
-        {
-          "name": "matrix-state",
-          "target": "/app/matrix"
-        },
-        {
-          "name": "model-state",
-          "target": "/app/models"
-        }
       ]
     },
     {

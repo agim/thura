@@ -51,6 +51,8 @@ class ProfileTests(unittest.TestCase):
         self.assertIn('LIDZA_MASTER_KEY',manifest['required_environment'])
         self.assertNotIn('LIDZA_MASTER_KEY',manifest['generated_secrets'])
         app=services['app']
+        self.assertNotIn('volumes',app)
+        self.assertEqual(app['environment']['THURA_MANAGED_STATE_IN_STORAGE'],'true')
         self.assertEqual(app['build']['target'],'compact')
         self.assertEqual(app['environment']['CACHE_URL'],'redis://127.0.0.1:6379/1')
         self.assertEqual(app['environment']['REALTIME_BUS_URL'],'redis://127.0.0.1:6379/2')

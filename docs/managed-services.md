@@ -42,8 +42,12 @@ registered application-service token. Public registration and federation are
 disabled. Matrix is the internal conversation store; external SMIP trust is
 separate. The server name is stable and cannot be changed in place on restart.
 
-Small installations use Synapse SQLite in the persistent `matrix-state` volume.
-Back up that volume, including its signing key and database, during a stopped
+Small installations use Synapse SQLite in persistent local state. Compose keeps
+its existing `matrix-state` and `model-state` volumes. Lidza-deploy uses the
+platform app-storage attachment: `.thura-services/matrix` and
+`.thura-services/models` beneath its `STORAGE_DIR`, including when file objects
+use S3. These private paths are not Drive objects and need local backups.
+Back up the state directory, including its signing key and database, during a stopped
 or SQLite-consistent snapshot. Do not copy a live database file alone. Larger
 deployments should plan a supported Synapse database migration and measure
 capacity; the small-team profile is not a concurrency guarantee.
@@ -51,7 +55,7 @@ capacity; the small-team profile is not a concurrency guarantee.
 Ollama listens on loopback with one loaded model, one request in parallel and
 no persistent loaded-model cache. Selecting Ollama defaults missing fields to
 `qwen2.5:0.5b`; an explicit AI connection check downloads its approximately
-398 MB weights into `model-state`. Cloud-provider choices leave the daemon idle
+398 MB weights into persistent model state. Cloud-provider choices leave the daemon idle
 and do not download weights. Custom/larger models require a separately sized
 service. This small assistant is not a validated phishing classifier; review
 its output. The incoming-mail screening toggle and configured AI provider remain

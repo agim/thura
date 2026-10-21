@@ -11,6 +11,12 @@ import urllib.request
 import matrix
 
 
+def managed_state(name, default):
+    if os.environ.get('THURA_MANAGED_STATE_IN_STORAGE') == 'true':
+        return Path(os.environ.get('STORAGE_DIR', '/app/storage'))/'.thura-services'/name
+    return default
+
+
 def configure(directory=Path('/run/thura')):
     key = os.environ.get('LIVEKIT_API_KEY', '')
     secret = os.environ.get('LIVEKIT_API_SECRET', '')
@@ -37,6 +43,11 @@ def configure(directory=Path('/run/thura')):
     storage = Path(os.environ.get('STORAGE_DIR', '/app/storage'))
     storage.mkdir(mode=0o700, exist_ok=True)
     os.chown(storage, 65532, 65532)
+    if os.environ.get('THURA_MANAGED_STATE_IN_STORAGE') == 'true':
+        state_root=storage/'.thura-services'
+        state_root.mkdir(mode=0o700,exist_ok=True)
+        state_root.chmod(0o700)
+        os.chown(state_root,65532,65532)
     return path
 
 
@@ -79,18 +90,18 @@ def main():
             return
         commands=[['/app/thura'], ['/usr/local/bin/livekit-server', '--config', str(config)]]
         if os.environ.get('THURA_MANAGED_MATRIX') == 'true':
-            matrix_config=matrix.configure()
+            matrix_config=matrix.configure(state=managed_state('matrix',None))
             subprocess.run(['/usr/local/bin/python', '-m', 'synapse.app.homeserver', '--generate-keys', '--config-path', str(matrix_config)], user=65532, group=65532, extra_groups=[], check=True)
             commands.append(['/usr/local/bin/python', '-m', 'synapse.app.homeserver', '--config-path', str(matrix_config)])
         if os.environ.get('THURA_MANAGED_OLLAMA') == 'true':
-            model_state=Path('/app/models')
+            model_state=managed_state('models',Path('/app/models'))
             model_state.mkdir(mode=0o700, parents=True, exist_ok=True)
             os.chown(model_state,65532,65532)
             commands.append(['/usr/local/bin/ollama','serve'])
         for command in commands:
             environment = dict(os.environ)
             if 'ollama' in command[0]:
-                environment.update({'HOME':'/app/models','OLLAMA_MODELS':'/app/models/models','OLLAMA_HOST':'127.0.0.1:11434','OLLAMA_NO_CLOUD':'1','OLLAMA_CONTEXT_LENGTH':'2048','OLLAMA_NUM_PARALLEL':'1','OLLAMA_MAX_LOADED_MODELS':'1','OLLAMA_MAX_QUEUE':'2','OLLAMA_KEEP_ALIVE':'0'})
+                environment.update({'HOME':str(model_state),'OLLAMA_MODELS':str(model_state/'models'),'OLLAMA_HOST':'127.0.0.1:11434','OLLAMA_NO_CLOUD':'1','OLLAMA_CONTEXT_LENGTH':'2048','OLLAMA_NUM_PARALLEL':'1','OLLAMA_MAX_LOADED_MODELS':'1','OLLAMA_MAX_QUEUE':'2','OLLAMA_KEEP_ALIVE':'0'})
             environment['GOMEMLIMIT'] = '96MiB' if 'livekit-server' in command[0] else '256MiB'
             children.append(subprocess.Popen(command, user=65532, group=65532, extra_groups=[], env=environment))
         Path('/run/thura/processes.json').write_text(json.dumps({str(index): child.pid for index, child in enumerate(children)}))

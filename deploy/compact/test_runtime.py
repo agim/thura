@@ -12,6 +12,14 @@ spec.loader.exec_module(app)
 
 
 class CompactRuntimeTests(unittest.TestCase):
+    def test_managed_state_uses_platform_attachment_even_with_s3_objects(self):
+        with mock.patch.dict(os.environ,{},clear=True):
+            self.assertIsNone(app.managed_state('matrix',None))
+            self.assertEqual(app.managed_state('models',Path('/app/models')),Path('/app/models'))
+        with mock.patch.dict(os.environ,{'THURA_MANAGED_STATE_IN_STORAGE':'true','STORAGE_DIR':'/var/lib/lidza-storage','STORAGE_PROVIDER':'s3'},clear=True):
+            self.assertEqual(app.managed_state('matrix',None),Path('/var/lib/lidza-storage/.thura-services/matrix'))
+            self.assertEqual(app.managed_state('models',None),Path('/var/lib/lidza-storage/.thura-services/models'))
+
     def test_config_uses_private_keys_bounded_rooms_and_unprivileged_storage(self):
         with tempfile.TemporaryDirectory() as root:
             root = Path(root)
