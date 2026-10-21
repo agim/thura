@@ -14,6 +14,20 @@ An existing deployment cannot reopen first-account creation. Its operator explic
 
 ## Steps
 
+Fresh installations prefill the storage prefix with `thura/<installation-id>/`,
+using the setup row's random UUID rather than a shared app name. Independent
+databases can share a private S3 bucket without using the same object namespace.
+Explicit `STORAGE_PREFIX` environment overrides are preserved. The prefix survives
+wizard draft resets and is frozen with the storage location after publication.
+Existing installations, including those with an empty prefix, are not relocated.
+Restrict each installation's S3 credentials to its prefix; a prefix alone is not
+an access-control boundary. Restoring a database preserves its namespace; a
+separate clone needs an explicit storage migration rather than a renamed prefix.
+
+The wizard covers the initial server, mail, storage, access and service settings
+below. Host infrastructure is provisioned by Deploy. AI provider/model settings
+are currently configured separately in Thura Settings after initial setup.
+
 1. **Server and workspace:** operator-selected public HTTPS origin, initial workspace name, operator contact, IANA timezone, backup and retention plan.
 2. **Email:** SMTP (including Debian Postfix), Mailgun, SendGrid, Postmark or Resend; verified sender, region/domain, API key or SMTP host/port/encryption and credentials. Receiving and sending are independent: select the included managed Postfix service for receiving and either Postfix or a hosted/SMTP provider for sending. The Compose sidecar receives exact mailbox mappings automatically after publication and activation. External raw-MIME relays still require their own signed configuration; hosted-provider-native ingress webhooks are not provisioned. See [Postfix Compose deployment](postfix.md).
 3. **Storage:** private persistent local directory or S3-compatible endpoint, region, private bucket/prefix and access/secret keys. Pre-create the bucket and give its key only the required bucket/prefix permissions. The framework selects virtual-host requests for AWS and path-style requests for other endpoints; this wizard does not expose the unsupported pointer-valued environment override in Līdza v0.1.90.

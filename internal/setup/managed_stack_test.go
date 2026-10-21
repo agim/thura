@@ -1,6 +1,29 @@
 package setup
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
+
+func TestFreshInstallationStorageNamespacesAreStableAndDistinct(t *testing.T) {
+	t.Setenv("STORAGE_PREFIX", "")
+	os.Unsetenv("STORAGE_PREFIX")
+	first := installationDraft("10000000-0000-4000-8000-000000000001")
+	again := installationDraft("10000000-0000-4000-8000-000000000001")
+	other := installationDraft("10000000-0000-4000-8000-000000000002")
+	if first["STORAGE_PREFIX"] != "thura/10000000-0000-4000-8000-000000000001/" || first["STORAGE_PREFIX"] != again["STORAGE_PREFIX"] || first["STORAGE_PREFIX"] == other["STORAGE_PREFIX"] {
+		t.Fatal("installation namespace must be stable and unique across databases")
+	}
+	for _, prefix := range []string{"operator-chosen/", ""} {
+		t.Setenv("STORAGE_PREFIX", prefix)
+		if installationDraft("10000000-0000-4000-8000-000000000001")["STORAGE_PREFIX"] != prefix {
+			t.Fatal("explicit operator namespace changed")
+		}
+	}
+	if defaults()["STORAGE_PREFIX"] != "" {
+		t.Fatal("older snapshots must retain their original unprefixed location")
+	}
+}
 
 func TestPrivateIntegrationOriginsRequireExplicitOperatorAllowlist(t *testing.T) {
 	t.Setenv("THURA_SERVICE_HTTP_ORIGINS", "")

@@ -57,7 +57,7 @@ func Catalog() []Step {
 			field("STORAGE_ENDPOINT", "S3 HTTPS endpoint", "url", "https://s3.amazonaws.com", "Explicit bucket service origin; private objects. AWS uses virtual hosts; other endpoints use path-style requests."),
 			field("STORAGE_REGION", "S3 region", "text", "us-east-1", "For AWS or your compatible service."),
 			field("STORAGE_BUCKET", "Private bucket", "text", "", "Pre-create the bucket and restrict the key to the required bucket/prefix."),
-			field("STORAGE_PREFIX", "Object prefix", "text", "", "Optional prefix within the bucket."),
+			field("STORAGE_PREFIX", "Installation object prefix", "text", "", "Fresh installations receive a unique thura/<installation-id>/ prefix. Keep it when sharing a bucket; changing a published location requires an offline migration."),
 			field("STORAGE_ACCESS_KEY", "S3 access key", "secret", "", "Never returned in setup responses."),
 			field("STORAGE_SECRET_KEY", "S3 secret key", "secret", "", "Never returned in setup responses."),
 		}},
@@ -122,6 +122,16 @@ func bootstrapDraft() map[string]string {
 				values[field.Name] = value
 			}
 		}
+	}
+	return values
+}
+
+// The setup row ID belongs to the installation database, not its display name.
+// Only first-account creation calls this: existing snapshots retain their keys.
+func installationDraft(id string) map[string]string {
+	values := bootstrapDraft()
+	if _, explicit := os.LookupEnv("STORAGE_PREFIX"); !explicit {
+		values["STORAGE_PREFIX"] = "thura/" + id + "/"
 	}
 	return values
 }

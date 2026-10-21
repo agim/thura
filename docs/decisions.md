@@ -437,3 +437,7 @@ Why: Actual Deploy preflight rejected the initial scaffold ciphertext because it
 ## 2026-10-20: Declare configuration ownership for first-install deployment
 
 Why: Deploy's generic production preflight otherwise requires mail and AI settings before Thura's wizard can collect them. Use the app-owned configuration contract from Lidza Deploy PR #20: master key is required at deployment, sender/provider are setup-owned, and AI is optional. Keep infrastructure requirements, original-key decryption, setup publication probes and established-release readiness strict; never supply dummy providers to start setup.
+
+## 2026-10-20: Give fresh installations stable storage namespaces
+
+Why: Multiple Thura installations may share an S3 bucket, so the common app name is insufficient. First-account setup seeds `thura/<server-setup-uuid>/` and preserves it across draft resets. Explicit operator prefixes and existing published snapshots, including empty prefixes, retain their original locations. Continue freezing storage after publication and require prefix-scoped bucket permissions; restoration keeps its namespace and independent clones require an explicit migration.
