@@ -14,6 +14,7 @@ import (
 )
 
 type View struct {
+	MailIdentity                                MailIdentityView
 	Revision, PublishedRevision, ActiveRevision int32
 	Step                                        Step
 	Steps                                       []Step
@@ -51,7 +52,7 @@ func Page() admin.Page {
 			step, _ = stepByID("server")
 		}
 		state, _ := lidza.Optional[runtimeState](r.Context())
-		view := View{MailCheckID: uuid.NewString(), StorageCheckID: uuid.NewString(), ActiveRevision: state.Revision, Revision: row.Revision, PublishedRevision: row.PublishedRevision, Step: step, Steps: Catalog()}
+		view := View{MailIdentity: mailIdentityView(v), MailCheckID: uuid.NewString(), StorageCheckID: uuid.NewString(), ActiveRevision: state.Revision, Revision: row.Revision, PublishedRevision: row.PublishedRevision, Step: step, Steps: Catalog()}
 		for i, f := range step.Fields {
 			view.Step.Fields[i].Saved = v[f.Name] != ""
 			if f.Kind != "secret" {

@@ -13,12 +13,23 @@
 {{if ne .Step.ID "review"}}
 <form method="post" action="setup/save" autocomplete="off">
 <input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="step" value="{{.Step.ID}}"><input type="hidden" name="back" value="?step={{.Step.ID}}">
-{{range .Step.Fields}}<div class="mb-3" data-setup-field="{{.Name}}"><label class="form-label" id="label-{{.Name}}" for="{{.Name}}">{{.Label}}</label>
+{{range .Step.Fields}}{{if ne .Name "SMIP_MAIL_CONFIG"}}<div class="mb-3" data-setup-field="{{.Name}}"><label class="form-label" id="label-{{.Name}}" for="{{.Name}}">{{.Label}}</label>
 {{if eq .Kind "select"}}{{$value := .Value}}<div class="setup-select"><input type="hidden" id="{{.Name}}" name="{{.Name}}" value="{{.Value}}"><button type="button" class="form-control setup-select-trigger" role="combobox" aria-labelledby="label-{{.Name}}" aria-expanded="false" aria-controls="options-{{.Name}}"><span>{{if .Value}}{{.Value}}{{else}}Choose an option{{end}}</span><span aria-hidden="true">⌄</span></button><div id="options-{{.Name}}" class="setup-options" role="listbox" aria-labelledby="label-{{.Name}}" hidden>{{range .Options}}<button type="button" role="option" aria-selected="{{if eq . $value}}true{{else}}false{{end}}" data-value="{{.}}">{{.}}</button>{{end}}</div></div>
 {{else if eq .Kind "textarea"}}<textarea class="form-control" id="{{.Name}}" name="{{.Name}}" maxlength="32768">{{.Value}}</textarea>
 {{else if eq .Kind "secret"}}<input class="form-control" type="password" id="{{.Name}}" name="{{.Name}}" maxlength="32768" autocomplete="new-password" value=""><p class="form-hint">{{if .Saved}}Secret saved; leave blank to keep it.{{else}}No secret saved.{{end}}</p><label><input type="checkbox" name="clear_{{.Name}}" value="true"> Clear saved secret</label>
 {{else}}<input class="form-control" type="{{.Kind}}" id="{{.Name}}" name="{{.Name}}" value="{{.Value}}" maxlength="32768">{{end}}
-<p class="form-hint">{{.Help}}</p></div>{{end}}
+<p class="form-hint">{{.Help}}</p></div>{{end}}{{end}}
+{{if eq .Step.ID "mail"}}<section class="setup-mail-identity" aria-labelledby="smip-identity-title">
+<h3 id="smip-identity-title">Secure email identity</h3>
+<label class="form-label" for="smip-mail-domain">Email identity domain</label>
+<input class="form-control" id="smip-mail-domain" name="smip_mail_domain" value="{{.MailIdentity.Domain}}" placeholder="example.org" maxlength="253" {{if .MailIdentity.Saved}}readonly{{end}} aria-describedby="smip-identity-help">
+<p class="form-hint" id="smip-identity-help">Use your inbox address domain. When SMIP is enabled, saving this step generates a private signing key and stores it encrypted. You do not need to create or paste a key.</p>
+{{if .MailIdentity.Saved}}<p role="status">Identity saved for <strong>{{.MailIdentity.Domain}}</strong>. Signing key expires {{.MailIdentity.Expires}}.</p><p class="form-hint">Key identifier: <code>{{.MailIdentity.KeyID}}</code>. The private key is never displayed.</p>
+<h4>Publish these DNS records</h4>
+<table aria-label="SMIP email DNS records"><thead><tr><th>Type</th><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>TXT</td><td><code>_smip.{{.MailIdentity.Domain}}</code></td><td><code>v=SMIP1</code></td></tr><tr><td>A / AAAA</td><td><code>smip.{{.MailIdentity.Domain}}</code></td><td>Your Thura server’s public IP address</td></tr></tbody></table>
+<p>Configure a trusted certificate for <strong>smip.{{.MailIdentity.Domain}}</strong> and direct TLS 1.3 access to Thura. A proxy that forwards ordinary HTTP to Thura does not satisfy SMIP’s transport requirement. Publish and restart to activate this identity; these DNS and transport instructions do not imply a successful connection test.</p>
+{{else}}<p>No identity saved yet. Enable SMIP above and save this step to generate it and display the DNS records.</p>{{end}}
+</section>{{end}}
 <div class="setup-save"><button class="btn btn-primary" type="submit">Save this step</button><span>Changes stay in your draft.</span></div></form>
 {{else}}
 <p>{{.Message}}</p>

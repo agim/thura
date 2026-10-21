@@ -49,7 +49,7 @@ func Catalog() []Step {
 			field("MAIL_AI_PER_HOUR", "AI screening attempts per workspace per hour", "number", "120", "Bounds automatic model usage. Mail over this budget stays quarantined and is retried in the next hour."),
 			field("MAIL_CLAMD_ADDRESS", "Private antivirus service", "text", "", "Host:port for the included ClamAV service, for example clamav:3310. Keep its port private. Blank disables signature scanning; static attachment checks still run."),
 			field("SMIP_MAIL_ENABLED", "Prefer verified SMIP email", "select", "false", "Verified domains use authenticated SMIP. Unadvertised domains use the configured provider; verification failures hold delivery.", "false", "true"),
-			field("SMIP_MAIL_CONFIG", "SMIP email identity JSON", "secret", "", "Domain, private signing seed and validity interval; optional private origins and required domains. See docs/smip-mail.md. Stored encrypted."),
+			field("SMIP_MAIL_CONFIG", "SMIP email identity", "secret", "", "Thura generates and encrypts the signing key when you save this step. Existing keys are preserved."),
 		}},
 		{ID: "storage", Title: "Private file storage", Fields: []Field{
 			field("STORAGE_PROVIDER", "Storage backend", "select", "local", "Private local disk or an S3-compatible backend.", "local", "s3"),

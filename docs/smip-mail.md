@@ -4,9 +4,9 @@ SMIP/0.2 adds server-authenticated email delivery to Thura's Mail app. It is a s
 
 ## Enable and advertise
 
-In Server setup → Email service, configure the normal outgoing API provider, enable **Prefer verified SMIP email**, and save the secret identity JSON. Publish and restart every node. `SMIP_MAIL_ENABLED=true` and `SMIP_MAIL_CONFIG` are also supported through sealed settings or environment overrides. Both are application settings; signing seeds are secrets. Keep the same identity and database across workers/nodes.
+In Server setup → Email service, configure the normal outgoing API provider, enable **Prefer verified SMIP email**, and enter the inbox domain in **Email identity domain**. Save the step: Thura generates a cryptographically random signing identity on the server and stores it in the encrypted draft. The wizard displays the domain, public key identifier, expiry and DNS instructions, never the private seed. Repeat saves preserve the existing identity and trust settings; changing its domain requires explicit identity management rather than silently replacing the key. Publish and restart every node. Existing operator-provided configurations remain supported without exposing their raw JSON in the wizard. `SMIP_MAIL_ENABLED=true` and `SMIP_MAIL_CONFIG` are also supported through sealed settings or environment overrides. Both are application settings; signing seeds are secrets. Keep the same identity and database across workers/nodes.
 
-Identity shape (placeholders, never usable keys):
+Advanced operator configuration shape (not required by the wizard; placeholders, never usable keys):
 
 ```json
 {

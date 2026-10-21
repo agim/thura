@@ -457,3 +457,7 @@ Why: The setup row uses a fixed singleton ID in every database, so it cannot ide
 ## 2026-10-21: Distribute native runtime images for both server architectures
 
 Why: The production AMD64 deployment attempted to run Collabora's ARM64 child manifest and the editor restarted continuously. Pin the immutable vendor index that includes both AMD64 and the same tested ARM64 child. Check actual registry indexes for every distributed pinned runtime in CI, rejecting single-platform children even when local emulation could mask the mistake. Keep historical ARM64 acceptance distinct from native AMD64 runtime verification.
+
+## 2026-10-21: Generate SMIP email identities in guided setup
+
+Why: The server wizard exposed signing seeds and validity timestamps as a raw JSON password field. Replace that field with an inbox-domain control; generate the identity once during the administrator-gated, revision-locked save and keep it in the existing encrypted snapshot. Render only public metadata and exact DNS record names/values. Preserve existing identities and advanced trust settings, reject accidental domain replacement, retain operator environment compatibility and make direct TLS requirements explicit without claiming successful DNS/peer verification.

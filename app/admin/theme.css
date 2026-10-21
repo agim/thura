@@ -68,3 +68,9 @@
 .thura-setup input::-webkit-inner-spin-button,.thura-setup input::-webkit-outer-spin-button {appearance:none;margin:0}
 .thura-setup input[type=checkbox] {appearance:none;vertical-align:middle;width:18px;height:18px;border:1px solid var(--admin-line);border-radius:4px;background:var(--admin-surface-2);margin:0 8px 0 0}
 .thura-setup input[type=checkbox]:checked {background:var(--admin-accent);box-shadow:inset 0 0 0 4px var(--admin-surface)}
+
+.setup-mail-identity {margin:24px 0;padding-top:20px;border-top:1px solid var(--admin-line)}
+.setup-mail-identity table {width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
+.setup-mail-identity th,.setup-mail-identity td {padding:10px 6px;text-align:left;border-bottom:1px solid var(--admin-line);overflow-wrap:anywhere}
+.setup-mail-identity th:first-child {width:18%}
+.setup-mail-identity code {overflow-wrap:anywhere;white-space:normal}

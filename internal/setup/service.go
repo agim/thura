@@ -246,6 +246,9 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 		}
 	}
 	if !restart && step == "mail" {
+		if e = configureMailIdentity(v, form, lidza.Now(ctx)); e != nil {
+			return e
+		}
 		if v["THURA_MAIL_INBOUND"] == "postfix" && v["MAIL_INBOUND_SECRET"] == "" {
 			key := make([]byte, 32)
 			if _, e := rand.Read(key); e != nil {
