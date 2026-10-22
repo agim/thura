@@ -3,6 +3,7 @@
 package federation
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"crypto/tls"
@@ -139,6 +140,20 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "SMIP is disabled", http.StatusServiceUnavailable)
 		return
 	}
+	// The complete bounded body arrives before a slot is held; the receiver
+	// then re-reads it from memory.
+	body, err := smip.ReadBody(w, req)
+	if err != nil {
+		var limit *http.MaxBytesError
+		if errors.As(err, &limit) {
+			http.Error(w, "packet too large", http.StatusRequestEntityTooLarge)
+		} else {
+			http.Error(w, "invalid body", http.StatusBadRequest)
+		}
+		return
+	}
+	req.Body = io.NopCloser(bytes.NewReader(body))
+	req.ContentLength = int64(len(body))
 	select {
 	case g.slots <- struct{}{}:
 		defer func() { <-g.slots }()

@@ -27,8 +27,13 @@ import (
 const DiscoveryVersion = "smip-discovery/1"
 const CacheLifetime = 5 * time.Minute
 
+// RegistryCapacity bounds the domain registry per local identity, counting only
+// verified and unexpired rows.
+const RegistryCapacity = 1000
+
 var ErrUnsupported = errors.New("recipient domain does not advertise SMIP mail")
 var ErrDiscovery = errors.New("secure domain verification is unavailable; delivery is held")
+var ErrRegistryFull = errors.New("SMIP domain registry capacity reached")
 
 type documentClaims struct {
 	Version  string              `json:"version"`
@@ -271,12 +276,21 @@ func (g *Gateway) Resolve(ctx context.Context, domain string, force bool) (Peer,
 		return Peer{}, ErrDiscovery
 	}
 	if !found {
-		count, err := queries.CountSmipMailDomains(ctx, g.domain)
+		// Only sticky verifications and unexpired checks occupy capacity: an
+		// unauthenticated sender naming random domains, or every provider
+		// recipient ever mailed, must not lock legitimate new peers out.
+		count, err := queries.CountSmipMailDomains(ctx, q.CountSmipMailDomainsParams{Origin: g.domain, ExpiresAt: now})
 		if err != nil {
 			return Peer{}, err
 		}
-		if count >= 1000 {
-			return Peer{}, errors.New("SMIP domain registry capacity reached")
+		if count.Live >= RegistryCapacity {
+			return Peer{}, ErrRegistryFull
+		}
+		if count.Total >= RegistryCapacity {
+			// The table stays bounded: expired, never-verified rows make room, oldest first.
+			if _, err = queries.EvictSmipMailDomains(ctx, q.EvictSmipMailDomainsParams{Origin: g.domain, ExpiresAt: now, Limit: 100}); err != nil {
+				return Peer{}, err
+			}
 		}
 	}
 	peer, fetchErr := g.fetch(ctx, domain)

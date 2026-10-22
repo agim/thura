@@ -103,6 +103,20 @@ func writeReceipt(w http.ResponseWriter, r Receipt, status int) {
 		return
 	}
 }
+
+// BodyTimeout bounds how long a peer may take to send its packet body. The
+// server times out headers only, so a connection that stalls mid-body would
+// otherwise hold an admission slot for as long as it stays open.
+var BodyTimeout = 10 * time.Second
+
+// ReadBody reads the whole MaxWire-bounded body under BodyTimeout. Receivers
+// call it before taking an admission slot so that only complete packets are
+// admitted. The deadline is unsupported only off a network connection.
+func ReadBody(w http.ResponseWriter, req *http.Request) ([]byte, error) {
+	_ = http.NewResponseController(w).SetReadDeadline(time.Now().Add(BodyTimeout))
+	req.Body = http.MaxBytesReader(w, req.Body, MaxWire)
+	return io.ReadAll(req.Body)
+}
 func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if (req.URL.Path != MessagePath && req.URL.Path != ApplicationMessagePath) || req.URL.RawQuery != "" {
 		http.NotFound(w, req)
@@ -121,20 +135,11 @@ func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "application/json required", http.StatusUnsupportedMediaType)
 		return
 	}
-	select {
-	case r.slots <- struct{}{}:
-		defer func() { <-r.slots }()
-	default:
-		w.Header().Set("Retry-After", "1")
-		http.Error(w, "receiver busy", http.StatusServiceUnavailable)
-		return
-	}
 	if req.ContentLength > MaxWire {
 		http.Error(w, "packet too large", http.StatusRequestEntityTooLarge)
 		return
 	}
-	req.Body = http.MaxBytesReader(w, req.Body, MaxWire)
-	b, err := io.ReadAll(req.Body)
+	b, err := ReadBody(w, req)
 	if err != nil {
 		var limit *http.MaxBytesError
 		if errors.As(err, &limit) {
@@ -142,6 +147,14 @@ func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		} else {
 			http.Error(w, "invalid body", http.StatusBadRequest)
 		}
+		return
+	}
+	select {
+	case r.slots <- struct{}{}:
+		defer func() { <-r.slots }()
+	default:
+		w.Header().Set("Retry-After", "1")
+		http.Error(w, "receiver busy", http.StatusServiceUnavailable)
 		return
 	}
 	var p Packet
