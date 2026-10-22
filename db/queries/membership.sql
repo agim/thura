@@ -47,4 +47,4 @@ SELECT subject FROM auth_user WHERE email=$1;
 
 -- name: CreateInvitedAccount :one
 INSERT INTO auth_user(subject,email,name,password_hash,verified_at)
-VALUES($1,$2,$3,$4,now()) RETURNING subject;
+VALUES($1,$2,$3,$4,sqlc.narg(verified_at)::timestamptz) RETURNING subject;

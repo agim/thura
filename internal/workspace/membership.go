@@ -179,7 +179,22 @@ func Accept(ctx context.Context, in schema.AcceptInviteInput) (schema.Workspace,
 			return schema.Workspace{}, err
 		}
 		name := strings.TrimSpace(*in.Name)
-		subject, err = q.CreateInvitedAccount(ctx, queries.CreateInvitedAccountParams{Subject: uuid.NewString(), Email: &inv.Email, Name: &name, PasswordHash: &hash})
+		// The token reached inv.Email itself unless the invitation reserved that
+		// address as the member's new team inbox: it was not active yet, so the
+		// link went to a separate delivery address and proves nothing about who
+		// reads the account email. Such an account stays unverified; ADMIN_USERS
+		// never admits an unverified email.
+		var verifiedAt *time.Time
+		if inv.MailboxID == nil {
+			now := lidza.Now(ctx)
+			verifiedAt = &now
+		} else if box, e := q.GetMailbox(ctx, *inv.MailboxID); e != nil {
+			return schema.Workspace{}, e
+		} else if box.Address != inv.Email {
+			now := lidza.Now(ctx)
+			verifiedAt = &now
+		}
+		subject, err = q.CreateInvitedAccount(ctx, queries.CreateInvitedAccountParams{Subject: uuid.NewString(), Email: &inv.Email, Name: &name, PasswordHash: &hash, VerifiedAt: verifiedAt})
 		if err != nil {
 			var p *pgconn.PgError
 			if errors.As(err, &p) && p.Code == "23505" {

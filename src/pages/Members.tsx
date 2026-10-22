@@ -48,7 +48,7 @@ function Membership({ workspaceId, subject }: { workspaceId: string; subject: st
 
         <RecipientInput workspaceId={workspaceId} label="New team email address" multiple={false} required value={email} onChange={setEmail} />
         <RecipientInput workspaceId={workspaceId} label="Deliver invitation to an existing email" multiple={false} value={deliveryEmail} onChange={setDeliveryEmail} />
-        <p>The team email is used to sign in and gets a private inbox. Send the activation link to an existing external address so your teammate can open it before their new inbox is active.</p>
+        <p>The team email is used to sign in and gets a private inbox. Send the activation link to an existing external address so your teammate can open it before their new inbox is active. An invitation to an existing address is always delivered to that address.</p>
         <label>Invitation role<SelectControl className="ml-3 border rounded p-2" value={role} onChange={e => setRole(e.target.value as WorkspaceRole)}>{(own?.role === 'owner' ? ['member', 'admin', 'owner'] : ['member']).map(r => <option key={r} value={r}>{r[0].toUpperCase() + r.slice(1)}</option>)}</SelectControl></label>
         {invite.isError && <p role="alert">{invite.error.message}</p>}<ActionButton className="primary-action" disabled={busy}>Send invitation</ActionButton>
       </form></ModalAction>

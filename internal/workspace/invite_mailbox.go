@@ -30,6 +30,13 @@ func invitationMailbox(ctx context.Context, tx pgx.Tx, queries *q.Queries, works
 			address = in.Email
 		}
 	}
+	// A separate delivery address only carries activation for a new team inbox
+	// that is not active yet. Every other invitation goes to the invited address
+	// itself: acceptance creates an account for that email, so the token must
+	// prove the recipient reads it, not an inviter-chosen inbox.
+	if delivery != in.Email && in.Email != address {
+		return nil, "", router.Errorf(422, "The invitation is delivered to the invited email address; a separate delivery address is only for a new team inbox")
+	}
 	if address == "" {
 		if managedErr == nil {
 			return nil, "", router.Errorf(422, "Choose a team email address for the new member")

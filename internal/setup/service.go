@@ -72,6 +72,9 @@ func Allow(ctx context.Context) bool {
 		return true
 	}
 	// Existing deployments require an explicitly configured operator account.
+	// An email entry only admits a verified account: an invited account whose
+	// activation went to a separate delivery address never proved it reads
+	// that email, so a listed address with no account yet cannot be claimed.
 	var cfg struct {
 		Admins string `env:"ADMIN_USERS"`
 	}
@@ -80,7 +83,7 @@ func Allow(ctx context.Context) bool {
 	}
 	for _, id := range strings.Split(cfg.Admins, ",") {
 		id = strings.TrimSpace(id)
-		if id != "" && (id == user.ID || strings.EqualFold(id, profile.Email)) {
+		if id != "" && (id == user.ID || (profile.Verified() && strings.EqualFold(id, profile.Email))) {
 			return true
 		}
 	}

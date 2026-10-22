@@ -10,7 +10,7 @@ The operator installs Thura, initializes its master key, configures Postgres and
 
 A row lock and account-count check permit exactly one successful account creation. The token does not grant access after any account exists. The password uses the official authentication policy and Argon2id hash; the operator token is never persisted in the wizard. Account creation, administrator binding, initial encrypted draft and audit commit together. Sign in after creation; if its response was lost, try the same credentials rather than creating a second account. Remove the setup-token binding afterward.
 
-An existing deployment cannot reopen first-account creation. Its operator explicitly lists an existing account ID or email in `ADMIN_USERS` to adopt the wizard. A workspace role alone is insufficient. Public account registration stays disabled; new members join by invitation.
+An existing deployment cannot reopen first-account creation. Its operator explicitly lists an existing account ID or email in `ADMIN_USERS` to adopt the wizard. An email entry admits only an account whose email is verified, so an invited account activated through a separate delivery address must be listed by ID. A workspace role alone is insufficient. Public account registration stays disabled; new members join by invitation.
 
 ## Steps
 

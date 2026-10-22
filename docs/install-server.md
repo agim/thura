@@ -130,7 +130,7 @@ Saved drafts can be resumed or restarted. Blank secret fields preserve saved val
 
 Publish, then restart **every app and worker node** and confirm the intended active revision and `/readyz` success on each node. Publication alone does not activate the first installation. The initial workspace, its owner membership and shared mailbox are created atomically. Its mailbox address comes from the configured `MAIL_FROM`. See [wizard details and recovery](server-setup.md).
 
-Existing deployments cannot create a new first administrator. Privately configure `ADMIN_USERS` with an explicitly authorized existing account ID or email to adopt the wizard. A workspace owner/admin role alone does not grant server configuration authority.
+Existing deployments cannot create a new first administrator. Privately configure `ADMIN_USERS` with an explicitly authorized existing account ID or email to adopt the wizard; an email entry only admits an account whose email is verified. A workspace owner/admin role alone does not grant server configuration authority.
 
 ## 5. Configure outbound mail
 

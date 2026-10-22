@@ -134,12 +134,13 @@ func TestAssistantOperatorSettingsPersistEncryptedAndNeverReturnKeys(t *testing.
 	srv := startConfigured(t, app.New(nil))
 	ctx := srv.Context()
 	email := fmt.Sprintf("assistant-operator-%d@example.com", time.Now().UnixNano())
-	t.Setenv("ADMIN_USERS", email)
 	pw := "forest maple waterfall lantern 7143"
 	owner, err := auth.From(ctx).CreateUser(ctx, email, "Server operator", pw)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// CreateUser leaves the email unverified; ADMIN_USERS admits it by ID.
+	t.Setenv("ADMIN_USERS", owner.Subject)
 	space, err := workspace.Create(ctx, schema.CreateWorkspaceInput{Name: "AI configuration", OwnerEmail: email})
 	if err != nil {
 		t.Fatal(err)

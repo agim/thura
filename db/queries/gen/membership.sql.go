@@ -74,14 +74,15 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 
 const createInvitedAccount = `-- name: CreateInvitedAccount :one
 INSERT INTO auth_user(subject,email,name,password_hash,verified_at)
-VALUES($1,$2,$3,$4,now()) RETURNING subject
+VALUES($1,$2,$3,$4,$5::timestamptz) RETURNING subject
 `
 
 type CreateInvitedAccountParams struct {
-	Subject      string  `json:"subject"`
-	Email        *string `json:"email"`
-	Name         *string `json:"name"`
-	PasswordHash *string `json:"password_hash"`
+	Subject      string     `json:"subject"`
+	Email        *string    `json:"email"`
+	Name         *string    `json:"name"`
+	PasswordHash *string    `json:"password_hash"`
+	VerifiedAt   *time.Time `json:"verified_at"`
 }
 
 func (q *Queries) CreateInvitedAccount(ctx context.Context, arg CreateInvitedAccountParams) (string, error) {
@@ -90,6 +91,7 @@ func (q *Queries) CreateInvitedAccount(ctx context.Context, arg CreateInvitedAcc
 		arg.Email,
 		arg.Name,
 		arg.PasswordHash,
+		arg.VerifiedAt,
 	)
 	var subject string
 	err := row.Scan(&subject)
