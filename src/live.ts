@@ -14,23 +14,26 @@ export function useLive(topics: string[]) {
     let socket: WebSocket | undefined
     let closed = false
     let delay = 1000
+    let reconnect: ReturnType<typeof setTimeout> | undefined
     const connect = () => {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws'
       socket = new WebSocket(`${proto}://${location.host}/api/v1/realtime?topics=${encodeURIComponent(key)}`)
       socket.onmessage = (event) => {
-        const message = JSON.parse(String(event.data)) as { topic: string }
-        queryClient.invalidateQueries({ queryKey: [message.topic] })
+        let message: { topic?: unknown }
+        try { message = JSON.parse(String(event.data)) } catch { return }
+        if (typeof message?.topic === 'string') queryClient.invalidateQueries({ queryKey: [message.topic] })
         delay = 1000
       }
       socket.onclose = () => {
         if (closed) return
-        setTimeout(connect, delay)
+        reconnect = setTimeout(connect, delay)
         delay = Math.min(delay * 2, 30000)
       }
     }
     connect()
     return () => {
       closed = true
+      clearTimeout(reconnect)
       socket?.close()
     }
   }, [queryClient, key])

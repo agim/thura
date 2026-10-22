@@ -64,8 +64,12 @@ described in [Collabora deployment](collabora.md). `THURA_WOPI_ORIGIN` defaults 
 Use a public HTTPS origin instead when your domain/proxy configuration requires
 it. Collabora's service port and LiveKit signaling port are published only on
 loopback, for the operator's existing HTTPS proxy. Set `LIVEKIT_PUBLIC_URL` to its
-browser-reachable `wss://` origin. Leaving it empty keeps meeting joins unavailable
-until configured; it does not generate insecure public meeting links.
+browser-reachable `wss://` origin (`scripts/init-compose.py` writes
+`wss://<APP_DOMAIN>/rtc`, so forward `/rtc` to port 7880). Setup publication
+requires it: an empty value fails the wizard's LiveKit check, and a non-empty
+process environment value must match what the wizard holds. An empty value in
+the environment does not count as an override; it never generates insecure
+public meeting links.
 
 Expose TCP 7881 and UDP 7882 directly for media. On a NAT host, set
 `THURA_RTC_NODE_IP` to its reachable public IP when automatic discovery is unsuitable.

@@ -357,42 +357,6 @@ func (q *Queries) GetSmipBinding(ctx context.Context, arg GetSmipBindingParams) 
 	return i, err
 }
 
-const getSmipInbox = `-- name: GetSmipInbox :one
-SELECT id, workspace_id, binding_id, origin, message_id, digest, record, origin_key, receipt_key, sender, recipient, stream, body, name, kind, size, imported_file_id, imported_at, accepted_at FROM smip_inbox WHERE workspace_id=$1 AND id=$2
-`
-
-type GetSmipInboxParams struct {
-	WorkspaceID string `json:"workspace_id"`
-	ID          string `json:"id"`
-}
-
-func (q *Queries) GetSmipInbox(ctx context.Context, arg GetSmipInboxParams) (SmipInbox, error) {
-	row := q.db.QueryRow(ctx, getSmipInbox, arg.WorkspaceID, arg.ID)
-	var i SmipInbox
-	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.BindingID,
-		&i.Origin,
-		&i.MessageID,
-		&i.Digest,
-		&i.Record,
-		&i.OriginKey,
-		&i.ReceiptKey,
-		&i.Sender,
-		&i.Recipient,
-		&i.Stream,
-		&i.Body,
-		&i.Name,
-		&i.Kind,
-		&i.Size,
-		&i.ImportedFileID,
-		&i.ImportedAt,
-		&i.AcceptedAt,
-	)
-	return i, err
-}
-
 const getSmipOutbound = `-- name: GetSmipOutbound :one
 SELECT id, origin, workspace_id, binding_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at FROM smip_outbox WHERE workspace_id=$1 AND id=$2
 `

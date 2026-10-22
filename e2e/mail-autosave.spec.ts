@@ -64,3 +64,22 @@ test('failed autosave stays visibly unsaved and an explicit retry preserves the 
   await page.getByRole('button').filter({ has: page.getByText(subject, { exact: true }) }).click()
   await expect(page.getByLabel('Message', { exact: true })).toHaveText('Keep these unsaved edits')
 })
+
+test('edits whose save fails while leaving the composer are recovered when the draft reopens', async ({ page }) => {
+  let saves = 0
+  await page.route('**/mailboxes/*/messages/*', route => {
+    if (route.request().method() === 'PUT' && ++saves > 1) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic unavailable storage' }) })
+    return route.continue()
+  })
+  await compose(page)
+  const subject = `Recover autosave ${Date.now()}`
+  await page.getByLabel('Subject', { exact: true }).fill(subject)
+  await expect(page.getByRole('status')).toContainText('Draft saved')
+  await page.getByLabel('Message', { exact: true }).fill('Typed just before leaving')
+  await expect(page.getByRole('status')).toContainText('Draft not saved')
+  await page.getByRole('button', { name: 'Inbox', exact: true }).click()
+  await page.getByRole('button', { name: 'Drafts', exact: true }).click()
+  await page.getByRole('button').filter({ has: page.getByText(subject, { exact: true }) }).click()
+  await expect(page.getByLabel('Message', { exact: true })).toHaveText('Typed just before leaving')
+  await expect(page.getByRole('alert')).toBeVisible()
+})

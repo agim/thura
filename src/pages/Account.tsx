@@ -7,7 +7,7 @@ import { Link } from '@tanstack/react-router'
 
 function useToken() {
   const [token, setToken] = useState('')
-  useEffect(() => { setToken(new URLSearchParams(window.location.search).get('token') ?? '') }, [])
+  useEffect(() => { const params = new URLSearchParams(window.location.search); const value = params.get('token') ?? ''; setToken(value); if (value) { params.delete('token'); const search = params.toString(); history.replaceState(history.state, '', location.pathname + (search ? '?' + search : '') + location.hash) } }, [])
   return token
 }
 

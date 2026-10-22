@@ -83,7 +83,8 @@ function instant(value: string, zone: string): string {
 }
 function EventForm({ workspaceId, calendarId, zone, date, initial, occurrence, saved }: { workspaceId: string; calendarId: string; zone: string; date?: string; initial?: EventDetail; occurrence?: EventInstance; saved: (message?: string) => Promise<void> }) {
   const event = initial?.event
-  const first = DateTime.fromISO(date || DateTime.now().setZone(zone).toISODate()!, { zone }).set({ hour: 9 })
+  // Anchor the form on the event's own day, never today's, so switching All day keeps the date.
+  const first = event?.startsAt ? DateTime.fromISO(event.startsAt, { zone }) : DateTime.fromISO(event?.startDate || date || DateTime.now().setZone(zone).toISODate()!, { zone }).set({ hour: 9 })
   const [mode, setMode] = useState<'series' | 'occurrence'>(event?.rrule && occurrence ? 'occurrence' : 'series')
   const [title, setTitle] = useState(occurrence?.title || event?.title || '')
   const [descriptionRevision, setDescriptionRevision] = useState(0)
@@ -107,10 +108,15 @@ function EventForm({ workspaceId, calendarId, zone, date, initial, occurrence, s
   }, onSuccess: data => saved(data.dispatch ? `Event saved. ${data.dispatch.queued} invitation${data.dispatch.queued === 1 ? '' : 's'} ${data.dispatch.captured ? 'captured locally; no email was delivered' : 'queued for delivery'}.` : undefined) })
   const cancel = useMutation({ mutationFn: () => mode === 'occurrence' && event && occurrence ? api.changeCalendarOccurrence({ workspaceId, calendarId, id: event.id }, { instanceKey: occurrence.instanceKey, sequence: event.sequence, cancelled: true }) : api.cancelCalendarEvent({ workspaceId, calendarId, id: event!.id }, { query: { sequence: event!.sequence } }), onSuccess: () => saved() })
   function changeMode(next: 'series' | 'occurrence') { setMode(next); if (!event) return; const instance = next === 'occurrence' ? occurrence : undefined; setTitle(instance?.title || event.title); setStartDate(instance?.allDay ? instance.start : event.startDate); setEndDate(instance?.allDay ? instance.end : event.endDate); setStarts(localTime(instance && !instance.allDay ? instance.start : event.startsAt, zone, first)); setEnds(localTime(instance && !instance.allDay ? instance.end : event.endsAt, zone, first.plus({ hours: 1 }))) }
+  function toggleAllDay(checked: boolean) {
+    setAllDay(checked)
+    if (checked) { const day = DateTime.fromISO(starts.slice(0, 10)); const last = DateTime.fromISO(ends.slice(0, 10)); const exclusive = ends.endsWith('T00:00') ? last : last.plus({ days: 1 }); if (day.isValid) { setStartDate(day.toISODate()!); setEndDate((exclusive.isValid && exclusive > day.plus({ days: 1 }) ? exclusive : day.plus({ days: 1 })).toISODate()!) } }
+    else { const day = DateTime.fromISO(startDate, { zone }).set({ hour: first.hour, minute: first.minute }); if (day.isValid) { setStarts(day.toFormat("yyyy-MM-dd'T'HH:mm")); setEnds(day.plus({ hours: 1 }).toFormat("yyyy-MM-dd'T'HH:mm")) } }
+  }
   function submit(e: FormEvent) { e.preventDefault(); setError(''); save.mutate(false) }
   return <form className="calendar-editor" onSubmit={submit}><h3>{event ? 'Edit event' : 'New event'}</h3>{event?.cancelled ? <p>This event was cancelled.</p> : <>
     {event?.rrule && occurrence && <label>Edit scope<SelectControl aria-label="Edit scope" value={mode} onChange={e => changeMode(e.target.value as 'series' | 'occurrence')}><option value="occurrence">This occurrence</option><option value="series">Entire series</option></SelectControl></label>}
-    <label>Event title<input required maxLength={500} value={title} onChange={e => setTitle(e.target.value)} /></label><label className="checkbox"><input type="checkbox" disabled={mode === 'occurrence'} checked={allDay} onChange={e => setAllDay(e.target.checked)} />All day</label>
+    <label>Event title<input required maxLength={500} value={title} onChange={e => setTitle(e.target.value)} /></label><label className="checkbox"><input type="checkbox" disabled={mode === 'occurrence'} checked={allDay} onChange={e => toggleAllDay(e.target.checked)} />All day</label>
     {allDay ? <div className="row"><label>Start date<DateTimeControl type="date" required value={startDate} onChange={e => setStartDate(e.target.value)} /></label><label>End date (exclusive)<DateTimeControl type="date" required value={endDate} onChange={e => setEndDate(e.target.value)} /></label></div> : <div className="row"><DateTimeControl label="Start" type="datetime-local" required value={starts} onChange={e => setStarts(e.target.value)} /><DateTimeControl label="End" type="datetime-local" required value={ends} onChange={e => setEnds(e.target.value)} /><p>Timezone: {zone}</p></div>}
     {!event?.meetingId && mode === 'series' && <label className="checkbox"><input type="checkbox" checked={createMeeting} onChange={e => setCreateMeeting(e.target.checked)} />Add Thura Meet</label>}
     {createMeeting && <p className="field-help">A meeting link, PIN and joining instructions will be included in the invitation. Invited guests can join without a Thura account.</p>}

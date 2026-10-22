@@ -23,10 +23,17 @@ if '--upgrade-mail' in sys.argv or '--upgrade-compact' in sys.argv:
         stream.write('\n' + ''.join(name + '=' + secrets.token_urlsafe(36) + '\n' for name in missing))
     print('Added missing private deployment secrets; all existing settings were preserved.')
     raise SystemExit(0)
+# The public domain is required: setup publication needs the browser-reachable
+# LiveKit origin, and Compose otherwise passes LIVEKIT_PUBLIC_URL through empty.
+domain = next((arg.split('=', 1)[1] for arg in sys.argv[1:] if arg.startswith('--domain=')), os.environ.get('APP_DOMAIN', '')).strip()
+if not domain and sys.stdin.isatty():
+    domain = input('Public Thura domain (APP_DOMAIN, for example thura.example.com): ').strip()
+if not domain or any(c in domain for c in '/: \t'):
+    raise SystemExit('Pass the public domain: python3 scripts/init-compose.py --domain=thura.example.com (or set APP_DOMAIN).')
 body = '# Private Compose bootstrap values. Back up the master key separately.\n' + '\n'.join(
     name + '=' + (secrets.token_hex(32) if name == 'LIDZA_MASTER_KEY' else secrets.token_urlsafe(36))
     for name in ('POSTGRES_PASSWORD', 'AUTH_SECRET', 'LIDZA_MASTER_KEY', 'THURA_SETUP_TOKEN', 'THURA_POSTFIX_TOKEN', 'THURA_RSPAMD_PASSWORD', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'COLLABORA_TOKEN_SECRET', 'MATRIX_AS_TOKEN', 'MATRIX_HS_TOKEN')
-) + '\n'
+) + '\n' + 'APP_DOMAIN=' + domain + '\n' + 'THURA_PUBLIC_HOSTS=' + domain + '\n' + 'LIVEKIT_PUBLIC_URL=wss://' + domain + '/rtc\n'
 try:
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
 except FileExistsError:
@@ -34,4 +41,4 @@ except FileExistsError:
 with os.fdopen(fd, 'w') as stream:
     stream.write(body)
 (root / 'deploy/private/smtp').mkdir(parents=True, exist_ok=True, mode=0o700)
-print('Created private .env. Open it locally for the first-administrator setup token. Run docker compose --env-file .env -f deploy/compose.yaml up -d --build.')
+print('Created private .env with APP_DOMAIN and LIVEKIT_PUBLIC_URL=wss://' + domain + '/rtc (forward /rtc to port 7880). Open it locally for the first-administrator setup token. Run docker compose --env-file .env -f deploy/compose.yaml up -d --build.')

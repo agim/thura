@@ -15,8 +15,6 @@ SELECT * FROM mail_item WHERE mailbox_id=$1 AND external_id=$2;
 -- name: CreateDraft :one
 INSERT INTO mail_item(mailbox_id,author_id,folder,from_address,to_address,cc,bcc,subject,text_body,html_body,thread_id)
 VALUES($1,$2,'drafts',$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *;
--- name: ListMailItems :many
-SELECT * FROM mail_item WHERE mailbox_id=$1 AND folder=$2 ORDER BY updated_at DESC,id LIMIT 200;
 -- name: ListMailItemsPage :many
 SELECT * FROM mail_item
 WHERE mailbox_id=sqlc.arg(mailbox_id) AND folder=sqlc.arg(folder)
@@ -66,8 +64,6 @@ ORDER BY updated_at DESC,id DESC LIMIT sqlc.arg(page_limit);
 -- name: ListMailboxLabels :many
 SELECT l.* FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id
 WHERE COALESCE(l.workspace_id,b.workspace_id)=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=$1) ORDER BY l.name,l.id;
--- name: CreateMailboxLabel :one
-INSERT INTO mail_label(mailbox_id,name) VALUES($1,$2) RETURNING *;
 -- name: GetMailboxLabel :one
 SELECT l.* FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id WHERE l.id=sqlc.arg(id)
 AND COALESCE(l.workspace_id,b.workspace_id)=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=sqlc.arg(mailbox_id));
@@ -79,9 +75,6 @@ INSERT INTO mail_tag(item_id,label_id) VALUES($1,$2) ON CONFLICT(item_id,label_i
 DELETE FROM mail_tag WHERE item_id=$1 AND label_id=$2;
 -- name: DeleteLabelTags :exec
 DELETE FROM mail_tag WHERE label_id=$1;
--- name: DeleteMailboxLabel :exec
-DELETE FROM mail_label l WHERE l.id=sqlc.arg(id) AND COALESCE(l.workspace_id,(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=l.mailbox_id))=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=sqlc.arg(mailbox_id));
-
 -- name: ListVisibleMailboxes :many
 SELECT * FROM mailbox WHERE workspace_id=sqlc.arg(workspace_id)
 AND (NOT private OR owner_subject=sqlc.arg(subject)) ORDER BY name,id;

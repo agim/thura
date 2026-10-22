@@ -320,7 +320,7 @@ func Publish(ctx context.Context, revision string) error {
 	}
 	for _, step := range Catalog() {
 		for _, f := range step.Fields {
-			if value, ok := os.LookupEnv(f.Name); ok && value != v[f.Name] {
+			if value, ok := os.LookupEnv(f.Name); ok && value != "" && value != v[f.Name] {
 				return fmt.Errorf("remove the conflicting %s process environment override before publishing", f.Name)
 			}
 		}

@@ -1,5 +1,5 @@
 # Generate private .env with: python3 scripts/init-compose.py
-# Start behind your HTTPS reverse proxy: docker compose --env-file .env -f deploy/compose.yaml up -d --build
+# Start behind your HTTPS reverse proxy: docker compose --env-file .env -f deploy/compose.separate.yaml up -d --build
 services:
   thura:
     build:
@@ -17,7 +17,7 @@ services:
       DATABASE_URL: postgres://thura:${POSTGRES_PASSWORD:?Run scripts/init-compose.py}@postgres:5432/thura?sslmode=disable
       AUTH_SECRET: ${AUTH_SECRET:?Run scripts/init-compose.py}
       LIDZA_MASTER_KEY: ${LIDZA_MASTER_KEY:?Run scripts/init-compose.py}
-      THURA_SETUP_TOKEN: ${THURA_SETUP_TOKEN:?Run scripts/init-compose.py}
+      THURA_SETUP_TOKEN: ${THURA_SETUP_TOKEN:-}
       THURA_POSTFIX_TOKEN: ${THURA_POSTFIX_TOKEN:?Run scripts/init-compose.py}
       DB_MIGRATE: "true"
       LIDZA_ADDR: 0.0.0.0:3000
@@ -68,7 +68,7 @@ services:
       retries: 4
       start_period: 30s
   postgres:
-    image: postgres:17
+    image: postgres:17@sha256:b8faeff7712663c2773a190181e1246e37e364b887611c04658c28b44e2408fe
     restart: unless-stopped
     environment:
       POSTGRES_DB: thura
@@ -82,7 +82,7 @@ services:
       timeout: 5s
       retries: 20
   valkey:
-    image: valkey/valkey:8
+    image: valkey/valkey:8@sha256:640c5e62cea04b6d6f2084232651d0cc70362d31f4f805e7be94dbed6855e8f2
     restart: unless-stopped
     command: ["valkey-server", "--appendonly", "yes"]
     volumes:

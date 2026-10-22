@@ -251,27 +251,6 @@ func (q *Queries) CreateMailboxAlias(ctx context.Context, arg CreateMailboxAlias
 	return i, err
 }
 
-const createMailboxLabel = `-- name: CreateMailboxLabel :one
-INSERT INTO mail_label(mailbox_id,name) VALUES($1,$2) RETURNING id, workspace_id, mailbox_id, name
-`
-
-type CreateMailboxLabelParams struct {
-	MailboxID *string `json:"mailbox_id"`
-	Name      string  `json:"name"`
-}
-
-func (q *Queries) CreateMailboxLabel(ctx context.Context, arg CreateMailboxLabelParams) (MailLabel, error) {
-	row := q.db.QueryRow(ctx, createMailboxLabel, arg.MailboxID, arg.Name)
-	var i MailLabel
-	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.MailboxID,
-		&i.Name,
-	)
-	return i, err
-}
-
 const deleteLabelTags = `-- name: DeleteLabelTags :exec
 DELETE FROM mail_tag WHERE label_id=$1
 `
@@ -296,20 +275,6 @@ func (q *Queries) DeleteMailAttachment(ctx context.Context, arg DeleteMailAttach
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const deleteMailboxLabel = `-- name: DeleteMailboxLabel :exec
-DELETE FROM mail_label l WHERE l.id=$1 AND COALESCE(l.workspace_id,(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=l.mailbox_id))=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=$2)
-`
-
-type DeleteMailboxLabelParams struct {
-	ID        string `json:"id"`
-	MailboxID string `json:"mailbox_id"`
-}
-
-func (q *Queries) DeleteMailboxLabel(ctx context.Context, arg DeleteMailboxLabelParams) error {
-	_, err := q.db.Exec(ctx, deleteMailboxLabel, arg.ID, arg.MailboxID)
-	return err
 }
 
 const findInboundMail = `-- name: FindInboundMail :one
@@ -614,61 +579,6 @@ func (q *Queries) ListMailAttachments(ctx context.Context, itemID string) ([]Mai
 			&i.Size,
 			&i.ObjectKey,
 			&i.ContentID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listMailItems = `-- name: ListMailItems :many
-SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, delivery_reason, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at FROM mail_item WHERE mailbox_id=$1 AND folder=$2 ORDER BY updated_at DESC,id LIMIT 200
-`
-
-type ListMailItemsParams struct {
-	MailboxID string     `json:"mailbox_id"`
-	Folder    MailFolder `json:"folder"`
-}
-
-func (q *Queries) ListMailItems(ctx context.Context, arg ListMailItemsParams) ([]MailItem, error) {
-	rows, err := q.db.Query(ctx, listMailItems, arg.MailboxID, arg.Folder)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []MailItem
-	for rows.Next() {
-		var i MailItem
-		if err := rows.Scan(
-			&i.ID,
-			&i.MailboxID,
-			&i.AuthorID,
-			&i.Folder,
-			&i.FromAddress,
-			&i.ToAddress,
-			&i.Cc,
-			&i.Bcc,
-			&i.Subject,
-			&i.TextBody,
-			&i.HTMLBody,
-			&i.Status,
-			&i.Starred,
-			&i.Unread,
-			&i.ProviderID,
-			&i.DeliveryReason,
-			&i.RawKey,
-			&i.ExternalID,
-			&i.ThreadID,
-			&i.MessageID,
-			&i.InReplyTo,
-			&i.ReferencesHeader,
-			&i.SendAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

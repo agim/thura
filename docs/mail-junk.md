@@ -63,7 +63,7 @@ and Rspamd readiness. Mail provider and receiving choices remain in the existing
 setup wizard; Postfix receiving can still be combined with API-based sending.
 
 The default [compact profile](compact-deployment.md) puts Postfix, Rspamd,
-ClamAV and Valkey under one 1792 MiB / 0.75-vCPU limit. Learning remains in
+ClamAV and Valkey under one 1536 MiB / 0.50-vCPU limit. Learning remains in
 Valkey database 0; app cache and realtime use databases 1 and 2. The complete
 four-container stack has 3584 MiB of limits, leaving 512 MiB for a 4 GiB host.
 Back up the mail queue, signatures, learning volume, database and private storage.

@@ -10,6 +10,22 @@ import (
 	"time"
 )
 
+const countMemberUploads = `-- name: CountMemberUploads :one
+SELECT COUNT(*) FROM upload_session WHERE workspace_id=$1 AND subject=$2 AND completed_at IS NULL AND expires_at>now()
+`
+
+type CountMemberUploadsParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+}
+
+func (q *Queries) CountMemberUploads(ctx context.Context, arg CountMemberUploadsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countMemberUploads, arg.WorkspaceID, arg.Subject)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countPendingNewFiles = `-- name: CountPendingNewFiles :one
 SELECT COUNT(*) FROM upload_session WHERE workspace_id=$1 AND file_id IS NULL AND completed_at IS NULL AND expires_at>now()
 `

@@ -12,8 +12,6 @@ INSERT INTO smip_binding(id,workspace_id,peer,stream,sender,recipient,created_by
 UPDATE smip_binding SET enabled=false WHERE workspace_id=$1 AND id=$2;
 -- name: FindSmipReceipt :one
 SELECT * FROM smip_inbox WHERE origin=$1 AND message_id=$2;
--- name: GetSmipInbox :one
-SELECT * FROM smip_inbox WHERE workspace_id=$1 AND id=$2;
 -- name: LockSmipInbox :one
 SELECT * FROM smip_inbox WHERE workspace_id=$1 AND id=$2 FOR UPDATE;
 -- name: SmipInboxUsage :one

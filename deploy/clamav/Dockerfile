@@ -1,4 +1,4 @@
-FROM alpine:3.23
+FROM alpine:3.23@sha256:21f3e19bafab57a9ff7aa9dd571dac72f868370472c10f450cc0416cc1aca553
 RUN apk add --no-cache clamav clamav-daemon ca-certificates tini \
     && mkdir -p /var/lib/clamav /run/clamav \
     && chown -R clamav:clamav /var/lib/clamav /run/clamav

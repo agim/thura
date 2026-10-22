@@ -273,31 +273,6 @@ func (q *Queries) GetMeeting(ctx context.Context, arg GetMeetingParams) (Meeting
 	return i, err
 }
 
-const getMeetingParticipant = `-- name: GetMeetingParticipant :one
-SELECT guest_invite_id, id, meeting_id, subject, token_expires_at, joined, session_id, updated_at FROM meeting_participant WHERE meeting_id=$1 AND subject=$2
-`
-
-type GetMeetingParticipantParams struct {
-	MeetingID string `json:"meeting_id"`
-	Subject   string `json:"subject"`
-}
-
-func (q *Queries) GetMeetingParticipant(ctx context.Context, arg GetMeetingParticipantParams) (MeetingParticipant, error) {
-	row := q.db.QueryRow(ctx, getMeetingParticipant, arg.MeetingID, arg.Subject)
-	var i MeetingParticipant
-	err := row.Scan(
-		&i.GuestInviteID,
-		&i.ID,
-		&i.MeetingID,
-		&i.Subject,
-		&i.TokenExpiresAt,
-		&i.Joined,
-		&i.SessionID,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const joinMeetingSession = `-- name: JoinMeetingSession :exec
 UPDATE meeting_participant SET joined=true,session_id=$3,updated_at=now() WHERE meeting_id=$1 AND subject=$2
 `

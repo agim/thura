@@ -9,6 +9,8 @@ SELECT COUNT(*) FROM drive_folder WHERE workspace_id=$1;
 SELECT COUNT(*) FROM upload_session WHERE workspace_id=$1 AND file_id IS NULL AND completed_at IS NULL AND expires_at>now();
 -- name: CountWorkspaceUploads :one
 SELECT COUNT(*) FROM upload_session WHERE workspace_id=$1 AND completed_at IS NULL AND expires_at>now();
+-- name: CountMemberUploads :one
+SELECT COUNT(*) FROM upload_session WHERE workspace_id=$1 AND subject=$2 AND completed_at IS NULL AND expires_at>now();
 -- name: GetUploadChunk :one
 SELECT * FROM upload_chunk WHERE session_id=$1 AND number=$2;
 -- name: ListExpiredUploads :many

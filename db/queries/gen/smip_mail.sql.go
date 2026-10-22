@@ -352,41 +352,6 @@ func (q *Queries) ListMailDeliveries(ctx context.Context, transmissionID string)
 	return items, nil
 }
 
-const listSmipMailDomains = `-- name: ListSmipMailDomains :many
-SELECT id, origin, domain, state, ever_verified, endpoint, document, reason, checked_at, expires_at FROM smip_mail_domain WHERE origin=$1 ORDER BY domain LIMIT 1000
-`
-
-func (q *Queries) ListSmipMailDomains(ctx context.Context, origin string) ([]SmipMailDomain, error) {
-	rows, err := q.db.Query(ctx, listSmipMailDomains, origin)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SmipMailDomain
-	for rows.Next() {
-		var i SmipMailDomain
-		if err := rows.Scan(
-			&i.ID,
-			&i.Origin,
-			&i.Domain,
-			&i.State,
-			&i.EverVerified,
-			&i.Endpoint,
-			&i.Document,
-			&i.Reason,
-			&i.CheckedAt,
-			&i.ExpiresAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const lockMailTransmission = `-- name: LockMailTransmission :one
 SELECT id, origin, workspace_id, mailbox_id, item_id, author_id, payload, provider_config, origin_key, state, api_state, api_attempt_id, api_result, reason, next_attempt, created_at, updated_at FROM mail_transmission WHERE id=$1 FOR UPDATE
 `

@@ -79,6 +79,10 @@ func CheckFolder(ctx context.Context, queries *q.Queries, w string, id *string) 
 	}
 	return err
 }
+
+// MaxMemberUploads bounds the pending upload sessions one member may hold in a workspace.
+const MaxMemberUploads = 20
+
 func Begin(ctx context.Context, w string, in schema.UploadInput) (schema.UploadState, error) {
 	if err := workspace.RequireMember(ctx, w); err != nil {
 		return schema.UploadState{}, err
@@ -108,6 +112,14 @@ func Begin(ctx context.Context, w string, in schema.UploadInput) (schema.UploadS
 	}
 	if activeCount >= 100 {
 		return schema.UploadState{}, router.Errorf(409, "at most 100 pending uploads per workspace")
+	}
+	// One member cannot reserve the workspace quota alone with abandoned sessions.
+	memberCount, err := queries.CountMemberUploads(ctx, q.CountMemberUploadsParams{WorkspaceID: w, Subject: auth.CurrentUser(ctx).ID})
+	if err != nil {
+		return schema.UploadState{}, err
+	}
+	if memberCount >= MaxMemberUploads {
+		return schema.UploadState{}, router.Errorf(429, "at most %d pending uploads per member; finish or wait for them to expire", MaxMemberUploads)
 	}
 	if in.FileID == nil {
 		count, xerr := queries.CountWorkspaceFiles(ctx, w)

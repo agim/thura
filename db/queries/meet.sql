@@ -20,8 +20,6 @@ INSERT INTO meeting_participant(meeting_id,subject,token_expires_at) VALUES($1,$
 UPDATE meeting_participant SET joined=true,session_id=$3,updated_at=now() WHERE meeting_id=$1 AND subject=$2;
 -- name: LeaveMeetingSession :exec
 UPDATE meeting_participant SET joined=false,updated_at=now() WHERE meeting_id=$1 AND subject=$2 AND session_id=$3;
--- name: GetMeetingParticipant :one
-SELECT * FROM meeting_participant WHERE meeting_id=$1 AND subject=$2;
 -- name: ListRevokedMeetingParticipants :many
 SELECT p.*,m.workspace_id FROM meeting_participant p JOIN meeting m ON m.id=p.meeting_id
 WHERE (p.joined OR p.token_expires_at > now()) AND (m.ended_at IS NOT NULL OR

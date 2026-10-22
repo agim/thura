@@ -97,7 +97,7 @@ function ChatConversation({ room, manager, onMeet, initialSearch }: { initialSea
     setGap(previous => timeline.data.gap || previous)
     setCursor(previous => previous === null ? timeline.data.next || '' : previous)
   }, [timeline.data, denied])
-  const send = useMutation({ mutationFn: (id: string) => api.sendChatMessage(params, { body, transactionId: id, replyTo: replyTo || undefined }), onSuccess: async () => { setBody(''); setTransactionId(''); setReplyTo(''); await timeline.refetch() } })
+  const send = useMutation({ mutationFn: (sent: { id: string; body: string; replyTo: string }) => api.sendChatMessage(params, { body: sent.body, transactionId: sent.id, replyTo: sent.replyTo || undefined }), onSuccess: async (_, sent) => { setBody(b => b === sent.body ? '' : b); setTransactionId(t => t === sent.id ? '' : t); setReplyTo(r => r === sent.replyTo ? '' : r); await timeline.refetch() } })
   const keep = (items: ChatMessage[]) => {
     for (const item of items) seen.current.set(item.id, item)
     setHistory([...seen.current.values()])
@@ -141,7 +141,7 @@ function ChatConversation({ room, manager, onMeet, initialSearch }: { initialSea
       </li>
     })}</ol></div>
     <div className="chat-compose-dock">
-    <form className="chat-composer" onSubmit={e => { e.preventDefault(); if (!body.trim() || send.isPending || timeline.isError) return; followLatest.current = true; const id = transactionId || crypto.randomUUID(); setTransactionId(id); send.mutate(id) }}>
+    <form className="chat-composer" onSubmit={e => { e.preventDefault(); if (!body.trim() || send.isPending || timeline.isError) return; followLatest.current = true; const id = transactionId || crypto.randomUUID(); setTransactionId(id); send.mutate({ id, body, replyTo }) }}>
     {replyTo && <div className="reply-preview"><span>Replying to <strong>{all.find(m => m.id === replyTo)?.body || 'Earlier message'}</strong></span><ActionButton type="button" onClick={() => setReplyTo('')}>Clear reply</ActionButton></div>}
     <label><span className="sr-only">Message</span><textarea placeholder={`Message ${room.direct ? '' : '# '}${room.name}`} rows={2} required maxLength={10000} value={body} onChange={e => { setBody(e.target.value); setTransactionId('') }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }} /></label><ActionButton variant="primary" className="primary" aria-label="Send message" disabled={!body.trim() || send.isPending || timeline.isError}><Send size={18} /></ActionButton></form>
     <ActionRow label="Chat actions" className="composer-tools">    <CompactDisclosure icon={<Paperclip size={18} />} label="Share a file" completion={fileSend.isSuccess ? fileSend.submittedAt : 0}><form className="row" onSubmit={e => { e.preventDefault(); const id = fileTransaction || crypto.randomUUID(); setFileTransaction(id); fileSend.mutate(id) }}><label>Share a Drive file<SelectControl required value={fileId} onChange={e => { setFileId(e.target.value); setFileTransaction('') }}><option value="">Select a file</option>{drive.data?.files.filter(f => !f.trashed).map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</SelectControl></label><ActionButton disabled={!fileId || fileSend.isPending || denied}>Send file</ActionButton>{fileSend.error && <p role="alert">{userError(fileSend.error)}</p>}<p>This sends a copy to the room and any invited remote servers. Revoking a Drive share does not recall this copy.</p></form></CompactDisclosure>

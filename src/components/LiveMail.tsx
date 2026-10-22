@@ -53,15 +53,14 @@ function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, quer
   const accessLost = detail.error instanceof ApiError && detail.error.status >= 400 && detail.error.status < 500 && detail.error.status !== 429
   const current = accessLost ? undefined : detail.data?.item
   const visible = list.isError ? [] : [...new Map(list.data?.pages.flatMap(page => page.items).map(item => [item.id, item]) ?? []).values()]
-  const failure = list.error ?? detail.error ?? compose.error ?? flags.error ?? undo.error
+  // One draft per click: Reply, Reply all, Forward and the assistant's insertion share a pending guard.
+  const reply = useMutation({ mutationFn: async ({ all, forward, text }: { all?: boolean; forward?: boolean; text?: string }) => {
+    if (!current) throw new Error('Select a message first.')
+    const draft = await api.createMailDraft({ workspaceId, mailboxId }, forward ? { forwardId: current.id, to: '' } : { replyId: current.id, replyAll: all })
+    return text === undefined ? draft : api.updateMailDraft({ workspaceId, mailboxId, id: draft.id }, { to: draft.toAddress, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, threadId: draft.threadId, text, html: plainToHTML(text) })
+  }, onSuccess: async i => { setEditing(i); setSelected(i.id); setFolder('drafts'); await refresh() } })
+  const failure = list.error ?? detail.error ?? compose.error ?? flags.error ?? undo.error ?? reply.error
   async function download(id: string) { try { downloadContent(await api.downloadMailAttachment({ workspaceId, mailboxId, id: selected, attachmentId: id })) } catch(e) { setReaderError(String(e)) } }
-  async function reply(all = false, forward = false) {
-    if (!current) return
-    try {
-      const i = await api.createMailDraft({ workspaceId, mailboxId }, forward ? { forwardId: current.id, to: '' } : { replyId: current.id, replyAll: all })
-      setEditing(i); setSelected(i.id); setFolder('drafts'); await refresh()
-    } catch (e) { setReaderError(String(e)) }
-  }
   function messageCommands(item:MailItem):ContextCommand[] { return [
     {label:'Open message',icon:<Inbox size={16}/>,run:()=>{setSelected(item.id);setEditing(item.status==='draft'?item:null);if(item.unread)flags.mutate({id:item.id,values:{unread:false}})}},
     {label:item.unread?'Mark as read':'Mark as unread',icon:<Inbox size={16}/>,disabled:flags.isPending,run:()=>flags.mutate({id:item.id,values:{unread:!item.unread}})},
@@ -90,7 +89,7 @@ function MailView({ workspaceId, mailboxId, initialDraft, initialMessageId, quer
           {detail.data?.screening && <MailScreening workspaceId={workspaceId} mailboxId={mailboxId} id={current.id} screening={detail.data.screening} onChange={refresh} />}
           <MailReader key={`reader:${current.id}`} workspaceId={workspaceId} mailboxId={mailboxId} id={current.id} html={current.htmlBody} text={current.textBody} attachments={detail.data?.attachments || []} />
           {detail.data?.attachments.map(a => <ActionButton disabled={!!detail.data?.screening && !['clean','released','not_screened'].includes(detail.data.screening.state)} className="attachment" key={a.id} onClick={() => void download(a.id)}>Download {a.name} · {Math.ceil(a.size / 1024)} KB</ActionButton>)}
-          <ActionRow label="Message actions" className="replybar"><AssistantAction key={current.id} workspaceId={workspaceId} source="mail" content={`${current.subject}\nFrom: ${current.fromAddress}\n${current.textBody || richHTMLText(current.htmlBody)}`} contextLabel={current.subject || "Open email"} useLabel="Insert into reply" onUse={async text => { const draft = await api.createMailDraft({ workspaceId, mailboxId }, { replyId: current.id }); const updated = await api.updateMailDraft({ workspaceId, mailboxId, id: draft.id }, { to: draft.toAddress, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, threadId: draft.threadId, text, html: plainToHTML(text) }); setEditing(updated); setSelected(updated.id); setFolder("drafts"); await refresh() }} /><ActionButton aria-label="Reply" onClick={() => void reply()}><Reply size={18} aria-hidden="true" /><span className="action-label">Reply</span></ActionButton><ActionButton aria-label="Reply all" onClick={() => void reply(true)}><ReplyAll size={18} aria-hidden="true" /><span className="action-label">Reply all</span></ActionButton><ActionButton aria-label="Forward" onClick={() => void reply(false, true)}><Forward size={18} aria-hidden="true" /><span className="action-label">Forward</span></ActionButton>
+          <ActionRow label="Message actions" className="replybar"><AssistantAction key={current.id} workspaceId={workspaceId} source="mail" content={`${current.subject}\nFrom: ${current.fromAddress}\n${current.textBody || richHTMLText(current.htmlBody)}`} contextLabel={current.subject || "Open email"} useLabel="Insert into reply" onUse={text => { if (!reply.isPending) reply.mutate({ text }) }} /><ActionButton aria-label="Reply" disabled={reply.isPending} onClick={() => reply.mutate({})}><Reply size={18} aria-hidden="true" /><span className="action-label">Reply</span></ActionButton><ActionButton aria-label="Reply all" disabled={reply.isPending} onClick={() => reply.mutate({ all: true })}><ReplyAll size={18} aria-hidden="true" /><span className="action-label">Reply all</span></ActionButton><ActionButton aria-label="Forward" disabled={reply.isPending} onClick={() => reply.mutate({ forward: true })}><Forward size={18} aria-hidden="true" /><span className="action-label">Forward</span></ActionButton>
           <MailConversation key={`conversation:${current.id}`} scope={{ workspaceId, mailboxId }} item={current} onSelect={i => { setSelected(i.id); setEditing(i.status === 'draft' ? i : null) }} /></ActionRow>
         </> : <p className="empty">Select a message or compose a new one.</p>}
       </section>
@@ -122,9 +121,29 @@ function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorP
   const attachmentInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
   const [state, setState] = useState('Draft loaded')
+  // Unsaved edits stay in this tab's session store until the server has them,
+  // keyed per draft like DriveDocumentEditor's recovery, so a failed flush on
+  // unmount (folder change, another message, app switch) loses nothing.
+  const recoveryKey = `thura:mail-draft:${workspaceId}:${mailboxId}:${item.id}`
+  const base = useRef(item.updatedAt)
+  const latest = useRef<DraftInput | null>(null)
+  function remember(value: DraftInput | null) {
+    latest.current = value
+    try { if (value === null) sessionStorage.removeItem(recoveryKey); else sessionStorage.setItem(recoveryKey, JSON.stringify({ updatedAt: base.current, input: value })) } catch { /* Explicit saves remain available. */ }
+  }
   const [autosave] = useState(() => new DraftAutosave(item,
-    body => api.updateMailDraft({ workspaceId, mailboxId, id: item.id }, body),
-    (next, failure) => { setState(next); setError(failure) }))
+    async body => { const saved = await api.updateMailDraft({ workspaceId, mailboxId, id: item.id }, body); base.current = saved.updatedAt; if (latest.current) remember(latest.current); return saved },
+    (next, failure) => { setState(next); setError(failure); if (next === 'Draft saved') remember(null) }))
+  const started = useRef(false)
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    try {
+      const copy = JSON.parse(sessionStorage.getItem(recoveryKey) || 'null')
+      if (copy && copy.updatedAt === item.updatedAt && copy.input && typeof copy.input === 'object') { const next = copy.input as DraftInput; setInput(next); setExtraRecipients(v => v || !!(next.cc || next.bcc)); setEditorRevision(v => v + 1); autosave.update(next); setState('Recovered unsaved changes') }
+      else if (copy) sessionStorage.removeItem(recoveryKey)
+    } catch { /* An unavailable local recovery store must not block editing. */ }
+  })
   const detail = useQuery({ queryKey: ['mail-detail', item.id], queryFn: () => api.getMail({ workspaceId, mailboxId, id: item.id }) })
   const client = useQueryClient()
   const save = useMutation({ mutationFn: () => autosave.flush() })
@@ -141,6 +160,7 @@ function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorP
   function change(field: keyof DraftInput, value: string) {
     const next = { ...input, [field]: value }
     setInput(next)
+    remember(next)
     autosave.update(next)
   }
   function submit(e: FormEvent) { e.preventDefault(); setError(''); send.mutate() }
@@ -149,8 +169,8 @@ function LoadedDraftEditor({ item, workspaceId, mailboxId, saved }: DraftEditorP
     <div className="composer-recipient-row"><RecipientInput inlineLabel workspaceId={workspaceId} label="To" disabled={send.isPending} value={input.to ?? ''} onChange={value => change('to', value)} /><ActionButton type="button" className="recipient-toggle" aria-expanded={extraRecipients} onClick={() => setExtraRecipients(v => !v)}>Cc / Bcc</ActionButton></div>
     {extraRecipients && <div className="recipient-extras">{([['cc', 'Cc'], ['bcc', 'Bcc']] as const).map(([field, label]) => <RecipientInput inlineLabel key={field} workspaceId={workspaceId} label={label} disabled={send.isPending} value={input[field] ?? ''} onChange={value => change(field, value)} />)}</div>}
     <label>Subject<input disabled={send.isPending} value={input.subject ?? ''} onChange={e => change('subject', e.target.value)} /></label>
-    <RichTextEditor key={editorRevision} label="Message" disabled={send.isPending} html={input.html} text={input.text} onChange={(html, text) => { const next = { ...input, html, text }; setInput(next); autosave.update(next) }} />
-    <InlineWritingAssistant workspaceId={workspaceId} source="mail" initialAction="draft" content={`Subject: ${input.subject || ''}\nTo: ${input.to || ''}\n\n${input.text || ''}`} contextLabel="Current draft" useLabel="Replace message" onUse={text => { const next = { ...input, text, html: plainToHTML(text) }; setInput(next); autosave.update(next); setEditorRevision(v => v + 1) }} />
+    <RichTextEditor key={editorRevision} label="Message" disabled={send.isPending} html={input.html} text={input.text} onChange={(html, text) => { const next = { ...input, html, text }; setInput(next); remember(next); autosave.update(next) }} />
+    <InlineWritingAssistant workspaceId={workspaceId} source="mail" initialAction="draft" content={`Subject: ${input.subject || ''}\nTo: ${input.to || ''}\n\n${input.text || ''}`} contextLabel="Current draft" useLabel="Replace message" onUse={text => { const next = { ...input, text, html: plainToHTML(text) }; setInput(next); remember(next); autosave.update(next); setEditorRevision(v => v + 1) }} />
     <label className="visually-hidden">Attachments<input ref={attachmentInput} type="file" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (file) upload.mutate(file); e.target.value = '' }} /></label>
     <ul>{detail.data?.attachments.map(a => <li key={a.id}>{a.name} <ActionButton type="button" aria-label={`Remove ${a.name}`} disabled={busy} onClick={() => removeAttachment.mutate(a.id)}><X size={14} aria-hidden="true" /></ActionButton></li>)}</ul>
     {(failure || error) && <p role="alert">{failure?.message || error}</p>}

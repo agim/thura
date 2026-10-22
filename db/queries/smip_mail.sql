@@ -1,7 +1,5 @@
 -- name: GetSmipMailDomain :one
 SELECT * FROM smip_mail_domain WHERE origin=$1 AND domain=$2;
--- name: ListSmipMailDomains :many
-SELECT * FROM smip_mail_domain WHERE origin=$1 ORDER BY domain LIMIT 1000;
 -- name: CountSmipMailDomains :one
 SELECT COUNT(*) AS total,COUNT(*) FILTER (WHERE ever_verified OR expires_at>$2) AS live FROM smip_mail_domain WHERE origin=$1;
 -- name: EvictSmipMailDomains :execrows

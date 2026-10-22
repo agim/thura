@@ -28,8 +28,9 @@ export function RecurrenceControl({ value, onChange, start, zone, allDay, disabl
     if (next.interval > 1) parts.push(`INTERVAL=${next.interval}`)
     if (next.frequency === 'WEEKLY') parts.push(`BYDAY=${next.days.join(',')}`)
     if (next.ending === 'date') {
+      // RFC 5545: UNTIL is a DATE when DTSTART is a DATE, otherwise a UTC date-time.
       const until = DateTime.fromISO(next.until, { zone: allDay ? 'UTC' : zone }).endOf('day').toUTC()
-      parts.push(`UNTIL=${until.toFormat("yyyyMMdd'T'HHmmss'Z'")}`)
+      parts.push(`UNTIL=${allDay ? next.until.replace(/-/g, '') : until.toFormat("yyyyMMdd'T'HHmmss'Z'")}`)
     } else parts.push(`COUNT=${next.count}`)
     onChange(parts.join(';'))
   }
@@ -42,7 +43,7 @@ export function RecurrenceControl({ value, onChange, start, zone, allDay, disabl
       {schedule.frequency === 'WEEKLY' && <fieldset className="repeat-weekdays"><legend>Repeat on</legend><div>{weekdays.map(([key, name]) => <button key={key} type="button" aria-label={name} aria-pressed={schedule.days.includes(key)} disabled={disabled || (schedule.days.length === 1 && schedule.days.includes(key))} onClick={() => change({ days: schedule.days.includes(key) ? schedule.days.filter(day => day !== key) : [...schedule.days, key] })}>{name.slice(0, 2)}</button>)}</div></fieldset>}
       {schedule.frequency === 'MONTHLY' && <p className="field-help">On day {startDate.day} of each month. Months without this day are skipped.</p>}
       <label>Ends<SelectControl aria-label="Repeat ends" disabled={disabled} value={schedule.ending} onChange={event => change({ ending: event.target.value as Schedule['ending'] })}><option value="count">After a number of occurrences</option><option value="date">On a date</option></SelectControl></label>
-      {schedule.ending === 'count' ? <label>Occurrences<input aria-label="Occurrences" type="number" min={1} max={1000} disabled={disabled} value={schedule.count} onChange={event => change({ count: Math.max(1, Math.min(1000, Number(event.target.value) || 1)) })} /></label> : <label>End date<DateTimeControl type="date" aria-label="Repeat end date" disabled={disabled} value={schedule.until} min={start.slice(0, 10)} max={startDate.plus({ years: 10 }).toISODate() || undefined} onChange={event => { if (event.target.value) change({ until: event.target.value }) }} /></label>}
+      {schedule.ending === 'count' ? <label>Occurrences<input aria-label="Occurrences" type="number" min={1} max={1000} disabled={disabled} value={schedule.count} onChange={event => change({ count: Math.max(1, Math.min(1000, Number(event.target.value) || 1)) })} /></label> : <label>End date<DateTimeControl type="date" aria-label="Repeat end date" disabled={disabled} value={schedule.until} min={start.slice(0, 10)} max={startDate.plus({ years: 10 }).minus({ days: 1 }).toISODate() || undefined} onChange={event => { if (event.target.value) change({ until: event.target.value }) }} /></label>}
       <p className="field-help">Repeats {schedule.interval > 1 ? `every ${schedule.interval} ${frequencies.find(([key]) => key === schedule.frequency)?.[2]}` : frequencies.find(([key]) => key === schedule.frequency)?.[1].toLowerCase()}{schedule.frequency === 'WEEKLY' ? ` on ${weekdays.filter(([key]) => schedule.days.includes(key)).map(([, name]) => name).join(', ')}` : ''}{schedule.ending === 'count' ? `, ${schedule.count} occurrence${schedule.count === 1 ? '' : 's'} including the first event.` : `, through ${DateTime.fromISO(schedule.until).toFormat('MMM d, yyyy')}.`}</p>
     </>}
     {disabled && <p className="field-help">Choose Entire series to change when this event repeats.</p>}
