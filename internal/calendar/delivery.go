@@ -92,7 +92,10 @@ func inviteTx(ctx context.Context, tx pgx.Tx, queries *q.Queries, w string, e q.
 		return out, err
 	}
 	for _, a := range attendees {
+		// stored is the copy filed in a shared mailbox: the guest meeting
+		// PIN and the reply grant go only to the attendee.
 		text := "Calendar event: " + e.Title + "\nOrganizer: " + e.Organizer + "\n\nOpen the attached calendar file."
+		stored := text
 		if e.MeetingID != nil {
 			invite, xerr := queries.MeetingInviteByEvent(ctx, e.ID)
 			if xerr == nil && invite.MeetingID == *e.MeetingID {
@@ -101,10 +104,13 @@ func inviteTx(ctx context.Context, tx pgx.Tx, queries *q.Queries, w string, e q.
 					return out, xerr
 				}
 				text += "\n\n" + instructions
+				stored += "\n\n[guest meeting instructions sent to " + a.Email + "]"
 			} else if xerr != nil && !errors.Is(xerr, pgx.ErrNoRows) {
 				return out, xerr
 			} else {
-				text += "\n\nMeeting: " + tenancy.Link(ctx, w, "/app?workspace="+w+"&meeting="+*e.MeetingID) + "\nOnly current workspace members can join."
+				members := "\n\nMeeting: " + tenancy.Link(ctx, w, "/app?workspace="+w+"&meeting="+*e.MeetingID) + "\nOnly current workspace members can join."
+				text += members
+				stored += members
 			}
 		}
 		if !e.Cancelled {
@@ -121,8 +127,10 @@ func inviteTx(ctx context.Context, tx pgx.Tx, queries *q.Queries, w string, e q.
 				return out, err
 			}
 			text += "\n\nReply for " + a.Email + ": " + tenancy.Link(ctx, w, "/rsvp#"+token) + "\nThis link grants access to this event only and expires in 30 days."
+			stored += "\n\n[reply link sent to " + a.Email + "]"
 		}
-		_, err = teammail.SendTx(ctx, tx, w, auth.CurrentUser(ctx).ID, mail.Message{To: a.Email, ReplyTo: e.Organizer, Subject: subject, Text: text, Attachments: []mail.Attachment{{Name: "event.ics", ContentType: "text/calendar; method=" + method + "; charset=utf-8", Data: content}}})
+		msg := mail.Message{To: a.Email, ReplyTo: e.Organizer, Subject: subject, Text: text, Attachments: []mail.Attachment{{Name: "event.ics", ContentType: "text/calendar; method=" + method + "; charset=utf-8", Data: content}}}
+		_, err = teammail.SendTx(ctx, tx, w, auth.CurrentUser(ctx).ID, teammail.Notice{Message: msg, Stored: &mail.Message{Subject: subject, Text: stored}})
 		if err != nil {
 			return out, err
 		}
