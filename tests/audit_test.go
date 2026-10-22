@@ -12,7 +12,10 @@ import (
 	"github.com/agim/lidza/packs/audit"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
+	"github.com/agim/lidza/packs/mail"
 	"thura/app"
+	"thura/internal/mailbox"
+	"thura/internal/smipmail"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -165,15 +168,18 @@ func TestWorkspaceAuditAuthorizationPagingAndRollback(t *testing.T) {
 	if _, err := pool.Exec(ctx, "CREATE TRIGGER "+function+" BEFORE INSERT ON audit_event FOR EACH ROW WHEN (NEW.scope='"+w.ID+"' AND NEW.action='invitation.create' AND NEW.outcome='ok') EXECUTE FUNCTION "+function+"()"); err != nil {
 		t.Fatal(err)
 	}
+	// Only mail jobs count: the jobs pack's schedules insert their own rows
+	// into the job table every minute, independently of this request.
+	mailKinds := []string{mail.JobKind, mailbox.DeliveryJob, smipmail.DispatchJob}
 	var before, after int
-	if err := pool.QueryRow(ctx, "SELECT count(*) FROM job").Scan(&before); err != nil {
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM job WHERE kind = ANY($1)", mailKinds).Scan(&before); err != nil {
 		t.Fatal(err)
 	}
 	request("POST", base+"/invitations", schema.InviteInput{Email: "rolled-back@example.com", Role: schema.WorkspaceRoleMember}, nil, 500)
 	if err := pool.QueryRow(ctx, "SELECT count(*) FROM invitation WHERE workspace_id=$1 AND email='rolled-back@example.com'", w.ID).Scan(&after); err != nil || after != 0 {
 		t.Fatalf("failed audit left an invitation: %d %v", after, err)
 	}
-	if err := pool.QueryRow(ctx, "SELECT count(*) FROM job").Scan(&after); err != nil || after != before {
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM job WHERE kind = ANY($1)", mailKinds).Scan(&after); err != nil || after != before {
 		t.Fatalf("failed audit queued a mail job: %d -> %d %v", before, after, err)
 	}
 	request("GET", base+"/audit?action=invitation.create&outcome=failed", nil, &filtered, 200)
