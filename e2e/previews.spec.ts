@@ -40,6 +40,47 @@ test('private image preview survives reload and never exposes a public storage U
   }
 })
 
+test('a rendered HTML file keeps harmless styles but cannot cover the screen with an invisible link', async ({ page }) => {
+  await signIn(page)
+  const name = `overlay-${Date.now()}.html`
+  const source = '<p style="text-align:center;position:fixed;inset:0;opacity:0">Agenda</p><a href="https://example.invalid/claim" target="_blank" style="position:fixed;inset:0;z-index:99999;opacity:0;transform:scale(4)">Claim prize</a><script>window.previewExecuted = true</script><p style="color:#c00;font-weight:bold">Private notes.</p>'
+  await page.getByLabel('Upload file', { exact: true }).setInputFiles({ name, mimeType: 'text/html', buffer: Buffer.from(source) })
+  await expect(page.getByRole('button', { name: `Download ${name}`, exact: true })).toBeVisible()
+  const files = await (await page.request.get(workspace + '/drive')).json()
+  const file = files.files.find((f: { name: string }) => f.name === name)
+  expect(file).toBeDefined()
+  const path = workspace + '/drive/files/' + file.id
+  const remoteRequests: string[] = []
+  page.on('request', request => { if (request.url().includes('example.invalid')) remoteRequests.push(request.url()) })
+  try {
+    // Phones open HTML files in the read-only renderer rather than the editor.
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.reload()
+    await page.getByRole('button', { name, exact: true }).click()
+    const rendered = page.locator('.drive-rendered-file')
+    const link = rendered.getByRole('link', { name: 'Claim prize', exact: true })
+    await expect(link).toBeVisible()
+    expect(await link.getAttribute('style')).toBeNull()
+    await expect(link).toHaveCSS('position', 'static')
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    await expect(link).toHaveAttribute('target', '_blank')
+    const box = (await link.boundingBox())!
+    expect(box.width).toBeLessThan(200)
+    expect(box.height).toBeLessThan(60)
+    expect(await rendered.locator('p').first().getAttribute('style')).toBe('text-align: center')
+    expect(await rendered.locator('p').last().getAttribute('style')).toBe('color: #c00; font-weight: bold')
+    expect(await page.evaluate(() => 'previewExecuted' in window)).toBe(false)
+    // A tap in the middle of the screen lands on the page, never on a link.
+    expect(await page.evaluate(() => document.elementFromPoint(innerWidth / 2, innerHeight / 2)?.closest('a')?.tagName ?? null)).toBeNull()
+    expect(remoteRequests).toEqual([])
+    await page.getByRole('button', { name: 'Back to Drive', exact: true }).click()
+    await expect(rendered).toHaveCount(0)
+  } finally {
+    expect((await page.request.patch(path, { data: { trashed: true } })).status()).toBe(200)
+    expect((await page.request.delete(path, { headers: { 'Sec-Fetch-Site': 'same-origin' } })).status()).toBe(204)
+  }
+})
+
 test('text preview stays inert, refreshes after a new version, and explains unsupported files', async ({ page }) => {
   await signIn(page)
   const name = `text-preview-${Date.now()}.txt`

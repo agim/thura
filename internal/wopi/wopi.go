@@ -17,6 +17,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"path"
@@ -134,6 +135,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == "GET" && contents {
+		// Collabora fetches the bytes server-side. A browser navigation to this
+		// URL would run an uploaded HTML file on Thura's origin with the
+		// visitor's session; GetFile is never a page.
+		if navigation(r) {
+			router.Error(w, 404, "File unavailable")
+			return
+		}
 		data, e := drive.Content(ctx, g.f, 0)
 		if e != nil {
 			writeError(w, e)
@@ -144,7 +152,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			writeError(w, e)
 			return
 		}
-		w.Header().Set("Content-Type", g.f.ContentType)
+		// WOPI GetFile is raw bytes; the format comes from CheckFileInfo's
+		// BaseFileName, so the client-supplied content type never reaches the
+		// browser as a renderable type.
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", attachment(g.f.Name))
+		w.Header().Set("Content-Security-Policy", "sandbox; default-src 'none'")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-WOPI-ItemVersion", version(g.f))
 		if _, e = w.Write(raw); e != nil {
 			lidza.Log(ctx).Error("document read interrupted", "error", e)
@@ -180,6 +194,18 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		writeError(w, e)
 	}
+}
+func navigation(r *http.Request) bool {
+	return r.Header.Get("Sec-Fetch-Dest") == "document" || r.Header.Get("Sec-Fetch-Mode") == "navigate"
+}
+
+// attachment is an RFC 6266 Content-Disposition for name: quoted or RFC 2231
+// encoded by FormatMediaType, so no file name can shape the header.
+func attachment(name string) string {
+	if header := mime.FormatMediaType("attachment", map[string]string{"filename": name}); header != "" {
+		return header
+	}
+	return "attachment"
 }
 func writeError(w http.ResponseWriter, e error) {
 	var failure *router.HTTPError

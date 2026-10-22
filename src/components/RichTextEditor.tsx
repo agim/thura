@@ -5,7 +5,7 @@ import { TableKit } from '@tiptap/extension-table'
 import TextAlign from '@tiptap/extension-text-align'
 import Highlight from '@tiptap/extension-highlight'
 import { TextStyleKit } from '@tiptap/extension-text-style'
-import DOMPurify from 'dompurify'
+import DOMPurify, { type DOMPurify as Purifier } from 'dompurify'
 import { Bold, Italic, Underline, List, ListOrdered, Link2, Unlink, Undo2, Redo2, RemoveFormatting, Quote, AlignLeft, AlignCenter, AlignRight, Table2, Highlighter, Minus, Strikethrough } from 'lucide-react'
 import { ActionButton } from './ActionButton'
 import { ActionRow } from './ActionRow'
@@ -13,11 +13,44 @@ import { SelectControl } from './SelectControl'
 import { WorkspaceDialog } from './WorkspaceDialog'
 
 const tags = ['p', 'br', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'a', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'hr', 'pre', 'code', 'table', 'tbody', 'tr', 'th', 'td', 'mark', 'span']
+/** The editor's own profile: Tiptap keeps only the styles its extensions declare, so `style` is safe inside ProseMirror. */
 export const cleanRichHTML = (html: string) => DOMPurify.sanitize(html, { ALLOWED_TAGS: tags, ALLOWED_ATTR: ['href', 'target', 'rel', 'style', 'colspan', 'rowspan'], ALLOW_DATA_ATTR: false })
+// Styles a displayed document may keep. Anything that positions, layers, hides
+// or transforms content (position, inset, z-index, opacity, transform…) is
+// dropped: an uploaded file must never cover the screen with an invisible link.
+const renderedStyles = new Set(['text-align', 'color', 'background-color', 'font-weight', 'font-style', 'text-decoration'])
+const styleValue = /^[a-z0-9#%.,()\s-]+$/i
+function renderedStyle(declarations: string) {
+  return declarations.split(';').flatMap(declaration => {
+    const colon = declaration.indexOf(':')
+    const name = declaration.slice(0, colon).trim().toLowerCase()
+    const value = declaration.slice(colon + 1).trim()
+    return colon > 0 && renderedStyles.has(name) && styleValue.test(value) && !/\b(url|expression|var)\s*\(/i.test(value) ? [`${name}: ${value}`] : []
+  }).join('; ')
+}
+let renderer: Purifier | undefined
+// A separate DOMPurify instance so the hooks never touch the editor profile; created on first use (a prerender has no window).
+function renderPurifier() {
+  if (renderer) return renderer
+  renderer = DOMPurify(window)
+  renderer.addHook('uponSanitizeAttribute', (_node, event) => {
+    if (event.attrName !== 'style') return
+    event.attrValue = renderedStyle(event.attrValue)
+    event.keepAttr = event.attrValue !== ''
+  })
+  renderer.addHook('afterSanitizeAttributes', node => {
+    if (!node.hasAttribute('target')) return
+    node.setAttribute('target', '_blank')
+    node.setAttribute('rel', 'noopener noreferrer')
+  })
+  return renderer
+}
+/** The display profile for HTML this app did not author (uploaded or imported Drive files, stored descriptions): the editor's tags, an allowlist of harmless styles, and links that cannot reach their opener. */
+export const cleanRenderedHTML = (html: string) => renderPurifier().sanitize(html, { ALLOWED_TAGS: tags, ALLOWED_ATTR: ['href', 'target', 'rel', 'style', 'colspan', 'rowspan'], ALLOW_DATA_ATTR: false })
 export function plainToHTML(text: string) { return text.split('\n').map(line => `<p>${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`).join('') }
 export function richHTMLText(html: string) { return DOMPurify.sanitize(cleanRichHTML(html).replace(/<\/(p|li|h[1-6]|tr)>/gi, '</$1>\n').replace(/<br\s*\/?\s*>/gi, '\n'), { RETURN_DOM_FRAGMENT: true }).textContent || '' }
 export function RichContent({ html, text }: { html?: string; text: string }) {
-  return html ? <div className="rich-content" dangerouslySetInnerHTML={{ __html: cleanRichHTML(html) }} /> : <div className="rich-content plain-content">{text}</div>
+  return html ? <div className="rich-content" dangerouslySetInnerHTML={{ __html: cleanRenderedHTML(html) }} /> : <div className="rich-content plain-content">{text}</div>
 }
 /** One editing surface; compact for correspondence, expanded for Drive documents. */
 export function RichTextEditor({ label, html, text = '', onChange, disabled = false, full = false }: {

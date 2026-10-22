@@ -8,7 +8,7 @@ import { OfficeEditor } from './OfficeEditor'
 import { officeFormat } from './OfficeConversion'
 import { DriveDocumentEditor } from './DriveDocumentEditor'
 import { ActionButton } from './ActionButton'
-import { cleanRichHTML } from './RichTextEditor'
+import { cleanRenderedHTML } from './RichTextEditor'
 import { userError } from '../lib/errors'
 
 export function DriveFileSurface({workspaceId,subject,file,readOnly,onClose,save,busy}:{workspaceId:string;subject:string;file:DriveFile;readOnly:boolean;onClose:()=>void;save:(file:File,base:DriveFile)=>Promise<DriveFile>;busy:boolean}) {
@@ -34,6 +34,6 @@ function RenderedFile({workspaceId,file,html}:{workspaceId:string;file:DriveFile
  const source=useQuery({queryKey:['drive-render',workspaceId,file.id,file.currentVersion],queryFn:()=>api.downloadDriveFile({workspaceId,id:file.id},{query:{version:file.currentVersion}}),retry:false})
  const text=source.data ? new TextDecoder().decode(Uint8Array.from(atob(source.data.data),c=>c.charCodeAt(0))):''
  const image=file.contentType.startsWith('image/')
- return <article className="drive-rendered-file">{source.error && <p role="alert">{userError(source.error)}</p>}{source.isPending && <p role="status">Opening file…</p>}{source.data && (image ? <img alt={file.name} src={`data:${file.contentType};base64,${source.data.data}`}/> : html ? <div className="rich-text" dangerouslySetInnerHTML={{__html:cleanRichHTML(text)}}/> : /^(text\/|application\/(json|xml))/.test(file.contentType) || /\.(txt|md|csv|tsv)$/i.test(file.name) ? <pre>{text}</pre> : <p>A preview is unavailable for this format. Download the file from Drive.</p>)}</article>
+ return <article className="drive-rendered-file">{source.error && <p role="alert">{userError(source.error)}</p>}{source.isPending && <p role="status">Opening file…</p>}{source.data && (image ? <img alt={file.name} src={`data:${file.contentType};base64,${source.data.data}`}/> : html ? <div className="rich-text" dangerouslySetInnerHTML={{__html:cleanRenderedHTML(text)}}/> : /^(text\/|application\/(json|xml))/.test(file.contentType) || /\.(txt|md|csv|tsv)$/i.test(file.name) ? <pre>{text}</pre> : <p>A preview is unavailable for this format. Download the file from Drive.</p>)}</article>
 }
 export type DocumentCloseHandler = MutableRefObject<() => void>

@@ -130,3 +130,64 @@ func TestWopiTokensLocksVersionedSavesAndRevocation(t *testing.T) {
 		t.Fatalf("revoked save: %d", r.StatusCode)
 	}
 }
+
+func TestWopiGetFileNeverRendersOnTheAppOrigin(t *testing.T) {
+	fixture := newWopiFixture(t)
+	srv, ctx, f := fixture.srv, fixture.ctx, fixture.f
+	// The stored type is whatever the uploader claimed; it must not decide how a browser treats the bytes.
+	if _, e := db.From(ctx).Exec(ctx, "UPDATE drive_file SET content_type='text/html' WHERE id=$1", f.ID); e != nil {
+		t.Fatal(e)
+	}
+	editor, e := wopi.Open(ctx, fixture.workspaceID, f.ID, "dark", "https://thura.example", false)
+	if e != nil {
+		t.Fatal(e)
+	}
+	get := func(headers map[string]string) *http.Response {
+		t.Helper()
+		request, e := http.NewRequest("GET", srv.URL+"/api/v1/wopi/files/"+f.ID+"/contents?access_token="+url.QueryEscape(editor.AccessToken), nil)
+		if e != nil {
+			t.Fatal(e)
+		}
+		for name, value := range headers {
+			request.Header.Set(name, value)
+		}
+		response, e := srv.Client().Do(request)
+		if e != nil {
+			t.Fatal(e)
+		}
+		t.Cleanup(func() {
+			if e := response.Body.Close(); e != nil {
+				t.Error(e)
+			}
+		})
+		return response
+	}
+	// Collabora's server-side fetch carries no Sec-Fetch metadata and gets the bytes.
+	r := get(nil)
+	if r.StatusCode != 200 {
+		t.Fatalf("plain fetch: %d", r.StatusCode)
+	}
+	body, e := io.ReadAll(r.Body)
+	if e != nil || !bytes.Equal(body, fixture.original) {
+		t.Fatal("document bytes changed")
+	}
+	for name, want := range map[string]string{"Content-Type": "application/octet-stream", "Content-Disposition": "attachment; filename=Plan.docx", "Content-Security-Policy": "sandbox; default-src 'none'", "X-Content-Type-Options": "nosniff", "X-WOPI-ItemVersion": "1", "Cache-Control": "no-store"} {
+		if got := r.Header.Get(name); got != want {
+			t.Errorf("%s: %q, want %q", name, got, want)
+		}
+	}
+	// A browser address-bar or link navigation is refused even with a valid token.
+	if r := get(map[string]string{"Sec-Fetch-Dest": "document", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Site": "same-origin"}); r.StatusCode != 404 {
+		t.Fatalf("navigation: %d", r.StatusCode)
+	}
+	if r := get(map[string]string{"Sec-Fetch-Mode": "navigate"}); r.StatusCode != 404 {
+		t.Fatalf("navigate mode: %d", r.StatusCode)
+	}
+	if r := get(map[string]string{"Sec-Fetch-Dest": "document"}); r.StatusCode != 404 {
+		t.Fatalf("document destination: %d", r.StatusCode)
+	}
+	// A same-origin script fetch still gets only an inert download.
+	if r := get(map[string]string{"Sec-Fetch-Dest": "empty", "Sec-Fetch-Mode": "cors", "Sec-Fetch-Site": "same-origin"}); r.StatusCode != 200 || r.Header.Get("Content-Type") != "application/octet-stream" {
+		t.Fatalf("script fetch: %d %q", r.StatusCode, r.Header.Get("Content-Type"))
+	}
+}
