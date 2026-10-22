@@ -107,6 +107,7 @@ CREATE TABLE mail_item (
   starred boolean NOT NULL DEFAULT false,
   unread boolean NOT NULL DEFAULT false,
   provider_id text NOT NULL DEFAULT '',
+  delivery_reason text NOT NULL DEFAULT '',
   raw_key text NOT NULL DEFAULT '',
   external_id text,
   thread_id text NOT NULL DEFAULT '',

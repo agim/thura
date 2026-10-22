@@ -585,6 +585,7 @@ type MailItem struct {
 	Starred          bool       `json:"starred"`
 	Unread           bool       `json:"unread"`
 	ProviderID       string     `json:"provider_id"`
+	DeliveryReason   string     `json:"delivery_reason"`
 	RawKey           string     `json:"raw_key"`
 	ExternalID       *string    `json:"external_id"`
 	ThreadID         string     `json:"thread_id"`

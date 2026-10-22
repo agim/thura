@@ -525,3 +525,9 @@ The v2 deployment manifest now declares /api/v1/smip and /api/v1/setup/transport
 
 ### Public document origin follows configured HTTPS behind private HTTP hops
 Collabora's bootstrap downgraded wss to ws because the app saw the Docker peer as HTTP and only recognized loopback forwarding. Build document browser origins from the operator-configured APP_URL scheme when it is HTTPS, retaining the incoming approved hostname. This is browser URL policy, not original-client TLS proof; SMIP still requires the separate verified gateway. Genuine local HTTP development retains its ws bootstrap. Never weaken browser mixed-content protection or expose the private document service.
+
+## 2026-10-22: Hold direct-provider mail after one submission
+
+Why: The direct provider path recorded a provider error as failed and let the job retry it, resending a message a timed-out provider may already have accepted, and a crash after a successful send left it queued for another copy. It now commits a delivery_uncertain marker before the single provider call, like the SMIP outbox, and records sent, delivery_blocked (a reply refused it) or delivery_uncertain (no reply) afterwards; only queued items enter delivery and nothing is retried automatically. The reason is kept on the item because this path has no per-recipient delivery rows.
+
+Touches: internal/mailbox/mailbox.go, mail_item.delivery_reason

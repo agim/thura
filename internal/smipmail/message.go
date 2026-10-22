@@ -65,6 +65,34 @@ func recipients(msg mailpack.Message) ([]string, error) {
 	}
 	return result, nil
 }
+
+// Check applies the content rules Prepare freezes to a composed message
+// without a transaction, so Queue refuses what delivery would hold: address
+// syntax and count, subject and body limits, headers, and a recipient listed
+// twice across To, Cc and Bcc, which the provider path rejects at send time.
+func Check(msg mailpack.Message) error {
+	unique, err := recipients(msg)
+	if err != nil {
+		return err
+	}
+	listed := 0
+	for _, group := range []string{msg.To, strings.Join(msg.Cc, ","), strings.Join(msg.Bcc, ",")} {
+		if strings.TrimSpace(group) == "" {
+			continue
+		}
+		addresses, err := mail.ParseAddressList(group)
+		if err != nil {
+			return err
+		}
+		listed += len(addresses)
+	}
+	if listed != len(unique) {
+		return errors.New("the same recipient is listed more than once")
+	}
+	p := Payload{MessageID: "<check@queue.invalid>", Created: 1, Message: msg}
+	p.Message.Bcc = nil
+	return p.Validate()
+}
 func (p Payload) Validate() error {
 	m := p.Message
 	if p.Created <= 0 || p.MessageID == "" || len(p.MessageID) > 254 || !strings.HasPrefix(p.MessageID, "<") || !strings.HasSuffix(p.MessageID, ">") || strings.ContainsAny(p.MessageID, "\r\n\x00") {

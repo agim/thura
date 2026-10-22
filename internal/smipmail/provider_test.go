@@ -23,7 +23,7 @@ func TestProviderPostRedirectCannotReplaySubmission(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = transport.Send(providerContext(context.Background()), mail.Message{From: "team@sender.example", To: "team@recipient.example", Subject: "No redirect replay", Text: "One original submission"})
+	_, err = transport.Send(ProviderContext(context.Background()), mail.Message{From: "team@sender.example", To: "team@recipient.example", Subject: "No redirect replay", Text: "One original submission"})
 	if err == nil || sourceCalls.Load() != 1 || targetCalls.Load() != 0 {
 		t.Fatal("provider replayed a redirected submission", err, sourceCalls.Load(), targetCalls.Load())
 	}

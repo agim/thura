@@ -50,6 +50,9 @@ func Parse(raw []byte) (ParsedMail, error) {
 	if err != nil {
 		return ParsedMail{}, err
 	}
+	// An encoded word may decode to a line break; stored as-is it would make
+	// every reply unsendable, as a subject header can never contain one.
+	subject = strings.NewReplacer("\r\n", " ", "\r", " ", "\n", " ", "\x00", "").Replace(subject)
 	out := ParsedMail{From: m.Header.Get("From"), To: m.Header.Get("To"), Cc: m.Header.Get("Cc"), Subject: subject,
 		MessageID: firstMessageID(m.Header.Get("Message-ID")), InReplyTo: firstMessageID(m.Header.Get("In-Reply-To")), References: cleanReferences(m.Header.Get("References"))}
 	out.Thread = firstMessageID(out.References)

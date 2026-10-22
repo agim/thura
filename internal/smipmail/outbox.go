@@ -504,7 +504,7 @@ func (g *Gateway) sendProviderGroup(ctx context.Context, initial q.MailTransmiss
 	if err = tx.Commit(ctx); err != nil {
 		return false, err
 	}
-	result, sendErr := transport.Send(providerContext(ctx), message)
+	result, sendErr := transport.Send(ProviderContext(ctx), message)
 	finish, queries, current, err := lock(ctx, row.ID)
 	if err != nil {
 		return false, err
@@ -598,7 +598,7 @@ func summarize(ctx context.Context, id string) error {
 			status = "captured"
 		}
 	}
-	if err = queries.SetMailOutcome(ctx, q.SetMailOutcomeParams{ID: row.ItemID, Status: status, Folder: folder, ProviderID: row.APIResult}); err != nil {
+	if err = queries.SetMailOutcome(ctx, q.SetMailOutcomeParams{ID: row.ItemID, Status: status, Folder: folder, ProviderID: row.APIResult, DeliveryReason: ""}); err != nil {
 		return err
 	}
 	if err = saveTransmission(ctx, queries, row); err != nil {
