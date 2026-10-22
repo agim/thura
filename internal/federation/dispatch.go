@@ -67,6 +67,12 @@ func Dispatch(ctx context.Context, raw json.RawMessage) error {
 		return err
 	}
 	g := From(ctx)
+	// One trust read serves the endpoint choice and the receipt verification
+	// of this attempt; a peer revoked before it blocks before any network.
+	trust, err := g.Trust(ctx)
+	if err != nil {
+		return err
+	}
 	p, packetErr := decodeOutbound(row)
 	reason := ""
 	member, err := queries.IsWorkspaceMember(ctx, q.IsWorkspaceMemberParams{Scope: row.WorkspaceID, Subject: row.Subject})
@@ -87,7 +93,7 @@ func Dispatch(ctx context.Context, raw json.RawMessage) error {
 		reason = "binding_changed"
 	} else if key, ok := g.originKeys[p.Envelope.KeyID]; !ok || p.Verify(key) != nil {
 		reason = "origin_key_unavailable"
-	} else if g.origins[binding.Peer] == "" {
+	} else if trust.Origins[binding.Peer] == "" {
 		reason = "peer_unconfigured"
 	} else if row.Attempts >= MaxSendAttempts {
 		reason = "retry_budget_exhausted"
@@ -108,7 +114,7 @@ func Dispatch(ctx context.Context, raw json.RawMessage) error {
 		}
 		return tx.Commit(ctx)
 	}
-	client, err := g.client(binding.Peer)
+	client, err := g.client(trust, binding.Peer)
 	if err != nil {
 		return err
 	}
@@ -137,7 +143,7 @@ func Dispatch(ctx context.Context, raw json.RawMessage) error {
 	}
 	latest.NextAttempt = lidza.Now(ctx).Add(backoff(row.Attempts))
 	if sendErr == nil {
-		peer, known := g.peers[p.Envelope.To][receipt.KeyID]
+		peer, known := trust.Peers[p.Envelope.To][receipt.KeyID]
 		if !known || receipt.Verify(p, peer) != nil {
 			return errors.New("unverified SMIP receipt")
 		}

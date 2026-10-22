@@ -47,10 +47,13 @@ public keys so already signed deliveries can still be checked.
 For `example.org`, publish TXT `_smip.example.org` = `v=SMIP1`, and point
 `smip.example.org` to Thura. SMIP requires **direct TLS 1.3**, including through a
 TCP passthrough proxy. Ordinary HTTP forwarding and `X-Forwarded-Proto` do not
-satisfy this requirement. Līdza's built-in HTTPS can use `LIDZA_TLS_DOMAINS` (include
-all application and SMIP hostnames), `LIDZA_TLS_EMAIL`, `LIDZA_TLS_ADDR` and
-`LIDZA_TLS_HTTP_ADDR`. Updating ingress/DNS/certificate configuration remains an
-operator deployment task. See [SMIP email](smip-mail.md).
+satisfy this requirement. Which hostnames the HTTPS listener must cover, for the
+built-in listener and for the deployment ingress, is stated once in
+[SMIP email: transport hostnames](smip-mail.md#transport-hostnames). Updating
+ingress/DNS/certificate configuration remains an operator deployment task; the
+domain's SMIP identity shows a read-only status (TXT found or missing, where
+`smip.<domain>` points and whether that is this server, TLS 1.3 reachable) that
+never blocks publishing.
 
 Public SMIP requests select the identity by the configured hostname. Requests to
 operator-pinned private origins may additionally carry `X-Thura-SMIP-Domain` for

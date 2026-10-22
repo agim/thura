@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -32,6 +33,10 @@ type Config struct {
 	OriginKeys map[string]smip.Key            `json:"originKeys"`
 	CAFile     string                         `json:"caFile"`
 }
+
+// Gateway holds the frozen local identity and the legacy JSON trust. Peers
+// paired on the admin page live in smip_peer and are merged at request time
+// by Trust, so pairing and revocation need no restart.
 type Gateway struct {
 	domain     string
 	signer     smip.SigningKey
@@ -40,6 +45,7 @@ type Gateway struct {
 	origins    map[string]string
 	originKeys map[string]smip.Key
 	roots      *x509.CertPool
+	resolver   *net.Resolver
 }
 
 type settings struct {
@@ -47,14 +53,15 @@ type settings struct {
 	Config  string `env:"SMIP_CONFIG"`
 }
 
-// Configure freezes operator trust for this process. Rotation/revocation
-// requires restarting all receiving nodes; no request can supply trusted keys.
+// Configure freezes the local identity and the legacy JSON peers for this
+// process. Database peers are read per request; no request can supply
+// trusted keys of its own.
 func Configure(s *lidza.Services) error {
 	var settings settings
 	if err := env.Load(".", &settings); err != nil {
 		return err
 	}
-	gateway := &Gateway{}
+	gateway := &Gateway{resolver: net.DefaultResolver}
 	if settings.Enabled {
 		var cfg Config
 		dec := json.NewDecoder(strings.NewReader(settings.Config))
@@ -74,12 +81,12 @@ func Configure(s *lidza.Services) error {
 
 func NewGateway(cfg Config) (*Gateway, error) {
 	seed, err := base64.RawURLEncoding.DecodeString(cfg.Seed)
-	if err != nil || len(seed) != ed25519.SeedSize || base64.RawURLEncoding.EncodeToString(seed) != cfg.Seed || len(cfg.Peers) > 100 {
+	if err != nil || len(seed) != ed25519.SeedSize || base64.RawURLEncoding.EncodeToString(seed) != cfg.Seed || len(cfg.Peers) > MaxPeers {
 		return nil, errors.New("invalid SMIP operator configuration")
 	}
-	g := &Gateway{domain: cfg.Domain, signer: smip.SigningKey{Private: ed25519.NewKeyFromSeed(seed), NotBefore: cfg.NotBefore, NotAfter: cfg.NotAfter}, peers: map[string]map[string]smip.Key{}, slots: make(chan struct{}, 2)}
+	g := &Gateway{domain: cfg.Domain, signer: smip.SigningKey{Private: ed25519.NewKeyFromSeed(seed), NotBefore: cfg.NotBefore, NotAfter: cfg.NotAfter}, peers: map[string]map[string]smip.Key{}, slots: make(chan struct{}, 2), resolver: net.DefaultResolver}
 	for domain, keys := range cfg.Peers {
-		if domain == cfg.Domain || len(keys) == 0 || len(keys) > 10 {
+		if domain == cfg.Domain || len(keys) == 0 || len(keys) > MaxPeerKeys {
 			return nil, errors.New("invalid SMIP peer configuration")
 		}
 		copied := map[string]smip.Key{}
@@ -109,7 +116,7 @@ func NewGateway(cfg Config) (*Gateway, error) {
 			return nil, errors.New("SMIP endpoint requires a configured peer")
 		}
 		g.origins[peer] = origin
-		client, err := g.client(peer)
+		client, err := g.newClient(origin, peer, g.peers[peer])
 		if err != nil {
 			return nil, errors.New("invalid SMIP peer HTTPS origin")
 		}
@@ -162,8 +169,15 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "SMIP receiver busy", http.StatusServiceUnavailable)
 		return
 	}
-	inbox := &DatabaseInbox{ctx: req.Context(), gateway: g}
-	receiver, err := smip.NewReceiver(g.domain, inbox, g.signer, g.peers, func(e smip.Envelope) bool { return e.Kind == "chat" || e.Kind == "file" }, func() time.Time { return lidza.Now(req.Context()) })
+	// Trust is read for this packet alone: a peer paired or revoked on any
+	// node is honoured by the next packet every node admits.
+	trust, err := g.Trust(req.Context())
+	if err != nil {
+		http.Error(w, "SMIP trust unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	inbox := &DatabaseInbox{ctx: req.Context(), gateway: g, peers: trust.Peers}
+	receiver, err := smip.NewReceiver(g.domain, inbox, g.signer, trust.Peers, func(e smip.Envelope) bool { return e.Kind == "chat" || e.Kind == "file" }, func() time.Time { return lidza.Now(req.Context()) })
 	if err != nil {
 		http.Error(w, "SMIP receiver unavailable", http.StatusServiceUnavailable)
 		return
@@ -171,14 +185,21 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	receiver.ServeHTTP(w, req)
 }
 
-func (g *Gateway) client(peer string) (*smip.Client, error) {
-	origin := g.origins[peer]
+func (g *Gateway) newClient(origin, peer string, keys map[string]smip.Key) (*smip.Client, error) {
+	return smip.NewApplicationClient(origin, peer, keys, &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: g.roots})
+}
+
+// client builds the sending client for peer from the given trust snapshot:
+// the origin and the receipt keys come from the same read.
+func (g *Gateway) client(trust Trust, peer string) (*smip.Client, error) {
+	origin := trust.Origins[peer]
 	if origin == "" {
 		return nil, errors.New("SMIP peer sending endpoint unavailable")
 	}
-	return smip.NewApplicationClient(origin, peer, g.peers[peer], &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: g.roots})
+	return g.newClient(origin, peer, trust.Peers[peer])
 }
 
 func (g *Gateway) Enabled() bool         { return g.domain != "" }
+func (g *Gateway) Domain() string        { return g.domain }
 func (g *Gateway) DispatchKind() string  { return DispatchJob + ":" + g.domain }
 func (g *Gateway) ReconcileKind() string { return ReconcileJob + ":" + g.domain }

@@ -745,6 +745,25 @@ CREATE TABLE auth_invite (
 );
 CREATE INDEX auth_invite_workspace_idx ON auth_invite (workspace);
 
+CREATE TABLE smip_peer (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner text NOT NULL,
+  domain text NOT NULL,
+  origin text NOT NULL DEFAULT '',
+  key_id text NOT NULL,
+  public_key text NOT NULL,
+  not_before timestamptz NOT NULL,
+  not_after timestamptz NOT NULL,
+  revoked boolean NOT NULL DEFAULT false,
+  state text NOT NULL DEFAULT 'pending',
+  confirmed boolean NOT NULL DEFAULT false,
+  paired_by text NOT NULL DEFAULT '',
+  paired_at timestamptz,
+  fetched_at timestamptz NOT NULL,
+  notes text NOT NULL DEFAULT ''
+);
+CREATE UNIQUE INDEX smip_peer_owner_domain_key_id_key ON smip_peer (owner, domain, key_id);
+
 CREATE TABLE smip_mail_domain (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   origin text NOT NULL,

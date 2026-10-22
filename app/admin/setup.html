@@ -28,6 +28,12 @@
 <h4>Publish these DNS records</h4>
 <table aria-label="SMIP email DNS records"><thead><tr><th>Type</th><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>TXT</td><td><code>_smip.{{.MailIdentity.Domain}}</code></td><td><code>v=SMIP1</code></td></tr><tr><td>A / AAAA</td><td><code>smip.{{.MailIdentity.Domain}}</code></td><td>Your Thura server’s public IP address</td></tr></tbody></table>
 <p>Configure a trusted certificate for <strong>smip.{{.MailIdentity.Domain}}</strong> and direct TLS 1.3 access to Thura. A proxy that forwards ordinary HTTP to Thura does not satisfy SMIP’s transport requirement. Publish and restart to activate this identity; these DNS and transport instructions do not imply a successful connection test.</p>
+{{with .MailIdentity.Status}}<h4>Current status</h4>
+<ul aria-label="SMIP DNS and transport status" data-smip-status><li>TXT record <code>_smip.{{.Domain}}</code>: <strong>{{if eq .TXT "found"}}found{{else if eq .TXT "missing"}}missing{{else}}lookup failed{{end}}</strong></li>
+<li><code>smip.{{.Domain}}</code> resolves to <strong>{{if .Addresses}}{{range $i, $a := .Addresses}}{{if $i}}, {{end}}{{$a}}{{end}}{{else}}nothing yet{{end}}</strong> (matches this server’s public address: <strong>{{.MatchesServer}}</strong>)</li>
+<li>TLS 1.3 reachable: <strong>{{.TLS}}</strong></li></ul>
+{{if .Detail}}<p class="form-hint">{{.Detail}}</p>{{end}}
+<p class="form-hint">Checked {{.CheckedAt.Format "Jan 2, 2006 3:04 PM MST"}}; refreshed at most once a minute. Informational only: publication relies on the recorded Secure delivery check in Review, never on this status.</p>{{end}}
 {{else}}<p>No identity saved yet. Enable SMIP above and save this step to generate it and display the DNS records.</p>{{end}}
 </section>{{end}}
 <div class="setup-save"><button class="btn btn-primary" type="submit">Save this step</button><span>Changes stay in your draft.</span></div></form>

@@ -15,9 +15,12 @@ import (
 )
 
 // MailIdentityView contains public metadata only, never a signing seed.
+// Status is the informational DNS/transport view of the saved domain; it
+// never gates publication, which relies on the recorded Secure delivery check.
 type MailIdentityView struct {
 	Domain, KeyID, Expires string
 	Saved                  bool
+	Status                 *smipmail.Status
 }
 
 func mailIdentityView(v map[string]string) MailIdentityView {

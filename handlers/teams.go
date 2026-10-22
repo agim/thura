@@ -2,11 +2,14 @@ package handlers
 
 import (
 	"context"
+	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
+	"github.com/agim/lidza/pkg/env"
 	"github.com/agim/lidza/pkg/router"
 	q "thura/db/queries/gen"
 	"thura/internal/setup"
+	"thura/internal/smipmail"
 	"thura/internal/tenancy"
 	"thura/internal/workspace"
 	"thura/schema"
@@ -30,7 +33,30 @@ func GetTenantContext(ctx context.Context, r *router.Request[router.None]) (sche
 	return tenancy.Host(ctx), nil
 }
 func GetTeamSetup(ctx context.Context, r *router.Request[router.None]) (schema.TeamSetupView, error) {
-	return tenancy.View(ctx, r.Param("workspaceId"))
+	out, e := tenancy.View(ctx, r.Param("workspaceId"))
+	if e != nil {
+		return out, e
+	}
+	// Informational DNS/transport status beside each SMIP identity; it never
+	// blocks team publication and reports only what was actually observed.
+	var cfg struct {
+		URL string `env:"APP_URL"`
+	}
+	if env.Load(".", &cfg) != nil {
+		return out, nil
+	}
+	names := map[string]string{}
+	for _, d := range out.Domains {
+		names[d.ID] = d.Name
+	}
+	for i, m := range out.Mail {
+		if !m.Smip || !m.Enabled || names[m.DomainID] == "" {
+			continue
+		}
+		s := smipmail.From(ctx).DomainStatus(ctx, names[m.DomainID], cfg.URL, lidza.Now(ctx))
+		out.Mail[i].Dns = &schema.SmipDnsStatus{Domain: s.Domain, Txt: s.TXT, Addresses: s.Addresses, MatchesServer: s.MatchesServer, Tls: s.TLS, Detail: s.Detail, CheckedAt: s.CheckedAt}
+	}
+	return out, nil
 }
 func AddTeamDomain(ctx context.Context, r *router.Request[schema.TeamDomainInput]) (schema.TeamDomainView, error) {
 	out, e := tenancy.AddDomain(ctx, r.Param("workspaceId"), r.Body)

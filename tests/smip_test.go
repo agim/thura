@@ -52,7 +52,19 @@ func newSmipApp(t *testing.T, domain, peer string) *smipApp {
 	now := time.Now().Unix()
 	seed, private, _ := smipKeys(domain, now)
 	_, _, peerKeys := smipKeys(peer, now)
-	config := federation.Config{Domain: domain, Seed: seed, NotBefore: now - 86400, NotAfter: now + 30*86400, Peers: map[string]map[string]smip.Key{peer: peerKeys}}
+	return startSmipApp(t, federation.Config{Domain: domain, Seed: seed, NotBefore: now - 86400, NotAfter: now + 30*86400, Peers: map[string]map[string]smip.Key{peer: peerKeys}}, private)
+}
+
+// newUnpairedSmipApp starts an application whose sealed SMIP_CONFIG trusts
+// nobody: peers come only from the admin pairing flow.
+func newUnpairedSmipApp(t *testing.T, domain string) *smipApp {
+	t.Helper()
+	now := time.Now().Unix()
+	seed, private, _ := smipKeys(domain, now)
+	return startSmipApp(t, federation.Config{Domain: domain, Seed: seed, NotBefore: now - 86400, NotAfter: now + 30*86400, Peers: map[string]map[string]smip.Key{}}, private)
+}
+func startSmipApp(t *testing.T, config federation.Config, private ed25519.PrivateKey) *smipApp {
+	t.Helper()
 	raw, err := json.Marshal(config)
 	if err != nil {
 		t.Fatal(err)
@@ -79,6 +91,11 @@ func newSmipApp(t *testing.T, domain, peer string) *smipApp {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
+		for _, sql := range []string{"DELETE FROM smip_peer WHERE owner=$1", "DELETE FROM audit_event WHERE resource='smip-peer/'||$1::text"} {
+			if _, err := db.From(ctx).Exec(ctx, sql, config.Domain); err != nil {
+				t.Error(err)
+			}
+		}
 		for _, sql := range []string{"DELETE FROM job WHERE kind LIKE 'thura.smip.dispatch%' AND payload->>'id' IN (SELECT id::text FROM smip_outbox WHERE workspace_id=$1)", "DELETE FROM smip_outbox WHERE workspace_id=$1", "DELETE FROM smip_inbox WHERE workspace_id=$1", "DELETE FROM smip_binding WHERE workspace_id=$1", "DELETE FROM file_version WHERE file_id IN (SELECT id FROM drive_file WHERE workspace_id=$1)", "DELETE FROM upload_chunk WHERE session_id IN (SELECT id FROM upload_session WHERE workspace_id=$1)", "DELETE FROM upload_session WHERE workspace_id=$1", "DELETE FROM drive_file WHERE workspace_id=$1", "DELETE FROM drive_folder WHERE workspace_id=$1", "DELETE FROM audit_event WHERE scope=$1", "DELETE FROM auth_member WHERE scope=$1", "DELETE FROM workspace WHERE id=$1"} {
 			if _, err := db.From(ctx).Exec(ctx, sql, w.ID); err != nil {
 				t.Error(err)

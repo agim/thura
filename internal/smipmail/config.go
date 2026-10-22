@@ -5,7 +5,6 @@ package smipmail
 import (
 	"context"
 	"crypto/ed25519"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -137,9 +136,6 @@ func validOrigin(raw string) bool {
 func From(ctx context.Context) *Gateway { return lidza.Service[*Gateway](ctx) }
 func (g *Gateway) Enabled() bool        { return g.domain != "" }
 func (g *Gateway) Domain() string       { return g.domain }
-func (g *Gateway) tlsConfig() *tls.Config {
-	return &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: g.roots}
-}
 func Capabilities(w http.ResponseWriter, r *http.Request) {
 	if g, ok := requestGateway(w, r); ok {
 		g.capabilities(w, r)

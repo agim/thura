@@ -108,6 +108,11 @@ func dnsResolver(t *testing.T, records []string, code dnsmessage.RCode) *net.Res
 						reply.Answers = append(reply.Answers, dnsmessage.Resource{Header: dnsmessage.ResourceHeader{Name: question.Name, Type: dnsmessage.TypeTXT, Class: dnsmessage.ClassINET, TTL: 60}, Body: &dnsmessage.TXTResource{TXT: []string{value}}})
 					}
 				}
+				// Every host answers with the loopback address, which public
+				// discovery must refuse and only a pinned origin may use.
+				if question.Type == dnsmessage.TypeA && code == dnsmessage.RCodeSuccess {
+					reply.Answers = append(reply.Answers, dnsmessage.Resource{Header: dnsmessage.ResourceHeader{Name: question.Name, Type: dnsmessage.TypeA, Class: dnsmessage.ClassINET, TTL: 60}, Body: &dnsmessage.AResource{A: [4]byte{127, 0, 0, 1}}})
+				}
 			}
 			wire, err := reply.Pack()
 			if err != nil {

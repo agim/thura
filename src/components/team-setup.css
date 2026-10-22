@@ -6,6 +6,7 @@
 .team-setup .settings-list-row > div { min-width: 0; }
 .team-setup small { display: block; }
 .team-dns { overflow-wrap: anywhere; }
+.team-dns-status { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
 .team-setup input:not([type="checkbox"]), .team-setup label { min-width: 0; max-width: 100%; }
 
 #orbit-workspace.zero-workspace .team-selection { align-items: flex-end; }

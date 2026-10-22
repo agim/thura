@@ -8,7 +8,7 @@ import (
 
 func ProtectedPath(path string) bool {
 	switch path {
-	case "/api/v1/smip/v0.1/messages", "/api/v1/smip/v0.2/mail", "/api/v1/smip/v0.2/capabilities", "/api/v1/setup/transport":
+	case "/api/v1/smip/v0.1/messages", "/api/v1/smip/v0.1/identity", "/api/v1/smip/v0.2/mail", "/api/v1/smip/v0.2/capabilities", "/api/v1/setup/transport":
 		return true
 	}
 	return false
