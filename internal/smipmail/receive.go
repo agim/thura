@@ -3,7 +3,6 @@ package smipmail
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -31,17 +30,22 @@ func (g *Gateway) receive(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Canonical JSON required", http.StatusBadRequest)
 		return
 	}
+	// Admission starts only once the whole bounded body has arrived.
+	raw, err := smip.ReadBody(w, r)
+	if err != nil {
+		var limit *http.MaxBytesError
+		if errors.As(err, &limit) {
+			http.Error(w, "Mail exceeds size limit", http.StatusRequestEntityTooLarge)
+		} else {
+			http.Error(w, "Mail body incomplete", http.StatusBadRequest)
+		}
+		return
+	}
 	select {
 	case g.admissions <- struct{}{}:
 		defer func() { <-g.admissions }()
 	default:
 		http.Error(w, "SMIP mail receiver busy", http.StatusServiceUnavailable)
-		return
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, smip.MaxWire)
-	raw, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Mail exceeds size limit", http.StatusRequestEntityTooLarge)
 		return
 	}
 	packet, err := smip.DecodePacket(raw)

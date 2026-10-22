@@ -188,6 +188,13 @@ func (g *Gateway) plan(ctx context.Context, initial q.MailTransmission) error {
 		}
 		current.Reason = "domain_verification_unavailable"
 		current.NextAttempt = lidza.Now(ctx).Add(30 * time.Second)
+		if errors.Is(resolveErr, ErrRegistryFull) {
+			// A full registry is an operator condition, not a peer outage: hold
+			// the recipient under its own reason without a 30-second retry storm.
+			// The provider is never selected for an unverified domain.
+			current.Reason = "registry_capacity"
+			current.NextAttempt = lidza.Now(ctx).Add(5 * time.Minute)
+		}
 		if resolveErr == nil {
 			sender, err := plainAddress(snapshot.Payload.Message.From)
 			if err != nil {

@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -712,5 +714,80 @@ func TestSmipMailProviderAttemptFencedByNewSecurePolicy(t *testing.T) {
 	raw, err := io.ReadAll(response.Body)
 	if err != nil || response.StatusCode != http.StatusOK || !bytes.Contains(raw, []byte("external.example")) || bytes.Contains(raw, []byte(a.config.Seed)) {
 		t.Fatal("registry page missing or leaked identity", response.StatusCode, err)
+	}
+}
+
+// fillRegistry inserts count never-verified failure rows, as an unauthenticated
+// sender naming random domains leaves behind.
+func fillRegistry(t *testing.T, n *mailNode, prefix string, expires time.Time) {
+	t.Helper()
+	ctx := n.server.Context()
+	if _, err := db.From(ctx).Exec(ctx, "INSERT INTO smip_mail_domain(origin,domain,state,ever_verified,endpoint,document,reason,checked_at,expires_at) SELECT $1,$2||i||'.example','error',false,'','','verification_failed',$3,$4 FROM generate_series(1,$5::int) i", n.config.Domain, prefix, lidza.Now(ctx).Add(-time.Minute), expires, smipmail.RegistryCapacity); err != nil {
+		t.Fatal(err)
+	}
+}
+func TestSmipMailRegistryCapacityEvictsExpiredFailuresAndHoldsWithoutDowngrade(t *testing.T) {
+	a, b := newMailNode(t, "cap-alpha.example"), newMailNode(t, "cap-beta.example")
+	target := mailTLS(t, b, nil)
+	source := mailTLS(t, a, nil)
+	mailTrust(t, a, map[string]string{b.config.Domain: target.URL}, target)
+	mailTrust(t, b, map[string]string{a.config.Domain: source.URL}, source)
+	ctx := a.server.Context()
+	queries := q.New(db.From(ctx))
+	now := lidza.Now(ctx)
+	fillRegistry(t, a, "attacker-", now.Add(-45*time.Second))
+	count, err := queries.CountSmipMailDomains(ctx, q.CountSmipMailDomainsParams{Origin: a.config.Domain, ExpiresAt: now})
+	if err != nil || count.Total != smipmail.RegistryCapacity || count.Live != 0 {
+		t.Fatal("expired failures counted as capacity", err, count)
+	}
+	if _, err = smipmail.From(ctx).Resolve(ctx, b.config.Domain, false); err != nil {
+		t.Fatal("expired failures locked a new peer out", err)
+	}
+	count, err = queries.CountSmipMailDomains(ctx, q.CountSmipMailDomainsParams{Origin: a.config.Domain, ExpiresAt: now})
+	if err != nil || count.Total >= smipmail.RegistryCapacity || count.Live != 1 {
+		t.Fatal("expired failures not evicted", err, count)
+	}
+	// Unexpired failures are genuine capacity: a new domain holds under its
+	// own reason, with a long retry and never the provider.
+	fillRegistry(t, a, "busy-", now.Add(time.Hour))
+	if _, err = smipmail.From(ctx).Resolve(ctx, "fresh.example", false); !errors.Is(err, smipmail.ErrRegistryFull) {
+		t.Fatal("full registry resolved a new domain", err)
+	}
+	held := a.queue(t, "person@fresh.example")
+	a.deliver(t, held)
+	_, rows := a.deliveries(t, held)
+	if got := a.detail(t, held); got.Item.Status != "delivery_pending" || len(rows) != 1 || rows[0].Route != "pending" || rows[0].Reason != "registry_capacity" || rows[0].NextAttempt.Before(lidza.Now(ctx).Add(4*time.Minute)) {
+		t.Fatalf("full registry hold: %+v %+v", got.Item, rows)
+	}
+	delivered := a.queue(t, b.box.Address)
+	a.deliver(t, delivered)
+	if got := a.detail(t, delivered); got.Item.Status != "sent" {
+		t.Fatalf("verified peer blocked by a full registry: %+v", got)
+	}
+}
+func TestSmipMailStalledBodiesNeverHoldAdmission(t *testing.T) {
+	a, b := newMailNode(t, "stall-alpha.example"), newMailNode(t, "stall-beta.example")
+	target := mailTLS(t, b, nil)
+	source := mailTLS(t, a, nil)
+	mailTrust(t, a, map[string]string{b.config.Domain: target.URL}, target)
+	mailTrust(t, b, map[string]string{a.config.Domain: source.URL}, source)
+	roots := x509.NewCertPool()
+	roots.AddCert(target.Certificate())
+	// Three connections send complete headers and one body byte, then idle.
+	for i := 0; i < 3; i++ {
+		conn, err := tls.Dial("tcp", target.Listener.Addr().String(), &tls.Config{RootCAs: roots, ServerName: "example.com"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { conn.Close() })
+		if _, err = conn.Write([]byte("POST " + smip.MailMessagePath + " HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Thura-SMIP-Domain: " + b.config.Domain + "\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	time.Sleep(50 * time.Millisecond)
+	draft := a.queue(t, b.box.Address)
+	a.deliver(t, draft)
+	if got := a.detail(t, draft); got.Item.Status != "sent" || len(got.Deliveries) != 1 || got.Deliveries[0].Transport != "smip" {
+		t.Fatalf("stalled bodies blocked delivery: %+v", got)
 	}
 }

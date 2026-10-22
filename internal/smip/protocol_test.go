@@ -3,6 +3,7 @@
 package smip
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/ed25519"
@@ -594,6 +595,55 @@ func TestAdmissionBackpressureAndSigningKeyExpiry(t *testing.T) {
 	}
 	if _, found, err := store.Get(p.Envelope.From, p.Envelope.ID); err != nil || found {
 		t.Fatal("unacknowledgeable message stored")
+	}
+}
+
+// stall opens a TLS connection that sends complete headers and one body byte,
+// then stays idle. Only the caller closing it, or the body deadline, ends it.
+func stall(t *testing.T, s *httptest.Server) *tls.Conn {
+	t.Helper()
+	roots := x509.NewCertPool()
+	roots.AddCert(s.Certificate())
+	c, err := tls.Dial("tcp", s.Listener.Addr().String(), &tls.Config{RootCAs: roots, ServerName: "example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { c.Close() })
+	if _, err = c.Write([]byte("POST " + MessagePath + " HTTP/1.1\r\nHost: b.example\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{")); err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+func TestStalledBodiesNeverHoldAdmission(t *testing.T) {
+	a, b := signing(1), signing(2)
+	r := receiver(t, "b.example", inbox(t), b, map[string]map[string]Key{"a.example": trusted(a)}, func() time.Time { return time.Unix(epoch+1, 0) })
+	s := server(t, r)
+	previous := BodyTimeout
+	BodyTimeout = 500 * time.Millisecond
+	t.Cleanup(func() { BodyTimeout = previous })
+	stalled := []*tls.Conn{stall(t, s), stall(t, s), stall(t, s)}
+	time.Sleep(50 * time.Millisecond)
+	c := client(t, s, "b.example", trusted(b))
+	p := packet(t, "beside-stalls", "a.example", "b.example", "chat", a)
+	if _, err := c.Send(context.Background(), p); err != nil {
+		t.Fatal("stalled bodies exhausted admission", err)
+	}
+	// The deadline ends each stall without the sender's cooperation.
+	for _, conn := range stalled {
+		if err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+			t.Fatal(err)
+		}
+		response, err := http.ReadResponse(bufio.NewReader(conn), nil)
+		if err != nil {
+			t.Fatal("stalled connection outlived the body deadline", err)
+		}
+		response.Body.Close()
+		if response.StatusCode != http.StatusBadRequest {
+			t.Fatal("stalled body status", response.StatusCode)
+		}
+	}
+	if _, err := c.Send(context.Background(), p); err != nil {
+		t.Fatal("receiver unavailable after stalls", err)
 	}
 }
 

@@ -111,14 +111,24 @@ func (q *Queries) AddSmipMailReceipt(ctx context.Context, arg AddSmipMailReceipt
 }
 
 const countSmipMailDomains = `-- name: CountSmipMailDomains :one
-SELECT COUNT(*) FROM smip_mail_domain WHERE origin=$1
+SELECT COUNT(*) AS total,COUNT(*) FILTER (WHERE ever_verified OR expires_at>$2) AS live FROM smip_mail_domain WHERE origin=$1
 `
 
-func (q *Queries) CountSmipMailDomains(ctx context.Context, origin string) (int64, error) {
-	row := q.db.QueryRow(ctx, countSmipMailDomains, origin)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+type CountSmipMailDomainsParams struct {
+	Origin    string    `json:"origin"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+type CountSmipMailDomainsRow struct {
+	Total int64 `json:"total"`
+	Live  int64 `json:"live"`
+}
+
+func (q *Queries) CountSmipMailDomains(ctx context.Context, arg CountSmipMailDomainsParams) (CountSmipMailDomainsRow, error) {
+	row := q.db.QueryRow(ctx, countSmipMailDomains, arg.Origin, arg.ExpiresAt)
+	var i CountSmipMailDomainsRow
+	err := row.Scan(&i.Total, &i.Live)
+	return i, err
 }
 
 const dueMailTransmissions = `-- name: DueMailTransmissions :many
@@ -143,6 +153,24 @@ func (q *Queries) DueMailTransmissions(ctx context.Context, origin string) ([]st
 		return nil, err
 	}
 	return items, nil
+}
+
+const evictSmipMailDomains = `-- name: EvictSmipMailDomains :execrows
+DELETE FROM smip_mail_domain WHERE id IN (SELECT d.id FROM smip_mail_domain d WHERE d.origin=$1 AND NOT d.ever_verified AND d.expires_at<=$2 ORDER BY d.expires_at,d.id LIMIT $3)
+`
+
+type EvictSmipMailDomainsParams struct {
+	Origin    string    `json:"origin"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Limit     int32     `json:"limit"`
+}
+
+func (q *Queries) EvictSmipMailDomains(ctx context.Context, arg EvictSmipMailDomainsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, evictSmipMailDomains, arg.Origin, arg.ExpiresAt, arg.Limit)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const findMailTransmission = `-- name: FindMailTransmission :one

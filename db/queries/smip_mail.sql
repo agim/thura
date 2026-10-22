@@ -3,7 +3,9 @@ SELECT * FROM smip_mail_domain WHERE origin=$1 AND domain=$2;
 -- name: ListSmipMailDomains :many
 SELECT * FROM smip_mail_domain WHERE origin=$1 ORDER BY domain LIMIT 1000;
 -- name: CountSmipMailDomains :one
-SELECT COUNT(*) FROM smip_mail_domain WHERE origin=$1;
+SELECT COUNT(*) AS total,COUNT(*) FILTER (WHERE ever_verified OR expires_at>$2) AS live FROM smip_mail_domain WHERE origin=$1;
+-- name: EvictSmipMailDomains :execrows
+DELETE FROM smip_mail_domain WHERE id IN (SELECT d.id FROM smip_mail_domain d WHERE d.origin=$1 AND NOT d.ever_verified AND d.expires_at<=$2 ORDER BY d.expires_at,d.id LIMIT $3);
 -- name: WriteSmipMailDomain :exec
 INSERT INTO smip_mail_domain(origin,domain,state,ever_verified,endpoint,document,reason,checked_at,expires_at)
 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
