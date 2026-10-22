@@ -773,6 +773,8 @@ CREATE TABLE mail_transmission (
   api_state text NOT NULL DEFAULT 'pending',
   api_attempt_id text NOT NULL DEFAULT '',
   api_result text NOT NULL DEFAULT '',
+  reason text NOT NULL DEFAULT '',
+  next_attempt timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL,
   updated_at timestamptz NOT NULL
 );

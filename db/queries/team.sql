@@ -38,7 +38,10 @@ SELECT c.* FROM team_mail_config c JOIN team_domain d ON c.domain_id=d.id WHERE 
 SELECT EXISTS(SELECT 1 FROM mailbox WHERE lower(address)=lower($1)
 UNION ALL SELECT 1 FROM mailbox_alias WHERE lower(address)=lower($1));
 -- name: DueAllMailTransmissions :many
-SELECT id FROM mail_transmission WHERE state IN ('planning','pending') ORDER BY updated_at,id LIMIT 50;
+SELECT t.id FROM mail_transmission t JOIN mail_delivery d ON d.transmission_id=t.id AND d.state IN ('pending','uncertain')
+WHERE t.state IN ('planning','pending') AND t.next_attempt<=$1
+GROUP BY t.id HAVING MIN(d.next_attempt)<=$1
+ORDER BY GREATEST(t.next_attempt,MIN(d.next_attempt)),t.id LIMIT 50;
 -- name: ConflictingTeamDomainMailboxes :one
 SELECT COUNT(*) FROM mailbox WHERE workspace_id<>$1 AND lower(split_part(address,'@',2))=$2;
 

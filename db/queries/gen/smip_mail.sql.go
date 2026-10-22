@@ -32,8 +32,8 @@ func (q *Queries) AddMailDelivery(ctx context.Context, arg AddMailDeliveryParams
 }
 
 const addMailTransmission = `-- name: AddMailTransmission :one
-INSERT INTO mail_transmission(origin,workspace_id,mailbox_id,item_id,author_id,payload,provider_config,origin_key,created_at,updated_at)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$9) RETURNING id, origin, workspace_id, mailbox_id, item_id, author_id, payload, provider_config, origin_key, state, api_state, api_attempt_id, api_result, created_at, updated_at
+INSERT INTO mail_transmission(origin,workspace_id,mailbox_id,item_id,author_id,payload,provider_config,origin_key,next_attempt,created_at,updated_at)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$9) RETURNING id, origin, workspace_id, mailbox_id, item_id, author_id, payload, provider_config, origin_key, state, api_state, api_attempt_id, api_result, reason, next_attempt, created_at, updated_at
 `
 
 type AddMailTransmissionParams struct {
@@ -45,7 +45,7 @@ type AddMailTransmissionParams struct {
 	Payload        string    `json:"payload"`
 	ProviderConfig string    `json:"provider_config"`
 	OriginKey      string    `json:"origin_key"`
-	CreatedAt      time.Time `json:"created_at"`
+	NextAttempt    time.Time `json:"next_attempt"`
 }
 
 func (q *Queries) AddMailTransmission(ctx context.Context, arg AddMailTransmissionParams) (MailTransmission, error) {
@@ -58,7 +58,7 @@ func (q *Queries) AddMailTransmission(ctx context.Context, arg AddMailTransmissi
 		arg.Payload,
 		arg.ProviderConfig,
 		arg.OriginKey,
-		arg.CreatedAt,
+		arg.NextAttempt,
 	)
 	var i MailTransmission
 	err := row.Scan(
@@ -75,6 +75,8 @@ func (q *Queries) AddMailTransmission(ctx context.Context, arg AddMailTransmissi
 		&i.APIState,
 		&i.APIAttemptID,
 		&i.APIResult,
+		&i.Reason,
+		&i.NextAttempt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -131,30 +133,6 @@ func (q *Queries) CountSmipMailDomains(ctx context.Context, arg CountSmipMailDom
 	return i, err
 }
 
-const dueMailTransmissions = `-- name: DueMailTransmissions :many
-SELECT id FROM mail_transmission WHERE origin=$1 AND state IN ('planning','pending') ORDER BY updated_at,id LIMIT 50
-`
-
-func (q *Queries) DueMailTransmissions(ctx context.Context, origin string) ([]string, error) {
-	rows, err := q.db.Query(ctx, dueMailTransmissions, origin)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const evictSmipMailDomains = `-- name: EvictSmipMailDomains :execrows
 DELETE FROM smip_mail_domain WHERE id IN (SELECT d.id FROM smip_mail_domain d WHERE d.origin=$1 AND NOT d.ever_verified AND d.expires_at<=$2 ORDER BY d.expires_at,d.id LIMIT $3)
 `
@@ -174,7 +152,7 @@ func (q *Queries) EvictSmipMailDomains(ctx context.Context, arg EvictSmipMailDom
 }
 
 const findMailTransmission = `-- name: FindMailTransmission :one
-SELECT id, origin, workspace_id, mailbox_id, item_id, author_id, payload, provider_config, origin_key, state, api_state, api_attempt_id, api_result, created_at, updated_at FROM mail_transmission WHERE id=$1
+SELECT id, origin, workspace_id, mailbox_id, item_id, author_id, payload, provider_config, origin_key, state, api_state, api_attempt_id, api_result, reason, next_attempt, created_at, updated_at FROM mail_transmission WHERE id=$1
 `
 
 func (q *Queries) FindMailTransmission(ctx context.Context, id string) (MailTransmission, error) {
@@ -194,6 +172,8 @@ func (q *Queries) FindMailTransmission(ctx context.Context, id string) (MailTran
 		&i.APIState,
 		&i.APIAttemptID,
 		&i.APIResult,
+		&i.Reason,
+		&i.NextAttempt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -236,7 +216,7 @@ func (q *Queries) FindSmipReceivingMailbox(ctx context.Context, lower string) ([
 }
 
 const getMailTransmission = `-- name: GetMailTransmission :one
-SELECT id, origin, workspace_id, mailbox_id, item_id, author_id, payload, provider_config, origin_key, state, api_state, api_attempt_id, api_result, created_at, updated_at FROM mail_transmission WHERE item_id=$1
+SELECT id, origin, workspace_id, mailbox_id, item_id, author_id, payload, provider_config, origin_key, state, api_state, api_attempt_id, api_result, reason, next_attempt, created_at, updated_at FROM mail_transmission WHERE item_id=$1
 `
 
 func (q *Queries) GetMailTransmission(ctx context.Context, itemID string) (MailTransmission, error) {
@@ -256,6 +236,8 @@ func (q *Queries) GetMailTransmission(ctx context.Context, itemID string) (MailT
 		&i.APIState,
 		&i.APIAttemptID,
 		&i.APIResult,
+		&i.Reason,
+		&i.NextAttempt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -314,6 +296,21 @@ func (q *Queries) GetSmipMailReceipt(ctx context.Context, arg GetSmipMailReceipt
 		&i.AcceptedAt,
 	)
 	return i, err
+}
+
+const holdMailTransmission = `-- name: HoldMailTransmission :exec
+UPDATE mail_transmission SET reason=$2,next_attempt=$3,updated_at=$3 WHERE id=$1
+`
+
+type HoldMailTransmissionParams struct {
+	ID          string    `json:"id"`
+	Reason      string    `json:"reason"`
+	NextAttempt time.Time `json:"next_attempt"`
+}
+
+func (q *Queries) HoldMailTransmission(ctx context.Context, arg HoldMailTransmissionParams) error {
+	_, err := q.db.Exec(ctx, holdMailTransmission, arg.ID, arg.Reason, arg.NextAttempt)
+	return err
 }
 
 const listMailDeliveries = `-- name: ListMailDeliveries :many
@@ -391,7 +388,7 @@ func (q *Queries) ListSmipMailDomains(ctx context.Context, origin string) ([]Smi
 }
 
 const lockMailTransmission = `-- name: LockMailTransmission :one
-SELECT id, origin, workspace_id, mailbox_id, item_id, author_id, payload, provider_config, origin_key, state, api_state, api_attempt_id, api_result, created_at, updated_at FROM mail_transmission WHERE id=$1 FOR UPDATE
+SELECT id, origin, workspace_id, mailbox_id, item_id, author_id, payload, provider_config, origin_key, state, api_state, api_attempt_id, api_result, reason, next_attempt, created_at, updated_at FROM mail_transmission WHERE id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockMailTransmission(ctx context.Context, id string) (MailTransmission, error) {
@@ -411,6 +408,8 @@ func (q *Queries) LockMailTransmission(ctx context.Context, id string) (MailTran
 		&i.APIState,
 		&i.APIAttemptID,
 		&i.APIResult,
+		&i.Reason,
+		&i.NextAttempt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -496,7 +495,7 @@ func (q *Queries) SaveMailDelivery(ctx context.Context, arg SaveMailDeliveryPara
 }
 
 const saveMailTransmission = `-- name: SaveMailTransmission :exec
-UPDATE mail_transmission SET state=$2,api_state=$3,api_attempt_id=$4,api_result=$5,updated_at=$6 WHERE id=$1
+UPDATE mail_transmission SET state=$2,api_state=$3,api_attempt_id=$4,api_result=$5,reason='',updated_at=$6 WHERE id=$1
 `
 
 type SaveMailTransmissionParams struct {

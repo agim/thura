@@ -1966,6 +1966,8 @@ type MailTransmission struct {
 	APIState       string    `json:"apiState" db:"api_state"`
 	APIAttemptID   string    `json:"apiAttemptId" db:"api_attempt_id"`
 	APIResult      string    `json:"apiResult" db:"api_result"`
+	Reason         string    `json:"reason" db:"reason"`
+	NextAttempt    time.Time `json:"nextAttempt" db:"next_attempt"`
 	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
 }
@@ -2008,6 +2010,9 @@ func (v MailTransmission) Validate() error {
 	}
 	if v.APIResult == "" {
 		errs.Add("apiResult", "required", "required")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
 	}
 	return errs.Result()
 }
