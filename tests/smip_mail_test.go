@@ -3,19 +3,27 @@ package tests
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"html"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -36,6 +44,7 @@ import (
 	"thura/internal/mailbox"
 	"thura/internal/smip"
 	"thura/internal/smipmail"
+	"thura/internal/smiptrust"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -789,5 +798,216 @@ func TestSmipMailStalledBodiesNeverHoldAdmission(t *testing.T) {
 	a.deliver(t, draft)
 	if got := a.detail(t, draft); got.Item.Status != "sent" || len(got.Deliveries) != 1 || got.Deliveries[0].Transport != "smip" {
 		t.Fatalf("stalled bodies blocked delivery: %+v", got)
+	}
+}
+
+// mailIdentity provides the node's SMIP mail identity with no pinned origin
+// and no CA bundle in its frozen configuration: the private deployment trust
+// has to come from the admin page forms.
+func mailIdentity(t *testing.T, n *mailNode) {
+	t.Helper()
+	cfg := n.config
+	cfg.Origins, cfg.CAFile = nil, ""
+	gateway, err := smipmail.NewGateway(cfg, mailbox.ReceiveSMIP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lidza.Provide(n.server.Services, gateway)
+	n.config = cfg
+}
+
+// mailAdminForm posts one SMIP peers page form as the signed-in browser does
+// (multipart when a file is attached) and returns the redirect's flash.
+func mailAdminForm(t *testing.T, n *mailNode, action string, v url.Values, file []byte) (saved, failure string) {
+	t.Helper()
+	var body bytes.Buffer
+	contentType := "application/x-www-form-urlencoded"
+	if file != nil {
+		form := multipart.NewWriter(&body)
+		for key, values := range v {
+			for _, value := range values {
+				if err := form.WriteField(key, value); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		part, err := form.CreateFormFile("file", "partner-ca.pem")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = part.Write(file); err != nil {
+			t.Fatal(err)
+		}
+		if err = form.Close(); err != nil {
+			t.Fatal(err)
+		}
+		contentType = form.FormDataContentType()
+	} else {
+		body.WriteString(v.Encode())
+	}
+	request, err := http.NewRequest("POST", n.server.URL+"/admin/smip-peers/"+action, &body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Content-Type", contentType)
+	request.Header.Set("Sec-Fetch-Site", "same-origin")
+	client := *n.server.Client()
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	response, err := client.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusSeeOther && response.StatusCode != http.StatusFound {
+		t.Fatalf("%s got %d", action, response.StatusCode)
+	}
+	location, err := url.Parse(response.Header.Get("Location"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return location.Query().Get("saved"), location.Query().Get("error")
+}
+
+func mailAdminPage(t *testing.T, n *mailNode) string {
+	t.Helper()
+	response, err := n.server.Client().Get(n.server.URL + "/admin/smip-peers")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	raw, err := io.ReadAll(response.Body)
+	if err != nil || response.StatusCode != 200 {
+		t.Fatal("SMIP peers page", response.StatusCode, err)
+	}
+	return string(raw)
+}
+
+func TestSmipMailPrivateDeploymentFormsDeliverWithoutRestart(t *testing.T) {
+	a, b := newMailNode(t, "private-alpha.example"), newMailNode(t, "private-beta.example")
+	t.Setenv("ADMIN_USERS", a.owner.Subject+","+b.owner.Subject)
+	mailIdentity(t, a)
+	mailIdentity(t, b)
+	sa, sb := mailTLS(t, a, nil), mailTLS(t, b, nil)
+	certificate := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: sb.Certificate().Raw})
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	private := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})
+	// Every invalid value is refused server-side and stores nothing.
+	for _, bad := range []url.Values{
+		{"domain": {"not a host"}, "origin": {sb.URL}},
+		{"domain": {"-bad.example"}, "origin": {sb.URL}},
+		{"domain": {b.config.Domain}, "origin": {"http://" + strings.TrimPrefix(sb.URL, "https://")}},
+		{"domain": {b.config.Domain}, "origin": {sb.URL + "/path"}},
+		{"domain": {b.config.Domain}, "origin": {"https://user@" + strings.TrimPrefix(sb.URL, "https://")}},
+		{"domain": {b.config.Domain}, "origin": {"https://127.0.0.1:99999"}},
+		{"domain": {b.config.Domain}, "origin": {"/etc/ssl/ca.pem"}},
+	} {
+		if _, failure := mailAdminForm(t, a, "origin-pin", bad, nil); failure == "" {
+			t.Fatalf("invalid pinned origin accepted: %v", bad)
+		}
+	}
+	for _, bad := range [][]byte{[]byte("not a certificate"), private, append(append([]byte{}, certificate...), private...), append(append([]byte{}, certificate...), []byte("trailing text")...), pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: []byte("truncated")}), bytes.Repeat(certificate, 1+smiptrust.MaxBundleBytes/len(certificate))} {
+		if _, failure := mailAdminForm(t, a, "ca-save", url.Values{"pem": {string(bad)}}, nil); failure == "" {
+			t.Fatalf("invalid CA bundle accepted: %.40q", bad)
+		}
+	}
+	if origins, err := q.New(db.From(a.server.Context())).ListSmipPinnedOrigins(a.server.Context()); err != nil || len(origins) != 0 {
+		t.Fatal("refused form stored a pinned origin", err)
+	}
+	if _, err := q.New(db.From(a.server.Context())).GetSmipCaBundle(a.server.Context()); !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal("refused form stored a CA bundle", err)
+	}
+	// Without the CA, the private origin's certificate does not verify.
+	if saved, failure := mailAdminForm(t, a, "origin-pin", url.Values{"domain": {b.config.Domain}, "origin": {sb.URL + "/"}}, nil); failure != "" || !strings.Contains(saved, "Pinned "+b.config.Domain) {
+		t.Fatalf("pin: saved=%q error=%q", saved, failure)
+	}
+	if status := smipmail.From(a.server.Context()).DomainStatus(a.server.Context(), b.config.Domain, "", lidza.Now(a.server.Context())); status.TLS != "no" {
+		t.Fatalf("a private certificate verified without its CA: %+v", status)
+	}
+	// The CA arrives as an upload on A and as pasted text on B; the origins
+	// as typed values. No gateway is rebuilt: the running process applies them.
+	if saved, failure := mailAdminForm(t, a, "ca-save", url.Values{}, certificate); failure != "" || !strings.Contains(saved, "Saved 1 CA certificate") {
+		t.Fatalf("ca upload: saved=%q error=%q", saved, failure)
+	}
+	if saved, failure := mailAdminForm(t, b, "ca-save", url.Values{"pem": {string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: sa.Certificate().Raw}))}}, nil); failure != "" || saved == "" {
+		t.Fatalf("ca paste: saved=%q error=%q", saved, failure)
+	}
+	if _, failure := mailAdminForm(t, b, "origin-pin", url.Values{"domain": {strings.ToUpper(a.config.Domain)}, "origin": {sa.URL}}, nil); failure != "" {
+		t.Fatal("pin on B:", failure)
+	}
+	page := mailAdminPage(t, a)
+	sum := sha256.Sum256(sb.Certificate().Raw)
+	for _, want := range []string{"Private deployment", b.config.Domain, sb.URL, hex.EncodeToString(sum[:]), sb.Certificate().Subject.String()} {
+		if !strings.Contains(page, html.EscapeString(want)) {
+			t.Fatalf("SMIP peers page lacks %q", want)
+		}
+	}
+	for _, secret := range []string{a.config.Seed, string(private)} {
+		if strings.Contains(page, secret) {
+			t.Fatal("secret rendered on the SMIP peers page")
+		}
+	}
+	draft := a.queue(t, b.box.Address)
+	a.deliver(t, draft)
+	if got := a.detail(t, draft); got.Item.Status != "sent" || len(got.Deliveries) != 1 || got.Deliveries[0].Transport != "smip" || got.Deliveries[0].State != "accepted" {
+		t.Fatalf("form-configured private delivery failed: %+v", got)
+	}
+	var inbox schema.MailItemList
+	b.request(t, "GET", b.base()+"?folder=inbox", nil, &inbox, 200)
+	if len(inbox.Items) != 1 || inbox.Items[0].FromAddress != a.box.Address {
+		t.Fatalf("remote inbox: %+v", inbox)
+	}
+	reverse := b.queue(t, a.box.Address)
+	b.deliver(t, reverse)
+	if got := b.detail(t, reverse); got.Item.Status != "sent" || got.Deliveries[0].Transport != "smip" {
+		t.Fatalf("reverse form-configured delivery failed: %+v", got)
+	}
+	// Every change is audited with its actor, and nothing secret is recorded.
+	for _, n := range []*mailNode{a, b} {
+		rows, err := db.From(n.server.Context()).Query(n.server.Context(), "SELECT action, actor, meta::text FROM audit_event WHERE action LIKE 'smip.trust.%' ORDER BY at")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var actions []string
+		for rows.Next() {
+			var action, actor, meta string
+			if err := rows.Scan(&action, &actor, &meta); err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(actor, n.owner.Subject) || strings.Contains(meta, "PRIVATE") || strings.Contains(meta, n.config.Seed) {
+				t.Fatalf("audit event %s by %q with %s", action, actor, meta)
+			}
+			actions = append(actions, action)
+		}
+		rows.Close()
+		if !slices.Contains(actions, "smip.trust.ca.save") || !slices.Contains(actions, "smip.trust.origin.pin") {
+			t.Fatalf("missing audit events: %v", actions)
+		}
+	}
+	// Clearing the CA and unpinning apply to the next request too.
+	ctx := a.server.Context()
+	if status := smipmail.From(ctx).DomainStatus(ctx, b.config.Domain, "", lidza.Now(ctx)); status.TLS != "yes" {
+		t.Fatalf("pinned private transport not confirmed: %+v", status)
+	}
+	if _, failure := mailAdminForm(t, a, "ca-clear", url.Values{"confirm": {"clear"}}, nil); failure != "" {
+		t.Fatal("clear:", failure)
+	}
+	if status := smipmail.From(ctx).DomainStatus(ctx, b.config.Domain, "", lidza.Now(ctx)); status.TLS != "no" {
+		t.Fatalf("a cleared CA still verified: %+v", status)
+	}
+	if _, err := smipmail.From(ctx).Resolve(ctx, b.config.Domain, true); err == nil {
+		t.Fatal("discovery verified after the CA was removed")
+	}
+	if _, failure := mailAdminForm(t, a, "origin-unpin", url.Values{"domain": {b.config.Domain}}, nil); failure != "" {
+		t.Fatal("unpin:", failure)
+	}
+	if origins, err := q.New(db.From(ctx)).ListSmipPinnedOrigins(ctx); err != nil || len(origins) != 0 {
+		t.Fatal("unpinned origin kept", err)
 	}
 }

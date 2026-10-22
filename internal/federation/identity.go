@@ -17,6 +17,7 @@ import (
 	"thura/internal/platform/ingress"
 	"thura/internal/smip"
 	"thura/internal/smipmail"
+	"thura/internal/smiptrust"
 )
 
 // PairingVersion names the signed identity document SMIP/0.1 operators pair
@@ -144,7 +145,11 @@ func (g *Gateway) FetchIdentity(ctx context.Context, domain, origin string) (Ide
 	} else if !smipmail.ValidOrigin(origin) {
 		return Identity{}, "", errors.New("the endpoint must be a bare HTTPS origin, such as https://smip.partner.example or https://10.0.0.5:8443")
 	}
-	client, err := smipmail.DiscoveryClient(ctx, g.resolver, g.roots, origin, pinned)
+	roots, err := smiptrust.Roots(ctx, g.roots)
+	if err != nil {
+		return Identity{}, origin, err
+	}
+	client, err := smipmail.DiscoveryClient(ctx, g.resolver, roots, origin, pinned)
 	if err != nil {
 		if !pinned {
 			return Identity{}, origin, fmt.Errorf("%w: smip.%s must resolve to public addresses; enter the endpoint explicitly for a private deployment", ErrPairing, domain)

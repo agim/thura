@@ -66,3 +66,51 @@ test('team owners see the central-administrator boundary without credentials', a
   await expect(page.getByRole('status')).toContainText('configured centrally by the server administrator')
   await expect(page.getByLabel('API key')).toHaveCount(0)
 })
+
+test('team setup renders before the SMIP status and shows an honest status per domain', async ({ page }) => {
+  const team = { id, name: 'Regional team', createdAt: '2026-10-19T12:00:00Z' }
+  const failingId = 'f0000000-0000-4000-8000-000000000043'
+  const domain = (domainId: string, name: string) => ({ id: domainId, name, status: 'verified', web: true, mail: true, txtName: '', txtValue: '' })
+  const mail = (domainId: string) => ({ domainId, provider: 'postmark', region: 'us', smtpHost: '', smtpPort: 0, smtpUsername: '', smtpSecurity: '', hasApiKey: true, hasSmtpPassword: false, enabled: true, smip: true, postfix: true, keyId: `public-key-${domainId.slice(-2)}`, publicKey: 'public-test-value' })
+  const state = { workspaceId: id, name: team.name, status: 'draft', primaryDomain: '', canManage: true, domains: [domain(domainId, 'regional.example.org'), domain(failingId, 'branch.example.org')], mail: [mail(domainId), mail(failingId)] }
+  await page.route('**/api/v1/workspaces', route => route.fulfill({ json: { items: [team] } }))
+  await page.route('**/api/v1/managed-teams', route => route.fulfill({ json: { items: [team] } }))
+  await page.route('**/team-setup', route => route.fulfill({ json: state }))
+  let release: () => void = () => {}
+  const released = new Promise<void>(resolve => { release = resolve })
+  let held = 0
+  await page.route(`**/domains/${domainId}/smip/status`, async route => {
+    held++
+    await released
+    await route.fulfill({ json: { domain: 'regional.example.org', txt: 'found', addresses: ['203.0.113.7'], matchesServer: 'yes', tls: 'yes', detail: '', checkedAt: '2026-10-22T12:00:00Z' } })
+  })
+  await page.route(`**/domains/${failingId}/smip/status`, async route => { await released; await route.fulfill({ status: 503, json: { error: 'The SMIP status check could not run' } }) })
+  await page.goto('/app')
+  await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
+  await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Account menu', exact: true })).toBeVisible()
+  await page.goto('/app/settings/team')
+  await expect(page.getByText('regional.example.org', { exact: true })).toBeVisible()
+  await expect(page.getByText('branch.example.org', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '2. Email', exact: true }).click()
+  // While the status requests are held, every domain's settings are usable.
+  await expect.poll(() => held).toBe(1)
+  await expect(page.getByRole('heading', { name: 'regional.example.org', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'branch.example.org', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save email settings', exact: true })).toHaveCount(2)
+  await expect(page.getByText('Checking DNS and transport…')).toHaveCount(2)
+  await page.getByRole('button', { name: '1. Domains', exact: true }).click()
+  await expect(page.getByText('regional.example.org', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '2. Email', exact: true }).click()
+  release()
+  const observed = page.getByLabel('SMIP status for regional.example.org', { exact: true })
+  await expect(observed).toContainText('TXT record _smip.regional.example.org: found')
+  await expect(observed).toContainText('TLS 1.3 reachable: yes')
+  const failed = page.getByLabel('SMIP status for branch.example.org', { exact: true })
+  await expect(failed).toContainText('The SMIP status check could not run')
+  await expect(failed).not.toContainText('reachable')
+  await expect(page.getByRole('button', { name: 'Check SMIP status for branch.example.org again', exact: true })).toBeVisible()
+  await expect(page.getByText('Checking DNS and transport…')).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})

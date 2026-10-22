@@ -12,7 +12,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -21,6 +20,7 @@ import (
 	"github.com/agim/lidza/pkg/env"
 	"github.com/jackc/pgx/v5"
 	"thura/internal/smip"
+	"thura/internal/smiptrust"
 )
 
 type Config struct {
@@ -46,11 +46,16 @@ type Gateway struct {
 	keys             map[string]smip.Key
 	origins          map[string]string
 	required, denied map[string]bool
-	roots            *x509.CertPool
-	resolver         *net.Resolver
-	slots            chan struct{}
-	admissions       chan struct{}
-	ingest           Ingest
+	// roots and caPEM come from the deployment JSON caFile; origins are the
+	// JSON origins. The admin page's saved origins and CA bundle are merged
+	// over them per request (smiptrust), the saved values winning.
+	roots      *x509.CertPool
+	caFile     string
+	caPEM      []byte
+	resolver   *net.Resolver
+	slots      chan struct{}
+	admissions chan struct{}
+	ingest     Ingest
 }
 
 func Configure(s *lidza.Services, ingest Ingest) error {
@@ -125,17 +130,31 @@ func NewGateway(cfg Config, ingest Ingest) (*Gateway, error) {
 		if err != nil || !roots.AppendCertsFromPEM(raw) {
 			return nil, errors.New("invalid SMIP mail CA bundle")
 		}
-		g.roots = roots
+		g.roots, g.caFile, g.caPEM = roots, cfg.CAFile, raw
 	}
 	return g, nil
 }
-func validOrigin(raw string) bool {
-	u, err := url.Parse(raw)
-	return err == nil && u.Scheme == "https" && u.Hostname() != "" && u.User == nil && u.RawQuery == "" && u.Fragment == "" && (u.Path == "" || u.Path == "/")
+func validOrigin(raw string) bool { return smiptrust.ValidOrigin(raw) }
+
+// pinnedOrigins is the operator-pinned origin of each partner domain for this
+// request: the JSON origins with the admin page's saved origins over them.
+func (g *Gateway) pinnedOrigins(ctx context.Context) (map[string]string, error) {
+	return smiptrust.MergeOrigins(ctx, g.origins)
 }
-func From(ctx context.Context) *Gateway { return lidza.Service[*Gateway](ctx) }
-func (g *Gateway) Enabled() bool        { return g.domain != "" }
-func (g *Gateway) Domain() string       { return g.domain }
+
+// ConfiguredOrigins and ConfiguredCA are the deployment JSON values, shown
+// read-only on the admin page; nothing secret is in them.
+func (g *Gateway) ConfiguredOrigins() map[string]string {
+	out := make(map[string]string, len(g.origins))
+	for domain, origin := range g.origins {
+		out[domain] = origin
+	}
+	return out
+}
+func (g *Gateway) ConfiguredCA() (string, []byte) { return g.caFile, g.caPEM }
+func From(ctx context.Context) *Gateway           { return lidza.Service[*Gateway](ctx) }
+func (g *Gateway) Enabled() bool                  { return g.domain != "" }
+func (g *Gateway) Domain() string                 { return g.domain }
 func Capabilities(w http.ResponseWriter, r *http.Request) {
 	if g, ok := requestGateway(w, r); ok {
 		g.capabilities(w, r)

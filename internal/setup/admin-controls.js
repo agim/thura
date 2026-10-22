@@ -314,6 +314,62 @@
     box.addEventListener('focusout', e => {if (!box.contains(e.relatedTarget)) close();});
     suggestRefreshers.push(() => { void loadLive(); if (!list.hidden && !filter()) close(); });
   }
+  // The SMIP mail status loads after the page through the gated
+  // smip-status.json endpoint: the DNS and TLS lookups never delay the
+  // instructions. Server values are written as text, never as markup, and a
+  // failed request says the check could not run instead of showing a result.
+  for (const pending of document.querySelectorAll('[data-smip-status-pending]')) {
+    const message = pending.querySelector('[data-smip-status-message]');
+    const item = (label, parts) => {
+      const li = document.createElement('li');
+      for (const [text, tag] of parts) {
+        const node = document.createElement(tag || 'span');
+        node.textContent = text;
+        li.append(node);
+      }
+      li.prepend(label);
+      return li;
+    };
+    const failed = () => {
+      message.textContent = 'The status check could not run. ';
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'btn btn-link p-0 align-baseline';
+      retry.textContent = 'Try again';
+      retry.addEventListener('click', () => { void load(); });
+      message.append(retry);
+    };
+    const load = async () => {
+      message.hidden = false;
+      message.textContent = 'Checking DNS and transport…';
+      pending.querySelector('[data-smip-status]')?.remove();
+      pending.querySelector('[data-smip-status-detail]')?.remove();
+      try {
+        const response = await fetch('setup/smip-status.json', {credentials:'same-origin', cache:'no-store', signal:AbortSignal.timeout(15000)});
+        const data = await response.json();
+        if (!response.ok || data.error || !data.available || typeof data.domain !== 'string') { failed(); return; }
+        const list = document.createElement('ul');
+        list.dataset.smipStatus = '';
+        list.setAttribute('aria-label', 'SMIP DNS and transport status');
+        const txt = data.txt === 'found' ? 'found' : data.txt === 'missing' ? 'missing' : 'lookup failed';
+        const addresses = Array.isArray(data.addresses) && data.addresses.length ? data.addresses.join(', ') : 'nothing yet';
+        list.append(
+          item('TXT record ', [['_smip.' + data.domain, 'code'], [': '], [txt, 'strong']]),
+          item('', [['smip.' + data.domain, 'code'], [' resolves to '], [addresses, 'strong'], [' (matches this server’s public address: '], [String(data.matchesServer || 'unknown'), 'strong'], [')']]),
+          item('TLS 1.3 reachable: ', [[data.tls === 'yes' ? 'yes' : 'no', 'strong']]));
+        message.textContent = 'Checked ' + (data.checkedAt || 'just now') + '.';
+        message.after(list);
+        if (data.detail) {
+          const detail = document.createElement('p');
+          detail.className = 'form-hint';
+          detail.dataset.smipStatusDetail = '';
+          detail.textContent = data.detail;
+          list.after(detail);
+        }
+      } catch { failed(); }
+    };
+    void load();
+  }
   for (const checkbox of document.querySelectorAll('[data-setup-field] input[type=checkbox][id]')) checkbox.addEventListener('change', refresh);
   document.addEventListener('input', e => { if (e.target.matches('[data-setup-field] input')) applyDerived(); });
   refresh();

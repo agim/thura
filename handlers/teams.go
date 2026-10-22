@@ -33,30 +33,36 @@ func GetTenantContext(ctx context.Context, r *router.Request[router.None]) (sche
 	return tenancy.Host(ctx), nil
 }
 func GetTeamSetup(ctx context.Context, r *router.Request[router.None]) (schema.TeamSetupView, error) {
-	out, e := tenancy.View(ctx, r.Param("workspaceId"))
-	if e != nil {
+	return tenancy.View(ctx, r.Param("workspaceId"))
+}
+
+// GetTeamSmipStatus is the informational DNS/transport status of one team
+// domain's SMIP identity, which the page loads after it renders. It never
+// blocks team publication, reports only what was observed, is cached for a
+// minute per domain and bounded to smipmail.StatusTimeout.
+func GetTeamSmipStatus(ctx context.Context, r *router.Request[router.None]) (schema.SmipDnsStatus, error) {
+	var out schema.SmipDnsStatus
+	id, domainID := r.Param("workspaceId"), r.Param("id")
+	if e := tenancy.Manage(ctx, id); e != nil {
 		return out, e
 	}
-	// Informational DNS/transport status beside each SMIP identity; it never
-	// blocks team publication and reports only what was actually observed.
+	queries := q.New(db.From(ctx))
+	d, e := queries.GetTeamDomain(ctx, q.GetTeamDomainParams{WorkspaceID: id, ID: domainID})
+	if e != nil {
+		return out, router.Errorf(404, "Domain not found")
+	}
+	m, e := queries.GetTeamMailConfig(ctx, q.GetTeamMailConfigParams{WorkspaceID: id, DomainID: d.ID})
+	if e != nil || !d.Mail || !m.Smip || !m.Enabled {
+		return out, router.Errorf(404, "SMIP delivery is not enabled for this domain")
+	}
 	var cfg struct {
 		URL string `env:"APP_URL"`
 	}
 	if env.Load(".", &cfg) != nil {
-		return out, nil
+		return out, router.Errorf(503, "The SMIP status check could not run")
 	}
-	names := map[string]string{}
-	for _, d := range out.Domains {
-		names[d.ID] = d.Name
-	}
-	for i, m := range out.Mail {
-		if !m.Smip || !m.Enabled || names[m.DomainID] == "" {
-			continue
-		}
-		s := smipmail.From(ctx).DomainStatus(ctx, names[m.DomainID], cfg.URL, lidza.Now(ctx))
-		out.Mail[i].Dns = &schema.SmipDnsStatus{Domain: s.Domain, Txt: s.TXT, Addresses: s.Addresses, MatchesServer: s.MatchesServer, Tls: s.TLS, Detail: s.Detail, CheckedAt: s.CheckedAt}
-	}
-	return out, nil
+	s := smipmail.From(ctx).DomainStatus(ctx, d.Name, cfg.URL, lidza.Now(ctx))
+	return schema.SmipDnsStatus{Domain: s.Domain, Txt: s.TXT, Addresses: s.Addresses, MatchesServer: s.MatchesServer, Tls: s.TLS, Detail: s.Detail, CheckedAt: s.CheckedAt}, nil
 }
 func AddTeamDomain(ctx context.Context, r *router.Request[schema.TeamDomainInput]) (schema.TeamDomainView, error) {
 	out, e := tenancy.AddDomain(ctx, r.Param("workspaceId"), r.Body)

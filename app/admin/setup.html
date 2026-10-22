@@ -30,6 +30,9 @@
 <h4>Publish these DNS records</h4>
 <table aria-label="SMIP email DNS records"><thead><tr><th>Type</th><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>TXT</td><td><code>_smip.{{.MailIdentity.Domain}}</code></td><td><code>v=SMIP1</code></td></tr><tr><td>A / AAAA</td><td><code>smip.{{.MailIdentity.Domain}}</code></td><td>Your Thura server’s public IP address</td></tr></tbody></table>
 <p>Configure a trusted certificate for <strong>smip.{{.MailIdentity.Domain}}</strong> and direct TLS 1.3 access to Thura. A proxy that forwards ordinary HTTP to Thura does not satisfy SMIP’s transport requirement. Publish and restart to activate this identity; these DNS and transport instructions do not imply a successful connection test.</p>
+{{if .MailIdentity.StatusDeferred}}<h4>Current status</h4>
+<div data-smip-status-pending><p role="status" data-smip-status-message hidden>Checking DNS and transport…</p><noscript><p><a href="setup?step=mail&amp;smip_status=now">Check the DNS and transport status now</a> (the page waits up to six seconds).</p></noscript></div>
+<p class="form-hint">Refreshed at most once a minute. Informational only: publication relies on the recorded Secure delivery check in Review, never on this status.</p>{{end}}
 {{with .MailIdentity.Status}}<h4>Current status</h4>
 <ul aria-label="SMIP DNS and transport status" data-smip-status><li>TXT record <code>_smip.{{.Domain}}</code>: <strong>{{if eq .TXT "found"}}found{{else if eq .TXT "missing"}}missing{{else}}lookup failed{{end}}</strong></li>
 <li><code>smip.{{.Domain}}</code> resolves to <strong>{{if .Addresses}}{{range $i, $a := .Addresses}}{{if $i}}, {{end}}{{$a}}{{end}}{{else}}nothing yet{{end}}</strong> (matches this server’s public address: <strong>{{.MatchesServer}}</strong>)</li>

@@ -95,7 +95,11 @@ func (g *Gateway) sendSecure(ctx context.Context, initial q.MailTransmission, de
 	if err != nil {
 		return err
 	}
-	_, pinned := g.origins[delivery.Domain]
+	origins, err := g.pinnedOrigins(ctx)
+	if err != nil {
+		return g.hold(ctx, initial, delivery, "secure_connection_unavailable_no_fallback", false)
+	}
+	_, pinned := origins[delivery.Domain]
 	client, err := g.client(ctx, peer.Origin, pinned)
 	if err != nil {
 		return g.hold(ctx, initial, delivery, "secure_connection_unavailable_no_fallback", false)

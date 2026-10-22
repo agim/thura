@@ -1964,6 +1964,50 @@ func (v SmipPeer) Validate() error {
 	return errs.Result()
 }
 
+// SmipPinnedOrigin is a row of the smip_pinned_origin table.
+type SmipPinnedOrigin struct {
+	ID      string    `json:"id" db:"id"`
+	Domain  string    `json:"domain" db:"domain"`
+	Origin  string    `json:"origin" db:"origin"`
+	AddedBy string    `json:"addedBy" db:"added_by"`
+	AddedAt time.Time `json:"addedAt" db:"added_at"`
+}
+
+// Validate applies the rules of SmipPinnedOrigin from schema.lidza.
+func (v SmipPinnedOrigin) Validate() error {
+	var errs validate.Errors
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	if v.Origin == "" {
+		errs.Add("origin", "required", "required")
+	}
+	if v.AddedBy == "" {
+		errs.Add("addedBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipCaBundle is a row of the smip_ca_bundle table.
+type SmipCaBundle struct {
+	ID        string    `json:"id" db:"id"`
+	Pem       string    `json:"pem" db:"pem"`
+	UpdatedBy string    `json:"updatedBy" db:"updated_by"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of SmipCaBundle from schema.lidza.
+func (v SmipCaBundle) Validate() error {
+	var errs validate.Errors
+	if v.Pem == "" {
+		errs.Add("pem", "required", "required")
+	}
+	if v.UpdatedBy == "" {
+		errs.Add("updatedBy", "required", "required")
+	}
+	return errs.Result()
+}
+
 // SmipMailDomain is a row of the smip_mail_domain table.
 type SmipMailDomain struct {
 	ID           string    `json:"id" db:"id"`
@@ -5499,22 +5543,21 @@ func (v SmipDnsStatus) Validate() error {
 
 // TeamMailView is an API type.
 type TeamMailView struct {
-	DomainID        string         `json:"domainId"`
-	Provider        string         `json:"provider"`
-	Region          string         `json:"region"`
-	SmtpHost        string         `json:"smtpHost"`
-	SmtpPort        int            `json:"smtpPort"`
-	SmtpUsername    string         `json:"smtpUsername"`
-	SmtpSecurity    string         `json:"smtpSecurity"`
-	HasAPIKey       bool           `json:"hasApiKey"`
-	HasSmtpPassword bool           `json:"hasSmtpPassword"`
-	Enabled         bool           `json:"enabled"`
-	Smip            bool           `json:"smip"`
-	Postfix         bool           `json:"postfix"`
-	PublicKey       string         `json:"publicKey"`
-	KeyID           string         `json:"keyId"`
-	KeyExpiresAt    *time.Time     `json:"keyExpiresAt"`
-	Dns             *SmipDnsStatus `json:"dns"`
+	DomainID        string     `json:"domainId"`
+	Provider        string     `json:"provider"`
+	Region          string     `json:"region"`
+	SmtpHost        string     `json:"smtpHost"`
+	SmtpPort        int        `json:"smtpPort"`
+	SmtpUsername    string     `json:"smtpUsername"`
+	SmtpSecurity    string     `json:"smtpSecurity"`
+	HasAPIKey       bool       `json:"hasApiKey"`
+	HasSmtpPassword bool       `json:"hasSmtpPassword"`
+	Enabled         bool       `json:"enabled"`
+	Smip            bool       `json:"smip"`
+	Postfix         bool       `json:"postfix"`
+	PublicKey       string     `json:"publicKey"`
+	KeyID           string     `json:"keyId"`
+	KeyExpiresAt    *time.Time `json:"keyExpiresAt"`
 }
 
 // Validate applies the rules of TeamMailView from schema.lidza.
@@ -5543,12 +5586,6 @@ func (v TeamMailView) Validate() error {
 	}
 	if v.KeyID == "" {
 		errs.Add("keyId", "required", "required")
-	}
-	if v.Dns != nil {
-		x := *v.Dns
-		if err := x.Validate(); err != nil {
-			errs.Add("dns", "nested", err.Error())
-		}
 	}
 	return errs.Result()
 }

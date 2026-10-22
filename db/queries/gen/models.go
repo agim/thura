@@ -825,6 +825,13 @@ type SmipBinding struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type SmipCaBundle struct {
+	ID        string    `json:"id"`
+	Pem       string    `json:"pem"`
+	UpdatedBy string    `json:"updated_by"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type SmipInbox struct {
 	ID             string     `json:"id"`
 	WorkspaceID    string     `json:"workspace_id"`
@@ -913,6 +920,14 @@ type SmipPeer struct {
 	PairedAt  *time.Time `json:"paired_at"`
 	FetchedAt time.Time  `json:"fetched_at"`
 	Notes     string     `json:"notes"`
+}
+
+type SmipPinnedOrigin struct {
+	ID      string    `json:"id"`
+	Domain  string    `json:"domain"`
+	Origin  string    `json:"origin"`
+	AddedBy string    `json:"added_by"`
+	AddedAt time.Time `json:"added_at"`
 }
 
 type TeamDomain struct {

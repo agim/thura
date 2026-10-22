@@ -3,6 +3,7 @@ package federation
 import (
 	"context"
 	"crypto/ed25519"
+	"crypto/x509"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"github.com/agim/lidza/packs/db"
 	q "thura/db/queries/gen"
 	"thura/internal/smip"
+	"thura/internal/smiptrust"
 )
 
 // Peer states in smip_peer. A pending row is a fetched proposal awaiting the
@@ -34,9 +36,12 @@ const ProposalLifetime = time.Hour
 // read for one request or attempt. Per key ID the database wins; a key
 // revoked in either source is revoked; a pending proposal has no effect. A
 // domain keeps a sending endpoint only while it has an unrevoked key.
+// Roots is the certificate pool of the same read: the system roots plus the
+// CA bundle saved on the admin page, else the JSON caFile.
 type Trust struct {
 	Peers   map[string]map[string]smip.Key
 	Origins map[string]string
+	Roots   *x509.CertPool
 }
 
 func (g *Gateway) Trust(ctx context.Context) (Trust, error) {
@@ -54,6 +59,11 @@ func (g *Gateway) Trust(ctx context.Context) (Trust, error) {
 	if g.domain == "" {
 		return trust, nil
 	}
+	roots, err := smiptrust.Roots(ctx, g.roots)
+	if err != nil {
+		return Trust{}, err
+	}
+	trust.Roots = roots
 	rows, err := q.New(db.From(ctx)).ListSmipPeers(ctx, g.domain)
 	if err != nil {
 		return Trust{}, err
@@ -85,7 +95,7 @@ func (g *Gateway) Trust(ctx context.Context) (Trust, error) {
 			delete(trust.Origins, domain)
 			continue
 		}
-		if client, err := g.newClient(origin, domain, trust.Peers[domain]); err != nil {
+		if client, err := g.newClient(origin, domain, trust.Peers[domain], trust.Roots); err != nil {
 			delete(trust.Origins, domain)
 		} else {
 			client.Close()

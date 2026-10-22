@@ -42,7 +42,7 @@ func Page() admin.Page {
 		if _, err := io.WriteString(w, adminControls); err != nil {
 			slog.WarnContext(r.Context(), "serve setup controls", "error", err)
 		}
-	}, "models.json": modelsJSON}, Data: func(r *http.Request) (any, error) {
+	}, "models.json": modelsJSON, "smip-status.json": smipStatusJSON}, Data: func(r *http.Request) (any, error) {
 		row, e := q.New(db.From(r.Context())).GetServerSetup(r.Context())
 		if e != nil {
 			return nil, e
@@ -65,8 +65,15 @@ func Page() admin.Page {
 			view.IntegrationChecks = append(view.IntegrationChecks, IntegrationCheckView{Kind: kind, ID: uuid.NewString()})
 		}
 		if step.ID == "mail" && view.MailIdentity.Saved && v["SMIP_MAIL_ENABLED"] == "true" {
-			status := smipmail.From(r.Context()).DomainStatus(r.Context(), view.MailIdentity.Domain, v["APP_URL"], lidza.Now(r.Context()))
-			view.MailIdentity.Status = &status
+			// The DNS/TLS lookups can take seconds, so the instructions render
+			// at once and the controls fetch the status; the no-script link
+			// asks for it inline instead.
+			if r.URL.Query().Get("smip_status") == "now" {
+				status := smipmail.From(r.Context()).DomainStatus(r.Context(), view.MailIdentity.Domain, v["APP_URL"], lidza.Now(r.Context()))
+				view.MailIdentity.Status = &status
+			} else {
+				view.MailIdentity.StatusDeferred = true
+			}
 		}
 		for i, f := range step.Fields {
 			view.Step.Fields[i].Saved = v[f.Name] != ""

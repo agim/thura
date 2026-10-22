@@ -17,9 +17,12 @@ import (
 // MailIdentityView contains public metadata only, never a signing seed.
 // Status is the informational DNS/transport view of the saved domain; it
 // never gates publication, which relies on the recorded Secure delivery check.
+// StatusDeferred means the page renders at once and the setup controls fill
+// the status from smip-status.json; Status is set only when the operator
+// asked for it in the page itself (the no-script recheck link).
 type MailIdentityView struct {
 	Domain, KeyID, Expires string
-	Saved                  bool
+	Saved, StatusDeferred  bool
 	Status                 *smipmail.Status
 }
 

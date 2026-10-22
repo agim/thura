@@ -769,6 +769,21 @@ CREATE TABLE smip_peer (
 );
 CREATE UNIQUE INDEX smip_peer_owner_domain_key_id_key ON smip_peer (owner, domain, key_id);
 
+CREATE TABLE smip_pinned_origin (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  domain text NOT NULL UNIQUE,
+  origin text NOT NULL,
+  added_by text NOT NULL DEFAULT '',
+  added_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE smip_ca_bundle (
+  id text PRIMARY KEY,
+  pem text NOT NULL,
+  updated_by text NOT NULL DEFAULT '',
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE smip_mail_domain (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   origin text NOT NULL,

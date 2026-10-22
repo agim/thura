@@ -53,10 +53,14 @@ built-in listener and for the deployment ingress, is stated once in
 ingress/DNS/certificate configuration remains an operator deployment task; the
 domain's SMIP identity shows a read-only status (TXT found or missing, where
 `smip.<domain>` points and whether that is this server, TLS 1.3 reachable) that
-never blocks publishing.
+never blocks publishing. It loads after the page from
+`GET /api/v1/workspaces/{workspaceId}/domains/{id}/smip/status` (server
+administrator only), showing **Checking…** meanwhile and saying the check could
+not run when the request fails.
 
 Public SMIP requests select the identity by the configured hostname. Requests to
-operator-pinned private origins may additionally carry `X-Thura-SMIP-Domain` for
+operator-pinned private origins (Administration → SMIP peers → Private
+deployment, see [private deployments](smip-mail.md#private-deployments)) may additionally carry `X-Thura-SMIP-Domain` for
 virtual hosting; it cannot cross an already-bound team host or bypass packet,
 key, recipient or TLS verification. The header is routing metadata, not an
 identity proof. Public capability documents never contain private keys.

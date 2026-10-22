@@ -21,12 +21,14 @@ type PeersPage struct {
 	Peers        []PeerView
 	Pending      []PeerView
 	MaxPeers     int
+	Private      PrivateTrust
 }
 
 func Page() admin.Page {
-	return admin.Page{Name: "SMIP peers", Path: "smip-peers", Icon: "shield-check", Template: "smip-peers.html", Data: func(r *http.Request) (any, error) {
+	actions := privateActions()
+	page := admin.Page{Name: "SMIP peers", Path: "smip-peers", Icon: "shield-check", Template: "smip-peers.html", MaxUpload: maxUpload, Data: func(r *http.Request) (any, error) {
 		g := From(r.Context())
-		data := PeersPage{Enabled: g.Enabled(), Domain: g.domain, IdentityPath: IdentityPath, MaxPeers: MaxPeers}
+		data := PeersPage{Enabled: g.Enabled(), Domain: g.domain, IdentityPath: IdentityPath, MaxPeers: MaxPeers, Private: privateTrust(r.Context())}
 		if !g.Enabled() {
 			return data, nil
 		}
@@ -84,4 +86,8 @@ func Page() admin.Page {
 			return "Revoked. Its keys are refused on every node from the next packet; queued sends to it block before any network attempt.", nil
 		},
 	}}
+	for name, action := range actions {
+		page.Actions[name] = action
+	}
+	return page
 }

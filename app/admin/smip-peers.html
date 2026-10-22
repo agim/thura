@@ -33,4 +33,32 @@
 {{else}}<div class="card-body">{{template "admin-empty" (dict "Icon" "shield-check" "Title" "No peer paired yet" "Text" "Fetch a server's identity above, confirm its fingerprint with the other operator, and have them pair this server too.")}}</div>{{end}}
 <div class="card-footer text-secondary">Pairing and revocation take effect on the next packet on every node, without a restart. Revoked keys are never trusted again on this server; a peer whose key was revoked has to rotate it. Workspace owners still authorize each stream in Chat before content is accepted.</div>
 </div>
-{{end}}{{end}}{{end}}
+{{end}}
+{{with .Private}}<div class="card mt-3" id="private-deployment"><div class="card-header"><h3 class="card-title">Private deployment</h3></div><div class="card-body">
+<p>For servers that cannot use public DNS and publicly trusted certificates: pin a partner's SMIP email domain to an HTTPS origin you control (it may be a private address), and add the private CA that signs the partner's certificate. Changes apply from the next request on every node, without a restart, and are recorded in the audit log. Certificate verification is never switched off.</p>
+{{if .Error}}<div class="alert alert-danger" role="alert">{{.Error}}</div>{{end}}
+<h4 id="pinned-origins-title">Pinned email origins (SMIP/0.2)</h4>
+{{if .Origins}}<div class="table-responsive"><table class="table card-table" aria-labelledby="pinned-origins-title"><thead><tr><th>Partner domain</th><th>HTTPS origin</th><th>Source</th><th></th></tr></thead><tbody>{{range .Origins}}<tr><td><strong>{{.Domain}}</strong></td><td><code>{{.Origin}}</code>{{if .Replaces}}<div class="text-secondary">replaces <code>{{.Replaces}}</code> from deployment configuration</div>{{end}}</td><td>{{if .Saved}}Saved here {{.AddedAt.Format "Jan 2, 2006"}}<div class="text-secondary">{{.AddedBy}}</div>{{else}}<span class="badge">deployment configuration</span><div class="text-secondary">read-only; from SMIP_MAIL_CONFIG</div>{{end}}</td><td>{{if .Saved}}<form method="post" action="{{$.Path}}/smip-peers/origin-unpin" data-admin-confirm="Remove the pinned origin of {{.Domain}}?"><input type="hidden" name="domain" value="{{.Domain}}"><button class="btn btn-outline-danger btn-sm" type="submit">Remove</button></form>{{end}}</td></tr>{{end}}</tbody></table></div>
+{{else}}<p class="text-secondary">No pinned origins. Partner domains are discovered through <code>_smip.&lt;domain&gt;</code> TXT and <code>https://smip.&lt;domain&gt;</code>, which must resolve to public addresses.</p>{{end}}
+<form method="post" action="{{$.Path}}/smip-peers/origin-pin" class="mt-3">
+<div class="row g-2"><div class="col-md-5"><label class="form-label" for="pin-domain">Partner email domain</label><input class="form-control" id="pin-domain" name="domain" required maxlength="253" placeholder="partner.example" autocapitalize="none" autocorrect="off"></div>
+<div class="col-md-5"><label class="form-label" for="pin-origin">HTTPS origin</label><input class="form-control" id="pin-origin" name="origin" required maxlength="512" placeholder="https://10.0.0.5:8443" autocapitalize="none" autocorrect="off"></div>
+<div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100" type="submit">Pin origin</button></div></div>
+<div class="form-hint">A bare HTTPS origin: no path, query or credentials. A saved origin wins over one for the same domain in deployment configuration. Both servers need each other's origin. At most {{.MaxOrigins}}.</div>
+</form>
+
+<h4 class="mt-4" id="ca-title">Private CA bundle (SMIP/0.1 and SMIP/0.2)</h4>
+{{with .Saved}}<p>Saved {{.UpdatedAt.Format "Jan 2, 2006 3:04 PM MST"}} by <span class="text-secondary">{{.UpdatedBy}}</span>. These certificates are trusted beside the system roots for SMIP chat, file and email connections.</p>
+<div class="table-responsive"><table class="table card-table" aria-label="Saved CA certificates"><thead><tr><th>Subject</th><th>Issuer</th><th>Valid</th><th>SHA-256</th></tr></thead><tbody>{{range .Certificates}}<tr><td>{{.Subject}}{{if not .CA}}<div class="text-secondary">not marked as a CA; trusted as this exact certificate</div>{{end}}</td><td>{{.Issuer}}</td><td>{{.NotBefore.Format "Jan 2, 2006"}} – {{.NotAfter.Format "Jan 2, 2006"}}{{if .Expired}} <span class="badge bg-red-lt">expired</span>{{end}}</td><td><code>{{.Fingerprint}}</code></td></tr>{{end}}</tbody></table></div>
+<form method="post" action="{{$.Path}}/smip-peers/ca-clear" class="mt-2" data-admin-confirm="Remove the saved CA bundle? Connections to private partners that rely on it will fail verification."><input type="hidden" name="confirm" value="clear"><button class="btn btn-outline-danger btn-sm" type="submit">Remove CA bundle</button></form>
+{{else}}<p class="text-secondary">No CA bundle saved here. Only the system roots{{if .Configured}} and the deployment configuration bundle below{{end}} are trusted.</p>{{end}}
+<form method="post" action="{{$.Path}}/smip-peers/ca-save" enctype="multipart/form-data" class="mt-3">
+<div class="mb-3"><label class="form-label" for="ca-pem">PEM certificates</label><textarea class="form-control font-monospace" id="ca-pem" name="pem" rows="6" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----"></textarea></div>
+<div class="mb-3"><label class="form-label" for="ca-file">Or choose a .pem file</label><input class="form-control" id="ca-file" name="file" type="file" accept=".pem,.crt,.cer,application/x-pem-file"></div>
+<div class="form-hint mb-3">Certificates only: every block must be a <code>CERTIFICATE</code> that parses, at most {{.MaxBundleKiB}} KiB. Saving replaces the whole bundle and, while saved, replaces the deployment configuration caFile. Never paste a private key.</div>
+<button class="btn btn-primary" type="submit">{{if .Saved}}Replace CA bundle{{else}}Save CA bundle{{end}}</button>
+</form>
+{{range .Configured}}<div class="mt-4"><h5>From deployment configuration: {{.Profile}}</h5><p class="text-secondary">Read-only; <code>caFile</code> {{.File}}, read at startup.{{if .Overridden}} The bundle saved above replaces it while saved.{{end}}</p>
+{{if .Error}}<p class="text-danger">{{.Error}}</p>{{else}}<div class="table-responsive"><table class="table card-table" aria-label="Configured CA certificates for {{.Profile}}"><thead><tr><th>Subject</th><th>Issuer</th><th>Valid</th></tr></thead><tbody>{{range .Certificates}}<tr><td>{{.Subject}}</td><td>{{.Issuer}}</td><td>{{.NotBefore.Format "Jan 2, 2006"}} – {{.NotAfter.Format "Jan 2, 2006"}}{{if .Expired}} <span class="badge bg-red-lt">expired</span>{{end}}</td></tr>{{end}}</tbody></table></div>{{end}}</div>{{end}}
+</div></div>{{end}}
+{{end}}{{end}}

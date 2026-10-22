@@ -99,7 +99,11 @@ func (g *Gateway) probeStatus(ctx context.Context, domain, appURL string, now ti
 	host := "smip." + domain
 	origin := "https://" + host
 	pinned := false
-	if pinnedOrigin, ok := g.origins[domain]; ok {
+	origins, err := g.pinnedOrigins(ctx)
+	if err != nil {
+		details = append(details, "The pinned origins could not be read; the status may not reflect them.")
+	}
+	if pinnedOrigin, ok := origins[domain]; ok {
 		origin, pinned = pinnedOrigin, true
 		if u, err := url.Parse(pinnedOrigin); err == nil {
 			host = u.Hostname()
@@ -192,5 +196,12 @@ func (g *Gateway) challenge(ctx context.Context, origin string, pinned bool) err
 func ForgetStatus(domain string) {
 	statusCache.Lock()
 	delete(statusCache.entries, strings.ToLower(strings.TrimSpace(domain)))
+	statusCache.Unlock()
+}
+
+// ForgetAllStatus drops every cached status, after the CA bundle changed.
+func ForgetAllStatus() {
+	statusCache.Lock()
+	statusCache.entries = map[string]Status{}
 	statusCache.Unlock()
 }

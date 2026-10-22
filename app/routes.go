@@ -74,6 +74,7 @@ func routes(r *router.Router) {
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/domains/{id}", handlers.RemoveTeamDomain)
 	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/domains/{id}/mail", handlers.SaveTeamMail)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/domains/{id}/smip/rotate", handlers.RotateTeamIdentity)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/domains/{id}/smip/status", handlers.GetTeamSmipStatus)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/mailboxes", handlers.CreateTeamMailbox)
 	router.Route(g, "GET /api/v1/workspaces", handlers.ListWorkspaces)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/audit", handlers.ListWorkspaceAudit)

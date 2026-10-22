@@ -1322,6 +1322,25 @@ model SmipPeer {
   notes string @default("")
   @@unique(owner, domain, keyId)
 }
+// Operator-pinned SMIP/0.2 mail origins for private deployments, set on the
+// SMIP peers admin page. Merged over SMIP_MAIL_CONFIG origins on every read;
+// the row wins for its domain.
+model SmipPinnedOrigin {
+  id uuid @id @default(uuid())
+  domain string @unique
+  origin string
+  addedBy string @default("")
+  addedAt time @default(now())
+}
+// The private CA bundle (PEM certificates only) trusted, beside the system
+// roots, by SMIP/0.1 and SMIP/0.2 server-to-server TLS. One row ("default");
+// when present it replaces the deployment JSON caFile bundles.
+model SmipCaBundle {
+  id string @id
+  pem text
+  updatedBy string @default("")
+  updatedAt time @default(now())
+}
 // Domain capabilities are local-origin scoped, sticky after first verification.
 model SmipMailDomain {
  id uuid @id @default(uuid())
@@ -1621,7 +1640,6 @@ type TeamMailView {
   publicKey string
   keyId string
   keyExpiresAt time?
-  dns SmipDnsStatus?
 }
 type TeamSetupView {
   workspaceId uuid

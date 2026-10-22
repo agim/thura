@@ -44,8 +44,12 @@ type Gateway struct {
 	slots      chan struct{}
 	origins    map[string]string
 	originKeys map[string]smip.Key
-	roots      *x509.CertPool
-	resolver   *net.Resolver
+	// roots, caFile and caPEM come from the JSON caFile; the CA bundle saved
+	// on the admin page replaces them per request (smiptrust.Roots).
+	roots    *x509.CertPool
+	caFile   string
+	caPEM    []byte
+	resolver *net.Resolver
 }
 
 type settings struct {
@@ -109,14 +113,14 @@ func NewGateway(cfg Config) (*Gateway, error) {
 		if err != nil || !roots.AppendCertsFromPEM(pem) {
 			return nil, errors.New("invalid SMIP CA file")
 		}
-		g.roots = roots
+		g.roots, g.caFile, g.caPEM = roots, cfg.CAFile, pem
 	}
 	for peer, origin := range cfg.Origins {
 		if len(g.peers[peer]) == 0 {
 			return nil, errors.New("SMIP endpoint requires a configured peer")
 		}
 		g.origins[peer] = origin
-		client, err := g.newClient(origin, peer, g.peers[peer])
+		client, err := g.newClient(origin, peer, g.peers[peer], g.roots)
 		if err != nil {
 			return nil, errors.New("invalid SMIP peer HTTPS origin")
 		}
@@ -185,9 +189,13 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	receiver.ServeHTTP(w, req)
 }
 
-func (g *Gateway) newClient(origin, peer string, keys map[string]smip.Key) (*smip.Client, error) {
-	return smip.NewApplicationClient(origin, peer, keys, &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: g.roots})
+func (g *Gateway) newClient(origin, peer string, keys map[string]smip.Key, roots *x509.CertPool) (*smip.Client, error) {
+	return smip.NewApplicationClient(origin, peer, keys, &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: roots})
 }
+
+// ConfiguredCA is the deployment JSON caFile and its PEM, shown read-only on
+// the admin page.
+func (g *Gateway) ConfiguredCA() (string, []byte) { return g.caFile, g.caPEM }
 
 // client builds the sending client for peer from the given trust snapshot:
 // the origin and the receipt keys come from the same read.
@@ -196,7 +204,7 @@ func (g *Gateway) client(trust Trust, peer string) (*smip.Client, error) {
 	if origin == "" {
 		return nil, errors.New("SMIP peer sending endpoint unavailable")
 	}
-	return g.newClient(origin, peer, trust.Peers[peer])
+	return g.newClient(origin, peer, trust.Peers[peer], trust.Roots)
 }
 
 func (g *Gateway) Enabled() bool         { return g.domain != "" }

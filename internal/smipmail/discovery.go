@@ -24,6 +24,7 @@ import (
 	q "thura/db/queries/gen"
 	"thura/internal/platform/ingress"
 	"thura/internal/smip"
+	"thura/internal/smiptrust"
 )
 
 const DiscoveryVersion = "smip-discovery/1"
@@ -131,8 +132,15 @@ func publicIP(ip net.IP) bool {
 	}
 	return true
 }
+
+// client verifies certificates against the roots of this request: the system
+// roots plus the saved CA bundle, else the deployment JSON caFile.
 func (g *Gateway) client(ctx context.Context, origin string, pinned bool) (*http.Client, error) {
-	return DiscoveryClient(ctx, g.resolver, g.roots, origin, pinned)
+	roots, err := smiptrust.Roots(ctx, g.roots)
+	if err != nil {
+		return nil, err
+	}
+	return DiscoveryClient(ctx, g.resolver, roots, origin, pinned)
 }
 
 // ValidOrigin reports whether raw is a bare HTTPS origin (no path, query,
@@ -181,11 +189,23 @@ func DiscoveryClient(ctx context.Context, resolver *net.Resolver, roots *x509.Ce
 	}}
 	return &http.Client{Transport: transport, Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, nil
 }
+
+// fetch reads the pinned origins for this request and fetches the document.
 func (g *Gateway) fetch(ctx context.Context, domain string) (Peer, error) {
+	origins, err := g.pinnedOrigins(ctx)
+	if err != nil {
+		return Peer{}, ErrDiscovery
+	}
+	return g.fetchFrom(ctx, domain, origins)
+}
+
+// fetchFrom fetches through the pinned origins Resolve already read, so the
+// expected endpoint and the fetched one come from the same read.
+func (g *Gateway) fetchFrom(ctx context.Context, domain string, origins map[string]string) (Peer, error) {
 	if g.denied[domain] {
 		return Peer{}, ErrDiscovery
 	}
-	origin, pinned := g.origins[domain]
+	origin, pinned := origins[domain]
 	if !pinned {
 		records, err := g.resolver.LookupTXT(ctx, "_smip."+domain)
 		if err != nil {
@@ -274,8 +294,12 @@ func (g *Gateway) Resolve(ctx context.Context, domain string, force bool) (Peer,
 		return Peer{}, err
 	}
 	now := lidza.Now(ctx)
+	origins, err := g.pinnedOrigins(ctx)
+	if err != nil {
+		return Peer{}, ErrDiscovery
+	}
 	expected := "https://smip." + domain
-	pinnedOrigin, pinned := g.origins[domain]
+	pinnedOrigin, pinned := origins[domain]
 	if pinned {
 		expected = pinnedOrigin
 	}
@@ -310,7 +334,7 @@ func (g *Gateway) Resolve(ctx context.Context, domain string, force bool) (Peer,
 			}
 		}
 	}
-	peer, fetchErr := g.fetch(ctx, domain)
+	peer, fetchErr := g.fetchFrom(ctx, domain, origins)
 	state, reason, endpoint, document, verified, expires := "error", "verification_failed", "", "", false, now.Add(15*time.Second)
 	if fetchErr == nil {
 		raw, err := json.Marshal(peer.Document)

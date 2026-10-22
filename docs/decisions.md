@@ -549,3 +549,15 @@ Touches: internal/federation/admin.go, app/admin/smip-peers.html, smip_peer
 Why: Trusted peers used to live only in the frozen SMIP_CONFIG and needed a restart of every node to change. Peers paired on the admin page are stored in smip_peer and merged with the JSON at request time (Gateway.Trust): per key ID the database wins, a key revoked in either source is revoked, a revoked key is never re-trusted (the peer rotates), and a domain keeps a sending endpoint only while it has an unrevoked key. There is no cache, so a pairing or revocation takes effect on the next packet or dispatch attempt on every node; the JSON stays supported for existing deployments and private CA bundles.
 
 Touches: internal/federation/peers.go, internal/federation/gateway.go, smip_peer
+
+## 2026-10-22: SMIP private-deployment trust in the database, merged per request
+
+Why: Pinned SMIP/0.2 mail origins and the private CA bundle shared by SMIP/0.1 and SMIP/0.2 are set on the SMIP peers admin page instead of sealed JSON that needed a restart: smip_pinned_origin and smip_ca_bundle (PEM certificates only, every block parsed, bounded, never a browser-chosen file path) are read on every discovery, delivery, pairing fetch and status probe and merged over the JSON origins and caFile, the saved value winning, so a change applies on the next request on every node; the parsed pool is reused only by content hash. Changes are audited in the same transaction, certificate verification is never disabled and a frozen recipient route still never switches endpoint.
+
+Touches: internal/smiptrust, internal/smipmail/discovery.go, internal/federation/gateway.go, app/admin/smip-peers.html, smip_pinned_origin, smip_ca_bundle
+
+## 2026-10-22: SMIP DNS status loads after the page
+
+Why: Each uncached SMIP status can take up to six seconds, and checking every team domain inside the team-setup response blocked the page. The status moved to its own server-administrator route per domain (and an administrator-only setup JSON endpoint for the wizard, with a no-script inline recheck), keeping the one-minute cache and bounded timeouts; the page shows Checking until it answers and says the check could not run when the request fails, never a fabricated pass.
+
+Touches: handlers/teams.go, src/components/TeamSetup.tsx, internal/setup/smip_status.go, internal/setup/admin-controls.js

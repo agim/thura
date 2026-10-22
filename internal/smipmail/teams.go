@@ -39,7 +39,7 @@ func forDomain(ctx context.Context, workspaceID, domain string) (*Gateway, error
 			return nil, e
 		}
 		parent := From(ctx)
-		g.roots = parent.roots
+		g.roots, g.caFile, g.caPEM = parent.roots, parent.caFile, parent.caPEM
 		g.origins = parent.origins
 		g.required = parent.required
 		g.denied = parent.denied
