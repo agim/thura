@@ -43,6 +43,18 @@ func (q *Queries) CreateOfficeSession(ctx context.Context, arg CreateOfficeSessi
 	return i, err
 }
 
+const deleteExpiredOfficeSessions = `-- name: DeleteExpiredOfficeSessions :execrows
+DELETE FROM office_session WHERE id IN (SELECT s.id FROM office_session s WHERE s.expires_at<$1 ORDER BY s.expires_at LIMIT 1000)
+`
+
+func (q *Queries) DeleteExpiredOfficeSessions(ctx context.Context, expiresAt time.Time) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpiredOfficeSessions, expiresAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getOfficeSession = `-- name: GetOfficeSession :one
 SELECT id, file_id, subject, source_version, document_key, expires_at, created_at FROM office_session WHERE id=$1
 `

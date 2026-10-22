@@ -1261,13 +1261,15 @@ func (v Meeting) Validate() error {
 
 // MeetingInvite is a row of the meeting_invite table.
 type MeetingInvite struct {
-	ID        string    `json:"id" db:"id"`
-	MeetingID string    `json:"meetingId" db:"meeting_id"`
-	EventID   string    `json:"eventId" db:"event_id"`
-	Code      string    `json:"code" db:"code"`
-	PinHash   string    `json:"pinHash" db:"pin_hash"`
-	PinSealed string    `json:"pinSealed" db:"pin_sealed"`
-	ExpiresAt time.Time `json:"expiresAt" db:"expires_at"`
+	ID          string     `json:"id" db:"id"`
+	MeetingID   string     `json:"meetingId" db:"meeting_id"`
+	EventID     string     `json:"eventId" db:"event_id"`
+	Code        string     `json:"code" db:"code"`
+	PinHash     string     `json:"pinHash" db:"pin_hash"`
+	PinSealed   string     `json:"pinSealed" db:"pin_sealed"`
+	ExpiresAt   time.Time  `json:"expiresAt" db:"expires_at"`
+	FailedPins  int        `json:"failedPins" db:"failed_pins"`
+	LockedUntil *time.Time `json:"lockedUntil" db:"locked_until"`
 }
 
 // Validate applies the rules of MeetingInvite from schema.lidza.

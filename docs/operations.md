@@ -156,7 +156,10 @@ Upgrade published Līdza with `lidza update`, inspect generated migrations,
 re-run the suites, and exercise restore with the new schema. Upgrade each
 optional service independently through its documented migration path and
 compatibility tests. Preserve a recoverable snapshot and the matching app
-revision before applying irreversible schema/provider changes.
+revision before applying irreversible schema/provider changes. Rolling back
+`20261021071232_alter_mailbox_alter_invitation` is refused while any private
+mailbox exists, because dropping `mailbox.private` would expose personal
+inboxes as shared ones: remove or reassign those inboxes first.
 
 ## Opt-in SMIP chat and file transport
 

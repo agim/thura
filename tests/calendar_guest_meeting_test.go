@@ -186,7 +186,45 @@ func TestCalendarGuestMeetingInvitationAndRevocation(t *testing.T) {
 		wrong.Pin = "111111"
 	}
 	guestRequest(wrong, 404)
+	// Failed PINs are counted on the invite itself, not only per client
+	// address: the tenth locks it, even for the correct PIN, and the
+	// lockout doubles with every further failure.
+	inviteState := func() (int, *time.Time) {
+		t.Helper()
+		var failed int
+		var locked *time.Time
+		if err = pool.QueryRow(ctx, "SELECT failed_pins, locked_until FROM meeting_invite WHERE event_id=$1", event.Event.ID).Scan(&failed, &locked); err != nil {
+			t.Fatal(err)
+		}
+		return failed, locked
+	}
+	// The non-numeric PIN is refused before the lookup; only the digit one counts.
+	if pinFailures, lockedUntil := inviteState(); pinFailures != 1 || lockedUntil != nil {
+		t.Fatalf("one wrong PIN: failed=%d locked=%v", pinFailures, lockedUntil)
+	}
+	if _, err = pool.Exec(ctx, "UPDATE meeting_invite SET failed_pins=9 WHERE event_id=$1", event.Event.ID); err != nil {
+		t.Fatal(err)
+	}
+	guestRequest(wrong, 404)
+	pinFailures, lockedUntil := inviteState()
+	if pinFailures != 10 || lockedUntil == nil || lockedUntil.Before(time.Now().Add(14*time.Minute)) || lockedUntil.After(time.Now().Add(16*time.Minute)) {
+		t.Fatalf("tenth wrong PIN did not lock the invite: failed=%d locked=%v", pinFailures, lockedUntil)
+	}
+	guestRequest(guest, 429)
+	if _, err = pool.Exec(ctx, "UPDATE meeting_invite SET failed_pins=12, locked_until=now()-interval '1 second' WHERE event_id=$1", event.Event.ID); err != nil {
+		t.Fatal(err)
+	}
+	guestRequest(wrong, 404)
+	if pinFailures, lockedUntil = inviteState(); pinFailures != 13 || lockedUntil == nil || lockedUntil.Before(time.Now().Add(110*time.Minute)) {
+		t.Fatalf("lockout did not grow: failed=%d locked=%v", pinFailures, lockedUntil)
+	}
+	if _, err = pool.Exec(ctx, "UPDATE meeting_invite SET locked_until=NULL WHERE event_id=$1", event.Event.ID); err != nil {
+		t.Fatal(err)
+	}
 	access := guestRequest(guest, 200)
+	if pinFailures, lockedUntil = inviteState(); pinFailures != 0 || lockedUntil != nil {
+		t.Fatalf("correct PIN did not reset the counter: failed=%d locked=%v", pinFailures, lockedUntil)
+	}
 	verifier, err := lkauth.ParseAPIToken(access.Token)
 	if err != nil {
 		t.Fatal(err)

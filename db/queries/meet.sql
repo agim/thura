@@ -44,6 +44,12 @@ SELECT * FROM meeting_invite WHERE event_id=$1;
 SELECT * FROM meeting_invite WHERE code=$1;
 -- name: UpdateMeetingInviteExpiry :exec
 UPDATE meeting_invite SET expires_at=$2 WHERE id=$1;
+-- name: RecordMeetingPinFailure :one
+UPDATE meeting_invite SET failed_pins=failed_pins+1 WHERE id=$1 RETURNING failed_pins;
+-- name: LockMeetingInvite :exec
+UPDATE meeting_invite SET locked_until=$2 WHERE id=$1;
+-- name: ResetMeetingPinFailures :exec
+UPDATE meeting_invite SET failed_pins=0,locked_until=NULL WHERE id=$1 AND (failed_pins<>0 OR locked_until IS NOT NULL);
 -- name: SetEventMeetingDetails :one
 UPDATE calendar_event SET meeting_id=$2,location=$3,description=$4 WHERE id=$1 RETURNING *;
 -- name: SaveGuestMeetingToken :exec

@@ -87,7 +87,7 @@ func (q *Queries) CountMeetingGuestTokens(ctx context.Context, meetingID string)
 }
 
 const createMeetingInvite = `-- name: CreateMeetingInvite :one
-INSERT INTO meeting_invite(meeting_id,event_id,code,pin_hash,pin_sealed,expires_at) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(code) DO NOTHING RETURNING id, meeting_id, event_id, code, pin_hash, pin_sealed, expires_at
+INSERT INTO meeting_invite(meeting_id,event_id,code,pin_hash,pin_sealed,expires_at) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(code) DO NOTHING RETURNING id, meeting_id, event_id, code, pin_hash, pin_sealed, expires_at, failed_pins, locked_until
 `
 
 type CreateMeetingInviteParams struct {
@@ -117,6 +117,8 @@ func (q *Queries) CreateMeetingInvite(ctx context.Context, arg CreateMeetingInvi
 		&i.PinHash,
 		&i.PinSealed,
 		&i.ExpiresAt,
+		&i.FailedPins,
+		&i.LockedUntil,
 	)
 	return i, err
 }
@@ -433,8 +435,22 @@ func (q *Queries) LockMeeting(ctx context.Context, arg LockMeetingParams) (Meeti
 	return i, err
 }
 
+const lockMeetingInvite = `-- name: LockMeetingInvite :exec
+UPDATE meeting_invite SET locked_until=$2 WHERE id=$1
+`
+
+type LockMeetingInviteParams struct {
+	ID          string     `json:"id"`
+	LockedUntil *time.Time `json:"locked_until"`
+}
+
+func (q *Queries) LockMeetingInvite(ctx context.Context, arg LockMeetingInviteParams) error {
+	_, err := q.db.Exec(ctx, lockMeetingInvite, arg.ID, arg.LockedUntil)
+	return err
+}
+
 const meetingInviteByCode = `-- name: MeetingInviteByCode :one
-SELECT id, meeting_id, event_id, code, pin_hash, pin_sealed, expires_at FROM meeting_invite WHERE code=$1
+SELECT id, meeting_id, event_id, code, pin_hash, pin_sealed, expires_at, failed_pins, locked_until FROM meeting_invite WHERE code=$1
 `
 
 func (q *Queries) MeetingInviteByCode(ctx context.Context, code string) (MeetingInvite, error) {
@@ -448,12 +464,14 @@ func (q *Queries) MeetingInviteByCode(ctx context.Context, code string) (Meeting
 		&i.PinHash,
 		&i.PinSealed,
 		&i.ExpiresAt,
+		&i.FailedPins,
+		&i.LockedUntil,
 	)
 	return i, err
 }
 
 const meetingInviteByEvent = `-- name: MeetingInviteByEvent :one
-SELECT id, meeting_id, event_id, code, pin_hash, pin_sealed, expires_at FROM meeting_invite WHERE event_id=$1
+SELECT id, meeting_id, event_id, code, pin_hash, pin_sealed, expires_at, failed_pins, locked_until FROM meeting_invite WHERE event_id=$1
 `
 
 func (q *Queries) MeetingInviteByEvent(ctx context.Context, eventID string) (MeetingInvite, error) {
@@ -467,6 +485,8 @@ func (q *Queries) MeetingInviteByEvent(ctx context.Context, eventID string) (Mee
 		&i.PinHash,
 		&i.PinSealed,
 		&i.ExpiresAt,
+		&i.FailedPins,
+		&i.LockedUntil,
 	)
 	return i, err
 }
@@ -488,6 +508,26 @@ func (q *Queries) MeetingParticipantAllowed(ctx context.Context, arg MeetingPart
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const recordMeetingPinFailure = `-- name: RecordMeetingPinFailure :one
+UPDATE meeting_invite SET failed_pins=failed_pins+1 WHERE id=$1 RETURNING failed_pins
+`
+
+func (q *Queries) RecordMeetingPinFailure(ctx context.Context, id string) (int32, error) {
+	row := q.db.QueryRow(ctx, recordMeetingPinFailure, id)
+	var failed_pins int32
+	err := row.Scan(&failed_pins)
+	return failed_pins, err
+}
+
+const resetMeetingPinFailures = `-- name: ResetMeetingPinFailures :exec
+UPDATE meeting_invite SET failed_pins=0,locked_until=NULL WHERE id=$1 AND (failed_pins<>0 OR locked_until IS NOT NULL)
+`
+
+func (q *Queries) ResetMeetingPinFailures(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, resetMeetingPinFailures, id)
+	return err
 }
 
 const saveGuestMeetingToken = `-- name: SaveGuestMeetingToken :exec

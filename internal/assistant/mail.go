@@ -23,11 +23,14 @@ func MailScreeningReady(ctx context.Context) bool {
 	return enabled() && (llm.From(ctx).Provider() != "fake" || credentials.Mode() == "test")
 }
 func ScreenMail(ctx context.Context, input string) (schema.MailAIClassification, error) {
-	configuration.RLock()
-	defer configuration.RUnlock()
 	var out schema.MailAIClassification
+	// Hold the read lock only for the configuration check, never across the
+	// model call, so a pending Save does not stall the other readers.
+	configuration.RLock()
 	service := llm.From(ctx)
-	if !enabled() || (service.Provider() == "fake" && credentials.Mode() != "test") {
+	ready := enabled() && (service.Provider() != "fake" || credentials.Mode() == "test")
+	configuration.RUnlock()
+	if !ready {
 		return out, errors.New("mail AI screening requires an enabled model in Settings")
 	}
 	if len(input) > 24000 {

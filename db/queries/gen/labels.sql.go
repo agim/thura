@@ -54,6 +54,20 @@ func (q *Queries) DeleteResourceLabelAssignments(ctx context.Context, labelID st
 	return err
 }
 
+const deleteResourceLabelsOf = `-- name: DeleteResourceLabelsOf :exec
+DELETE FROM resource_label WHERE source=$1 AND source_id=$2
+`
+
+type DeleteResourceLabelsOfParams struct {
+	Source   string `json:"source"`
+	SourceID string `json:"source_id"`
+}
+
+func (q *Queries) DeleteResourceLabelsOf(ctx context.Context, arg DeleteResourceLabelsOfParams) error {
+	_, err := q.db.Exec(ctx, deleteResourceLabelsOf, arg.Source, arg.SourceID)
+	return err
+}
+
 const deleteWorkspaceLabel = `-- name: DeleteWorkspaceLabel :exec
 DELETE FROM mail_label l WHERE l.id=$1 AND COALESCE(l.workspace_id,(SELECT b.workspace_id FROM mailbox b WHERE b.id=l.mailbox_id))=$2
 `

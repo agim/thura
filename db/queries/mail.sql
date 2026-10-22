@@ -57,6 +57,10 @@ DELETE FROM mail_attachment WHERE id=$1 AND item_id=$2;
 UPDATE mailbox SET signature=$2 WHERE id=$1 RETURNING *;
 -- name: SetMailThreadHeaders :one
 UPDATE mail_item SET in_reply_to=$2,references_header=$3,thread_id=$4 WHERE id=$1 RETURNING *;
+-- name: ListMailboxIDs :many
+SELECT id FROM mailbox ORDER BY id;
+-- name: MailObjectReferenced :one
+SELECT EXISTS(SELECT 1 FROM mail_attachment a WHERE a.object_key=$1)::boolean AS referenced;
 -- name: FindMailThreadParent :one
 SELECT * FROM mail_item WHERE mailbox_id=$1 AND (message_id=$2 OR provider_id=$2) ORDER BY created_at DESC,id DESC LIMIT 1;
 -- name: ListMailThreadPage :many

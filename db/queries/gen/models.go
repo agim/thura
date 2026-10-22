@@ -724,13 +724,15 @@ type Meeting struct {
 }
 
 type MeetingInvite struct {
-	ID        string    `json:"id"`
-	MeetingID string    `json:"meeting_id"`
-	EventID   string    `json:"event_id"`
-	Code      string    `json:"code"`
-	PinHash   string    `json:"pin_hash"`
-	PinSealed string    `json:"pin_sealed"`
-	ExpiresAt time.Time `json:"expires_at"`
+	ID          string     `json:"id"`
+	MeetingID   string     `json:"meeting_id"`
+	EventID     string     `json:"event_id"`
+	Code        string     `json:"code"`
+	PinHash     string     `json:"pin_hash"`
+	PinSealed   string     `json:"pin_sealed"`
+	ExpiresAt   time.Time  `json:"expires_at"`
+	FailedPins  int32      `json:"failed_pins"`
+	LockedUntil *time.Time `json:"locked_until"`
 }
 
 type MeetingParticipant struct {

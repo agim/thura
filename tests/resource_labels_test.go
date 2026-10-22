@@ -158,6 +158,14 @@ func TestWorkspaceLabelsCreateApplyAndResourcePermissions(t *testing.T) {
 			t.Fatalf("deleted label remained on %s", source)
 		}
 	}
+	// Deleting a contact drops its label assignments, which have no foreign key.
+	var contactLabel schema.MailLabel
+	request("POST", resource("contact", resources["contact"]), schema.MailLabelInput{Name: "Removed with contact"}, &contactLabel, 201)
+	request("DELETE", base+"/contacts/"+resources["contact"], nil, nil, 204)
+	var stale int
+	if err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM resource_label WHERE source='contact' AND source_id=$1", resources["contact"]).Scan(&stale); err != nil || stale != 0 {
+		t.Fatalf("deleted contact kept %d label assignments (%v)", stale, err)
+	}
 	_, err = pool.Exec(ctx, "DELETE FROM auth_member WHERE scope=$1", w)
 	if err != nil {
 		t.Fatal(err)
