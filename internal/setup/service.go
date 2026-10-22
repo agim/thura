@@ -231,8 +231,16 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 			// Never send one vendor's saved credential to a different provider.
 			v["LLM_API_KEY"] = ""
 		}
+		// Visibility follows the submitted controlling values; a field the
+		// page hides keeps its saved value instead of a stale or blank post.
+		preview := maps.Clone(v)
 		for _, f := range s.Fields {
-			if managedField(f.Name) {
+			if f.Kind != "secret" && !managedField(f.Name) && form.Has(f.Name) {
+				preview[f.Name] = strings.TrimSpace(form.Get(f.Name))
+			}
+		}
+		for _, f := range s.Fields {
+			if managedField(f.Name) || !visible(preview, f.Name) {
 				continue
 			}
 			// Older wizard clients do not know these optional routing fields.
@@ -242,6 +250,9 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 			value := form.Get(f.Name)
 			if len(value) > 32768 {
 				return errors.New("setup field exceeds its size limit")
+			}
+			if f.Kind == "checkbox" {
+				value = checkboxValue(form.Has(f.Name), value)
 			}
 			if f.Kind == "secret" {
 				if form.Get("clear_"+f.Name) == "true" {
@@ -262,6 +273,9 @@ func Save(ctx context.Context, form url.Values, restart bool) error {
 	// A newly selected managed local provider must work immediately after Save,
 	// without requiring a restart just to discover its model and private origin.
 	localModelDefaults(v)
+	if !restart {
+		applyDerivedDefaults(v)
+	}
 	if !restart && step == "mail" {
 		if e = configureMailIdentity(v, form, lidza.Now(ctx)); e != nil {
 			return e

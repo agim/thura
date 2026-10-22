@@ -41,7 +41,7 @@ func Page() admin.Page {
 		if _, err := io.WriteString(w, adminControls); err != nil {
 			slog.WarnContext(r.Context(), "serve setup controls", "error", err)
 		}
-	}}, Data: func(r *http.Request) (any, error) {
+	}, "models.json": modelsJSON}, Data: func(r *http.Request) (any, error) {
 		row, e := q.New(db.From(r.Context())).GetServerSetup(r.Context())
 		if e != nil {
 			return nil, e
@@ -80,6 +80,10 @@ func Page() admin.Page {
 			}
 			if f.Kind != "secret" {
 				view.Step.Fields[i].Value = v[f.Name]
+			}
+			view.Step.Fields[i].Placeholder = derivedDefault(v, f.Name)
+			if (f.Name == "STORAGE_ENDPOINT" || f.Name == "STORAGE_REGION") && v["THURA_STORAGE_PROFILE"] != "custom" && v["THURA_STORAGE_PROFILE"] != "" {
+				view.Step.Fields[i].ReadOnly = true
 			}
 		}
 		if step.ID == "review" {
