@@ -108,7 +108,15 @@ func Invite(ctx context.Context, id string, in schema.InviteInput) (schema.Invit
 	if err != nil {
 		return schema.InviteView{}, err
 	}
-	_, err = teammail.SendTx(ctx, tx, id, auth.CurrentUser(ctx).ID, mail.Message{To: delivery, Subject: "Invitation to " + w.Name, Text: "You have been invited to " + w.Name + " on Thura.\n\n" + tenancy.Link(ctx, id, "/invite?token="+token) + "\n\nThis invitation expires in 72 hours. If you did not expect it, ignore this email."})
+	// The filed copy of a shared mailbox never carries the token: any member
+	// reading it could accept the invitation as the invitee.
+	text := func(link string) string {
+		return "You have been invited to " + w.Name + " on Thura.\n\n" + link + "\n\nThis invitation expires in 72 hours. If you did not expect it, ignore this email."
+	}
+	msg := mail.Message{To: delivery, Subject: "Invitation to " + w.Name, Text: text(tenancy.Link(ctx, id, "/invite?token="+token))}
+	stored := msg
+	stored.Text = text("[invitation link sent to " + delivery + "]")
+	_, err = teammail.SendTx(ctx, tx, id, auth.CurrentUser(ctx).ID, teammail.Notice{Message: msg, Stored: &stored})
 	if err != nil {
 		return schema.InviteView{}, err
 	}

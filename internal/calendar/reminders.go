@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/mail"
 	"github.com/jackc/pgx/v5"
@@ -110,7 +111,16 @@ func remindOne(ctx context.Context, r q.ListReminderSubscriptionsRow, now time.T
 		if inserted == 0 {
 			continue
 		}
-		_, err = teammail.SendTx(ctx, tx, r.WorkspaceID, r.Subject, mail.Message{To: email, Subject: "Reminder: " + i.Title, Text: fmt.Sprintf("%s\nStarts: %s (%s)\nLocation: %s\n\n%s", i.Title, start.In(mustLocation(e.TimeZone)).Format(time.RFC3339), e.TimeZone, e.Location, tenancy.Link(ctx, r.WorkspaceID, "/app"))})
+		// A reminder is one member's notice about their own calendar, so it
+		// leaves only through their personal inbox: filed in a shared mailbox,
+		// every member would read it. Without one the subscription is logged
+		// and skipped, never crashing the sweep for the others.
+		msg := mail.Message{To: email, Subject: "Reminder: " + i.Title, Text: fmt.Sprintf("%s\nStarts: %s (%s)\nLocation: %s\n\n%s", i.Title, start.In(mustLocation(e.TimeZone)).Format(time.RFC3339), e.TimeZone, e.Location, tenancy.Link(ctx, r.WorkspaceID, "/app"))}
+		_, err = teammail.SendTx(ctx, tx, r.WorkspaceID, r.Subject, teammail.Notice{Message: msg, Private: true})
+		if errors.Is(err, teammail.ErrNoPrivateMailbox) {
+			lidza.Log(ctx).Warn("calendar reminder skipped", "error", err, "workspace", r.WorkspaceID, "event", e.ID)
+			return nil
+		}
 		if err != nil {
 			return err
 		}
