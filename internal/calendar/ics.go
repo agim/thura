@@ -130,6 +130,7 @@ func ParseICS(raw []byte, defaultZone string) ([]Imported, string, error) {
 		}
 	}
 	events := []Imported{}
+	exdates := 0
 	method := ""
 	inside := false
 	calendar := false
@@ -174,6 +175,11 @@ func ParseICS(raw []byte, defaultZone string) ([]Imported, string, error) {
 				events = append(events, e)
 				if len(events) > 200 {
 					return nil, "", router.Errorf(422, "import at most 200 events at once")
+				}
+				// Every exception date is checked against its expanded series.
+				exdates += len(e.Exdates)
+				if exdates > 2000 {
+					return nil, "", router.Errorf(422, "import at most 2000 exception dates at once")
 				}
 				inside = false
 			}

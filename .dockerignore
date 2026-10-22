@@ -12,6 +12,8 @@ test-results
 !.env.example
 # The master key never enters an image: the deployment sets LIDZA_MASTER_KEY.
 config/master.key
+# A developer checkout's sealed credentials never ship: the deployment provides its own.
+config/credentials.yml.enc
 config/owner-claim
 storage
 

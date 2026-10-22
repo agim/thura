@@ -169,6 +169,43 @@ func TestCalendarPrivacyConcurrentVersionsAndICSImport(t *testing.T) {
 	if !imported.Items[0].Event.Cancelled {
 		t.Fatal("older delivery resurrected cancelled event")
 	}
+	// Exception dates are checked against one expansion of the series, not one per EXDATE.
+	series := func(uid string, exdates int, extra string) []byte {
+		var b strings.Builder
+		b.WriteString("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:" + uid + "\r\nSUMMARY:Daily\r\nDTSTART:20260301T130000Z\r\nDTEND:20260301T140000Z\r\nRRULE:FREQ=DAILY;COUNT=1000\r\n")
+		first := time.Date(2026, 3, 1, 13, 0, 0, 0, time.UTC)
+		for n := 0; n < exdates; n++ {
+			b.WriteString("EXDATE:" + first.AddDate(0, 0, n).Format("20060102T150405Z") + "\r\n")
+		}
+		b.WriteString(extra + "END:VEVENT\r\nEND:VCALENDAR\r\n")
+		return []byte(b.String())
+	}
+	manyUID := fmt.Sprintf("exdates-%d", suffix)
+	started := time.Now()
+	upload(importedCal.ID, series(manyUID, 1000, ""), 200)
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("1000 exception dates took %s", elapsed)
+	}
+	status("GET", base+"/"+importedCal.ID+"/events", nil, &imported, 200)
+	var daily *schema.EventDetail
+	for i := range imported.Items {
+		if imported.Items[i].Event.Uid == manyUID {
+			daily = &imported.Items[i]
+		}
+	}
+	if daily == nil || len(daily.Exceptions) != 1000 {
+		t.Fatal("exception dates were not imported")
+	}
+	status("GET", base+"/"+importedCal.ID+"/instances?from=2026-03-01T00:00:00Z&to=2026-04-01T00:00:00Z", nil, &instances, 200)
+	for _, item := range instances.Items {
+		if item.EventID == daily.Event.ID {
+			t.Fatal("excluded occurrence still listed")
+		}
+	}
+	upload(importedCal.ID, series(fmt.Sprintf("exdate-miss-%d", suffix), 1, "EXDATE:20300101T130000Z\r\n"), 422)
+	over := bytes.Join([][]byte{series(fmt.Sprintf("exdate-cap-a-%d", suffix), 1000, ""), series(fmt.Sprintf("exdate-cap-b-%d", suffix), 1000, ""), series(fmt.Sprintf("exdate-cap-c-%d", suffix), 1, "")}, nil)
+	over = bytes.ReplaceAll(over, []byte("END:VCALENDAR\r\nBEGIN:VCALENDAR\r\nVERSION:2.0\r\n"), nil)
+	upload(importedCal.ID, over, 422)
 	upload(shared.ID, []byte(strings.Repeat("x", (1<<20)+1)), 413)
 	if _, err = db.From(ctx).Exec(ctx, "DELETE FROM auth_member WHERE subject=$1 AND scope=$2", other.Subject, w.ID); err != nil {
 		t.Fatal(err)

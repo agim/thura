@@ -111,9 +111,12 @@ var BodyTimeout = 10 * time.Second
 
 // ReadBody reads the whole MaxWire-bounded body under BodyTimeout. Receivers
 // call it before taking an admission slot so that only complete packets are
-// admitted. The deadline is unsupported only off a network connection.
+// admitted. The deadline is unsupported only off a network connection (a
+// test recorder), where no peer can stall.
 func ReadBody(w http.ResponseWriter, req *http.Request) ([]byte, error) {
-	_ = http.NewResponseController(w).SetReadDeadline(time.Now().Add(BodyTimeout))
+	if err := http.NewResponseController(w).SetReadDeadline(time.Now().Add(BodyTimeout)); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		return nil, err
+	}
 	req.Body = http.MaxBytesReader(w, req.Body, MaxWire)
 	return io.ReadAll(req.Body)
 }

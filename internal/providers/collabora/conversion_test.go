@@ -117,3 +117,46 @@ func TestBrowserProxyDoesNotExposePrivateConversion(t *testing.T) {
 		t.Fatal("private converter exposed through browser proxy")
 	}
 }
+
+func TestBrowserProxyForwardsOnlyEditorResources(t *testing.T) {
+	forwarded := 0
+	service := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		forwarded++
+		w.WriteHeader(200)
+	}))
+	defer service.Close()
+	t.Setenv("COLLABORA_SERVER_URL", service.URL)
+	t.Setenv("COLLABORA_APP_URL", "https://app.example")
+	t.Setenv("COLLABORA_TOKEN_SECRET", "synthetic-collabora-allowlist-key-maple-73619284")
+	socket := Prefix + "/cool/http%3A%2F%2Fapp.example%2Fapi%2Fv1%2Fwopi%2Ffiles%2F1/ws"
+	allowed := map[string][]string{
+		"GET":  {Prefix + "/browser/hash/cool.html?WOPISrc=x", Prefix + "/browser/hash/images/logo.svg", Prefix + "/hosting/discovery", Prefix + "/hosting/capabilities", socket},
+		"HEAD": {Prefix + "/browser/hash/bundle.js"},
+		"POST": {Prefix + "/browser/hash/cool.html?theme=dark"},
+	}
+	denied := map[string][]string{
+		"POST": {Prefix + "/lool/convert-to/docx", Prefix + "/cool/convert-to", Prefix + "/cool/get-thumbnail", Prefix + "/cool/extract-link-targets", Prefix + "/cool/render-search-result", Prefix + "/browser/hash/images/logo.svg", Prefix + "/hosting/discovery", socket},
+		"GET":  {Prefix + "/cool/adminws", Prefix + "/cool/clipboard", Prefix + "/cool/convert-to/docx", Prefix + "/cool/a/b/ws", Prefix + "/", Prefix + "/hosting/wopiAccessCheck", Prefix + "/browser/hash/..%2Fcool%2Fadminws", Prefix + "/browser/hash/../cool/adminws"},
+		"PUT":  {Prefix + "/browser/hash/cool.html"},
+	}
+	for method, paths := range allowed {
+		for _, path := range paths {
+			before := forwarded
+			response := httptest.NewRecorder()
+			Proxy(response, httptest.NewRequest(method, "http://app.example"+path, nil))
+			if response.Code != 200 || forwarded != before+1 {
+				t.Errorf("%s %s: editor resource not forwarded: %d", method, path, response.Code)
+			}
+		}
+	}
+	for method, paths := range denied {
+		for _, path := range paths {
+			before := forwarded
+			response := httptest.NewRecorder()
+			Proxy(response, httptest.NewRequest(method, "http://app.example"+path, strings.NewReader("payload")))
+			if response.Code != 404 || forwarded != before {
+				t.Errorf("%s %s: private Collabora endpoint reached through the browser proxy: %d", method, path, response.Code)
+			}
+		}
+	}
+}
