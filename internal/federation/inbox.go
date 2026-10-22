@@ -22,6 +22,8 @@ const MaxInboxBytes = 64 << 20
 type DatabaseInbox struct {
 	ctx     context.Context
 	gateway *Gateway
+	// peers is the trust snapshot the receiver admitting this packet uses.
+	peers map[string]map[string]smip.Key
 }
 
 func decode(r q.SmipInbox) (smip.Record, error) {
@@ -50,7 +52,7 @@ func (s *DatabaseInbox) Get(origin, id string) (smip.Record, bool, error) {
 func (s *DatabaseInbox) Put(record smip.Record) (smip.Record, bool, error) {
 	ctx := s.ctx
 	e := record.Packet.Envelope
-	key, known := s.gateway.peers[e.From][e.KeyID]
+	key, known := s.peers[e.From][e.KeyID]
 	receiptKey := smip.Key{Public: s.gateway.signer.Private.Public().(ed25519.PublicKey), NotBefore: s.gateway.signer.NotBefore, NotAfter: s.gateway.signer.NotAfter}
 	if !known || record.Packet.Verify(key) != nil || record.Receipt.Verify(record.Packet, receiptKey) != nil || e.To != s.gateway.domain {
 		return smip.Record{}, false, smip.ErrAdmissionDenied

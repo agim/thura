@@ -34,7 +34,11 @@ func ListBindings(ctx context.Context, w string) (schema.SmipBindingList, error)
 		return out, err
 	}
 	out.Configured = From(ctx).domain != ""
-	for peer := range From(ctx).origins {
+	trust, err := From(ctx).Trust(ctx)
+	if err != nil {
+		return out, err
+	}
+	for peer := range trust.Origins {
 		out.SendablePeers = append(out.SendablePeers, peer)
 	}
 	sort.Strings(out.SendablePeers)
@@ -93,7 +97,14 @@ func CreateBinding(ctx context.Context, w string, in schema.SmipBindingInput) (s
 	e := smip.Envelope{Version: smip.Version, ID: in.RequestID, From: in.Peer, To: g.domain, Sender: in.Sender, Recipient: in.Recipient, Stream: in.Stream, Kind: "chat", Created: 1000, Expires: 2000}
 	// The public key type is Ed25519; Sign fills the fingerprint before validation.
 	_, err = smip.Sign(e, g.signer.Private)
-	if err != nil || len(g.peers[in.Peer]) == 0 {
+	if err != nil {
+		return schema.SmipBinding{}, router.Errorf(422, "choose a configured peer and valid SMIP identities")
+	}
+	trust, err := g.Trust(ctx)
+	if err != nil {
+		return schema.SmipBinding{}, err
+	}
+	if !hasActiveKey(trust.Peers[in.Peer]) {
 		return schema.SmipBinding{}, router.Errorf(422, "choose a configured peer and valid SMIP identities")
 	}
 	old, err := queries.GetSmipBinding(ctx, q.GetSmipBindingParams{WorkspaceID: w, ID: in.RequestID})

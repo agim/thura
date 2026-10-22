@@ -63,7 +63,11 @@ func Queue(ctx context.Context, w string, in schema.SmipSendInput) (schema.SmipO
 	if !binding.Enabled {
 		return schema.SmipOutbound{}, router.Errorf(409, "SMIP binding is disabled")
 	}
-	if g.origins[binding.Peer] == "" {
+	trust, err := g.Trust(ctx)
+	if err != nil {
+		return schema.SmipOutbound{}, err
+	}
+	if trust.Origins[binding.Peer] == "" {
 		return schema.SmipOutbound{}, router.Errorf(503, "SMIP peer sending endpoint is not configured")
 	}
 	kind, name, data := "chat", "", []byte(body)

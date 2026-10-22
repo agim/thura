@@ -537,3 +537,15 @@ Touches: internal/mailbox/mailbox.go, mail_item.delivery_reason
 Why: The dispatch sweep selects transmissions by the earliest due recipient, so a transmission that cannot progress at all (team identity disabled, domain suspended, setup unpublished, planning failing) needs its own next_attempt and reason on mail_transmission: pushing the recipients' next_attempt would overwrite route state, and leaving updated_at untouched kept fifty such rows at the head of the queue for every other team.
 
 Touches: internal/smipmail/outbox.go, db/queries/team.sql, mail_transmission
+
+## 2026-10-22: Admin page SMIP peers
+
+Why: The server administrator pairs SMIP/0.1 chat/file peers on an admin page instead of editing the sealed SMIP_CONFIG JSON: it fetches a peer's signed identity document over the SSRF-safe TLS 1.3 client, shows the key fingerprints for an out-of-band read-out, stores trust only after the operator ticks the verification box, and revokes per domain. It reads and writes smip_peer rows for this server's identity (all peers, no workspace scope), shows the server's own public keys and never the seed, and audits propose, pair, discard and revoke.
+
+Touches: internal/federation/admin.go, app/admin/smip-peers.html, smip_peer
+
+## 2026-10-22: SMIP/0.1 peers in the database, merged with the sealed JSON
+
+Why: Trusted peers used to live only in the frozen SMIP_CONFIG and needed a restart of every node to change. Peers paired on the admin page are stored in smip_peer and merged with the JSON at request time (Gateway.Trust): per key ID the database wins, a key revoked in either source is revoked, a revoked key is never re-trusted (the peer rotates), and a domain keeps a sending endpoint only while it has an unrevoked key. There is no cache, so a pairing or revocation takes effect on the next packet or dispatch attempt on every node; the JSON stays supported for existing deployments and private CA bundles.
+
+Touches: internal/federation/peers.go, internal/federation/gateway.go, smip_peer

@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"net/http"
 	q "thura/db/queries/gen"
+	"thura/internal/smipmail"
 	"time"
 )
 
@@ -62,6 +63,10 @@ func Page() admin.Page {
 		view := View{MailIdentity: mailIdentityView(v), MailCheckID: uuid.NewString(), StorageCheckID: uuid.NewString(), ActiveRevision: state.Revision, Revision: row.Revision, PublishedRevision: row.PublishedRevision, Step: step, Steps: Catalog()}
 		for _, kind := range integrationKinds() {
 			view.IntegrationChecks = append(view.IntegrationChecks, IntegrationCheckView{Kind: kind, ID: uuid.NewString()})
+		}
+		if step.ID == "mail" && view.MailIdentity.Saved && v["SMIP_MAIL_ENABLED"] == "true" {
+			status := smipmail.From(r.Context()).DomainStatus(r.Context(), view.MailIdentity.Domain, v["APP_URL"], lidza.Now(r.Context()))
+			view.MailIdentity.Status = &status
 		}
 		for i, f := range step.Fields {
 			view.Step.Fields[i].Saved = v[f.Name] != ""

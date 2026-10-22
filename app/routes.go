@@ -31,6 +31,7 @@ func routes(r *router.Router) {
 	router.Route(r, "POST /api/v1/setup/claim", handlers.ClaimSetup, auth.Throttle())
 	// Versioned peer wire endpoint; all application routes stay under /api.
 	r.HandleFunc("POST /api/v1/smip/v0.1/messages", federation.Receive)
+	r.HandleFunc("GET /api/v1/smip/v0.1/identity", federation.IdentityDocument)
 	r.HandleFunc("POST /api/v1/meet/webhook", meet.Webhook)
 	r.HandleFunc("GET /api/v1/wopi/files/{id}", wopi.Handler)
 	r.HandleFunc("POST /api/v1/wopi/files/{id}", wopi.Handler)

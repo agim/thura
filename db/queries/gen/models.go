@@ -897,6 +897,24 @@ type SmipOutbox struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+type SmipPeer struct {
+	ID        string     `json:"id"`
+	Owner     string     `json:"owner"`
+	Domain    string     `json:"domain"`
+	Origin    string     `json:"origin"`
+	KeyID     string     `json:"key_id"`
+	PublicKey string     `json:"public_key"`
+	NotBefore time.Time  `json:"not_before"`
+	NotAfter  time.Time  `json:"not_after"`
+	Revoked   bool       `json:"revoked"`
+	State     string     `json:"state"`
+	Confirmed bool       `json:"confirmed"`
+	PairedBy  string     `json:"paired_by"`
+	PairedAt  *time.Time `json:"paired_at"`
+	FetchedAt time.Time  `json:"fetched_at"`
+	Notes     string     `json:"notes"`
+}
+
 type TeamDomain struct {
 	ID           string     `json:"id"`
 	WorkspaceID  string     `json:"workspace_id"`

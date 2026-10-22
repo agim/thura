@@ -27,14 +27,26 @@ Publish this TXT record:
 _smip.example.org. 300 IN TXT "v=SMIP1"
 ```
 
-Point `smip.example.org` at Thura, with a publicly trusted certificate for that hostname. It must reach Thura with **direct TLS 1.3** (a TCP/TLS passthrough proxy is fine). HTTP forwarding with `X-Forwarded-Proto` is deliberately insufficient. Līdza's built-in HTTPS supports `LIDZA_TLS_DOMAINS`, `LIDZA_TLS_EMAIL`, `LIDZA_TLS_ADDR` and `LIDZA_TLS_HTTP_ADDR`; include the application and SMIP hostnames. The ordinary loopback-HTTP Compose example needs an appropriate TLS deployment before public SMIP can be enabled. Expose HTTPS port 443; do not expose the database or private SMTP submission port.
+Point `smip.example.org` at Thura, with a publicly trusted certificate for that hostname. It must reach Thura with **direct TLS 1.3** (a TCP/TLS passthrough proxy is fine). HTTP forwarding with `X-Forwarded-Proto` is deliberately insufficient. See [transport hostnames](#transport-hostnames) for the listener configuration. Expose HTTPS port 443; do not expose the database or private SMTP submission port.
+
+### Status beside the instructions
+
+The wizard's Email service step and each team domain's SMIP identity in Settings → Teams and domains show a live, read-only status under the DNS instructions: whether `_smip.<domain>` TXT `v=SMIP1` was **found** or is **missing** (or the lookup **failed**), which addresses `smip.<domain>` resolves to and whether one of them is a public address of `APP_URL`'s host (**yes**, **no**, or **unknown** when the application host does not resolve to a public address), and whether **TLS 1.3** is reachable: Thura repeats the setup transport challenge (`/api/v1/setup/transport` with a fresh nonce) against the SMIP host through the SSRF-safe TLS 1.3 client, so a browser certificate or a forwarded header never counts. A pinned `origins` entry replaces the public host. The status is cached per domain for one minute, bounded to six seconds of lookups, and is informational only: it never blocks publication, which relies on the recorded Secure delivery check in Review, and it never reports success it did not observe.
+
+### Transport hostnames
+
+Thura's HTTPS listener must serve, over direct TLS 1.3, the application hostname (`APP_URL`, which also carries the SMIP/0.1 chat/file endpoint and identity document) and `smip.<domain>` for every SMIP mail identity: the deployment identity from the wizard and each team domain with SMIP delivery enabled. This is the one place that requirement is stated; the wizard and the team settings show the status above against it.
+
+- Built-in HTTPS (`deploy/thura.service`, `docs/install-server.md`): list every one of those hostnames in `LIDZA_TLS_DOMAINS` (comma separated) with `LIDZA_TLS_EMAIL`; the binary serves 443 itself and obtains certificates through ACME, so each hostname needs a public A (and working AAAA) record first. Thura does not rewrite `LIDZA_TLS_DOMAINS` itself: it is read once at startup by the framework, and adding a team domain later means adding its `smip.` hostname and restarting.
+- Lidza-deploy / Compose (`deploy/compose.yaml`, `deploy/lidza.stack.json`): the platform's Caddy ingress owns certificates and forwards the protected `/api/v1/smip` paths through the authenticated gateway contract; add `smip.<domain>` as a site of that ingress for every identity, next to the application and team web domains. The loopback-HTTP Compose example on its own has no TLS and cannot serve public SMIP.
+- A TCP/TLS passthrough proxy in front of either works; HTTP termination followed by plaintext forwarding does not.
 
 The fixed endpoints are:
 
 - `GET /api/v1/smip/v0.2/capabilities`: canonical, Ed25519-signed five-minute key/capability document.
 - `POST /api/v1/smip/v0.2/mail`: canonical signed SMIP mail envelope; returns a signed receipt after the email and receipt commit together.
 
-Private/local deployments can set operator-controlled `origins` (`{"partner.example":"https://host:port"}`) and `caFile` (a PEM CA bundle) in the secret JSON. Both peers need reciprocal discovery configuration. This is a deployment-level exception to public-address restrictions; users cannot supply endpoints. No TLS verification is disabled. Production discovery rejects private/reserved IPs, pins the resolved addresses for the request, refuses proxies/redirects, bounds requests and verifies document domain/profile/expiry/signature.
+Private/local deployments can set operator-controlled `origins` (`{"partner.example":"https://host:port"}`) and `caFile` (a PEM CA bundle) in the secret JSON; these two remain manual JSON settings, read at startup. Both peers need reciprocal discovery configuration. This is a deployment-level exception to public-address restrictions; users cannot supply endpoints. No TLS verification is disabled. Production discovery rejects private/reserved IPs, pins the resolved addresses for the request, refuses proxies/redirects, bounds requests and verifies document domain/profile/expiry/signature.
 
 ## Routing and downgrade policy
 

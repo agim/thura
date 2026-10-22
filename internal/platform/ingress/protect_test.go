@@ -105,7 +105,7 @@ func TestProtectedRoutesRequireOriginalTLSOverRealMutualTLS(t *testing.T) {
 	}))
 	plain := httptest.NewServer(handler)
 	defer plain.Close()
-	for _, path := range []string{"/api/v1/smip/v0.1/messages", "/api/v1/smip/v0.2/mail", "/api/v1/smip/v0.2/capabilities", "/api/v1/setup/transport"} {
+	for _, path := range []string{"/api/v1/smip/v0.1/messages", "/api/v1/smip/v0.1/identity", "/api/v1/smip/v0.2/mail", "/api/v1/smip/v0.2/capabilities", "/api/v1/setup/transport"} {
 		r, err := http.NewRequest("GET", plain.URL+path, nil)
 		if err != nil {
 			t.Fatal(err)

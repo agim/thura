@@ -79,7 +79,10 @@ explicit and replay-safe. An AI test may incur the chosen provider's charge.
 Discovery/API checks do not replace document-save or device-media acceptance.
 
 Deployment generates a local SMIP chat/file signing identity without inventing
-trusted peers. Cross-server exchange still requires explicit pairing, consent
+trusted peers. Cross-server exchange still requires explicit pairing (on
+Administration → SMIP peers: fetch the peer's signed identity, confirm its
+fingerprint with the other operator; see
+[the SMIP guide](protocols/smip-thura.md#pairing-on-the-admin-page)), consent
 and workspace bindings. Existing identities are retained. The separate SMIP
 mail identity is retained with its domain provider configuration.
 

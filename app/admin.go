@@ -5,6 +5,7 @@ import (
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/admin"
 	"github.com/agim/lidza/pkg/router"
+	"thura/internal/federation"
 	"thura/internal/setup"
 	"thura/internal/smipmail"
 )
@@ -13,5 +14,5 @@ import (
 var adminFiles embed.FS
 
 func mountAdmin(r *router.Router) {
-	admin.Mount(r, admin.Options{Title: "Thura administration", Allow: setup.Allow, NoFirstUserAdmin: true, Templates: lidza.Sub(adminFiles, "admin"), Pages: []admin.Page{setup.Page(), smipmail.Page()}})
+	admin.Mount(r, admin.Options{Title: "Thura administration", Allow: setup.Allow, NoFirstUserAdmin: true, Templates: lidza.Sub(adminFiles, "admin"), Pages: []admin.Page{setup.Page(), smipmail.Page(), federation.Page()}})
 }

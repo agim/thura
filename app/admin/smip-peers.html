@@ -1,0 +1,36 @@
+{{define "content"}}{{with .Data}}
+{{if not .Enabled}}<div class="card"><div class="card-body">{{template "admin-empty" (dict "Icon" "shield-x" "Title" "SMIP is disabled" "Text" "Enable secure chat and file exchange in Server setup; the identity is generated when the server address is saved. Pairing appears here once SMIP is enabled.")}}</div></div>
+{{else}}
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">This server</h3></div><div class="card-body">
+<p>Give the other operator this domain and endpoint. They fetch the identity document at <code>{{.Origin}}{{.IdentityPath}}</code>, read the fingerprint back to you, and confirm it on their side. Then pair their server here the same way: both servers must pair each other before any chat or file crosses.</p>
+<dl class="row"><dt class="col-3">Domain</dt><dd class="col-9"><code>{{.Domain}}</code></dd><dt class="col-3">Endpoint origin</dt><dd class="col-9"><code>{{.Origin}}</code></dd></dl>
+<div class="table-responsive"><table class="table card-table" aria-label="Own signing keys"><thead><tr><th>Key</th><th>SHA-256 fingerprint</th><th>Valid</th><th>State</th></tr></thead><tbody>{{range .Keys}}<tr><td><code>{{.KeyID}}</code></td><td><code>{{.Fingerprint}}</code></td><td>{{.NotBefore.Format "Jan 2, 2006"}} – {{.NotAfter.Format "Jan 2, 2006"}}</td><td>{{if .Revoked}}<span class="badge bg-red-lt">revoked</span>{{else if .Current}}<span class="badge bg-green-lt">current</span>{{else}}<span class="badge">retained</span>{{end}}</td></tr>{{end}}</tbody></table></div>
+<p class="text-secondary">The private key stays sealed on this server and is never shown.</p>
+</div></div>
+
+<div class="card mb-3"><div class="card-header"><h3 class="card-title">Pair a server</h3></div><div class="card-body">
+<form method="post" action="{{$.Path}}/smip-peers/pair">
+<div class="mb-3"><label class="form-label" for="peer-domain">Peer domain</label><input class="form-control" id="peer-domain" name="domain" required maxlength="253" placeholder="partner.example" autocapitalize="none" autocorrect="off"></div>
+<div class="mb-3"><label class="form-label" for="peer-origin">HTTPS endpoint (optional)</label><input class="form-control" id="peer-origin" name="origin" maxlength="512" placeholder="https://smip.partner.example"><div class="form-hint">Leave empty to use <code>https://smip.&lt;domain&gt;</code>, which must resolve to public addresses. Enter the endpoint for a private deployment; its certificate must still verify.</div></div>
+<button class="btn btn-primary" type="submit">Fetch identity</button>
+</form>
+<p class="text-secondary mt-3">Fetching stores nothing you trust: the fingerprint below has to be confirmed with the peer's operator over a channel you both trust (a call, a meeting) before packets are accepted.</p>
+</div></div>
+
+{{range .Pending}}<div class="card mb-3"><div class="card-header"><h3 class="card-title">Confirm {{.Domain}}</h3></div><div class="card-body">
+{{if .Expired}}<p class="text-danger">This proposal is older than an hour. Fetch the identity again before confirming.</p>{{end}}
+<p>Fetched {{.FetchedAt.Format "Jan 2, 2006 3:04 PM MST"}}{{if .Origin}} from <code>{{.Origin}}</code>{{else}} from <code>https://smip.{{.Domain}}</code>{{end}}. Compare every fingerprint with what the peer's operator reads out from their own SMIP peers page.</p>
+<form method="post" action="{{$.Path}}/smip-peers/confirm"><input type="hidden" name="domain" value="{{.Domain}}">
+<div class="table-responsive"><table class="table card-table" aria-label="Keys of {{.Domain}}"><thead><tr><th>Key</th><th>SHA-256 fingerprint</th><th>Valid</th><th>State</th></tr></thead><tbody>{{range .Keys}}<tr><td><code>{{.KeyID}}</code><input type="hidden" name="key" value="{{.KeyID}}"></td><td><code>{{.Fingerprint}}</code></td><td>{{.NotBefore.Format "Jan 2, 2006"}} – {{.NotAfter.Format "Jan 2, 2006"}}</td><td>{{if .Revoked}}<span class="badge bg-red-lt">revoked</span>{{else}}<span class="badge bg-yellow-lt">awaiting confirmation</span>{{end}}</td></tr>{{end}}</tbody></table></div>
+<label class="form-check mt-3"><input class="form-check-input" type="checkbox" name="verified" value="on"><span class="form-check-label">I verified this fingerprint with the peer's operator</span></label>
+<div class="btn-list mt-3"><button class="btn btn-primary" type="submit">Pair {{.Domain}}</button></div>
+</form>
+<form method="post" action="{{$.Path}}/smip-peers/discard" class="mt-2"><input type="hidden" name="domain" value="{{.Domain}}"><button class="btn btn-link" type="submit">Discard this proposal</button></form>
+</div></div>{{end}}
+
+<div class="card"><div class="card-header"><h3 class="card-title">Paired servers</h3></div>
+{{if .Peers}}<div class="table-responsive"><table class="table card-table" aria-label="Paired SMIP peers"><thead><tr><th>Domain</th><th>Endpoint</th><th>Keys</th><th>State</th><th>Paired</th><th></th></tr></thead><tbody>{{range .Peers}}<tr><td><strong>{{.Domain}}</strong>{{if .Configured}}<div class="text-secondary">also in SMIP_CONFIG</div>{{end}}</td><td>{{if .Origin}}<code>{{.Origin}}</code>{{else}}<span class="text-secondary">receive only</span>{{end}}</td><td>{{range .Keys}}<div><code>{{.Fingerprint}}</code> {{if .Revoked}}<span class="badge bg-red-lt">revoked</span>{{else}}<span class="text-secondary">until {{.NotAfter.Format "Jan 2, 2006"}}</span>{{end}}</div>{{end}}</td><td>{{if eq .State "revoked"}}<span class="badge bg-red-lt">revoked</span>{{else if .Sendable}}<span class="badge bg-green-lt">paired · send and receive</span>{{else}}<span class="badge bg-green-lt">paired · receive</span>{{end}}</td><td>{{if .PairedAt}}{{.PairedAt.Format "Jan 2, 2006"}}<div class="text-secondary">{{.PairedBy}}</div>{{else}}<span class="text-secondary">{{.Notes}}</span>{{end}}</td><td>{{if ne .State "revoked"}}<form method="post" action="{{$.Path}}/smip-peers/revoke" data-admin-confirm="Revoke {{.Domain}}? Its packets are refused from now on and queued sends to it block."><input type="hidden" name="domain" value="{{.Domain}}"><input type="hidden" name="confirm" value="revoke"><button class="btn btn-outline-danger btn-sm" type="submit">Revoke</button></form>{{end}}</td></tr>{{end}}</tbody></table></div>
+{{else}}<div class="card-body">{{template "admin-empty" (dict "Icon" "shield-check" "Title" "No peer paired yet" "Text" "Fetch a server's identity above, confirm its fingerprint with the other operator, and have them pair this server too.")}}</div>{{end}}
+<div class="card-footer text-secondary">Pairing and revocation take effect on the next packet on every node, without a restart. Revoked keys are never trusted again on this server; a peer whose key was revoked has to rotate it. Workspace owners still authorize each stream in Chat before content is accepted.</div>
+</div>
+{{end}}{{end}}{{end}}

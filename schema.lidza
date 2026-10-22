@@ -1301,6 +1301,27 @@ model AuthInvite @table("auth_invite") {
 }
 
 
+// Operator-paired SMIP/0.1 peers, scoped to the local identity (owner). Only
+// confirmed "trusted" rows enter trust; pending proposals wait for an explicit
+// fingerprint confirmation and revoked rows refuse the key everywhere.
+model SmipPeer {
+  id uuid @id @default(uuid())
+  owner string
+  domain string
+  origin string @default("")
+  keyId string
+  publicKey string
+  notBefore time
+  notAfter time
+  revoked bool @default(false)
+  state string @default("pending")
+  confirmed bool @default(false)
+  pairedBy string @default("")
+  pairedAt time?
+  fetchedAt time
+  notes string @default("")
+  @@unique(owner, domain, keyId)
+}
 // Domain capabilities are local-origin scoped, sticky after first verification.
 model SmipMailDomain {
  id uuid @id @default(uuid())
@@ -1574,6 +1595,16 @@ type TeamMailInput {
   postfix bool
   inboundSecret string? @max(4096)
 }
+// Informational DNS/transport status for a SMIP mail identity; never a publication gate.
+type SmipDnsStatus {
+  domain string
+  txt string
+  addresses string[]
+  matchesServer string
+  tls string
+  detail string
+  checkedAt time
+}
 type TeamMailView {
   domainId uuid
   provider string
@@ -1590,6 +1621,7 @@ type TeamMailView {
   publicKey string
   keyId string
   keyExpiresAt time?
+  dns SmipDnsStatus?
 }
 type TeamSetupView {
   workspaceId uuid

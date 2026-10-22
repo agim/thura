@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -130,6 +132,18 @@ func publicIP(ip net.IP) bool {
 	return true
 }
 func (g *Gateway) client(ctx context.Context, origin string, pinned bool) (*http.Client, error) {
+	return DiscoveryClient(ctx, g.resolver, g.roots, origin, pinned)
+}
+
+// ValidOrigin reports whether raw is a bare HTTPS origin (no path, query,
+// fragment or credentials), the only endpoint shape SMIP peers may use.
+func ValidOrigin(raw string) bool { return validOrigin(raw) }
+
+// DiscoveryClient is the bounded, redirect-refusing, TLS 1.3-only client every
+// server-to-server fetch shares (mail discovery, SMIP/0.1 pairing, status
+// probes). An origin the operator typed or pinned may be a private address;
+// one derived from public DNS must resolve to public addresses only.
+func DiscoveryClient(ctx context.Context, resolver *net.Resolver, roots *x509.CertPool, origin string, pinned bool) (*http.Client, error) {
 	if !validOrigin(origin) {
 		return nil, ErrDiscovery
 	}
@@ -137,7 +151,10 @@ func (g *Gateway) client(ctx context.Context, origin string, pinned bool) (*http
 	if err != nil {
 		return nil, ErrDiscovery
 	}
-	ips, err := g.resolver.LookupIPAddr(ctx, u.Hostname())
+	if resolver == nil {
+		resolver = net.DefaultResolver
+	}
+	ips, err := resolver.LookupIPAddr(ctx, u.Hostname())
 	if err != nil || len(ips) == 0 {
 		return nil, ErrDiscovery
 	}
@@ -153,7 +170,7 @@ func (g *Gateway) client(ctx context.Context, origin string, pinned bool) (*http
 		port = "443"
 	}
 	// Resolve once and dial only those validated IPs; no proxy or second DNS lookup.
-	transport := &http.Transport{TLSClientConfig: g.tlsConfig(), ResponseHeaderTimeout: 5 * time.Second, DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+	transport := &http.Transport{TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: roots}, ResponseHeaderTimeout: 5 * time.Second, DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 		for _, ip := range ips {
 			connection, err := (&net.Dialer{Timeout: 3 * time.Second}).DialContext(ctx, "tcp", net.JoinHostPort(ip.IP.String(), port))
 			if err == nil {
