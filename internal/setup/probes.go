@@ -3,8 +3,10 @@ package setup
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -26,6 +28,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/smip"
 )
 
 const probePrefix = "_thura_setup_checks/"
@@ -62,6 +65,16 @@ func probeFingerprint(v map[string]string, kind string) (string, error) {
 	for _, name := range names {
 		selected[name] = v[name]
 	}
+	// The SMIP check proves the saved signing identity and its public route, not
+	// the JSON text the identity happens to be serialised in. Binding the raw
+	// value would let an equivalent re-serialisation, or a regenerated identity
+	// carrying the same domain and key, silently invalidate a successful check;
+	// publication re-validates the signing interval itself.
+	for _, name := range []string{"SMIP_CONFIG", "SMIP_MAIL_CONFIG"} {
+		if _, ok := selected[name]; ok {
+			selected[name] = signingIdentity(v[name])
+		}
+	}
 	key, err := credentials.Key(".")
 	if err != nil {
 		return "", errors.New("server master key is unavailable")
@@ -74,6 +87,24 @@ func probeFingerprint(v map[string]string, kind string) (string, error) {
 	digest.Write([]byte("thura.setup.probe.v1\x00"))
 	digest.Write(body)
 	return hex.EncodeToString(digest.Sum(nil)), nil
+}
+
+// signingIdentity reduces a saved SMIP identity to the domain and key ID its
+// seed signs as. Anything that is not a well-formed identity stays bound as
+// written, so a malformed value can never share a fingerprint with a valid one.
+func signingIdentity(raw string) string {
+	var cfg struct {
+		Domain string `json:"domain"`
+		Seed   string `json:"seed"`
+	}
+	if json.Unmarshal([]byte(raw), &cfg) != nil {
+		return raw
+	}
+	seed, err := base64.RawURLEncoding.Strict().DecodeString(cfg.Seed)
+	if err != nil || len(seed) != ed25519.SeedSize || smip.Encode(seed) != cfg.Seed || !smip.ValidDomain(cfg.Domain) {
+		return raw
+	}
+	return cfg.Domain + "/" + smip.KeyID(ed25519.NewKeyFromSeed(seed).Public().(ed25519.PublicKey))
 }
 
 func probeMessage(kind, state string) string {
