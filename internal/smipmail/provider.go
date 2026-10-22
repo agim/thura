@@ -21,7 +21,7 @@ func (t noRedirect) RoundTrip(r *http.Request) (*http.Response, error) {
 	return response, err
 }
 
-func providerContext(ctx context.Context) context.Context {
+func ProviderContext(ctx context.Context) context.Context {
 	base := lidza.HTTPClient(ctx).Transport
 	if base == nil {
 		base = http.DefaultTransport

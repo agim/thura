@@ -182,6 +182,7 @@ model MailItem {
   starred bool @default(false)
   unread bool @default(false)
   providerId string @default("")
+  deliveryReason string @default("")
   rawKey string @default("")
   externalId string?
   threadId string @default("")

@@ -325,6 +325,7 @@ type MailItem struct {
 	Starred          bool       `json:"starred" db:"starred"`
 	Unread           bool       `json:"unread" db:"unread"`
 	ProviderID       string     `json:"providerId" db:"provider_id"`
+	DeliveryReason   string     `json:"deliveryReason" db:"delivery_reason"`
 	RawKey           string     `json:"rawKey" db:"raw_key"`
 	ExternalID       *string    `json:"externalId" db:"external_id"`
 	ThreadID         string     `json:"threadId" db:"thread_id"`
@@ -377,6 +378,9 @@ func (v MailItem) Validate() error {
 	}
 	if v.ProviderID == "" {
 		errs.Add("providerId", "required", "required")
+	}
+	if v.DeliveryReason == "" {
+		errs.Add("deliveryReason", "required", "required")
 	}
 	if v.RawKey == "" {
 		errs.Add("rawKey", "required", "required")

@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/net/html"
 	queries "thura/db/queries/gen"
@@ -45,12 +46,17 @@ func cleanReferences(value string) string {
 
 	return strings.Join(ids, " ")
 }
+
+// shortText bounds value to max bytes, the unit the delivery limits use, cut
+// on a rune boundary.
 func shortText(value string, max int) string {
-	runes := []rune(value)
-	if len(runes) > max {
-		runes = runes[:max]
+	if len(value) <= max {
+		return value
 	}
-	return string(runes)
+	for max > 0 && !utf8.RuneStart(value[max]) {
+		max--
+	}
+	return value[:max]
 }
 func sourceDraft(box queries.Mailbox, source queries.MailItem, in schema.DraftInput) schema.DraftInput {
 	reply := in.ReplyID != nil

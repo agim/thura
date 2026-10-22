@@ -39,7 +39,7 @@ UPDATE mail_item SET status='queued',send_at=$2,updated_at=now() WHERE id=$1 AND
 -- name: CancelMailItem :one
 UPDATE mail_item SET status='draft',send_at=NULL,updated_at=now() WHERE id=$1 AND status='queued' RETURNING *;
 -- name: SetMailOutcome :exec
-UPDATE mail_item SET status=$2,provider_id=$3,folder=$4,updated_at=now() WHERE id=$1;
+UPDATE mail_item SET status=$2,provider_id=$3,folder=$4,delivery_reason=$5,updated_at=now() WHERE id=$1;
 -- name: ListMailAttachments :many
 SELECT * FROM mail_attachment WHERE item_id=$1 ORDER BY id;
 -- name: GetMailAttachment :one

@@ -17,6 +17,8 @@ import (
 	"io"
 	"net/http"
 	stdmail "net/mail"
+	"net/textproto"
+	"net/url"
 	"regexp"
 	"strings"
 	queries "thura/db/queries/gen"
@@ -113,7 +115,7 @@ func View(i queries.MailItem) schema.MailItem {
 	if i.Folder == queries.MailFolderDrafts {
 		formatted = richtext.Clean(i.HTMLBody)
 	}
-	return schema.MailItem{ID: i.ID, MailboxID: i.MailboxID, AuthorID: i.AuthorID, Folder: schema.MailFolder(i.Folder), FromAddress: i.FromAddress, ToAddress: i.ToAddress, Cc: i.Cc, Bcc: i.Bcc, Subject: i.Subject, TextBody: i.TextBody, HTMLBody: formatted, Status: i.Status, Starred: i.Starred, Unread: i.Unread, ProviderID: i.ProviderID, RawKey: i.RawKey, ExternalID: i.ExternalID, ThreadID: i.ThreadID, MessageID: i.MessageID, InReplyTo: i.InReplyTo, ReferencesHeader: i.ReferencesHeader, SendAt: i.SendAt, CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt}
+	return schema.MailItem{ID: i.ID, MailboxID: i.MailboxID, AuthorID: i.AuthorID, Folder: schema.MailFolder(i.Folder), FromAddress: i.FromAddress, ToAddress: i.ToAddress, Cc: i.Cc, Bcc: i.Bcc, Subject: i.Subject, TextBody: i.TextBody, HTMLBody: formatted, Status: i.Status, Starred: i.Starred, Unread: i.Unread, ProviderID: i.ProviderID, DeliveryReason: i.DeliveryReason, RawKey: i.RawKey, ExternalID: i.ExternalID, ThreadID: i.ThreadID, MessageID: i.MessageID, InReplyTo: i.InReplyTo, ReferencesHeader: i.ReferencesHeader, SendAt: i.SendAt, CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt}
 }
 func Attachment(a queries.MailAttachment) schema.AttachmentView {
 	return schema.AttachmentView{ID: a.ID, Name: a.Name, ContentType: a.ContentType, Size: int(a.Size), ContentID: ContentID(a.ContentID)}
@@ -193,6 +195,21 @@ func Queue(ctx context.Context, workspaceID, mailboxID, itemID string, in schema
 	if strings.TrimSpace(i.Subject) == "" {
 		return schema.MailItem{}, router.Errorf(422, "subject is required")
 	}
+	if strings.ContainsAny(i.Subject, "\r\n") {
+		return schema.MailItem{}, router.Errorf(422, "subject cannot contain line breaks")
+	}
+	// Refuse now what delivery would hold: the queued message is immutable.
+	box, err := q.GetMailbox(ctx, mailboxID)
+	if err != nil {
+		return schema.MailItem{}, err
+	}
+	msg, err := compose(box, i)
+	if err != nil {
+		return schema.MailItem{}, err
+	}
+	if err = smipmail.Check(msg); err != nil {
+		return schema.MailItem{}, router.Errorf(422, "message cannot be sent: %v", err)
+	}
 	when := lidza.Now(ctx).Add(10 * time.Second)
 	if in.SendAt != nil {
 		if in.SendAt.Before(when) || in.SendAt.After(lidza.Now(ctx).Add(365*24*time.Hour)) {
@@ -215,6 +232,13 @@ func Cancel(ctx context.Context, workspaceID, mailboxID, itemID string) (schema.
 		return schema.MailItem{}, err
 	}
 	defer tx.Rollback(ctx)
+	// Another node's clock may have found the item due: a committed transmission
+	// is a delivery intent, whatever this node thinks of the schedule.
+	if _, err = q.GetMailTransmission(ctx, itemID); err == nil {
+		return schema.MailItem{}, router.Errorf(409, "delivery has already started")
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return schema.MailItem{}, err
+	}
 	if i.Status != "queued" || i.SendAt == nil || !i.SendAt.After(lidza.Now(ctx)) {
 		return schema.MailItem{}, router.Errorf(409, "undo window has closed")
 	}
@@ -234,12 +258,28 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 	if err := json.Unmarshal(payload, &data); err != nil {
 		return err
 	}
+	// The workspace is locked before the item, the order Lock takes for every
+	// user action (undo, move, flags); an unlocked read only finds the workspace.
+	peek, err := queries.New(db.From(ctx)).GetMailItem(ctx, data.ID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	box, err := queries.New(db.From(ctx)).GetMailbox(ctx, peek.MailboxID)
+	if err != nil {
+		return err
+	}
 	tx, err := db.From(ctx).Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 	q := queries.New(tx)
+	if _, err = q.LockWorkspace(ctx, box.WorkspaceID); err != nil {
+		return err
+	}
 	i, err := q.LockMailItem(ctx, data.ID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
@@ -257,7 +297,12 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 	if !errors.Is(existingErr, pgx.ErrNoRows) {
 		return existingErr
 	}
-	if i.Status != "queued" && i.Status != "failed" {
+	// Only a queued item enters delivery. A provider error is no longer
+	// recorded as "failed" and retried: once a submission has started the
+	// pack cannot prove the message was refused, and a retry would send a
+	// second copy. The outcome is held as delivery_uncertain (unknown) or
+	// delivery_blocked (refused before or by the provider), both terminal.
+	if i.Status != "queued" {
 		return nil
 	}
 	if i.SendAt != nil && i.SendAt.After(lidza.Now(ctx)) {
@@ -275,31 +320,28 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 		cfg, err = Config(m)
 	}
 	if err != nil {
+		if permanent(err) {
+			return hold(ctx, tx, q, i, "delivery_blocked", reason("", err))
+		}
 		return err
 	}
-	cc, err := addresses(i.Cc)
-	if err != nil {
-		return err
+	msg, err := compose(m, i)
+	if err == nil {
+		err = smipmail.Check(msg)
 	}
-	bcc, err := addresses(i.Bcc)
 	if err != nil {
-		return err
+		return hold(ctx, tx, q, i, "delivery_blocked", reason("Message cannot be sent", err))
 	}
 	attachments, err := q.ListMailAttachments(ctx, i.ID)
 	if err != nil {
 		return err
 	}
-	msg := mail.Message{To: i.ToAddress, Cc: cc, Bcc: bcc, From: m.Address, Subject: i.Subject, Text: i.TextBody, HTML: i.HTMLBody}
-	msg.Headers = map[string]string{}
-	if i.InReplyTo != "" {
-		msg.Headers["In-Reply-To"] = i.InReplyTo
-	}
-	if i.ReferencesHeader != "" {
-		msg.Headers["References"] = i.ReferencesHeader
-	}
 	var total int64
 	for _, a := range attachments {
 		if err := mailabuse.GuardObject(ctx, a.ObjectKey); err != nil {
+			if permanent(err) {
+				return hold(ctx, tx, q, i, "delivery_blocked", reason("", err))
+			}
 			return err
 		}
 		r, _, err := storage.From(ctx).Get(ctx, a.ObjectKey)
@@ -313,7 +355,7 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 		}
 		total += int64(len(b))
 		if total > 10<<20 {
-			return errors.New("attachments exceed ten megabytes")
+			return hold(ctx, tx, q, i, "delivery_blocked", "Attachments exceed ten megabytes")
 		}
 		msg.Attachments = append(msg.Attachments, mail.Attachment{Name: a.Name, ContentType: a.ContentType, Data: b, ContentID: a.ContentID})
 	}
@@ -331,18 +373,122 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	providerID, deliveryErr := transport.Send(ctx, msg)
-	status, folder := "sent", queries.MailFolderSent
-	if deliveryErr != nil {
-		status = "failed"
-		folder = i.Folder
-	} else if cfg.Provider == "outbox" || cfg.Provider == "log" {
+	// The marker commits BEFORE the one provider call, as the SMIP outbox does:
+	// a timeout, a crash or a lost commit after it leaves the item uncertain,
+	// never queued, so no run can submit the message a second time.
+	if err = hold(ctx, tx, q, i, "delivery_uncertain", "Provider outcome unknown; not retried automatically"); err != nil {
+		return err
+	}
+	providerID, sendErr := transport.Send(smipmail.ProviderContext(ctx), msg)
+	return record(ctx, m, i, cfg.Provider, providerID, sendErr)
+}
+
+// compose builds the outgoing message without its attachments: Queue checks it
+// and Deliver adds the stored files.
+func compose(m queries.Mailbox, i queries.MailItem) (mail.Message, error) {
+	cc, err := addresses(i.Cc)
+	if err != nil {
+		return mail.Message{}, err
+	}
+	bcc, err := addresses(i.Bcc)
+	if err != nil {
+		return mail.Message{}, err
+	}
+	msg := mail.Message{To: i.ToAddress, Cc: cc, Bcc: bcc, From: m.Address, Subject: i.Subject, Text: i.TextBody, HTML: i.HTMLBody, Headers: map[string]string{}}
+	if i.InReplyTo != "" {
+		msg.Headers["In-Reply-To"] = i.InReplyTo
+	}
+	if i.ReferencesHeader != "" {
+		msg.Headers["References"] = i.ReferencesHeader
+	}
+	return msg, nil
+}
+
+// hold commits a terminal delivery state for the item locked in tx.
+func hold(ctx context.Context, tx pgx.Tx, q *queries.Queries, i queries.MailItem, status, why string) error {
+	if err := q.SetMailOutcome(ctx, queries.SetMailOutcomeParams{ID: i.ID, Status: status, ProviderID: i.ProviderID, Folder: i.Folder, DeliveryReason: why}); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// record stores the provider's answer after the uncertain marker committed.
+// Without a definite refusal the item stays uncertain: the job never retries.
+func record(ctx context.Context, m queries.Mailbox, i queries.MailItem, provider, providerID string, sendErr error) error {
+	tx, err := db.From(ctx).Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	q := queries.New(tx)
+	if _, err = q.LockWorkspace(ctx, m.WorkspaceID); err != nil {
+		return err
+	}
+	current, err := q.LockMailItem(ctx, i.ID)
+	if err != nil {
+		return err
+	}
+	if current.Status != "delivery_uncertain" {
+		return errors.New("provider attempt was superseded")
+	}
+	status, folder, why := "sent", queries.MailFolderSent, ""
+	switch {
+	case sendErr == nil && (provider == "outbox" || provider == "log"):
 		status = "captured"
+	case sendErr == nil:
+	case definite(sendErr):
+		status, folder, why = "delivery_blocked", current.Folder, reason("Provider refused the message", sendErr)
+	default:
+		lidza.Log(ctx).Warn("mail provider outcome unknown; not retried", "item", i.ID, "error", sendErr)
+		status, folder, why = "delivery_uncertain", current.Folder, reason("Provider outcome unknown; not retried automatically", sendErr)
 	}
-	if err = q.SetMailOutcome(ctx, queries.SetMailOutcomeParams{ID: i.ID, Status: status, ProviderID: providerID, Folder: folder}); err != nil {
-		return errors.Join(deliveryErr, err)
+	if err = q.SetMailOutcome(ctx, queries.SetMailOutcomeParams{ID: i.ID, Status: status, ProviderID: providerID, Folder: folder, DeliveryReason: why}); err != nil {
+		return err
 	}
-	return errors.Join(deliveryErr, tx.Commit(ctx))
+	return tx.Commit(ctx)
+}
+
+// permanent is a refusal the job cannot outwait: a conflict or validation reply.
+func permanent(err error) bool {
+	var httpErr *router.HTTPError
+	return errors.As(err, &httpErr) && (httpErr.Status == 403 || httpErr.Status == 409 || httpErr.Status == 422)
+}
+
+var providerStatusPattern = regexp.MustCompile(`: ([45]\d\d) `)
+
+// definite reports whether the provider answered and refused the message: an
+// SMTP reply code, or an HTTP 4xx response the pack reports as "host: 4xx
+// body". A transport error or a 5xx leaves the outcome unknown.
+func definite(err error) bool {
+	var reply *textproto.Error
+	if errors.As(err, &reply) {
+		return true
+	}
+	var transport *url.Error
+	if errors.As(err, &transport) {
+		return false
+	}
+	match := providerStatusPattern.FindStringSubmatch(err.Error())
+	return match != nil && match[1][0] == '4'
+}
+
+// reason is a bounded, single-line text for the message's delivery state.
+func reason(prefix string, err error) string {
+	text := err.Error()
+	var httpErr *router.HTTPError
+	if errors.As(err, &httpErr) {
+		text = httpErr.Message
+	}
+	text = strings.Map(func(r rune) rune {
+		if r < ' ' || r == 127 {
+			return ' '
+		}
+		return r
+	}, text)
+	if prefix != "" {
+		text = prefix + ": " + text
+	}
+	return shortText(text, 300)
 }
 func CheckEditable(i queries.MailItem) error {
 	if i.Status != "draft" {
