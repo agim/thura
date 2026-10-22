@@ -1,21 +1,39 @@
 // Setup controls run within the official, administrator-gated page.
 (() => {
   document.querySelector('.setup-steps [aria-current="step"]')?.scrollIntoView({block:"nearest",inline:"center"});
-  const updateMailFields = () => {
-    const value = name => document.getElementById(name)?.value;
-    const localOut = value('THURA_MAIL_OUTBOUND') === 'postfix';
-    const localIn = value('THURA_MAIL_INBOUND') === 'postfix';
-    const provider = value('MAIL_PROVIDER');
-    const show = (names, visible) => names.forEach(name => {
-      const field = document.querySelector(`[data-setup-field="${name}"]`);
-      if (field) field.hidden = !visible;
-    });
-    show(['THURA_POSTFIX_HOSTNAME'], localOut || localIn);
-    show(['MAIL_PROVIDER'], !localOut);
-    show(['MAIL_API_KEY', 'MAIL_REGION'], !localOut && provider !== 'smtp');
-    show(['MAIL_DOMAIN'], !localOut && provider === 'mailgun');
-    show(['MAIL_SMTP_HOST', 'MAIL_SMTP_PORT', 'MAIL_SMTP_SECURITY', 'MAIL_SMTP_USERNAME', 'MAIL_SMTP_PASSWORD'], !localOut && provider === 'smtp');
-    show(['MAIL_INBOUND_SECRET'], !localIn);
+  // A field's current value, with checkboxes read as the strings the server stores.
+  const current = name => {
+    const element = document.getElementById(name);
+    if (!element) return undefined;
+    return element.type === 'checkbox' ? (element.checked ? 'true' : 'false') : element.value;
+  };
+  // Visibility is declared by the server as data-show-when: a list of
+  // alternatives, each mapping a field name to its allowed values. A field
+  // whose controlling field is itself hidden stays hidden.
+  const rules = new Map();
+  for (const element of document.querySelectorAll('[data-show-when]')) {
+    try { rules.set(element, JSON.parse(element.dataset.showWhen)); } catch { rules.set(element, []); }
+  }
+  const holds = (alternatives, depth) => alternatives.some(condition => Object.entries(condition).every(([name, allowed]) => allowed.includes(current(name)) && fieldVisible(name, depth + 1)));
+  const fieldVisible = (name, depth = 0) => {
+    const field = document.querySelector(`[data-setup-field="${name}"]`);
+    const alternatives = field && rules.get(field);
+    return !alternatives || depth > 8 || holds(alternatives, depth);
+  };
+  const applyVisibility = () => { for (const [element, alternatives] of rules) element.hidden = !holds(alternatives, 0); };
+  // Placeholders show what a blank field receives on save; they follow edits live.
+  const applyDerived = () => {
+    for (const input of document.querySelectorAll('[data-derive-from]')) {
+      const source = current(input.dataset.deriveFrom) || '';
+      let hint = '';
+      if (input.dataset.deriveRule === 'email-domain') {
+        const at = source.lastIndexOf('@');
+        hint = at > 0 && at < source.length - 1 ? source.slice(at + 1).toLowerCase() : '';
+      } else if (input.dataset.deriveRule === 'map') {
+        try { hint = JSON.parse(input.dataset.deriveMap || '{}')[source] || ''; } catch { hint = ''; }
+      }
+      input.placeholder = hint;
+    }
   };
   const updateStorageFields = () => {
     const backend = document.getElementById('STORAGE_PROVIDER');
@@ -34,11 +52,6 @@
         select.querySelector('[role=combobox] span').textContent = options.find(option => option.dataset.value === value)?.textContent || value || 'Choose an option';
       }
     };
-    const show = (name,visible) => { document.querySelector(`[data-setup-field="${name}"]`).hidden = !visible; };
-    show('STORAGE_DIR', !cloud);
-    for (const name of ['THURA_STORAGE_PROFILE','STORAGE_ENDPOINT','STORAGE_BUCKET','STORAGE_ACCESS_KEY','STORAGE_SECRET_KEY']) show(name,cloud);
-    show('THURA_STORAGE_LOCATION',cloud && (profile === 'aws' || profile === 'digitalocean'));
-    show('STORAGE_REGION',cloud && profile === 'custom');
     const options = [...location.closest('.setup-select').querySelectorAll('[role=option]')];
     options.forEach(option => option.hidden = option.dataset.storageProfile !== profile);
     if (cloud && (profile === 'aws' || profile === 'digitalocean')) {
@@ -47,7 +60,9 @@
       set('STORAGE_REGION',profile === 'aws' ? location.value : 'us-east-1');
     }
     if (cloud && profile === 'google') { set('STORAGE_ENDPOINT','https://storage.googleapis.com'); set('STORAGE_REGION','auto'); }
+    // Known providers derive the endpoint and signing region from the bucket region.
     document.getElementById('STORAGE_ENDPOINT').readOnly = profile !== 'custom';
+    document.getElementById('STORAGE_REGION').readOnly = profile !== 'custom';
     const hints = {
       google:'Use a Cloud Storage HMAC access ID and HMAC secret for a service account. Service-account JSON keys and Google API keys do not work with this XML/S3 connection.',
       digitalocean:'Select your Spaces bucket region and use a Spaces access key pair. The service endpoint and signing region are configured automatically; do not use a CDN URL.',
@@ -59,6 +74,13 @@
     help.textContent = hints[profile] + ' Keep the bucket private. Saved keys are not reused across different providers.';
     document.getElementById('label-STORAGE_ACCESS_KEY').textContent = profile === 'google' ? 'HMAC access ID' : profile === 'digitalocean' ? 'Spaces access key' : 'S3 access key';
     document.getElementById('label-STORAGE_SECRET_KEY').textContent = profile === 'google' ? 'HMAC secret' : profile === 'digitalocean' ? 'Spaces secret key' : 'S3 secret key';
+  };
+  const suggestRefreshers = [];
+  const refresh = () => {
+    applyVisibility();
+    applyDerived();
+    updateStorageFields();
+    suggestRefreshers.forEach(fn => fn());
   };
   const review = document.querySelector('[data-setup-review]');
   if (review && review.dataset.configured === 'true') {
@@ -172,15 +194,15 @@
       await watchStarted();
     })();
   }
-  updateMailFields();
-  const updateAIFields = () => {
-    const provider = document.getElementById('LLM_PROVIDER')?.value;
-    const field = document.querySelector('[data-setup-field="LLM_API_KEY"]');
-    if (field) field.hidden = provider === 'ollama';
+  const optionKeys = (options, option, close, e) => {
+    const visible = options().filter(o => !o.hidden);
+    const at = visible.indexOf(option);
+    const keys = {ArrowDown: (at + 1) % visible.length, ArrowUp: (at - 1 + visible.length) % visible.length, Home: 0, End: visible.length - 1};
+    if (e.key in keys) {e.preventDefault(); visible[keys[e.key]]?.focus();}
+    if (e.key === 'Escape') {e.preventDefault(); close(true);}
+    if (e.key === 'Tab') close();
   };
-  updateAIFields();
-  updateStorageFields();
-  for (const select of document.querySelectorAll('.setup-select')) {
+  for (const select of document.querySelectorAll('.setup-select:not(.setup-suggest)')) {
     const trigger = select.querySelector('[role="combobox"]');
     const list = select.querySelector('[role="listbox"]');
     const input = select.querySelector('input[type=hidden]');
@@ -214,23 +236,87 @@
         trigger.querySelector('span').textContent = option.textContent;
         options.forEach(o => o.setAttribute('aria-selected', String(o === option)));
         close(true);
-        updateMailFields();
-        updateAIFields();
-        updateStorageFields();
+        refresh();
       });
       option.addEventListener('keydown', e => {
-        const visible = options.filter(o => !o.hidden);
-        const at = visible.indexOf(option);
-        const keys = {ArrowDown: (at + 1) % visible.length, ArrowUp: (at - 1 + visible.length) % visible.length, Home: 0, End: visible.length - 1};
-        if (e.key in keys) {e.preventDefault(); visible[keys[e.key]]?.focus();}
-        if (e.key === 'Escape') {e.preventDefault(); close(true);}
-        if (e.key === 'Tab') close();
+        optionKeys(() => options, option, close, e);
         if (e.key.length === 1 && e.key !== ' ') options.find(o => o.textContent.toLowerCase().startsWith(e.key.toLowerCase()))?.focus();
       });
     });
     document.addEventListener('pointerdown', e => {if (!select.contains(e.target)) close();});
     select.addEventListener('focusout', e => {if (!select.contains(e.relatedTarget)) close();});
   }
+  // A suggest control keeps free text and offers options; LLM_MODEL filters
+  // them by the selected provider and adds the local service's installed
+  // models through the gated models.json endpoint, never by contacting it here.
+  for (const box of document.querySelectorAll('.setup-suggest')) {
+    const input = box.querySelector('[data-setup-suggest]');
+    const list = box.querySelector('[role="listbox"]');
+    const toggle = box.querySelector('.setup-suggest-toggle');
+    const by = input.dataset.suggestBy;
+    const live = input.dataset.suggestLive;
+    let loaded = false;
+    const options = () => [...list.querySelectorAll('[role="option"]')];
+    const belongs = option => !by || !option.dataset.group || option.dataset.group === current(by);
+    const close = (focus = false) => { list.hidden = true; input.setAttribute('aria-expanded', 'false'); if (focus) input.focus(); };
+    // Typing narrows the list; the toggle and arrow keys show every suggestion.
+    let typed = '';
+    const filter = () => {
+      const query = typed.trim().toLowerCase();
+      let any = false;
+      for (const option of options()) {
+        option.hidden = !belongs(option) || (query !== '' && !option.dataset.value.toLowerCase().includes(query) && !option.textContent.toLowerCase().includes(query));
+        option.setAttribute('aria-selected', String(option.dataset.value === input.value));
+        any = any || !option.hidden;
+      }
+      return any;
+    };
+    const open = query => { typed = query; if (!filter()) { close(); return false; } list.hidden = false; input.setAttribute('aria-expanded', 'true'); return true; };
+    const wire = option => {
+      option.addEventListener('click', () => {
+        input.value = option.dataset.value;
+        close(true);
+        applyDerived();
+      });
+      option.addEventListener('keydown', e => optionKeys(options, option, close, e));
+    };
+    options().forEach(wire);
+    const loadLive = async () => {
+      if (!live || loaded || current(by) !== live) return;
+      loaded = true;
+      try {
+        const response = await fetch('setup/models.json?provider=' + encodeURIComponent(live), {credentials:'same-origin', cache:'no-store', signal:AbortSignal.timeout(5000)});
+        if (!response.ok) return;
+        const data = await response.json();
+        for (const name of Array.isArray(data.models) ? data.models : []) {
+          if (typeof name !== 'string' || options().some(option => option.dataset.value === name && option.dataset.group === live)) continue;
+          const option = document.createElement('button');
+          option.type = 'button';
+          option.setAttribute('role', 'option');
+          option.setAttribute('aria-selected', 'false');
+          option.dataset.value = name;
+          option.dataset.group = live;
+          option.textContent = name + ' · installed';
+          list.append(option);
+          wire(option);
+        }
+        if (!list.hidden) filter();
+      } catch { /* no suggestions */ }
+    };
+    input.addEventListener('input', () => { void loadLive(); open(input.value); });
+    input.addEventListener('focus', () => { void loadLive(); });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (open('')) options().find(o => !o.hidden)?.focus(); }
+      if (e.key === 'Escape') { e.preventDefault(); close(); }
+    });
+    toggle.addEventListener('click', () => { if (list.hidden) { void loadLive(); open(''); } else close(true); });
+    document.addEventListener('pointerdown', e => {if (!box.contains(e.target)) close();});
+    box.addEventListener('focusout', e => {if (!box.contains(e.relatedTarget)) close();});
+    suggestRefreshers.push(() => { void loadLive(); if (!list.hidden && !filter()) close(); });
+  }
+  for (const checkbox of document.querySelectorAll('[data-setup-field] input[type=checkbox][id]')) checkbox.addEventListener('change', refresh);
+  document.addEventListener('input', e => { if (e.target.matches('[data-setup-field] input')) applyDerived(); });
+  refresh();
   for (const button of document.querySelectorAll('[data-setup-open]')) {
     const dialog = document.getElementById(button.dataset.setupOpen);
     button.addEventListener('click', () => dialog.showModal());

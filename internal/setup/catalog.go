@@ -19,7 +19,25 @@ type Field struct {
 	Saved                            bool
 	Managed                          bool
 	ManagedTitle                     string
+	// ShowWhen lists alternatives; the field is shown when every named field
+	// of one alternative holds one of its listed values. Nil shows it always.
+	ShowWhen []Condition
+	// Suggestions are offered by the suggest kind; free text stays allowed.
+	Suggestions []Suggestion
+	// Placeholder shows the value a blank field receives when the step is saved.
+	Placeholder string
+	// DeriveFrom/DeriveRule let the page refresh Placeholder while another
+	// field of the same step changes: "email-domain" or "map" (DeriveMap).
+	DeriveFrom, DeriveRule string
+	DeriveMap              map[string]string
+	ReadOnly               bool
+	Inputmode              string
 }
+
+// Condition maps a field name to the values that satisfy it.
+type Condition map[string][]string
+
+type Suggestion struct{ Value, Label, Group string }
 type Step struct {
 	ID, Title string
 	Fields    []Field
@@ -29,7 +47,7 @@ func field(name, label, kind, def, help string, options ...string) Field {
 	return Field{Name: name, Label: label, Kind: kind, Default: def, Help: help, Options: options}
 }
 func Catalog() []Step {
-	return []Step{
+	steps := []Step{
 		{ID: "server", Title: "Server and workspace", Fields: []Field{
 			field("APP_URL", "Public HTTPS address", "url", "", "The address users open; no fixed Thura domain."),
 			field("THURA_WORKSPACE_NAME", "Initial workspace name", "text", "My workspace", "Created with the administrator as owner on first publish."),
@@ -40,15 +58,15 @@ func Catalog() []Step {
 		{ID: "mail", Title: "Email service", Fields: []Field{
 			field("THURA_MAIL_INBOUND", "Receive email through", "select", "relay", "Postfix uses the included Compose service. Relay keeps an independently managed signed MIME relay.", "postfix", "relay"),
 			field("THURA_MAIL_OUTBOUND", "Send email through", "select", "provider", "Recommended: an API provider for outgoing delivery. Postfix remains available for direct SMTP sending.", "provider", "postfix"),
-			field("THURA_POSTFIX_HOSTNAME", "Mail server hostname", "text", "", "For example mail.example.org. Point your inbox domain MX record here and this hostname A record at this server."),
+			field("THURA_POSTFIX_HOSTNAME", "Mail server hostname", "text", "", "Blank uses mail. on the public address host. Point your inbox domain MX record here and this hostname A record at this server."),
 			field("THURA_MAIL_ADDRESS", "Administrator inbox address", "email", "", "Private inbox for the first administrator; blank uses the sender address. New members receive personal inboxes through invitations."),
 			field("MAIL_PROVIDER", "Outgoing provider", "select", "smtp", "API providers are recommended: Mailgun, SendGrid, Postmark or Resend. SMTP is available when needed.", "mailgun", "sendgrid", "postmark", "resend", "smtp"),
 			field("MAIL_FROM", "Sender address", "email", "", "A verified outgoing sender; can differ from the inbox address."),
 			field("MAIL_API_KEY", "Email API key", "secret", "", "Required for API providers. Blank preserves the saved key."),
-			field("MAIL_DOMAIN", "Mailgun sending domain", "text", "", "Verify this domain in the provider console."),
-			field("MAIL_REGION", "Email API region", "select", "us", "Select the provider's regional endpoint.", "us", "eu"),
+			field("MAIL_DOMAIN", "Mailgun sending domain", "text", "", "Blank uses the sender address domain. Verify this domain in the provider console."),
+			field("MAIL_REGION", "Email API region", "select", "us", "Mailgun and SendGrid regional endpoints.", "us", "eu"),
 			field("MAIL_SMTP_HOST", "SMTP hostname", "text", "", "For SMTP; localhost is allowed for a local Postfix relay."),
-			field("MAIL_SMTP_PORT", "SMTP port", "number", "587", "1–65535."),
+			field("MAIL_SMTP_PORT", "SMTP port", "suggest", "587", "1–65535; 587 is the usual submission port."),
 			field("MAIL_SMTP_SECURITY", "SMTP encryption", "select", "starttls", "Plain transport is allowed only to loopback Postfix.", "starttls", "tls", "none"),
 			field("MAIL_SMTP_USERNAME", "SMTP username", "text", "", "Leave both username/password empty for a trusted local relay."),
 			field("MAIL_SMTP_PASSWORD", "SMTP password", "secret", "", "Blank preserves the saved password."),
@@ -56,10 +74,10 @@ func Catalog() []Step {
 			field("MAIL_RSPAMD_URL", "Local spam filter", "text", "", "Compose supplies http://127.0.0.1:11333. Local rules and learned Junk corrections run before optional AI screening."),
 			field("MAIL_RSPAMD_CONTROLLER_URL", "Spam filter learning endpoint", "text", "", "Compose supplies http://127.0.0.1:11334 alongside Postfix. Never publish the controller port."),
 			field("MAIL_RSPAMD_PASSWORD", "Spam filter learning secret", "secret", "", "Compose supplies this automatically. Blank preserves the existing controller secret."),
-			field("MAIL_AI_SCREENING", "AI-screen incoming email by default", "select", "true", "New workspace policies screen incoming messages using the model selected in AI settings. Unavailable required checks keep messages in quarantine. Workspace owners can turn screening off in Mail settings.", "true", "false"),
+			field("MAIL_AI_SCREENING", "AI-screen incoming email by default", "checkbox", "true", "New workspace policies screen incoming messages using the model selected in AI settings. Unavailable required checks keep messages in quarantine. Workspace owners can turn screening off in Mail settings.", "true", "false"),
 			field("MAIL_AI_PER_HOUR", "AI screening attempts per workspace per hour", "number", "120", "Bounds automatic model usage. Mail over this budget stays quarantined and is retried in the next hour."),
 			field("MAIL_CLAMD_ADDRESS", "Private antivirus service", "text", "", "Host:port for the included ClamAV service, for example clamav:3310. Keep its port private. Blank disables signature scanning; static attachment checks still run."),
-			field("SMIP_MAIL_ENABLED", "Prefer verified SMIP email", "select", "false", "Verified domains use authenticated SMIP. Unadvertised domains use the configured provider; verification failures hold delivery.", "false", "true"),
+			field("SMIP_MAIL_ENABLED", "Prefer verified SMIP email", "checkbox", "false", "Verified domains use authenticated SMIP. Unadvertised domains use the configured provider; verification failures hold delivery.", "false", "true"),
 			field("SMIP_MAIL_CONFIG", "SMIP email identity", "secret", "", "Thura generates and encrypts the signing key when you save this step. Existing keys are preserved."),
 		}},
 		{ID: "storage", Title: "Private file storage", Fields: []Field{
@@ -75,18 +93,18 @@ func Catalog() []Step {
 			field("STORAGE_SECRET_KEY", "S3 secret key", "secret", "", "Never returned in setup responses."),
 		}},
 		{ID: "policy", Title: "Quotas and access", Fields: []Field{
-			field("DRIVE_QUOTA_BYTES", "Drive bytes per workspace", "number", "1073741824", "1 MiB–1 TiB; includes retained versions and active reservations."),
+			field("DRIVE_QUOTA_BYTES", "Drive bytes per workspace", "suggest", "1073741824", "1 MiB–1 TiB; includes retained versions and active reservations."),
 			field("THURA_MAX_MEMBERS", "Members and pending invitations per workspace", "number", "100", "1–1000, checked again during invitation acceptance."),
-			field("THURA_ADMIN_INVITES", "Allow workspace admins to invite members", "select", "true", "Owners retain invitation authority.", "true", "false"),
-			field("THURA_ALLOW_SHARES", "Allow external file sharing", "select", "true", "Disabling blocks existing external grants as well as new grants.", "true", "false"),
-			field("THURA_ALLOW_ANONYMOUS_SHARES", "Allow anonymous file links", "select", "false", "Email-restricted shares still require the matching signed-in account.", "false", "true"),
+			field("THURA_ADMIN_INVITES", "Allow workspace admins to invite members", "checkbox", "true", "Owners retain invitation authority.", "true", "false"),
+			field("THURA_ALLOW_SHARES", "Allow external file sharing", "checkbox", "true", "Disabling blocks existing external grants as well as new grants.", "true", "false"),
+			field("THURA_ALLOW_ANONYMOUS_SHARES", "Allow anonymous file links", "checkbox", "false", "Email-restricted shares still require the matching signed-in account.", "false", "true"),
 			field("MAIL_MAX_RECIPIENTS", "Maximum recipients per email", "number", "50", "1–50 across To, Cc and Bcc."),
 		}},
 		{ID: "ai", Title: "AI service", Fields: []Field{
-			field("THURA_AI_ENABLED", "AI assistance", "select", "false", "AI is a core service and must be enabled before publishing setup.", "true", "false"),
+			field("THURA_AI_ENABLED", "AI assistance", "checkbox", "false", "AI is a core service and must be enabled before publishing setup.", "true", "false"),
 			field("LLM_PROVIDER", "AI provider", "select", "", "Use a local model service or a hosted API provider.", "", "ollama", "openai", "anthropic", "google", "compatible"),
-			field("LLM_MODEL", "Model name", "text", "", "The model ID installed locally or available to your provider account."),
-			field("LLM_BASE_URL", "Model service URL", "text", "", "Use the provider default or a server reachable from Thura. Container localhost is not the host machine."),
+			field("LLM_MODEL", "Model name", "suggest", "", "Pick a suggested model or type the model ID installed locally or available to your provider account."),
+			field("LLM_BASE_URL", "Model service URL", "text", "", "Optional for hosted providers. Ollama defaults to the local service; an OpenAI-compatible service needs its URL. Container localhost is not the host machine."),
 			field("LLM_API_KEY", "Model API key", "secret", "", "Required for hosted providers. Blank preserves the saved key."),
 			field("LLM_MAX_TOKENS", "Maximum output tokens", "number", "1024", "128–4096 output tokens per request."),
 		}},
@@ -101,11 +119,17 @@ func Catalog() []Step {
 			field("LIVEKIT_PUBLIC_URL", "LiveKit public WSS URL", "text", "", "Browser-reachable secure WebSocket endpoint."),
 			field("LIVEKIT_API_KEY", "LiveKit API key", "secret", "", "Required with LiveKit."),
 			field("LIVEKIT_API_SECRET", "LiveKit API secret", "secret", "", "Required with LiveKit."),
-			field("SMIP_ENABLED", "SMIP chat and files", "select", "false", "Required before publishing. Thura generates this server’s identity; pair trusted servers explicitly when enabling cross-server exchange.", "false", "true"),
+			field("SMIP_ENABLED", "SMIP chat and files", "checkbox", "false", "Required before publishing. Thura generates this server’s identity; pair trusted servers explicitly when enabling cross-server exchange.", "false", "true"),
 			field("SMIP_CONFIG", "Secure chat and file identity", "secret", "", "Generated and encrypted by Thura. Remote peers still require explicit pairing and consent; no remote server is trusted automatically."),
 		}},
 		{ID: "review", Title: "Review and publish"},
 	}
+	for _, step := range steps {
+		for i := range step.Fields {
+			decorate(&step.Fields[i])
+		}
+	}
+	return steps
 }
 func defaults() map[string]string {
 	out := map[string]string{}

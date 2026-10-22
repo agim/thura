@@ -68,7 +68,7 @@ func validate(v map[string]string) error {
 	for _, b := range []struct {
 		name   string
 		lo, hi int64
-	}{{"DRIVE_QUOTA_BYTES", 1 << 20, 1 << 40}, {"THURA_MAX_MEMBERS", 1, 1000}, {"MAIL_MAX_RECIPIENTS", 1, 50}, {"MAIL_SMTP_PORT", 1, 65535}} {
+	}{{"DRIVE_QUOTA_BYTES", 1 << 20, 1 << 40}, {"THURA_MAX_MEMBERS", 1, 1000}, {"MAIL_MAX_RECIPIENTS", 1, 50}} {
 		if e := bounded(v, b.name, b.lo, b.hi); e != nil {
 			return e
 		}
@@ -80,6 +80,9 @@ func validate(v map[string]string) error {
 		return errors.New("inbound signing secret must have at least 32 characters")
 	}
 	if v["MAIL_PROVIDER"] == "smtp" {
+		if e := bounded(v, "MAIL_SMTP_PORT", 1, 65535); e != nil {
+			return e
+		}
 		host := v["MAIL_SMTP_HOST"]
 		if host == "" || (net.ParseIP(host) == nil && strings.ContainsAny(host, "/: \r\n")) {
 			return errors.New("smtp hostname required")
