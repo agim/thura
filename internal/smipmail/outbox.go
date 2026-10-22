@@ -91,7 +91,7 @@ func Prepare(ctx context.Context, tx pgx.Tx, mailbox q.Mailbox, item q.MailItem,
 	if err != nil {
 		return q.MailTransmission{}, err
 	}
-	row, err := queries.AddMailTransmission(ctx, q.AddMailTransmissionParams{Origin: g.domain, WorkspaceID: mailbox.WorkspaceID, MailboxID: mailbox.ID, ItemID: item.ID, AuthorID: item.AuthorID, Payload: string(payload), ProviderConfig: sealed, OriginKey: string(originKey), CreatedAt: now})
+	row, err := queries.AddMailTransmission(ctx, q.AddMailTransmissionParams{Origin: g.domain, WorkspaceID: mailbox.WorkspaceID, MailboxID: mailbox.ID, ItemID: item.ID, AuthorID: item.AuthorID, Payload: string(payload), ProviderConfig: sealed, OriginKey: string(originKey), NextAttempt: now})
 	if err != nil {
 		return row, err
 	}
@@ -115,6 +115,14 @@ func readFrozen(row q.MailTransmission) (frozen, error) {
 }
 func saveTransmission(ctx context.Context, queries *q.Queries, row q.MailTransmission) error {
 	return queries.SaveMailTransmission(ctx, q.SaveMailTransmissionParams{ID: row.ID, State: row.State, APIState: row.APIState, APIAttemptID: row.APIAttemptID, APIResult: row.APIResult, UpdatedAt: lidza.Now(ctx)})
+}
+
+// holdTransmission takes a transmission that cannot progress out of the sweep
+// for a while: without it, the fifty oldest rows of one team whose identity is
+// unavailable stay at the head of the queue and every other team waits.
+func holdTransmission(ctx context.Context, id, reason string) error {
+	lidza.Log(ctx).Warn("mail transmission held", "reason", reason, "transmission", id)
+	return q.New(db.From(ctx)).HoldMailTransmission(ctx, q.HoldMailTransmissionParams{ID: id, Reason: reason, NextAttempt: lidza.Now(ctx).Add(5 * time.Minute)})
 }
 func saveDelivery(ctx context.Context, queries *q.Queries, row q.MailDelivery) error {
 	return queries.SaveMailDelivery(ctx, q.SaveMailDeliveryParams{ID: row.ID, Route: row.Route, State: row.State, Reason: row.Reason, Packet: row.Packet, PeerDocument: row.PeerDocument, Receipt: row.Receipt, Attempts: row.Attempts, AttemptID: row.AttemptID, NextAttempt: row.NextAttempt, UpdatedAt: lidza.Now(ctx)})
@@ -288,11 +296,11 @@ func Dispatch(ctx context.Context, raw json.RawMessage) error {
 	}
 	g, identityErr := forDomain(ctx, row.WorkspaceID, row.Origin)
 	if identityErr != nil || !g.Enabled() || row.Origin != g.domain {
-		return nil
+		return holdTransmission(ctx, row.ID, "identity_unavailable")
 	} // Disabling never enters the old provider sender.
 	if row.State == "planning" {
 		if err = g.plan(ctx, row); err != nil {
-			return err
+			return errors.Join(err, holdTransmission(ctx, row.ID, "planning_failed"))
 		}
 	}
 	row, err = q.New(db.From(ctx)).FindMailTransmission(ctx, row.ID)
@@ -325,7 +333,7 @@ func Job(id string) json.RawMessage {
 	return b
 }
 func Reconcile(ctx context.Context, _ json.RawMessage) error {
-	rows, err := q.New(db.From(ctx)).DueAllMailTransmissions(ctx)
+	rows, err := q.New(db.From(ctx)).DueAllMailTransmissions(ctx, lidza.Now(ctx))
 	if err != nil {
 		return err
 	}

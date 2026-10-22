@@ -688,6 +688,8 @@ type MailTransmission struct {
 	APIState       string    `json:"api_state"`
 	APIAttemptID   string    `json:"api_attempt_id"`
 	APIResult      string    `json:"api_result"`
+	Reason         string    `json:"reason"`
+	NextAttempt    time.Time `json:"next_attempt"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }

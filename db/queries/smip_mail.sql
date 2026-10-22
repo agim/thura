@@ -18,18 +18,18 @@ SELECT * FROM mail_transmission WHERE id=$1;
 -- name: LockMailTransmission :one
 SELECT * FROM mail_transmission WHERE id=$1 FOR UPDATE;
 -- name: AddMailTransmission :one
-INSERT INTO mail_transmission(origin,workspace_id,mailbox_id,item_id,author_id,payload,provider_config,origin_key,created_at,updated_at)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$9) RETURNING *;
+INSERT INTO mail_transmission(origin,workspace_id,mailbox_id,item_id,author_id,payload,provider_config,origin_key,next_attempt,created_at,updated_at)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$9) RETURNING *;
 -- name: SaveMailTransmission :exec
-UPDATE mail_transmission SET state=$2,api_state=$3,api_attempt_id=$4,api_result=$5,updated_at=$6 WHERE id=$1;
+UPDATE mail_transmission SET state=$2,api_state=$3,api_attempt_id=$4,api_result=$5,reason='',updated_at=$6 WHERE id=$1;
+-- name: HoldMailTransmission :exec
+UPDATE mail_transmission SET reason=$2,next_attempt=$3,updated_at=$3 WHERE id=$1;
 -- name: AddMailDelivery :exec
 INSERT INTO mail_delivery(transmission_id,recipient,domain,next_attempt,updated_at) VALUES($1,$2,$3,$4,$4);
 -- name: ListMailDeliveries :many
 SELECT * FROM mail_delivery WHERE transmission_id=$1 ORDER BY id;
 -- name: SaveMailDelivery :exec
 UPDATE mail_delivery SET route=$2,state=$3,reason=$4,packet=$5,peer_document=$6,receipt=$7,attempts=$8,attempt_id=$9,next_attempt=$10,updated_at=$11 WHERE id=$1;
--- name: DueMailTransmissions :many
-SELECT id FROM mail_transmission WHERE origin=$1 AND state IN ('planning','pending') ORDER BY updated_at,id LIMIT 50;
 -- name: MailTransmissionUsage :one
 SELECT COUNT(*) AS records,COALESCE(SUM(octet_length(payload)),0)::bigint AS bytes FROM mail_transmission WHERE workspace_id=$1;
 -- name: GetSmipMailReceipt :one

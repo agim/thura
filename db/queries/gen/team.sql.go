@@ -208,11 +208,14 @@ func (q *Queries) DeleteTeamMailConfig(ctx context.Context, arg DeleteTeamMailCo
 }
 
 const dueAllMailTransmissions = `-- name: DueAllMailTransmissions :many
-SELECT id FROM mail_transmission WHERE state IN ('planning','pending') ORDER BY updated_at,id LIMIT 50
+SELECT t.id FROM mail_transmission t JOIN mail_delivery d ON d.transmission_id=t.id AND d.state IN ('pending','uncertain')
+WHERE t.state IN ('planning','pending') AND t.next_attempt<=$1
+GROUP BY t.id HAVING MIN(d.next_attempt)<=$1
+ORDER BY GREATEST(t.next_attempt,MIN(d.next_attempt)),t.id LIMIT 50
 `
 
-func (q *Queries) DueAllMailTransmissions(ctx context.Context) ([]string, error) {
-	rows, err := q.db.Query(ctx, dueAllMailTransmissions)
+func (q *Queries) DueAllMailTransmissions(ctx context.Context, nextAttempt time.Time) ([]string, error) {
+	rows, err := q.db.Query(ctx, dueAllMailTransmissions, nextAttempt)
 	if err != nil {
 		return nil, err
 	}

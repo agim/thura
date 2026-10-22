@@ -21,6 +21,10 @@ func Remind(ctx context.Context, _ json.RawMessage) error { return RemindAt(ctx,
 
 // Cursor paging prevents older subscriptions from starving after the first 500.
 // The notice ledger and mail queue commit together, including after retries.
+// Each subscription fails on its own: the sweep runs every minute from the
+// first row, so one that cannot be sent (a suspended team mailbox, a broken
+// time zone) would otherwise hide every later subscription for good. Its
+// failure is logged and the job stays green; only a dead context stops it.
 func RemindAt(ctx context.Context, now time.Time) error {
 	cursor := ""
 	queries := q.New(db.From(ctx))
@@ -34,7 +38,10 @@ func RemindAt(ctx context.Context, now time.Time) error {
 		}
 		for _, r := range rows {
 			if err = remindOne(ctx, r, now); err != nil {
-				return err
+				if ctx.Err() != nil {
+					return err
+				}
+				lidza.Log(ctx).Warn("calendar reminder failed", "error", err, "subscription", r.ID, "workspace", r.WorkspaceID, "event", r.EventID)
 			}
 			cursor = r.ID
 		}

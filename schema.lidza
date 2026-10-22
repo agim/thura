@@ -1324,6 +1324,8 @@ model MailTransmission {
  apiState string @default("pending")
  apiAttemptId string @default("")
  apiResult string @default("")
+ reason string @default("")
+ nextAttempt time @default(now())
  createdAt time
  updatedAt time
 }

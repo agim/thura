@@ -531,3 +531,9 @@ Collabora's bootstrap downgraded wss to ws because the app saw the Docker peer a
 Why: The direct provider path recorded a provider error as failed and let the job retry it, resending a message a timed-out provider may already have accepted, and a crash after a successful send left it queued for another copy. It now commits a delivery_uncertain marker before the single provider call, like the SMIP outbox, and records sent, delivery_blocked (a reply refused it) or delivery_uncertain (no reply) afterwards; only queued items enter delivery and nothing is retried automatically. The reason is kept on the item because this path has no per-recipient delivery rows.
 
 Touches: internal/mailbox/mailbox.go, mail_item.delivery_reason
+
+## 2026-10-22: Transmission-level hold for the SMIP mail sweep
+
+Why: The dispatch sweep selects transmissions by the earliest due recipient, so a transmission that cannot progress at all (team identity disabled, domain suspended, setup unpublished, planning failing) needs its own next_attempt and reason on mail_transmission: pushing the recipients' next_attempt would overwrite route state, and leaving updated_at untouched kept fifty such rows at the head of the queue for every other team.
+
+Touches: internal/smipmail/outbox.go, db/queries/team.sql, mail_transmission
