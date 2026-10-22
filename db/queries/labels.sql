@@ -11,6 +11,8 @@ SELECT l.* FROM mail_label l JOIN resource_label r ON r.label_id=l.id LEFT JOIN 
 WHERE COALESCE(l.workspace_id,b.workspace_id)=sqlc.arg(workspace_id) AND r.source=sqlc.arg(source) AND r.source_id=sqlc.arg(source_id) ORDER BY l.name,l.id;
 -- name: AddResourceLabel :exec
 INSERT INTO resource_label(label_id,source,source_id) VALUES($1,$2,$3) ON CONFLICT(label_id,source,source_id) DO NOTHING;
+-- name: DeleteResourceLabelsOf :exec
+DELETE FROM resource_label WHERE source=$1 AND source_id=$2;
 -- name: RemoveResourceLabel :exec
 DELETE FROM resource_label WHERE label_id=$1 AND source=$2 AND source_id=$3;
 -- name: LabelResourceContainer :one

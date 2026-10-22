@@ -91,6 +91,9 @@ func TestWorkspaceAuditAuthorizationPagingAndRollback(t *testing.T) {
 	request("POST", base+"/invitations", schema.InviteInput{Email: "not-recorded@example.com", Role: schema.WorkspaceRoleOwner}, nil, 403)
 	login(otherEmail)
 	request("GET", base+"/audit", nil, nil, 404)
+	// A signed-in non-member's refusal is not written into this workspace's
+	// audit scope; the count of 6 below would otherwise grow without bound.
+	request("POST", base+"/invitations", schema.InviteInput{Email: "not-recorded@example.com", Role: schema.WorkspaceRoleMember}, nil, 404)
 	login(ownerEmail)
 	request("DELETE", base+"/members/"+profiles[0].Subject, nil, nil, 409)
 	request("PATCH", base+"/members/"+profiles[1].Subject, schema.RoleInput{Role: schema.WorkspaceRoleAdmin}, nil, 204)

@@ -86,6 +86,28 @@ func InviteInstructions(ctx context.Context, invite q.MeetingInvite, transaction
 	}
 	return "[Thura Meet]\nJoin meeting: " + link + "\n\nIf the link does not work, open " + strings.SplitN(link, "/meet?", 2)[0] + "/meet" + " and enter:\nMeeting ID: " + invite.Code + "\nPIN: " + pin + "\nEnter your name, then choose Join meeting. Your microphone and camera start off.\nAnyone with this invitation can join this meeting only. Keep the link and PIN private.\n[/Thura Meet]", nil
 }
+// pinFailureLimit failed PINs lock the invite for pinLockout, doubling with
+// each further failure up to pinLockoutMax; a correct PIN clears the count.
+const pinFailureLimit = 10
+const pinLockout = 15 * time.Minute
+const pinLockoutMax = 24 * time.Hour
+
+func recordPinFailure(ctx context.Context, queries *q.Queries, inviteID string, now time.Time) error {
+	failures, err := queries.RecordMeetingPinFailure(ctx, inviteID)
+	if err != nil || failures < pinFailureLimit {
+		return err
+	}
+	lockout := pinLockout
+	for n := failures - pinFailureLimit; n > 0 && lockout < pinLockoutMax; n-- {
+		lockout *= 2
+	}
+	if lockout > pinLockoutMax {
+		lockout = pinLockoutMax
+	}
+	until := now.Add(lockout)
+	return queries.LockMeetingInvite(ctx, q.LockMeetingInviteParams{ID: inviteID, LockedUntil: &until})
+}
+
 func JoinGuest(ctx context.Context, in schema.GuestMeetingInput) (schema.GuestMeetingAccess, error) {
 	out := schema.GuestMeetingAccess{}
 	in.Name = strings.TrimSpace(in.Name)
@@ -107,8 +129,21 @@ func JoinGuest(ctx context.Context, in schema.GuestMeetingInput) (schema.GuestMe
 	if err != nil {
 		return out, err
 	}
+	// A 6-digit PIN needs a durable per-invite counter: the per-IP limiter
+	// alone is sidestepped from a large address block. The lock is checked
+	// before the compare so a locked invite leaks nothing about the PIN.
+	now := time.Now()
+	if invite.LockedUntil != nil && now.Before(*invite.LockedUntil) {
+		return out, router.Errorf(429, "too many incorrect PINs; try again later or ask the host for a new invitation")
+	}
 	if subtle.ConstantTimeCompare([]byte(invite.PinHash), []byte(pinHash(in.Pin))) != 1 {
+		if err = recordPinFailure(ctx, queries, invite.ID, now); err != nil {
+			return out, err
+		}
 		return out, router.Errorf(404, "meeting ID or PIN is incorrect")
+	}
+	if err = queries.ResetMeetingPinFailures(ctx, invite.ID); err != nil {
+		return out, err
 	}
 	cfg, err := provider.Load()
 	if err != nil {

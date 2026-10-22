@@ -731,6 +731,30 @@ func (q *Queries) ListMailThreadPage(ctx context.Context, arg ListMailThreadPage
 	return items, nil
 }
 
+const listMailboxIDs = `-- name: ListMailboxIDs :many
+SELECT id FROM mailbox ORDER BY id
+`
+
+func (q *Queries) ListMailboxIDs(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, listMailboxIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMailboxLabels = `-- name: ListMailboxLabels :many
 SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id
 WHERE COALESCE(l.workspace_id,b.workspace_id)=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=$1) ORDER BY l.name,l.id
@@ -920,6 +944,17 @@ func (q *Queries) LockMailbox(ctx context.Context, id string) (Mailbox, error) {
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const mailObjectReferenced = `-- name: MailObjectReferenced :one
+SELECT EXISTS(SELECT 1 FROM mail_attachment a WHERE a.object_key=$1)::boolean AS referenced
+`
+
+func (q *Queries) MailObjectReferenced(ctx context.Context, objectKey string) (bool, error) {
+	row := q.db.QueryRow(ctx, mailObjectReferenced, objectKey)
+	var referenced bool
+	err := row.Scan(&referenced)
+	return referenced, err
 }
 
 const queueMailItem = `-- name: QueueMailItem :one

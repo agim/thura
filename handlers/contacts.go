@@ -126,11 +126,24 @@ func DeleteContact(ctx context.Context, req *router.Request[router.None]) (route
 	if !workspace.ValidID(cid) {
 		return router.None{}, router.Errorf(http.StatusNotFound, "contact not found")
 	}
-	count, err := queries.New(db.From(ctx)).DeleteContact(ctx, queries.DeleteContactParams{WorkspaceID: id, ID: cid})
-	if err == nil && count == 0 {
-		err = router.Errorf(http.StatusNotFound, "contact not found")
+	tx, err := db.From(ctx).Begin(ctx)
+	if err != nil {
+		return router.None{}, err
 	}
-	return router.None{}, err
+	defer tx.Rollback(ctx)
+	q := queries.New(tx)
+	count, err := q.DeleteContact(ctx, queries.DeleteContactParams{WorkspaceID: id, ID: cid})
+	if err != nil {
+		return router.None{}, err
+	}
+	if count == 0 {
+		return router.None{}, router.Errorf(http.StatusNotFound, "contact not found")
+	}
+	// resource_label has no foreign key to the contact; drop its rows with it.
+	if err = q.DeleteResourceLabelsOf(ctx, queries.DeleteResourceLabelsOfParams{Source: "contact", SourceID: cid}); err != nil {
+		return router.None{}, err
+	}
+	return router.None{}, tx.Commit(ctx)
 }
 
 func contact(c queries.Contact) schema.Contact {

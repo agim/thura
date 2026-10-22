@@ -120,6 +120,9 @@ CREATE TABLE mail_item (
 );
 CREATE INDEX mail_item_mailbox_id_idx ON mail_item (mailbox_id);
 CREATE UNIQUE INDEX mail_item_mailbox_id_external_id_key ON mail_item (mailbox_id, external_id);
+CREATE INDEX mail_item_mailbox_id_folder_updated_at_id_idx ON mail_item (mailbox_id, folder, updated_at, id);
+CREATE INDEX mail_item_mailbox_id_thread_id_idx ON mail_item (mailbox_id, thread_id);
+CREATE INDEX mail_item_mailbox_id_message_id_idx ON mail_item (mailbox_id, message_id);
 
 CREATE TABLE mail_attachment (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -491,7 +494,9 @@ CREATE TABLE meeting_invite (
   code text NOT NULL UNIQUE,
   pin_hash text NOT NULL,
   pin_sealed text NOT NULL,
-  expires_at timestamptz NOT NULL
+  expires_at timestamptz NOT NULL,
+  failed_pins integer NOT NULL DEFAULT 0,
+  locked_until timestamptz
 );
 
 CREATE TABLE meeting_participant (

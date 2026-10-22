@@ -193,6 +193,9 @@ model MailItem {
   createdAt time @default(now())
   updatedAt time @default(now())
   @@unique(mailboxId, externalId)
+  @@index(mailboxId, folder, updatedAt, id)
+  @@index(mailboxId, threadId)
+  @@index(mailboxId, messageId)
 }
 model MailAttachment {
   id uuid @id @default(uuid())
@@ -842,6 +845,8 @@ model MeetingInvite {
  pinHash string
  pinSealed text
  expiresAt time
+ failedPins int @default(0)
+ lockedUntil time?
 }
 
 type GuestMeetingInput {

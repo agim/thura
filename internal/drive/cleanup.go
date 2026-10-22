@@ -47,6 +47,14 @@ func Cleanup(ctx context.Context, _ json.RawMessage) error {
 			return err
 		}
 	}
+	// Every editor open inserts an office_session; an expired one is refused
+	// by WOPI but was never removed. Bounded batches keep the hourly job short.
+	for n := 0; n < 10; n++ {
+		deleted, err := queries.DeleteExpiredOfficeSessions(ctx, now.Add(-24*time.Hour))
+		if err != nil || deleted < 1000 {
+			return err
+		}
+	}
 	return nil
 }
 func cleanupOne(ctx context.Context, u q.UploadSession, now time.Time) error {
@@ -141,6 +149,10 @@ func Purge(ctx context.Context, w, id string) error {
 		if err = remove(ctx, id); err != nil {
 			return err
 		}
+	}
+	// resource_label has no foreign key to the file; drop its rows here.
+	if err = queries.DeleteResourceLabelsOf(ctx, q.DeleteResourceLabelsOfParams{Source: "document", SourceID: id}); err != nil {
+		return err
 	}
 	if err = queries.DeleteDriveFile(ctx, q.DeleteDriveFileParams{WorkspaceID: w, ID: id}); err != nil {
 		return err

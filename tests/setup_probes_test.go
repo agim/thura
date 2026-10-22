@@ -158,7 +158,7 @@ func TestSetupProviderChecksBindSettingsAndDoNotRepeat(t *testing.T) {
 	saveStep(t, s, "policy", map[string]string{"THURA_MAX_MEMBERS": "9"})
 	revision, _, _ = setupRow(t, s)
 	if r := setupForm(t, s, "publish", url.Values{"revision": {strconv.Itoa(revision)}, "confirm": {"publish"}}); strings.Contains(r.Header.Get("Location"), "error=") {
-		t.Fatal("unrelated edit invalidated provider checks")
+		t.Fatalf("unrelated edit invalidated provider checks: %s", r.Header.Get("Location"))
 	}
 	// Missing explicit side-effect confirmation is rejected.
 	id = uuid.NewString()
