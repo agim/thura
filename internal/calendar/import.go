@@ -19,6 +19,16 @@ func Import(ctx context.Context, w, calendarID string, raw []byte, zone string) 
 	if err != nil {
 		return schema.CalendarImportResult{}, err
 	}
+	// Expanding each series is the costly part of an import: check the
+	// exception dates against the parsed input before taking the workspace
+	// lock. A cancellation keeps the stored series and is checked below.
+	for _, r := range records {
+		if r.Instance == "" && !r.Cancelled && method != "CANCEL" {
+			if err = checkExceptions(r.Input, r.Exdates); err != nil {
+				return schema.CalendarImportResult{}, err
+			}
+		}
+	}
 	tx, err := db.From(ctx).Begin(ctx)
 	if err != nil {
 		return schema.CalendarImportResult{}, err
@@ -103,11 +113,12 @@ func Import(ctx context.Context, w, calendarID string, raw []byte, zone string) 
 				return out, err
 			}
 		}
-		for _, instance := range r.Exdates {
-			ex := schema.ExceptionInput{InstanceKey: instance, Cancelled: true}
-			if err = ValidateException(e, ex); err != nil {
+		if cancelled {
+			if err = checkExceptions(eventInput(e), r.Exdates); err != nil {
 				return out, err
 			}
+		}
+		for _, instance := range r.Exdates {
 			if _, err = queries.SaveEventException(ctx, q.SaveEventExceptionParams{EventID: e.ID, InstanceKey: instance, Cancelled: true}); err != nil {
 				return out, err
 			}

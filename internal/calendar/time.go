@@ -169,11 +169,14 @@ func key(t time.Time, allDay bool) string {
 	return t.UTC().Format(time.RFC3339)
 }
 func starts(e q.CalendarEvent) ([]time.Time, time.Duration, error) {
-	start, end, err := timing(eventInput(e))
+	return occurrences(eventInput(e))
+}
+func occurrences(in schema.EventInput) ([]time.Time, time.Duration, error) {
+	start, end, err := timing(in)
 	if err != nil {
 		return nil, 0, err
 	}
-	rule, err := Rule(e.Rrule, start, e.AllDay)
+	rule, err := Rule(text(in.Rrule), start, in.AllDay)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -194,20 +197,39 @@ func starts(e q.CalendarEvent) ([]time.Time, time.Duration, error) {
 	}
 	return out, end.Sub(start), nil
 }
-func ValidateException(e q.CalendarEvent, in schema.ExceptionInput) error {
-	occurrences, _, err := starts(e)
+
+// instanceKeys expands a series once, so many exceptions can be checked
+// without re-parsing and re-expanding its rule for each one.
+func instanceKeys(in schema.EventInput) (map[string]bool, error) {
+	all, _, err := occurrences(in)
+	if err != nil {
+		return nil, err
+	}
+	keys := make(map[string]bool, len(all))
+	for _, t := range all {
+		keys[key(t, in.AllDay)] = true
+	}
+	return keys, nil
+}
+func checkExceptions(in schema.EventInput, instances []string) error {
+	if len(instances) == 0 {
+		return nil
+	}
+	keys, err := instanceKeys(in)
 	if err != nil {
 		return err
 	}
-	found := false
-	for _, t := range occurrences {
-		if key(t, e.AllDay) == in.InstanceKey {
-			found = true
-			break
+	for _, instance := range instances {
+		if !keys[instance] {
+			return router.Errorf(422, "exception must name an occurrence of this series")
 		}
 	}
-	if !found {
-		return router.Errorf(422, "exception must name an occurrence of this series")
+	return nil
+}
+func ValidateException(e q.CalendarEvent, in schema.ExceptionInput) error {
+	err := checkExceptions(eventInput(e), []string{in.InstanceKey})
+	if err != nil {
+		return err
 	}
 	if in.Cancelled {
 		return nil
