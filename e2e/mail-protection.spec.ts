@@ -25,7 +25,8 @@ for (const width of [320,390,1440]) test(`incoming protection settings, quaranti
   await page.screenshot({path:testInfo.outputPath(`protection-settings-${width}.png`),fullPage:true})
   const boxes=await(await page.request.get(`${base}/mailboxes`)).json();const box=boxes.items[0]
   const subject=`Quarantine review ${width} ${Date.now()}`
-  const raw=Buffer.from(`From: Unknown Sender <new-${width}@outside.example>\r\nTo: ${box.address}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nAn ordinary update waiting for required screening.`)
+  // A sender this run has never seen: an earlier run approves and reports its own sender.
+  const raw=Buffer.from(`From: Unknown Sender <new-${width}-${Date.now()}@outside.example>\r\nTo: ${box.address}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nAn ordinary update waiting for required screening.`)
   const stamp=String(Math.floor(Date.now()/1000)),delivery=`protection-${width}-${Date.now()}`
   const signature=createHmac('sha256','synthetic-browser-reader-secret-at-least-32-characters').update(`${stamp}.${delivery}.`).update(raw).digest('hex')
   const response=await page.request.post(`/api/v1/inbound/${box.id}`,{data:raw,headers:{'Content-Type':'message/rfc822','X-Thura-Timestamp':stamp,'X-Thura-Delivery':delivery,'X-Thura-Signature':signature}})
