@@ -39,3 +39,15 @@ was reconnected. Thura has no DMARC-specific team note.
 
 Commit-hook reuse and the separate test-package split are measured below after
 completion. Local raw command outputs are under `.lidza/upgrade-128/`.
+
+The upgrade was committed separately as df5b605. The first commit took 0.03 s,
+but inspection revealed this checkout had no core.hooksPath configured: that
+number is not hook acceptance. The existing .githooks hook was enabled before the
+subsequent test-layout commit; its measured result follows below.
+
+The first full split run passed in 58.25 s (previously 66.05 s). Feature packages
+ran in 0.9–6.7 s; the retained cross-service setup/SMIP package took 53.53 s and
+still dominates a complete uncached run. Database inspection during the run
+confirmed nine distinct package clones. An automated token audit confirms all
+128 original tests remain once each with unchanged bodies, apart from qualifying
+the shared fixture call. tests/README.md explains fixture isolation and scope.

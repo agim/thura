@@ -1,0 +1,21 @@
+package tests
+
+import (
+	"net/http"
+	"testing"
+	"thura/app"
+	"thura/tests/testsupport"
+
+	"thura/schema"
+)
+
+// lidzatest.Start boots the app with its packs against .env.test
+// (LIDZA_MODE=test) and serves it on a local port. `lidza test` runs this.
+func TestHello(t *testing.T) {
+	srv := testsupport.StartConfigured(t, app.New(nil))
+	var g schema.Greeting
+	res := srv.JSON(t, http.MethodGet, "/api/v1/hello/test", nil, &g)
+	if res.StatusCode != http.StatusOK || g.Message != "hello, test" {
+		t.Fatalf("got %d %+v", res.StatusCode, g)
+	}
+}

@@ -561,3 +561,13 @@ Touches: internal/smiptrust, internal/smipmail/discovery.go, internal/federation
 Why: Each uncached SMIP status can take up to six seconds, and checking every team domain inside the team-setup response blocked the page. The status moved to its own server-administrator route per domain (and an administrator-only setup JSON endpoint for the wizard, with a no-script inline recheck), keeping the one-minute cache and bounded timeouts; the page shows Checking until it answers and says the check could not run when the request fails, never a fabricated pass.
 
 Touches: handlers/teams.go, src/components/TeamSetup.tsx, internal/setup/smip_status.go, internal/setup/admin-controls.js
+
+## 2026-10-26: Split feature integration tests with isolated package databases
+
+The feature suite now runs by area, sharing only the published-installation
+fixture through tests/testsupport. Līdza supplies a database clone per feature
+package. The remaining cross-service setup/SMIP package creates its own ordinary
+fixture clone before opting out of automatic URL replacement, preserving the
+stronger database-per-fixture guarantees for first-account and two-server tests.
+No test assertion changed. This keeps independent feature changes from rebuilding
+one monolithic test binary and avoids concurrent access to the template database.

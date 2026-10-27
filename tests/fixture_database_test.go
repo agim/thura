@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"context"
+	"github.com/agim/lidza/pkg/env"
 	"os"
 	"testing"
 
@@ -9,9 +11,26 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// These integration helpers create a database per fixture. A package-wide
-	// clone would replace those explicit URLs with one shared database. Use the
-	// framework's documented opt-out, retaining the stronger per-fixture scope.
+	// This package mixes explicitly isolated setup/SMIP fixtures with ordinary
+	// app fixtures. Give the latter a package clone without letting Start
+	// replace the explicit per-fixture DATABASE_URL values.
+	if err := os.Chdir(".."); err != nil {
+		panic(err)
+	}
+	if err := os.Setenv("LIDZA_MODE", "test"); err != nil {
+		panic(err)
+	}
+	var cfg db.Config
+	if err := env.Load(".", &cfg); err != nil {
+		panic(err)
+	}
+	url, err := db.CloneTestDatabase(context.Background(), cfg.URL, "tests")
+	if err != nil {
+		panic(err)
+	}
+	if err := os.Setenv("DATABASE_URL", url); err != nil {
+		panic(err)
+	}
 	if err := os.Setenv(lidzatest.EnvSharedDatabase, "1"); err != nil {
 		panic(err)
 	}
