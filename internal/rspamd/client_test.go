@@ -2,6 +2,7 @@ package rspamd
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -78,5 +79,23 @@ func TestTooShortSamplesAreNotFalselyReportedAsLearned(t *testing.T) {
 	err := Learn(context.Background(), Config{Controller: server.URL, Password: "fixture"}, testTeam, []byte("Short mail"), "ham")
 	if !errors.Is(err, ErrNotLearnable) {
 		t.Fatal("skipped sample must be recorded without claiming learning", err)
+	}
+}
+
+func TestSMTPScanUsesOnlySignedEnvelopeForAuthentication(t *testing.T) {
+	encoded := base64.RawURLEncoding.EncodeToString([]byte(`{"ip":"203.0.113.5","from":"envelope@example.com","helo":"mail.example.com"}`))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("IP") != "203.0.113.5" || r.Header.Get("From") != "envelope@example.com" || r.Header.Get("Helo") != "mail.example.com" || r.Header.Get("User") != "" {
+			t.Error("SMTP metadata was lost or upgraded to an authenticated user")
+		}
+		fmt.Fprint(w, `{"score":0,"action":"no action","symbols":{"DMARC_POLICY_ALLOW":{}}}`)
+	}))
+	defer server.Close()
+	result, err := ScanSMTP(context.Background(), Config{URL: server.URL}, testTeam, []byte("From: forged@other.example\r\nAuthentication-Results: fake; dmarc=pass\r\n\r\nBody"), encoded)
+	if err != nil || result.Action != "no action" {
+		t.Fatal(result, err)
+	}
+	if _, err = ScanSMTP(context.Background(), Config{URL: server.URL}, testTeam, []byte("original"), "invalid!"); err == nil {
+		t.Fatal("malformed metadata reached the scanner")
 	}
 }

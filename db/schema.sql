@@ -109,6 +109,7 @@ CREATE TABLE mail_item (
   provider_id text NOT NULL DEFAULT '',
   delivery_reason text NOT NULL DEFAULT '',
   raw_key text NOT NULL DEFAULT '',
+  smtp_envelope text NOT NULL DEFAULT '',
   external_id text,
   thread_id text NOT NULL DEFAULT '',
   message_id text NOT NULL DEFAULT '',

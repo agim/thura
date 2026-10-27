@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"thura/internal/smtpenvelope"
 	"time"
 
 	"github.com/agim/lidza"
@@ -60,7 +61,7 @@ type Result struct {
 	Symbols map[string]json.RawMessage `json:"symbols"`
 }
 
-func request(ctx context.Context, c Config, origin, path, workspace string, raw []byte, learn bool) ([]byte, error) {
+func request(ctx context.Context, c Config, origin, path, workspace string, raw []byte, learn bool, envelope *smtpenvelope.Envelope) ([]byte, error) {
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}
@@ -80,6 +81,11 @@ func request(ctx context.Context, c Config, origin, path, workspace string, raw 
 	// HTTP metadata, never the spoofable MIME headers or an SMTP-auth User header.
 	req.Header.Set("X-Thura-Workspace", workspace)
 	req.Header.Set("Flags", "no_log")
+	if envelope != nil {
+		req.Header.Set("IP", envelope.IP)
+		req.Header.Set("From", envelope.From)
+		req.Header.Set("Helo", envelope.Helo)
+	}
 	if learn {
 		if c.Password == "" {
 			return nil, errors.New("rspamd learning password is not configured")
@@ -119,8 +125,20 @@ func request(ctx context.Context, c Config, origin, path, workspace string, raw 
 }
 
 func Scan(ctx context.Context, c Config, workspace string, raw []byte) (Result, error) {
+	return ScanSMTP(ctx, c, workspace, raw, "")
+}
+
+func ScanSMTP(ctx context.Context, c Config, workspace string, raw []byte, encoded string) (Result, error) {
+	var envelope *smtpenvelope.Envelope
+	if encoded != "" {
+		e, err := smtpenvelope.Decode(encoded)
+		if err != nil {
+			return Result{}, err
+		}
+		envelope = &e
+	}
 	var out Result
-	data, err := request(ctx, c, c.URL, "/checkv2", workspace, raw, false)
+	data, err := request(ctx, c, c.URL, "/checkv2", workspace, raw, false, envelope)
 	if err != nil {
 		return out, err
 	}
@@ -140,7 +158,7 @@ func Learn(ctx context.Context, c Config, workspace string, raw []byte, classifi
 	} else if classification != "ham" {
 		return errors.New("invalid feedback class")
 	}
-	data, err := request(ctx, c, c.Controller, path, workspace, raw, true)
+	data, err := request(ctx, c, c.Controller, path, workspace, raw, true, nil)
 	if err != nil {
 		return err
 	}

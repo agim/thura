@@ -43,7 +43,7 @@ func ReceiveMail(ctx context.Context, r *router.Request[router.File]) (schema.Ma
 	if err != nil {
 		return schema.MailItem{}, err
 	}
-	item, err := mailbox.Receive(ctx, id, r.Raw.Header.Get("X-Thura-Timestamp"), r.Raw.Header.Get("X-Thura-Delivery"), r.Raw.Header.Get("X-Thura-Signature"), raw)
+	item, err := mailbox.ReceiveSMTP(ctx, id, r.Raw.Header.Get("X-Thura-Timestamp"), r.Raw.Header.Get("X-Thura-Delivery"), r.Raw.Header.Get("X-Thura-Signature"), raw, r.Raw.Header.Get("X-Thura-SMTP-Envelope"))
 	return mailbox.View(item), err
 }
 func ListMail(ctx context.Context, r *router.Request[router.None]) (schema.MailItemList, error) {

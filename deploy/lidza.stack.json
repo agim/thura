@@ -136,7 +136,11 @@
         "python3",
         "/opt/thura/compact.py",
         "--health"
-      ]
+      ],
+      "public_tls": {
+        "hostname": "primary",
+        "uid": 0
+      }
     },
     {
       "name": "office",

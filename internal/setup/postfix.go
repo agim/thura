@@ -69,8 +69,9 @@ type postfixMailbox struct {
 	Secret string `json:"secret"`
 }
 type postfixRelay struct {
-	BaseURL   string                    `json:"baseUrl"`
-	Mailboxes map[string]postfixMailbox `json:"mailboxes"`
+	ReportDomain string                    `json:"reportDomain,omitempty"`
+	BaseURL      string                    `json:"baseUrl"`
+	Mailboxes    map[string]postfixMailbox `json:"mailboxes"`
 }
 type postfixConfiguration struct {
 	Enabled  bool         `json:"enabled"`
@@ -83,12 +84,7 @@ type postfixConfiguration struct {
 func PostfixConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	ip := net.ParseIP(host)
-	token := os.Getenv("THURA_POSTFIX_TOKEN")
-	expected := sha256.Sum256([]byte("Bearer " + token))
-	actual := sha256.Sum256([]byte(r.Header.Get("Authorization")))
-	if err != nil || ip == nil || !ip.IsLoopback() || len(token) < 32 || subtle.ConstantTimeCompare(expected[:], actual[:]) != 1 {
+	if !PrivatePostfixRequest(r) {
 		http.Error(w, "Postfix authentication required", http.StatusForbidden)
 		return
 	}
@@ -179,6 +175,13 @@ func PostfixConfig(w http.ResponseWriter, r *http.Request) {
 				result.Config.Mailboxes[alias.Address] = target
 			}
 			if len(result.Config.Mailboxes) > 0 {
+				_, domain, _ := strings.Cut(inboxAddress(v), "@")
+				for address := range result.Config.Mailboxes {
+					if strings.HasSuffix(address, "@"+domain) {
+						result.Config.ReportDomain = domain
+						break
+					}
+				}
 				result.Listen = "25"
 				result.Enabled = true
 				if !mailHostname.MatchString(v["THURA_POSTFIX_HOSTNAME"]) {
@@ -193,4 +196,14 @@ func PostfixConfig(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		return
 	}
+}
+
+// PrivatePostfixRequest authenticates the mail sidecar without trusting proxy headers.
+func PrivatePostfixRequest(r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	ip := net.ParseIP(host)
+	token := os.Getenv("THURA_POSTFIX_TOKEN")
+	expected := sha256.Sum256([]byte("Bearer " + token))
+	actual := sha256.Sum256([]byte(r.Header.Get("Authorization")))
+	return err == nil && ip != nil && ip.IsLoopback() && len(token) >= 32 && subtle.ConstantTimeCompare(expected[:], actual[:]) == 1
 }

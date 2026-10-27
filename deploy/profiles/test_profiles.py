@@ -72,6 +72,15 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(services['office']['health_command'],['/usr/local/bin/thura-office-health'])
         self.assertIn('CMD ["/usr/local/bin/thura-office-health"]',office_dockerfile.read_text())
 
+    def test_smtp_certificate_is_scoped_to_mail_service(self):
+        manifest=json.loads((ROOT/'deploy/lidza.stack.json').read_text())
+        for service in manifest['services']:
+            if service['name']=='mail':
+                self.assertEqual(service['public_tls'],{'hostname':'primary','uid':0})
+            else:
+                self.assertNotIn('public_tls',service)
+            self.assertFalse(any(name.startswith('DEPLOY_PUBLIC_TLS_') for name in service.get('environment',{})))
+
     def test_smip_uses_protected_gateway_without_exposing_private_listener(self):
         manifest=json.loads((ROOT/'deploy/lidza.stack.json').read_text())
         self.assertEqual(manifest['gateway_transport'], {'version':1,'paths':['/api/v1/smip','/api/v1/setup/transport']})

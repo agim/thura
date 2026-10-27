@@ -8,6 +8,8 @@ import re
 import subprocess
 import urllib.parse
 import uuid
+import smtp_tls
+import mail_auth
 
 
 def settings(config, hostname, listen, allow_empty=False):
@@ -66,6 +68,8 @@ def recipient_history(config, path):
 
 def configure(config, hostname, listen, managed=False):
     domains = settings(config, hostname, listen, allow_empty=managed)
+    tls_options, _ = smtp_tls.configuration(hostname)
+    mail_auth.configure(domains, hostname, config.get('reportDomain', ''))
     transport_addresses = recipient_history(config, pathlib.Path('/var/spool/postfix/.thura-recipient-history.json')) if managed else config['mailboxes']
     private = pathlib.Path('/etc/thura-postfix/private')
     relay_group = pwd.getpwnam('thura-mail').pw_gid
@@ -107,8 +111,13 @@ def configure(config, hostname, listen, managed=False):
         # Public inbound SMTP overrides this to the existing 12 MiB boundary.
         'message_size_limit': str(16 * 1024 * 1024),
         'thura_destination_recipient_limit': '1',
-        'smtp_tls_security_level': 'may', 'smtpd_tls_security_level': 'may',
+        'smtp_tls_security_level': 'may',
         'maillog_file': '/dev/stdout',
+        'smtpd_milters': 'inet:127.0.0.1:11332',
+        'non_smtpd_milters': '',
+        'milter_default_action': 'tempfail',
+        'milter_protocol': '6',
+        'milter_mail_macros': 'i {mail_addr} {client_addr} {client_name} {auth_authen}',
     }
     # Optional test/private upstream relay; public delivery uses DNS/MX by default.
     relayhost = os.environ.get('POSTFIX_RELAYHOST', '')
@@ -116,12 +125,7 @@ def configure(config, hostname, listen, managed=False):
         if not re.fullmatch(r'\[(?:[a-z0-9.-]+)\]:[0-9]{1,5}', relayhost):
             raise ValueError('POSTFIX_RELAYHOST must be [hostname]:port')
         options['relayhost'] = relayhost
-    cert = pathlib.Path('/run/secrets/smtp-cert.pem')
-    key = pathlib.Path('/run/secrets/smtp-key.pem')
-    if cert.exists() != key.exists():
-        raise ValueError('Mount both the SMTP TLS certificate and key')
-    if cert.exists():
-        options.update(smtpd_tls_cert_file=str(cert), smtpd_tls_key_file=str(key))
+    options.update(tls_options)
     for name, value in options.items():
         subprocess.run(['postconf', '-e', f'{name} = {value}'], check=True)
     # Retain Debian's queue/proxymap/TLS/log services. Replacing the entire
@@ -142,8 +146,8 @@ def configure(config, hostname, listen, managed=False):
     if listen != '127.0.0.1:2525':
         smtp += f'{listen} inet n - n - - smtpd\n  -o message_size_limit=12582912\n  -o smtpd_relay_restrictions=reject_unauth_destination\n'
     (maps / 'master.cf').write_text(''.join(lines) + '\n' + smtp +
-        'thura unix - n n - - pipe flags=R user=thura-mail '
-        f'argv=/usr/bin/python3 {pathlib.Path(__file__).with_name("relay.py")} --config /etc/thura-postfix/private/relay.json --recipient ${{recipient}}\n')
+        'thura unix - n n - - pipe flags=R null_sender= user=thura-mail '
+        f'argv=/usr/bin/python3 {pathlib.Path(__file__).with_name("relay.py")} --config /etc/thura-postfix/private/relay.json --recipient=${{recipient}} --client-ip=${{client_address}} --sender=${{sender}} --helo=${{client_helo}}\n')
     subprocess.run(['postfix', 'check'], check=True)
 
 

@@ -32,10 +32,13 @@ class CombinedMailTests(unittest.TestCase):
             children=[mock.Mock(pid=100),mock.Mock(pid=101)]
             children[failed].poll.return_value=1
             children[1-failed].poll.return_value=None
-            with mock.patch.object(supervise,'configure_secret'), \
+            with mock.patch.dict(os.environ, {'MAIL_RSPAMD_PASSWORD':'PUBLIC-test-controller-secret-at-least-32'}), \
+                 mock.patch.object(supervise.urllib.request,'urlopen') as ready, \
+                 mock.patch.object(supervise,'configure_secret'), \
                  mock.patch.object(supervise.subprocess,'Popen',side_effect=children), \
                  mock.patch.object(supervise.Path,'write_text'), \
                  mock.patch.object(supervise.signal,'signal'):
+                ready.return_value.__enter__.return_value.status=200
                 with self.assertRaises(RuntimeError):supervise.main()
             children[1-failed].terminate.assert_called_once()
             for child in children:child.wait.assert_called_once()

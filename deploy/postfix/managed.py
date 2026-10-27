@@ -11,6 +11,8 @@ import time
 import urllib.request
 
 import configure
+import smtp_tls
+import mail_auth
 from relay import NoRedirect
 
 CONFIG_URL = 'http://127.0.0.1:3000/api/v1/setup/postfix'
@@ -47,6 +49,7 @@ def main():
         raise ValueError('THURA_POSTFIX_TOKEN must have at least 32 characters')
     process = None
     previous = None
+    previous_tls = None
     stopping = False
 
     def stop(_signum, _frame):
@@ -61,7 +64,16 @@ def main():
                 raise RuntimeError('Postfix exited; container restart required')
             try:
                 payload = validate(fetch(token))
-                if payload != previous:
+                try:
+                    _, tls_digest = smtp_tls.configuration(payload['hostname'])
+                except ValueError:
+                    if process is not None and previous_tls != 'invalid-certificate':
+                        for option in ('smtpd_tls_security_level=none','smtpd_tls_cert_file=','smtpd_tls_key_file=','smtpd_tls_chain_files='):
+                            subprocess.run(['postconf','-e',option],check=True)
+                        subprocess.run(['postfix','reload'],check=True)
+                    previous_tls = 'invalid-certificate'
+                    raise
+                if payload != previous or tls_digest != previous_tls:
                     if not payload['enabled']:
                         if process is not None:
                             subprocess.run(['postfix', 'stop'], check=True)
@@ -75,7 +87,10 @@ def main():
                         else:
                             subprocess.run(['postfix', 'reload'], check=True)
                     previous = payload
+                    previous_tls = tls_digest
                     print('Postfix configuration applied; revision ' + str(payload.get('revision', 0)), flush=True)
+                if payload['enabled']:
+                    mail_auth.reports(payload['config'].get('reportDomain', ''))
             except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
                 # Never log response bytes, signing keys, bearer credentials or URLs.
                 # A read failure preserves the last running configuration and queue.

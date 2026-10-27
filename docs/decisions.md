@@ -571,3 +571,16 @@ fixture clone before opting out of automatic URL replacement, preserving the
 stronger database-per-fixture guarantees for first-account and two-server tests.
 No test assertion changed. This keeps independent feature changes from rebuilding
 one monolithic test binary and avoids concurrent access to the template database.
+
+## SMTP authentication at the receiving edge (2026-10-27)
+
+Postfix's Rspamd Milter validates real connection/envelope SPF, DKIM and aligned
+DMARC before accepting public mail. The relay signs separately persisted SMTP
+metadata without changing raw MIME. This prevents forged MIME headers and relay
+HMAC from masquerading as domain authentication. Direct local SMTP uses persistent
+DKIM keys; hosted APIs retain their own signing. Aggregate DMARC reports honor DNS
+recipient authorization and use the ordinary immutable outbox, avoiding a second
+delivery path or exposing provider credentials to the mail service. No forensic
+reporting or backscatter is added. Lidza-deploy v0.2.105 public_tls supplies a
+service-scoped immutable certificate bundle, and the managed mail loop reloads
+TLS on first issuance and renewal.

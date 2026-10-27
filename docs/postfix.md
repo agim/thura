@@ -84,12 +84,16 @@ preserves its queue volume. Do not remove that volume during upgrades.
 Set your inbox domain's MX to the mail server hostname and its A record to this
 server; allow inbound TCP 25. Set `SMTP_TLS_DIR` in `.env` to a private directory
 containing `smtp-cert.pem` and `smtp-key.pem` for that hostname (default
-`deploy/private/smtp`). Restart Postfix after certificate rotation. Without
-these files the service does not advertise STARTTLS. Configure SPF, DKIM
-signing and DMARC/PTR for direct Postfix sending; this stack does not install a
-DKIM signer, spam filter or malware scanner. With a hosted outgoing provider,
-use that provider's sending-domain records while retaining your Postfix MX.
-DNS, certificates, public delivery and abuse filtering remain operator tasks.
+`deploy/private/smtp`). The managed service detects certificate changes and
+reloads Postfix without restarting or losing its queue. Without a usable pair,
+STARTTLS is disabled instead of advertising a command that returns 454.
+Lidza-deploy v0.2.105 or newer provisions the primary hostname certificate through
+the mail service's `public_tls` declaration. Thura loads its immutable bundle,
+validates the public hostname/key/expiry, and notices renewal automatically.
+The `DEPLOY_PUBLIC_TLS_*` paths are private to that service; neither Caddy's
+certificate store nor the Docker socket is mounted into the container.
+With a hosted outgoing provider, retain its sending-domain records and your
+Postfix MX. DNS, PTR and external reachability still require operator setup.
 A wizard test confirms outgoing acceptance, not incoming internet reachability;
 send an external test to the inbox after activation and check the received item.
 
@@ -248,3 +252,44 @@ fixture project, loopback app port 8082 and SMTP port 2528; never point this
 fixture at a production installation. The separate browser checks exercise
 actual desktop/phone wizard menus and ensure hidden provider fields, secret
 values and page width behave correctly. Hosted provider accounts are not used.
+
+## SMTP sender authentication and reports
+
+Public SMTP goes through the bundled Rspamd Milter before queue acceptance.
+SPF uses the actual socket peer and envelope sender; DKIM verifies the original
+signed content; DMARC requires alignment with the visible From domain.
+Published `p=reject` failures are rejected during SMTP, `p=quarantine` failures
+are held by Thura even with a low spam score, and monitoring policies retain
+the ordinary spam/AI checks. Temporary authentication DNS failures defer mail.
+A forged Authentication-Results header cannot supply a passing identity.
+Relay HMAC and SMIP authentication remain distinct: the HMAC protects the relay
+and its separately stored peer/envelope metadata, not a sender's claimed name.
+Existing generic relays without signed SMTP metadata remain unverified.
+
+For direct outgoing SMTP, Rspamd signs locally submitted mail for configured
+receiving domains only. Persistent RSA-2048 keys and a unique installation
+selector live in `/var/spool/postfix/etc/thura-auth`, on the existing durable
+Postfix queue volume. Back up that volume privately. To obtain public DNS TXT
+records, read `public-records.json` in that directory inside the mail container.
+Publish each selector record before relying on direct DKIM; never copy a private
+key into DNS or the setup form. API providers retain their own DKIM signing.
+Authorize every legitimate sending service in SPF and publish a DMARC policy;
+do not blindly replace a provider's existing DNS records.
+
+Rspamd collects daily aggregate reports when a domain publishes `rua`, including
+third-party destination authorization in DNS. Reports contain counts, source IPs
+and authentication results, not original message bodies or attachments.
+The private loopback report bridge queues them through Thura's normal configured
+API/SMTP/SMIP sending pipeline, with immutable submission and duplicate protection.
+An ambiguous reporting attempt is recorded before execution and is not silently
+repeated after a restart. Inspect `report-attempt.json` in the protected state
+directory before an operator-authorized retry; `completed` means the collector
+command finished, not proof of external delivery. Inspect the normal outbox for
+provider delivery status. Pending daily attempts are bounded to retained Redis
+history; this is not an unlimited report archive.
+
+This implementation sends aggregate `rua` reports. Rspamd does not implement
+forensic `ruf` failure reports. SMTP rejections return failure to the connected
+sender; Thura does not send unsolicited failure messages to a potentially forged
+From address. DMARC authenticates a domain, not a human sender or harmless content;
+spam, malware and optional AI screening still apply.

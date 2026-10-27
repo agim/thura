@@ -184,6 +184,7 @@ model MailItem {
   providerId string @default("")
   deliveryReason string @default("")
   rawKey string @default("")
+  smtpEnvelope string @default("")
   externalId string?
   threadId string @default("")
   messageId string @default("")

@@ -50,8 +50,21 @@ def main():
     signal.signal(signal.SIGINT,stop)
     try:
         children.append(subprocess.Popen(['rspamd','-f','-u','_rspamd','-g','_rspamd']))
+        Path('/tmp/thura-mail-processes.json').write_text(json.dumps({'0':children[0].pid}))
+        # Configuration reload needs a live master, not a race with daemon startup.
+        deadline=time.monotonic()+15
+        while True:
+            try:
+                request=urllib.request.Request('http://127.0.0.1:11334/ready',headers={'Password':os.environ['MAIL_RSPAMD_PASSWORD']})
+                with urllib.request.urlopen(request,timeout=1) as response:
+                    if response.status==200:break
+            except OSError:
+                if children[0].poll() is not None or time.monotonic()>=deadline:raise
+                time.sleep(.1)
         children.append(subprocess.Popen([sys.executable,'/opt/thura/configure.py']))
-        Path('/tmp/thura-mail-processes.json').write_text(json.dumps({'rspamd':children[0].pid,'postfix_supervisor':children[1].pid}))
+        if os.environ.get('THURA_POSTFIX_MANAGED') == 'true':
+            children.append(subprocess.Popen([sys.executable, '/opt/thura/reports.py']))
+        Path('/tmp/thura-mail-processes.json').write_text(json.dumps({str(i): child.pid for i, child in enumerate(children)}))
         while not stopping:
             if any(child.poll() is not None for child in children):
                 raise RuntimeError('A mail service exited; restarting the combined container')

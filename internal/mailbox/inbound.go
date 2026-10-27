@@ -27,6 +27,7 @@ import (
 	"thura/internal/mailabuse"
 	"thura/internal/platform/objectstore"
 	"thura/internal/smipmail"
+	"thura/internal/smtpenvelope"
 	"thura/internal/tenancy"
 	"time"
 )
@@ -159,6 +160,16 @@ func Parse(raw []byte) (ParsedMail, error) {
 // Receive is the boundary for an SMTP edge or verified hosted-provider relay.
 // Its HMAC binds timestamp, delivery id, and the complete raw MIME body.
 func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature string, raw []byte) (queries.MailItem, error) {
+	return ReceiveSMTP(ctx, mailboxID, timestamp, deliveryID, signature, raw, "")
+}
+
+// ReceiveSMTP binds original SMTP metadata to the relay HMAC before storing it.
+func ReceiveSMTP(ctx context.Context, mailboxID, timestamp, deliveryID, signature string, raw []byte, envelope string) (queries.MailItem, error) {
+	if envelope != "" {
+		if _, err := smtpenvelope.Decode(envelope); err != nil {
+			return queries.MailItem{}, router.Errorf(400, "invalid SMTP envelope")
+		}
+	}
 	q := queries.New(db.From(ctx))
 	m, err := q.GetMailbox(ctx, mailboxID)
 	if err != nil {
@@ -194,7 +205,13 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 		return queries.MailItem{}, router.Errorf(401, "relay delivery outside replay window")
 	}
 	expected := hmac.New(sha256.New, []byte(secret))
+	if envelope != "" {
+		expected.Write([]byte("smtp2."))
+	}
 	expected.Write([]byte(timestamp + "." + deliveryID + "."))
+	if envelope != "" {
+		expected.Write([]byte(envelope + "."))
+	}
 	expected.Write(raw)
 	supplied, err := hex.DecodeString(signature)
 	if err != nil || !hmac.Equal(supplied, expected.Sum(nil)) {
@@ -209,7 +226,7 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 		return queries.MailItem{}, err
 	}
 	defer tx.Rollback(ctx)
-	item, err := persistInbound(ctx, tx, m.ID, parsed, raw, deliveryID, false)
+	item, err := persistInbound(ctx, tx, m.ID, parsed, raw, deliveryID, false, envelope)
 	if err != nil {
 		return queries.MailItem{}, err
 	}
@@ -225,10 +242,10 @@ func ReceiveSMIP(ctx context.Context, tx pgx.Tx, mailboxID string, payload smipm
 	if err != nil {
 		return "", err
 	}
-	item, err := persistInbound(ctx, tx, mailboxID, parsed, raw, deliveryID, true)
+	item, err := persistInbound(ctx, tx, mailboxID, parsed, raw, deliveryID, true, "")
 	return item.ID, err
 }
-func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed ParsedMail, raw []byte, deliveryID string, authenticated bool) (queries.MailItem, error) {
+func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed ParsedMail, raw []byte, deliveryID string, authenticated bool, envelope string) (queries.MailItem, error) {
 	var err error
 	tq := queries.New(tx)
 	box, err := tq.LockMailbox(ctx, mailboxID)
@@ -260,7 +277,7 @@ func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed Par
 	if _, err = objectstore.Put(ctx, rawKey, bytes.NewReader(raw), storage.PutOptions{ContentType: "message/rfc822"}); err != nil {
 		return queries.MailItem{}, err
 	}
-	item, err := tq.InsertInboundMail(ctx, queries.InsertInboundMailParams{MailboxID: mailboxID, FromAddress: parsed.From, ToAddress: parsed.To, Cc: parsed.Cc, Subject: parsed.Subject, TextBody: parsed.Text, HTMLBody: parsed.HTML, RawKey: rawKey, ExternalID: &deliveryID, ThreadID: parsed.Thread, MessageID: parsed.MessageID, InReplyTo: parsed.InReplyTo, ReferencesHeader: parsed.References})
+	item, err := tq.InsertInboundMail(ctx, queries.InsertInboundMailParams{MailboxID: mailboxID, FromAddress: parsed.From, ToAddress: parsed.To, Cc: parsed.Cc, Subject: parsed.Subject, TextBody: parsed.Text, HTMLBody: parsed.HTML, RawKey: rawKey, ExternalID: &deliveryID, ThreadID: parsed.Thread, MessageID: parsed.MessageID, InReplyTo: parsed.InReplyTo, ReferencesHeader: parsed.References, SmtpEnvelope: envelope})
 	if err != nil {
 		return queries.MailItem{}, err
 	}

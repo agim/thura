@@ -111,12 +111,18 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 			if readErr != nil || len(raw) > 20<<20 {
 				localFailed = true
 			} else {
-				result, scanErr := rspamd.Scan(ctx, localConfig, s.WorkspaceID, raw)
+				result, scanErr := rspamd.ScanSMTP(ctx, localConfig, s.WorkspaceID, raw, item.SmtpEnvelope)
 				if scanErr != nil {
 					localFailed = true
 				} else {
+					if _, ok := result.Symbols["DMARC_POLICY_ALLOW"]; ok {
+						e.add("smtp_dmarc_pass", "info", "SMTP From domain authenticated by aligned SPF or DKIM (DMARC pass)", 0)
+					}
 					locallyHeld = result.Score >= 6 || result.Action == "reject"
-					for _, symbol := range []string{"PHISHING", "PHISHED_URL", "PHISHED_GENERIC_SERVICE", "PHISHED_OPENPHISH", "PHISHED_PHISHTANK"} {
+					if result.Action == "soft reject" {
+						localFailed = true
+					}
+					for _, symbol := range []string{"PHISHING", "PHISHED_URL", "PHISHED_GENERIC_SERVICE", "PHISHED_OPENPHISH", "PHISHED_PHISHTANK", "DMARC_POLICY_QUARANTINE", "DMARC_POLICY_REJECT"} {
 						if _, ok := result.Symbols[symbol]; ok {
 							locallyHeld = true
 						}

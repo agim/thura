@@ -45,8 +45,8 @@ SELECT * FROM mail_attachment WHERE id=$1;
 -- name: AddMailAttachment :one
 INSERT INTO mail_attachment(item_id,name,content_type,size,object_key,content_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING *;
 -- name: InsertInboundMail :one
-INSERT INTO mail_item(mailbox_id,author_id,folder,from_address,to_address,cc,subject,text_body,html_body,status,unread,raw_key,external_id,thread_id,message_id,in_reply_to,references_header)
-VALUES($1,'','inbox',$2,$3,$4,$5,$6,$7,'received',true,$8,$9,$10,$11,$12,$13)
+INSERT INTO mail_item(mailbox_id,author_id,folder,from_address,to_address,cc,subject,text_body,html_body,status,unread,raw_key,external_id,thread_id,message_id,in_reply_to,references_header,smtp_envelope)
+VALUES($1,'','inbox',$2,$3,$4,$5,$6,$7,'received',true,$8,$9,$10,$11,$12,$13,$14)
 ON CONFLICT (mailbox_id,external_id) DO UPDATE SET external_id=EXCLUDED.external_id RETURNING *;
 -- name: DeleteMailAttachment :execrows
 DELETE FROM mail_attachment WHERE id=$1 AND item_id=$2;
@@ -103,3 +103,10 @@ FOR UPDATE;
 
 -- name: RevokeReservedMailboxInvitations :exec
 UPDATE invitation SET revoked_at=now() WHERE workspace_id=$1 AND mailbox_id=$2 AND accepted_at IS NULL AND revoked_at IS NULL;
+
+-- name: CreateDMARCReportDraft :one
+INSERT INTO mail_item(mailbox_id,author_id,folder,from_address,to_address,subject,text_body,status,external_id)
+VALUES($1,$2,'drafts',$3,$4,$5,$6,'draft',$7)
+ON CONFLICT(mailbox_id,external_id) DO UPDATE SET external_id=EXCLUDED.external_id RETURNING *;
+-- name: ListMailboxesByAddress :many
+SELECT * FROM mailbox WHERE address=$1 ORDER BY id LIMIT 2;

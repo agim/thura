@@ -86,3 +86,19 @@ class RelayTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class SMTPEnvelopeTests(unittest.TestCase):
+    setUp = RelayTests.setUp
+    tearDown = RelayTests.tearDown
+    def test_connection_metadata_is_signed_and_not_read_from_mime_headers(self):
+        import base64
+        import json
+        envelope = {'ip': '203.0.113.7', 'from': 'bounce@real.example', 'helo': 'mx.real.example'}
+        raw = b'From: forged@claimed.example\r\nX-Thura-SMTP-Envelope: fake\r\n\r\nBody\r\n'
+        self.assertEqual(relay.deliver(self.config, 'inbox@tenant.example', raw, envelope), 0)
+        _, headers, body = self.requests[0]
+        encoded = headers['X-Thura-Smtp-Envelope']
+        self.assertEqual(json.loads(base64.urlsafe_b64decode(encoded + '=' * (-len(encoded) % 4))), envelope)
+        signed = b'smtp2.' + headers['X-Thura-Timestamp'].encode() + b'.' + headers['X-Thura-Delivery'].encode() + b'.' + encoded.encode() + b'.' + raw
+        self.assertEqual(headers['X-Thura-Signature'], hmac.new(SECRET.encode(), signed, hashlib.sha256).hexdigest())
+        self.assertEqual(body, raw)

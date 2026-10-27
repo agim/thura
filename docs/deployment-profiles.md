@@ -127,3 +127,5 @@ rollback in a 2-CPU / 4-GiB Linux VM. That result does not validate the expanded
 Matrix/local-model bundle or its reduced Office/mail allocations. See the
 [acceptance report](deploy-stack-acceptance.md) for measured resources,
 reproduction and the remaining deployment-specific checks.
+
+The manifest now requires **Lidza-deploy v0.2.105 or newer** for mail-service `public_tls` certificate delivery. Upgrade the deployment agent before deploying this manifest; the mail service enables STARTTLS only once validated certificate material is available.

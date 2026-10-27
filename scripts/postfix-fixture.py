@@ -172,6 +172,8 @@ def main():
     subprocess.run(['docker', 'rm', '-f', 'thura-postfix-test'], capture_output=True)
     try:
         command = ['docker', 'run', '-d', '--name', 'thura-postfix-test', '--network', 'host',
+                   '--add-host', 'mail-filter-cache:127.0.0.1',
+                   '-e', 'MAIL_RSPAMD_PASSWORD=PUBLIC-controller-fixture-password-at-least-32',
                    '-e', 'MAIL_HOSTNAME=mail.tenant.example', '-e', 'POSTFIX_RELAYHOST=[127.0.0.1]:2526',
                    '-e', 'SMTP_LISTEN=127.0.0.1:2527',
                    '-v', f'{config}:/run/secrets/thura-relay.json:ro',

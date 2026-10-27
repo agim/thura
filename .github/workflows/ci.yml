@@ -72,3 +72,8 @@ jobs:
         run: |
           docker build -t thura-postfix:test deploy/postfix
           python3 scripts/postfix-fixture.py
+
+      - name: Offline SPF DKIM DMARC and STARTTLS acceptance
+        run: |
+          docker build -t thura-postfix-auth:test -f deploy/postfix/fixture.Dockerfile .
+          python3 scripts/mail-auth-fixture.py --image thura-postfix-auth:test

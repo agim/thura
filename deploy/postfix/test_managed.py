@@ -89,3 +89,28 @@ class ManagedTests(unittest.TestCase):
         self.assertEqual(sum(call.args[0] == ['postfix', 'reload'] for call in run.call_args_list), 1)
         self.assertEqual(sum(call.args[0] == ['postfix', 'stop'] for call in run.call_args_list), 1)
         process.wait.assert_called_once()
+
+    def test_certificate_renewal_reloads_unchanged_mapping_without_restart(self):
+        payload = self.payload()
+        process = mock.Mock()
+        process.poll.return_value = None
+        handlers = {}
+        calls = [0]
+        def fetch(_token):
+            calls[0] += 1
+            if calls[0] == 4:
+                handlers[managed.signal.SIGTERM](None,None)
+            return payload
+        with mock.patch.dict(managed.os.environ, {'THURA_POSTFIX_TOKEN':'PUBLIC-sidecar-token-at-least-32-characters'}), \
+             mock.patch.object(managed,'fetch',side_effect=fetch), \
+             mock.patch.object(managed.smtp_tls,'configuration',side_effect=[({},'first'),({},'first'),({},'renewed'),({},'renewed')]), \
+             mock.patch.object(managed.mail_auth,'reports'), \
+             mock.patch.object(managed.signal,'signal',side_effect=lambda sig,fn:handlers.update({sig:fn})), \
+             mock.patch.object(managed.time,'sleep'), \
+             mock.patch.object(managed.configure,'configure') as apply, \
+             mock.patch.object(managed.subprocess,'Popen',return_value=process) as start, \
+             mock.patch.object(managed.subprocess,'run') as run:
+            managed.main()
+        self.assertEqual(start.call_count,1)
+        self.assertEqual(apply.call_count,2)
+        self.assertEqual(sum(c.args[0]==['postfix','reload'] for c in run.call_args_list),1)

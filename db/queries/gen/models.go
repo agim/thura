@@ -587,6 +587,7 @@ type MailItem struct {
 	ProviderID       string     `json:"provider_id"`
 	DeliveryReason   string     `json:"delivery_reason"`
 	RawKey           string     `json:"raw_key"`
+	SmtpEnvelope     string     `json:"smtp_envelope"`
 	ExternalID       *string    `json:"external_id"`
 	ThreadID         string     `json:"thread_id"`
 	MessageID        string     `json:"message_id"`
