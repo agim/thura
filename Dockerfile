@@ -16,7 +16,7 @@ COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
  && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
-RUN go install github.com/agim/lidza/cmd/lidza@v0.1.125
+RUN go install github.com/agim/lidza/cmd/lidza@v0.1.128
 # lidza build regenerates SQL-backed queries; sqlc requires CGO while building.
 RUN CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 WORKDIR /src
