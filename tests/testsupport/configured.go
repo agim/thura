@@ -3,6 +3,8 @@ package testsupport
 import (
 	"context"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/agim/lidza"
@@ -17,7 +19,8 @@ import (
 // Fresh-install and publication tests use setupServer instead.
 func StartConfigured(t *testing.T, application lidza.App) *lidzatest.Server {
 	t.Helper()
-	if os.Getenv("STORAGE_DIR") == "" {
+	dir := filepath.ToSlash(os.Getenv("STORAGE_DIR"))
+	if dir == "" || dir == ".lidza/test-storage" || strings.HasSuffix(dir, "/.lidza/test-storage") {
 		t.Setenv("STORAGE_DIR", t.TempDir())
 	}
 	start := application.OnStart

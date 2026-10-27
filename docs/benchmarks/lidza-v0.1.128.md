@@ -37,8 +37,7 @@ A newly started stdio MCP server completed initialization plus tools/list in
 checks an actual fresh server process, not a claim that an existing GUI client
 was reconnected. Thura has no DMARC-specific team note.
 
-Commit-hook reuse and the separate test-package split are measured below after
-completion. Local raw command outputs are under `.lidza/upgrade-128/`.
+Commit-hook reuse and the separate test-package split are measured below. Local raw command outputs are under `.lidza/upgrade-128/`.
 
 The upgrade was committed separately as df5b605. The first commit took 0.03 s,
 but inspection revealed this checkout had no core.hooksPath configured: that
@@ -51,3 +50,35 @@ still dominates a complete uncached run. Database inspection during the run
 confirmed nine distinct package clones. An automated token audit confirms all
 128 original tests remain once each with unchanged bodies, apart from qualifying
 the shared fixture call. tests/README.md explains fixture isolation and scope.
+
+Final acceptance:
+
+| Follow-up check | Result |
+| --- | ---: |
+| Actual pre-commit hook after passing verify | 0.21 s |
+| Full suite after fixture-storage isolation | 57.63 s |
+| Verify after changing only workspace test code | 11.40 s |
+| Workspace package within that verify | 4.01 s |
+
+The real hook printed `[lidza] verify: passed 0s ago on the tree being committed;
+not repeated`. The split itself was committed as 37ee0ed, after the upgrade.
+The guard initially flagged two assertions relocated from configured_test.go to
+tests/testsupport/configured.go. Both remain unchanged; the explicit test-change
+allowance was used for that authorized mechanical move. This is a guard false
+positive, not an incorrect test expectation.
+
+An initial one-package verification still took 60.73 s. Go cache diagnostics
+showed the root suite reading shared `.lidza/test-storage` paths. Giving the
+published fixture temporary storage also when the inherited setting is the
+default test path resolved it; explicit caller-selected storage remains intact.
+The final one-package verification reused all eight untouched integration
+packages, including the heavy root setup/SMIP suite. One new test proves the
+workspace package actually uses its own database; all 128 original test bodies
+remain unchanged apart from qualifying the shared fixture call (129 total).
+
+Remaining costs: a fully uncached setup/SMIP package still takes about 52 s,
+mostly exercising independent installations. Check/generate overhead remains
+several seconds on a changed tree. Dependency scan reuse, verify reuse and the
+commit hook pass; the warm-check speedup is modest on Thura. No Lidza repository
+changes were made. The update and test layout are on chore/lidza-0.1.128, with
+production deployment and merge outside this task.

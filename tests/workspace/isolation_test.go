@@ -16,6 +16,6 @@ func TestWorkspacePackageUsesItsOwnDatabase(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.HasSuffix(name, "_pkg_tests_workspace_test") {
-		t.Fatalf("workspace tests require their own package database, got %q", name)
+		t.Fatalf("workspace tests must retain their isolated package database, got %q", name)
 	}
 }
