@@ -82,8 +82,8 @@ test('Drive document formatting saves immutable versions and reopens with tables
   await expect(page.getByRole('textbox', { name: 'Document', exact: true }).locator('table')).toHaveCount(1)
   await page.getByRole('textbox', { name: 'Document', exact: true }).fill('Recovered notes')
   await page.reload()
-  await page.getByRole('button', { name: `${name}.html`, exact: true }).click()
-  await page.getByRole('button', { name: `${name}.html`, exact: true }).dblclick()
+  // Refresh reopens the editor from the URL; the recovered draft must be there.
+  await expect(page).toHaveURL(/[?&]edit=1/)
   await expect(page.getByRole('textbox', { name: 'Document', exact: true })).toHaveText('Recovered notes')
   await expect(page.getByText('Recovered unsaved changes', { exact: true })).toBeVisible()
   await page.route('**/drive/uploads', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Synthetic document storage unavailable' }) }))
