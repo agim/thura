@@ -60,7 +60,7 @@ func Preflight(ctx context.Context, queries *q.Queries, box q.Mailbox, from stri
 	}
 	return p, nil
 }
-func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q.MailProtection, authenticated bool, files []File) (q.MailItem, error) {
+func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q.MailProtection, authenticated bool, envelope Envelope, files []File) (q.MailItem, error) {
 	queries := q.New(tx)
 	directory, err := people(ctx, queries, box.WorkspaceID)
 	if err != nil {
@@ -117,6 +117,14 @@ func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q
 	}
 	if _, err = queries.AddMailScreening(ctx, q.AddMailScreeningParams{ItemID: item.ID, WorkspaceID: box.WorkspaceID, Sender: sender, Domain: registrable(domain), Identity: id, Authenticated: authenticated, State: state, Score: int32(e.Score), Findings: string(findingJSON), AiState: ai, AvState: av, ApprovalRequired: p.ApproveUnknown && !known, PolicyRevision: p.Revision, NextAttempt: lidza.Now(ctx)}); err != nil {
 		return item, err
+	}
+	if envelope.IP != "" {
+		if !ValidEnvelope(envelope) {
+			return item, router.Errorf(400, "invalid SMTP envelope")
+		}
+		if err = queries.SetMailScreeningEnvelope(ctx, q.SetMailScreeningEnvelopeParams{ItemID: item.ID, ClientAddress: envelope.IP, ClientHelo: envelope.Helo, EnvelopeSender: envelope.MailFrom}); err != nil {
+			return item, err
+		}
 	}
 	if state != "clean" {
 		item.Folder = q.MailFolderSpam

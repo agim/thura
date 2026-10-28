@@ -102,7 +102,7 @@ def main():
     class Bridge(http.server.BaseHTTPRequestHandler):
         def do_POST(self):
             raw = self.rfile.read(int(self.headers['Content-Length']))
-            headers = {name: self.headers[name] for name in ('X-Thura-Timestamp', 'X-Thura-Delivery', 'X-Thura-Signature')}
+            headers = {name: self.headers[name] for name in ('X-Thura-Timestamp', 'X-Thura-Delivery', 'X-Thura-Signature', 'X-Thura-Envelope') if self.headers[name] is not None}
             request = urllib.request.Request(BASE + self.path, data=raw, headers=headers)
             try:
                 with urllib.request.urlopen(request, timeout=10) as response:

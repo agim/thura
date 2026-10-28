@@ -561,3 +561,9 @@ Touches: internal/smiptrust, internal/smipmail/discovery.go, internal/federation
 Why: Each uncached SMIP status can take up to six seconds, and checking every team domain inside the team-setup response blocked the page. The status moved to its own server-administrator route per domain (and an administrator-only setup JSON endpoint for the wizard, with a no-script inline recheck), keeping the one-minute cache and bounded timeouts; the page shows Checking until it answers and says the check could not run when the request fails, never a fabricated pass.
 
 Touches: handlers/teams.go, src/components/TeamSetup.tsx, internal/setup/smip_status.go, internal/setup/admin-controls.js
+
+## 2026-10-28: Sender authenticity from SPF/DKIM/DMARC; forwarded mail judged by its forwarder
+
+Why: The developer requires authenticity to come only from SPF and DKIM and the AI to stop investigating forwarding chains. Managed Postfix passes the SMTP client IP, HELO and envelope sender in a v2-signed X-Thura-Envelope relay header; Thura stores them and passes them to its own Rspamd scan, reads only Rspamd's R_SPF/R_DKIM/DMARC symbols (never message Authentication-Results headers), persists the result on mail_screening and gives it to the model as the complete authenticity answer, with a prompt limited to the forwarder and the message's own risk. Reputation, rate limits and approval keep their intake-time smip/unverified identities because DMARC authenticates a domain, not a mailbox. See docs/mail-protection.md.
+
+Touches: deploy/postfix, internal/rspamd, internal/mailabuse, internal/mailbox, internal/assistant/mail.go, mail_screening

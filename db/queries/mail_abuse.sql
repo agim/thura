@@ -64,3 +64,7 @@ SELECT item_id FROM mail_filter_feedback WHERE state IN ('pending','error') AND 
 -- name: FinishMailFilterFeedback :exec
 UPDATE mail_filter_feedback SET state=$2,learned_revision=$3,attempts=$4,next_attempt=$5,updated_at=$6
 WHERE item_id=$1 AND revision=$7;
+-- name: SetMailScreeningEnvelope :exec
+UPDATE mail_screening SET client_address=$2,client_helo=$3,envelope_sender=$4 WHERE item_id=$1;
+-- name: SaveMailScreeningAuth :exec
+UPDATE mail_screening SET spf=$2,dkim=$3,dkim_domain=$4,dkim_aligned=$5,dmarc=$6 WHERE item_id=$1;

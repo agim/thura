@@ -2249,6 +2249,14 @@ type MailScreening struct {
 	PolicyRevision   int       `json:"policyRevision" db:"policy_revision"`
 	NextAttempt      time.Time `json:"nextAttempt" db:"next_attempt"`
 	UpdatedAt        time.Time `json:"updatedAt" db:"updated_at"`
+	ClientAddress    string    `json:"clientAddress" db:"client_address"`
+	ClientHelo       string    `json:"clientHelo" db:"client_helo"`
+	EnvelopeSender   string    `json:"envelopeSender" db:"envelope_sender"`
+	Spf              string    `json:"spf" db:"spf"`
+	Dkim             string    `json:"dkim" db:"dkim"`
+	DkimDomain       string    `json:"dkimDomain" db:"dkim_domain"`
+	DkimAligned      bool      `json:"dkimAligned" db:"dkim_aligned"`
+	Dmarc            string    `json:"dmarc" db:"dmarc"`
 }
 
 // Validate applies the rules of MailScreening from schema.lidza.
@@ -2283,6 +2291,27 @@ func (v MailScreening) Validate() error {
 	}
 	if v.AttemptID == "" {
 		errs.Add("attemptId", "required", "required")
+	}
+	if v.ClientAddress == "" {
+		errs.Add("clientAddress", "required", "required")
+	}
+	if v.ClientHelo == "" {
+		errs.Add("clientHelo", "required", "required")
+	}
+	if v.EnvelopeSender == "" {
+		errs.Add("envelopeSender", "required", "required")
+	}
+	if v.Spf == "" {
+		errs.Add("spf", "required", "required")
+	}
+	if v.Dkim == "" {
+		errs.Add("dkim", "required", "required")
+	}
+	if v.DkimDomain == "" {
+		errs.Add("dkimDomain", "required", "required")
+	}
+	if v.Dmarc == "" {
+		errs.Add("dmarc", "required", "required")
 	}
 	return errs.Result()
 }
@@ -5274,21 +5303,22 @@ func (v MailFinding) Validate() error {
 
 // MailScreeningView is an API type.
 type MailScreeningView struct {
-	State            string        `json:"state"`
-	Score            int           `json:"score"`
-	Findings         []MailFinding `json:"findings"`
-	AiState          string        `json:"aiState"`
-	AvState          string        `json:"avState"`
-	Authenticated    bool          `json:"authenticated"`
-	Sender           string        `json:"sender"`
-	Reputation       string        `json:"reputation"`
-	Complaints       int           `json:"complaints"`
-	Reported         bool          `json:"reported"`
-	ApprovalRequired bool          `json:"approvalRequired"`
-	Released         bool          `json:"released"`
-	CanManage        bool          `json:"canManage"`
-	FeedbackState    string        `json:"feedbackState"`
-	UpdatedAt        time.Time     `json:"updatedAt"`
+	State            string              `json:"state"`
+	Score            int                 `json:"score"`
+	Findings         []MailFinding       `json:"findings"`
+	AiState          string              `json:"aiState"`
+	AvState          string              `json:"avState"`
+	Authenticated    bool                `json:"authenticated"`
+	Sender           string              `json:"sender"`
+	Reputation       string              `json:"reputation"`
+	Complaints       int                 `json:"complaints"`
+	Reported         bool                `json:"reported"`
+	ApprovalRequired bool                `json:"approvalRequired"`
+	Released         bool                `json:"released"`
+	CanManage        bool                `json:"canManage"`
+	FeedbackState    string              `json:"feedbackState"`
+	UpdatedAt        time.Time           `json:"updatedAt"`
+	SenderAuth       *MailSenderAuthView `json:"senderAuth"`
 }
 
 // Validate applies the rules of MailScreeningView from schema.lidza.
@@ -5317,6 +5347,49 @@ func (v MailScreeningView) Validate() error {
 	}
 	if v.FeedbackState == "" {
 		errs.Add("feedbackState", "required", "required")
+	}
+	if v.SenderAuth != nil {
+		x := *v.SenderAuth
+		if err := x.Validate(); err != nil {
+			errs.Add("senderAuth", "nested", err.Error())
+		}
+	}
+	return errs.Result()
+}
+
+// MailSenderAuthView is an API type.
+type MailSenderAuthView struct {
+	Method      string `json:"method"`
+	Verified    bool   `json:"verified"`
+	FromDomain  string `json:"fromDomain"`
+	Spf         string `json:"spf"`
+	SpfAligned  bool   `json:"spfAligned"`
+	Dkim        string `json:"dkim"`
+	DkimDomain  string `json:"dkimDomain"`
+	DkimAligned bool   `json:"dkimAligned"`
+	Dmarc       string `json:"dmarc"`
+}
+
+// Validate applies the rules of MailSenderAuthView from schema.lidza.
+func (v MailSenderAuthView) Validate() error {
+	var errs validate.Errors
+	if v.Method == "" {
+		errs.Add("method", "required", "required")
+	}
+	if v.FromDomain == "" {
+		errs.Add("fromDomain", "required", "required")
+	}
+	if v.Spf == "" {
+		errs.Add("spf", "required", "required")
+	}
+	if v.Dkim == "" {
+		errs.Add("dkim", "required", "required")
+	}
+	if v.DkimDomain == "" {
+		errs.Add("dkimDomain", "required", "required")
+	}
+	if v.Dmarc == "" {
+		errs.Add("dmarc", "required", "required")
 	}
 	return errs.Result()
 }

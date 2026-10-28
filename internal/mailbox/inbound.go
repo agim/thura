@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/db"
@@ -157,8 +158,9 @@ func Parse(raw []byte) (ParsedMail, error) {
 }
 
 // Receive is the boundary for an SMTP edge or verified hosted-provider relay.
-// Its HMAC binds timestamp, delivery id, and the complete raw MIME body.
-func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature string, raw []byte) (queries.MailItem, error) {
+// Its HMAC binds timestamp, delivery id, and the complete raw MIME body, and,
+// when the relay reports its SMTP envelope, that envelope too (see envelope).
+func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature, envelopeHeader string, raw []byte) (queries.MailItem, error) {
 	q := queries.New(db.From(ctx))
 	m, err := q.GetMailbox(ctx, mailboxID)
 	if err != nil {
@@ -194,11 +196,21 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 		return queries.MailItem{}, router.Errorf(401, "relay delivery outside replay window")
 	}
 	expected := hmac.New(sha256.New, []byte(secret))
-	expected.Write([]byte(timestamp + "." + deliveryID + "."))
+	if envelopeHeader == "" {
+		expected.Write([]byte(timestamp + "." + deliveryID + "."))
+	} else {
+		// Distinct "v2." prefix: an envelope-free signature can never verify as
+		// one that carries an envelope, or the reverse.
+		expected.Write([]byte("v2." + timestamp + "." + envelopeHeader + "." + deliveryID + "."))
+	}
 	expected.Write(raw)
 	supplied, err := hex.DecodeString(signature)
 	if err != nil || !hmac.Equal(supplied, expected.Sum(nil)) {
 		return queries.MailItem{}, router.Errorf(401, "invalid relay signature")
+	}
+	envelope, err := relayEnvelope(envelopeHeader)
+	if err != nil {
+		return queries.MailItem{}, router.Errorf(400, "invalid SMTP envelope")
 	}
 	parsed, err := Parse(raw)
 	if err != nil {
@@ -209,11 +221,42 @@ func Receive(ctx context.Context, mailboxID, timestamp, deliveryID, signature st
 		return queries.MailItem{}, err
 	}
 	defer tx.Rollback(ctx)
-	item, err := persistInbound(ctx, tx, m.ID, parsed, raw, deliveryID, false)
+	item, err := persistInbound(ctx, tx, m.ID, parsed, raw, deliveryID, false, envelope)
 	if err != nil {
 		return queries.MailItem{}, err
 	}
 	return item, tx.Commit(ctx)
+}
+
+// relayEnvelope decodes X-Thura-Envelope: unpadded base64url of a JSON object
+// with the SMTP client's IP, its HELO name and the envelope sender, as the
+// receiving MTA observed them. Rspamd evaluates SPF from these values.
+func relayEnvelope(header string) (mailabuse.Envelope, error) {
+	if header == "" {
+		return mailabuse.Envelope{}, nil
+	}
+	if len(header) > 2048 {
+		return mailabuse.Envelope{}, errors.New("envelope too large")
+	}
+	data, err := base64.RawURLEncoding.DecodeString(header)
+	if err != nil {
+		return mailabuse.Envelope{}, err
+	}
+	var fields struct {
+		ClientAddress string `json:"clientAddress"`
+		ClientHelo    string `json:"clientHelo"`
+		Sender        string `json:"sender"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err = decoder.Decode(&fields); err != nil || decoder.Decode(new(any)) != io.EOF {
+		return mailabuse.Envelope{}, errors.New("invalid envelope")
+	}
+	envelope := mailabuse.Envelope{IP: fields.ClientAddress, Helo: fields.ClientHelo, MailFrom: fields.Sender}
+	if !mailabuse.ValidEnvelope(envelope) {
+		return mailabuse.Envelope{}, errors.New("invalid envelope")
+	}
+	return envelope, nil
 }
 
 func ReceiveSMIP(ctx context.Context, tx pgx.Tx, mailboxID string, payload smipmail.Payload, deliveryID string) (string, error) {
@@ -225,10 +268,10 @@ func ReceiveSMIP(ctx context.Context, tx pgx.Tx, mailboxID string, payload smipm
 	if err != nil {
 		return "", err
 	}
-	item, err := persistInbound(ctx, tx, mailboxID, parsed, raw, deliveryID, true)
+	item, err := persistInbound(ctx, tx, mailboxID, parsed, raw, deliveryID, true, mailabuse.Envelope{})
 	return item.ID, err
 }
-func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed ParsedMail, raw []byte, deliveryID string, authenticated bool) (queries.MailItem, error) {
+func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed ParsedMail, raw []byte, deliveryID string, authenticated bool, envelope mailabuse.Envelope) (queries.MailItem, error) {
 	var err error
 	tq := queries.New(tx)
 	box, err := tq.LockMailbox(ctx, mailboxID)
@@ -277,5 +320,5 @@ func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed Par
 	for _, a := range parsed.Attachments {
 		files = append(files, mailabuse.File{Name: a.Name, ContentType: a.ContentType, Data: a.Data})
 	}
-	return mailabuse.Enqueue(ctx, tx, box, item, p, authenticated, files)
+	return mailabuse.Enqueue(ctx, tx, box, item, p, authenticated, envelope, files)
 }

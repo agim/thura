@@ -657,6 +657,14 @@ type MailScreening struct {
 	PolicyRevision   int32     `json:"policy_revision"`
 	NextAttempt      time.Time `json:"next_attempt"`
 	UpdatedAt        time.Time `json:"updated_at"`
+	ClientAddress    string    `json:"client_address"`
+	ClientHelo       string    `json:"client_helo"`
+	EnvelopeSender   string    `json:"envelope_sender"`
+	Spf              string    `json:"spf"`
+	Dkim             string    `json:"dkim"`
+	DkimDomain       string    `json:"dkim_domain"`
+	DkimAligned      bool      `json:"dkim_aligned"`
+	Dmarc            string    `json:"dmarc"`
 }
 
 type MailSenderPolicy struct {

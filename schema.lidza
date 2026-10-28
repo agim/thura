@@ -1447,6 +1447,14 @@ model MailScreening {
  policyRevision int
  nextAttempt time
  updatedAt time
+ clientAddress string @default("")
+ clientHelo string @default("")
+ envelopeSender string @default("")
+ spf string @default("")
+ dkim string @default("")
+ dkimDomain string @default("")
+ dkimAligned bool @default(false)
+ dmarc string @default("")
  @@index(state, nextAttempt)
  @@index(workspaceId, domain, authenticated)
 }
@@ -1533,6 +1541,18 @@ type MailScreeningView {
  canManage bool
  feedbackState string
  updatedAt time
+ senderAuth MailSenderAuthView?
+}
+type MailSenderAuthView {
+ method string
+ verified bool
+ fromDomain string
+ spf string
+ spfAligned bool
+ dkim string
+ dkimDomain string
+ dkimAligned bool
+ dmarc string
 }
 type MailReviewInput {
  action string @max(30)

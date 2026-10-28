@@ -38,6 +38,8 @@ for (const width of [320,390,1440]) test(`incoming protection settings, quaranti
   const protection=page.getByRole('region',{name:'Mail protection',exact:true})
   await expect(protection).toContainText('Quarantined · review required')
   await expect(protection).toContainText('Unknown sender approval required')
+  await expect(protection).toContainText(/Sender authentication (pending|not checked)/)
+  await expect(protection).not.toContainText('not independently authenticated')
   await protection.getByRole('button',{name:'Release reviewed email',exact:true}).click()
   await expect(protection.getByRole('alert')).toContainText('Required scans have not completed')
   const bounds=await protection.boundingBox();expect(bounds).not.toBeNull();expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(width)
@@ -100,6 +102,8 @@ for (const width of [320,390,1440]) test(`incoming protection settings, quaranti
   await protection.getByRole('button',{name:'Rescan email',exact:true}).click()
   await expect(protection).toContainText('Screening complete',{timeout:15_000})
   await expect(protection).toContainText('AI: disabled')
+  // No SMTP envelope or local filter in this fixture: authentication is reported as unchecked, never as verified.
+  await expect(protection).toContainText('Sender authentication not checked')
   await protection.getByRole('button',{name:'Report spam',exact:true}).click()
   await expect(protection).toContainText('Quarantined · review required')
   await expect(protection).toContainText('1 spam complaint')

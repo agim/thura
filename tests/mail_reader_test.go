@@ -63,7 +63,7 @@ func TestMailReaderSanitizationAndScopedCIDImages(t *testing.T) {
 	sign := hmac.New(sha256.New, []byte(secret))
 	sign.Write([]byte(stamp + ".reader-fixture."))
 	sign.Write(raw)
-	item, err := mailbox.Receive(ctx, m.ID, stamp, "reader-fixture", hex.EncodeToString(sign.Sum(nil)), raw)
+	item, err := mailbox.Receive(ctx, m.ID, stamp, "reader-fixture", hex.EncodeToString(sign.Sum(nil)), "", raw)
 	if err != nil {
 		t.Fatal(err)
 	}

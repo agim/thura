@@ -78,7 +78,7 @@ func View(ctx context.Context, item, subject string) (*schema.MailScreeningView,
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, err
 	}
-	return &schema.MailScreeningView{State: s.State, Score: int(s.Score), Findings: findings, AiState: s.AiState, AvState: s.AvState, Authenticated: s.Authenticated, Sender: s.Sender, Reputation: rep, Complaints: count, Reported: reported, ApprovalRequired: s.ApprovalRequired, Released: s.Released, CanManage: can, FeedbackState: feedback, UpdatedAt: s.UpdatedAt}, nil
+	return &schema.MailScreeningView{State: s.State, Score: int(s.Score), Findings: findings, AiState: s.AiState, AvState: s.AvState, Authenticated: s.Authenticated, Sender: s.Sender, Reputation: rep, Complaints: count, Reported: reported, ApprovalRequired: s.ApprovalRequired, Released: s.Released, CanManage: can, FeedbackState: feedback, UpdatedAt: s.UpdatedAt, SenderAuth: senderAuthView(s)}, nil
 }
 
 // Review is called only after mailbox.ItemAccess; it fences role changes and
