@@ -158,7 +158,12 @@ adapter runs as the dedicated `thura-mail` account.
 Configure MX/A records, reverse DNS, SPF and an appropriate DKIM signer/DMARC
 policy for the chosen domains. Review abuse limits, filtering and public TLS.
 Postfix's queue and Thura's signed relay do not establish sender authenticity
-or internet deliverability by themselves. Outbound uses DNS/MX unless the
+or internet deliverability by themselves. The pipe passes the SMTP client IP,
+HELO name and envelope sender to Thura in the signed relay request so that
+Rspamd can evaluate inbound SPF alongside DKIM and DMARC; a manually adapted
+pipe command should keep `null_sender=` and the `--client-address`,
+`--client-helo` and `--sender` arguments (see
+[Mail protection](mail-protection.md#sender-authentication-and-forwarded-mail)). Outbound uses DNS/MX unless the
 operator selects `POSTFIX_RELAYHOST=[host]:port`. That optional upstream must be
 a trusted private relay; authenticated upstream relays require native Postfix
 SASL/TLS configuration. Blocked outbound port 25 needs an approved submission

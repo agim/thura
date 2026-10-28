@@ -196,11 +196,11 @@ func TestCentralAdministratorTeamsDomainsProvidersAndHostIsolation(t *testing.T)
 	mac.Write([]byte(stamp + "." + deliveryID + "."))
 	mac.Write(rawMail)
 	signature := hex.EncodeToString(mac.Sum(nil))
-	received, e := mailbox.Receive(ctx, boxes[0].ID, stamp, deliveryID, signature, rawMail)
+	received, e := mailbox.Receive(ctx, boxes[0].ID, stamp, deliveryID, signature, "", rawMail)
 	if e != nil || received.MailboxID != boxes[0].ID {
 		t.Fatalf("team relay failed: %v", e)
 	}
-	if _, e = mailbox.Receive(ctx, boxes[1].ID, stamp, deliveryID, signature, rawMail); e == nil {
+	if _, e = mailbox.Receive(ctx, boxes[1].ID, stamp, deliveryID, signature, "", rawMail); e == nil {
 		t.Fatal("another team's relay key was accepted")
 	}
 	// Disabling configuration cannot enter the global deployment sender.

@@ -48,7 +48,7 @@ func TestScopedFeedbackAndIdempotentAcknowledgment(t *testing.T) {
 func TestRejectIncompleteScansAndLearningFailures(t *testing.T) {
 	for _, response := range []string{`{}`, `{"score":0,"action":"no action","is_skipped":true}`, `{"score":0,"action":"no action","error":"unavailable"}`} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, response) }))
-		if _, err := Scan(context.Background(), Config{URL: server.URL}, testTeam, []byte("MIME")); err == nil {
+		if _, err := Scan(context.Background(), Config{URL: server.URL}, testTeam, []byte("MIME"), Envelope{}); err == nil {
 			t.Error("incomplete scan accepted")
 		}
 		server.Close()

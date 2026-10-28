@@ -19,6 +19,7 @@ Point the trusted SMTP edge or hosted-provider adapter at `POST /api/v1/inbound/
 - `X-Thura-Timestamp`: current Unix seconds, within five minutes.
 - `X-Thura-Delivery`: stable provider delivery ID, 1–200 characters.
 - `X-Thura-Signature`: hexadecimal HMAC-SHA256 of the bytes `timestamp + "." + deliveryID + "." + rawMessage`.
+- `X-Thura-Envelope` (optional): the SMTP transaction the relay observed, as unpadded base64url of the JSON object `{"clientAddress": "203.0.113.7", "clientHelo": "mx.example.net", "sender": "bounce@example.net"}` (`sender` empty for the null sender). It lets Rspamd evaluate SPF; see [Mail protection](mail-protection.md#sender-authentication-and-forwarded-mail). When present, the signature covers it instead: HMAC-SHA256 of `"v2." + timestamp + "." + envelope + "." + deliveryID + "." + rawMessage`, so it cannot be added, changed or removed in transit. An invalid envelope is refused with 400. Report only what the relay itself observed, never values read from the message.
 
 The signature binds all message bytes and the delivery ID. Repeated deliveries return the original item; each mailbox serializes ingestion. The relay must authenticate its upstream provider, preserve the delivery ID on retry, and refresh the signed timestamp. This contract is implemented and tested. The default SMTP listener and signed queue adapter are supplied as the separate Debian Postfix deployment; see [Postfix](postfix.md). Hosted-provider-native webhook adapters remain separate integrations.
 

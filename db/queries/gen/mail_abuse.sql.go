@@ -12,7 +12,7 @@ import (
 
 const addMailScreening = `-- name: AddMailScreening :one
 INSERT INTO mail_screening(item_id,workspace_id,sender,domain,identity,authenticated,state,score,findings,ai_state,av_state,approval_required,policy_revision,next_attempt,updated_at)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14) RETURNING id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14) RETURNING id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc
 `
 
 type AddMailScreeningParams struct {
@@ -70,6 +70,14 @@ func (q *Queries) AddMailScreening(ctx context.Context, arg AddMailScreeningPara
 		&i.PolicyRevision,
 		&i.NextAttempt,
 		&i.UpdatedAt,
+		&i.ClientAddress,
+		&i.ClientHelo,
+		&i.EnvelopeSender,
+		&i.Spf,
+		&i.Dkim,
+		&i.DkimDomain,
+		&i.DkimAligned,
+		&i.Dmarc,
 	)
 	return i, err
 }
@@ -161,7 +169,7 @@ func (q *Queries) GetMailProtection(ctx context.Context, workspaceID string) (Ma
 }
 
 const getMailScreening = `-- name: GetMailScreening :one
-SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at FROM mail_screening WHERE item_id=$1
+SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc FROM mail_screening WHERE item_id=$1
 `
 
 func (q *Queries) GetMailScreening(ctx context.Context, itemID string) (MailScreening, error) {
@@ -187,6 +195,14 @@ func (q *Queries) GetMailScreening(ctx context.Context, itemID string) (MailScre
 		&i.PolicyRevision,
 		&i.NextAttempt,
 		&i.UpdatedAt,
+		&i.ClientAddress,
+		&i.ClientHelo,
+		&i.EnvelopeSender,
+		&i.Spf,
+		&i.Dkim,
+		&i.DkimDomain,
+		&i.DkimAligned,
+		&i.Dmarc,
 	)
 	return i, err
 }
@@ -238,7 +254,7 @@ func (q *Queries) LockMailFilterFeedback(ctx context.Context, itemID string) (Ma
 }
 
 const lockMailScreening = `-- name: LockMailScreening :one
-SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at FROM mail_screening WHERE item_id=$1 FOR UPDATE
+SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc FROM mail_screening WHERE item_id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockMailScreening(ctx context.Context, itemID string) (MailScreening, error) {
@@ -264,6 +280,14 @@ func (q *Queries) LockMailScreening(ctx context.Context, itemID string) (MailScr
 		&i.PolicyRevision,
 		&i.NextAttempt,
 		&i.UpdatedAt,
+		&i.ClientAddress,
+		&i.ClientHelo,
+		&i.EnvelopeSender,
+		&i.Spf,
+		&i.Dkim,
+		&i.DkimDomain,
+		&i.DkimAligned,
+		&i.Dmarc,
 	)
 	return i, err
 }
@@ -631,6 +655,31 @@ func (q *Queries) SaveMailScreening(ctx context.Context, arg SaveMailScreeningPa
 	return err
 }
 
+const saveMailScreeningAuth = `-- name: SaveMailScreeningAuth :exec
+UPDATE mail_screening SET spf=$2,dkim=$3,dkim_domain=$4,dkim_aligned=$5,dmarc=$6 WHERE item_id=$1
+`
+
+type SaveMailScreeningAuthParams struct {
+	ItemID      string `json:"item_id"`
+	Spf         string `json:"spf"`
+	Dkim        string `json:"dkim"`
+	DkimDomain  string `json:"dkim_domain"`
+	DkimAligned bool   `json:"dkim_aligned"`
+	Dmarc       string `json:"dmarc"`
+}
+
+func (q *Queries) SaveMailScreeningAuth(ctx context.Context, arg SaveMailScreeningAuthParams) error {
+	_, err := q.db.Exec(ctx, saveMailScreeningAuth,
+		arg.ItemID,
+		arg.Spf,
+		arg.Dkim,
+		arg.DkimDomain,
+		arg.DkimAligned,
+		arg.Dmarc,
+	)
+	return err
+}
+
 const saveMailSenderPolicy = `-- name: SaveMailSenderPolicy :exec
 INSERT INTO mail_sender_policy(workspace_id,identity,decision,updated_by,updated_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(workspace_id,identity) DO UPDATE SET decision=EXCLUDED.decision,updated_by=EXCLUDED.updated_by,updated_at=EXCLUDED.updated_at
 `
@@ -650,6 +699,27 @@ func (q *Queries) SaveMailSenderPolicy(ctx context.Context, arg SaveMailSenderPo
 		arg.Decision,
 		arg.UpdatedBy,
 		arg.UpdatedAt,
+	)
+	return err
+}
+
+const setMailScreeningEnvelope = `-- name: SetMailScreeningEnvelope :exec
+UPDATE mail_screening SET client_address=$2,client_helo=$3,envelope_sender=$4 WHERE item_id=$1
+`
+
+type SetMailScreeningEnvelopeParams struct {
+	ItemID         string `json:"item_id"`
+	ClientAddress  string `json:"client_address"`
+	ClientHelo     string `json:"client_helo"`
+	EnvelopeSender string `json:"envelope_sender"`
+}
+
+func (q *Queries) SetMailScreeningEnvelope(ctx context.Context, arg SetMailScreeningEnvelopeParams) error {
+	_, err := q.db.Exec(ctx, setMailScreeningEnvelope,
+		arg.ItemID,
+		arg.ClientAddress,
+		arg.ClientHelo,
+		arg.EnvelopeSender,
 	)
 	return err
 }

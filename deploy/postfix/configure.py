@@ -64,6 +64,15 @@ def recipient_history(config, path):
     return sorted(addresses)
 
 
+def pipe_service():
+    """The local delivery transport. The SMTP envelope (client IP, HELO name and
+    envelope sender) lets Thura's Rspamd scan evaluate SPF; null_sender= keeps a
+    bounce's empty envelope sender empty instead of MAILER-DAEMON."""
+    return ('thura unix - n n - - pipe flags=R null_sender= user=thura-mail '
+            f'argv=/usr/bin/python3 {pathlib.Path(__file__).with_name("relay.py")} --config /etc/thura-postfix/private/relay.json --recipient ${{recipient}} '
+            '--client-address=${client_address} --client-helo=${client_helo} --sender=${sender}\n')
+
+
 def configure(config, hostname, listen, managed=False):
     domains = settings(config, hostname, listen, allow_empty=managed)
     transport_addresses = recipient_history(config, pathlib.Path('/var/spool/postfix/.thura-recipient-history.json')) if managed else config['mailboxes']
@@ -141,9 +150,7 @@ def configure(config, hostname, listen, managed=False):
     smtp = '127.0.0.1:2525 inet n - n - - smtpd\n  -o message_size_limit=16777216\n'
     if listen != '127.0.0.1:2525':
         smtp += f'{listen} inet n - n - - smtpd\n  -o message_size_limit=12582912\n  -o smtpd_relay_restrictions=reject_unauth_destination\n'
-    (maps / 'master.cf').write_text(''.join(lines) + '\n' + smtp +
-        'thura unix - n n - - pipe flags=R user=thura-mail '
-        f'argv=/usr/bin/python3 {pathlib.Path(__file__).with_name("relay.py")} --config /etc/thura-postfix/private/relay.json --recipient ${{recipient}}\n')
+    (maps / 'master.cf').write_text(''.join(lines) + '\n' + smtp + pipe_service())
     subprocess.run(['postfix', 'check'], check=True)
 
 

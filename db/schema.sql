@@ -882,7 +882,15 @@ CREATE TABLE mail_screening (
   attempt_id text NOT NULL DEFAULT '',
   policy_revision integer NOT NULL,
   next_attempt timestamptz NOT NULL,
-  updated_at timestamptz NOT NULL
+  updated_at timestamptz NOT NULL,
+  client_address text NOT NULL DEFAULT '',
+  client_helo text NOT NULL DEFAULT '',
+  envelope_sender text NOT NULL DEFAULT '',
+  spf text NOT NULL DEFAULT '',
+  dkim text NOT NULL DEFAULT '',
+  dkim_domain text NOT NULL DEFAULT '',
+  dkim_aligned boolean NOT NULL DEFAULT false,
+  dmarc text NOT NULL DEFAULT ''
 );
 CREATE INDEX mail_screening_workspace_id_idx ON mail_screening (workspace_id);
 CREATE INDEX mail_screening_state_next_attempt_idx ON mail_screening (state, next_attempt);

@@ -347,7 +347,7 @@ func TestLegacyProviderSingleSubmissionAndQueueValidation(t *testing.T) {
 	mac := hmac.New(sha256.New, []byte("fixture-inbound-secret-with-at-least-32-characters"))
 	mac.Write([]byte(stamp + ".fixture-crlf-delivery."))
 	mac.Write(raw)
-	inbound, err := mailbox.Receive(ctx, m.ID, stamp, "fixture-crlf-delivery", hex.EncodeToString(mac.Sum(nil)), raw)
+	inbound, err := mailbox.Receive(ctx, m.ID, stamp, "fixture-crlf-delivery", hex.EncodeToString(mac.Sum(nil)), "", raw)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -60,7 +60,7 @@ type Result struct {
 	Symbols map[string]json.RawMessage `json:"symbols"`
 }
 
-func request(ctx context.Context, c Config, origin, path, workspace string, raw []byte, learn bool) ([]byte, error) {
+func request(ctx context.Context, c Config, origin, path, workspace string, raw []byte, learn bool, metadata map[string]string) ([]byte, error) {
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}
@@ -80,6 +80,11 @@ func request(ctx context.Context, c Config, origin, path, workspace string, raw 
 	// HTTP metadata, never the spoofable MIME headers or an SMTP-auth User header.
 	req.Header.Set("X-Thura-Workspace", workspace)
 	req.Header.Set("Flags", "no_log")
+	for name, value := range metadata {
+		if value != "" && !strings.ContainsAny(value, "\r\n\x00") {
+			req.Header.Set(name, value)
+		}
+	}
 	if learn {
 		if c.Password == "" {
 			return nil, errors.New("rspamd learning password is not configured")
@@ -118,9 +123,12 @@ func request(ctx context.Context, c Config, origin, path, workspace string, raw 
 	return data, nil
 }
 
-func Scan(ctx context.Context, c Config, workspace string, raw []byte) (Result, error) {
+// Scan checks one message. The envelope is the receiving MTA's SMTP
+// transaction, passed as Rspamd's IP/Helo/From request metadata so that SPF is
+// evaluated; an empty envelope leaves SPF unchecked.
+func Scan(ctx context.Context, c Config, workspace string, raw []byte, envelope Envelope) (Result, error) {
 	var out Result
-	data, err := request(ctx, c, c.URL, "/checkv2", workspace, raw, false)
+	data, err := request(ctx, c, c.URL, "/checkv2", workspace, raw, false, map[string]string{"IP": envelope.IP, "Helo": envelope.Helo, "From": envelope.MailFrom})
 	if err != nil {
 		return out, err
 	}
@@ -140,7 +148,7 @@ func Learn(ctx context.Context, c Config, workspace string, raw []byte, classifi
 	} else if classification != "ham" {
 		return errors.New("invalid feedback class")
 	}
-	data, err := request(ctx, c, c.Controller, path, workspace, raw, true)
+	data, err := request(ctx, c, c.Controller, path, workspace, raw, true, nil)
 	if err != nil {
 		return err
 	}

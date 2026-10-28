@@ -97,6 +97,10 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	deferred := false
 	locallyHeld := false
 	localFailed := false
+	// Sender authentication comes only from Rspamd's own SPF/DKIM/DMARC
+	// evaluation (or SMIP), never from headers carried by the message.
+	var auth rspamd.Authentication
+	authChecked := false
 	localConfig, err := rspamd.Configuration()
 	if err != nil {
 		return err
@@ -111,10 +115,13 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 			if readErr != nil || len(raw) > 20<<20 {
 				localFailed = true
 			} else {
-				result, scanErr := rspamd.Scan(ctx, localConfig, s.WorkspaceID, raw)
+				result, scanErr := rspamd.Scan(ctx, localConfig, s.WorkspaceID, raw, envelopeOf(s))
 				if scanErr != nil {
 					localFailed = true
 				} else {
+					_, fromDomain, _ := address(item.FromAddress)
+					auth = result.Authentication(fromDomain, envelopeOf(s))
+					authChecked = true
 					locallyHeld = result.Score >= 6 || result.Action == "reject"
 					for _, symbol := range []string{"PHISHING", "PHISHED_URL", "PHISHED_GENERIC_SERVICE", "PHISHED_OPENPHISH", "PHISHED_PHISHTANK"} {
 						if _, ok := result.Symbols[symbol]; ok {
@@ -173,12 +180,15 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	}
 	if p.AiEnabled && !locallyHeld && !localFailed && av != "infected" && livePolicy.Revision == p.Revision {
 		ai = "error"
+		if !authChecked {
+			_, auth.FromDomain, _ = address(item.FromAddress)
+		}
 		payload, xerr := json.Marshal(struct {
 			From, Subject, Text, HTML string
-			Authenticated             bool
+			SenderAuthentication      senderEvidence
 			Files                     []string
 			Findings                  []schema.MailFinding
-		}{item.FromAddress, item.Subject, item.TextBody, item.HTMLBody, s.Authenticated, fileNames(attachments), e.Findings})
+		}{item.FromAddress, item.Subject, item.TextBody, item.HTMLBody, evidenceFor(s.Authenticated, auth, authChecked), fileNames(attachments), e.Findings})
 		if xerr != nil {
 			return xerr
 		}
@@ -240,6 +250,11 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	}
 	if latest.AttemptID != s.AttemptID || latest.Released {
 		return nil
+	}
+	if authChecked && !s.Authenticated {
+		if err = queries.SaveMailScreeningAuth(ctx, q.SaveMailScreeningAuthParams{ItemID: s.ItemID, Spf: auth.SPF, Dkim: auth.DKIM, DkimDomain: auth.DKIMDomain, DkimAligned: auth.DKIMAligned, Dmarc: auth.DMARC}); err != nil {
+			return err
+		}
 	}
 	current, err := Policy(ctx, queries, s.WorkspaceID)
 	if err != nil {
