@@ -93,6 +93,9 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 		return err
 	}
 	ai, av := "disabled", "not_configured"
+	// The model's view of the sender ("person", "automated" or "unsure"),
+	// read from the same screening call; never a second model call.
+	aiKind := ""
 	failed := readFailure
 	deferred := false
 	locallyHeld := false
@@ -213,9 +216,13 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 			e.add("ai_unavailable", "warning", xerr.Error(), 0)
 		} else {
 			ai = "complete"
+			if classification.SenderKind != nil {
+				aiKind = *classification.SenderKind
+			}
 			if classification.Category == "unknown" {
 				failed = true
 				ai = "uncertain"
+				aiKind = ""
 			}
 			severity := "info"
 			if classification.Risk >= int(p.SpamThreshold) {
@@ -318,6 +325,17 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	latest.Findings = string(encoded)
 	if err = save(ctx, queries, latest); err != nil {
 		return err
+	}
+	// Real person: header decisions stand; mail from before the feature ("")
+	// is never classified; otherwise decide once the screening has settled.
+	if latest.PersonState != "" && latest.PersonSource != "header" && (latest.State == "clean" || latest.State == "quarantined") {
+		decision, err := decidePerson(ctx, queries, s.WorkspaceID, s.Sender, aiKind)
+		if err != nil {
+			return err
+		}
+		if err = settlePerson(ctx, queries, latest, decision); err != nil {
+			return err
+		}
 	}
 	// A concurrent user move/report cannot be overwritten by background release.
 	if latest.State == "clean" && currentItem.Folder == q.MailFolderSpam {

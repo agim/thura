@@ -109,3 +109,17 @@ func ChangeResourceLabel(ctx context.Context, r *router.Request[schema.ResourceL
 	}
 	return router.None{}, labels.Change(ctx, w, source, id, r.Body.LabelID, r.Body.Applied)
 }
+
+// Label pins belong to the signed-in member in this workspace.
+func ListLabelPins(ctx context.Context, r *router.Request[router.None]) (schema.LabelPinList, error) {
+	return labels.Pins(ctx, r.Param("workspaceId"))
+}
+func PinLabel(ctx context.Context, r *router.Request[schema.LabelPinInput]) (schema.LabelPinList, error) {
+	return labels.Pin(ctx, r.Param("workspaceId"), r.Body)
+}
+func UnpinLabel(ctx context.Context, r *router.Request[router.None]) (schema.LabelPinList, error) {
+	return labels.Unpin(ctx, r.Param("workspaceId"), r.Param("app"), r.Param("labelId"))
+}
+func ReorderLabelPins(ctx context.Context, r *router.Request[schema.LabelPinOrder]) (schema.LabelPinList, error) {
+	return labels.Reorder(ctx, r.Param("workspaceId"), r.Body)
+}

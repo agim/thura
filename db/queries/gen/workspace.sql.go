@@ -143,7 +143,8 @@ SELECT id, workspace_id, name, email, company, phone, favorite, created_at FROM 
 WHERE workspace_id=$1
 AND ($2::text='' OR strpos(lower(name || ' ' || email || ' ' || company || ' ' || phone), lower($2)) > 0)
 AND ($3::text IS NULL OR (name,id) > ($3::text,$4::uuid))
-ORDER BY name,id LIMIT $5
+AND ($5::uuid IS NULL OR EXISTS (SELECT 1 FROM resource_label r WHERE r.source='contact' AND r.source_id=contact.id AND r.label_id=$5::uuid))
+ORDER BY name,id LIMIT $6
 `
 
 type ListContactsPageParams struct {
@@ -151,6 +152,7 @@ type ListContactsPageParams struct {
 	Search      string  `json:"search"`
 	AfterName   *string `json:"after_name"`
 	AfterID     string  `json:"after_id"`
+	LabelID     *string `json:"label_id"`
 	PageLimit   int32   `json:"page_limit"`
 }
 
@@ -160,6 +162,7 @@ func (q *Queries) ListContactsPage(ctx context.Context, arg ListContactsPagePara
 		arg.Search,
 		arg.AfterName,
 		arg.AfterID,
+		arg.LabelID,
 		arg.PageLimit,
 	)
 	if err != nil {

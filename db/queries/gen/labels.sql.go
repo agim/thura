@@ -24,8 +24,26 @@ func (q *Queries) AddResourceLabel(ctx context.Context, arg AddResourceLabelPara
 	return err
 }
 
+const adoptSystemLabel = `-- name: AdoptSystemLabel :execrows
+UPDATE mail_label SET system_key=$1 WHERE id=(SELECT l.id FROM mail_label l WHERE l.workspace_id=$2 AND lower(l.name)=lower($3) AND l.system_key IS NULL ORDER BY l.id LIMIT 1)
+`
+
+type AdoptSystemLabelParams struct {
+	SystemKey   *string `json:"system_key"`
+	WorkspaceID *string `json:"workspace_id"`
+	Name        string  `json:"name"`
+}
+
+func (q *Queries) AdoptSystemLabel(ctx context.Context, arg AdoptSystemLabelParams) (int64, error) {
+	result, err := q.db.Exec(ctx, adoptSystemLabel, arg.SystemKey, arg.WorkspaceID, arg.Name)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const createWorkspaceLabel = `-- name: CreateWorkspaceLabel :one
-INSERT INTO mail_label(workspace_id,name) VALUES($1,$2) RETURNING id, workspace_id, mailbox_id, name
+INSERT INTO mail_label(workspace_id,name) VALUES($1,$2) RETURNING id, workspace_id, mailbox_id, name, system_key
 `
 
 type CreateWorkspaceLabelParams struct {
@@ -41,8 +59,24 @@ func (q *Queries) CreateWorkspaceLabel(ctx context.Context, arg CreateWorkspaceL
 		&i.WorkspaceID,
 		&i.MailboxID,
 		&i.Name,
+		&i.SystemKey,
 	)
 	return i, err
+}
+
+const deleteLabelPins = `-- name: DeleteLabelPins :exec
+DELETE FROM label_pin WHERE workspace_id=$1 AND subject=$2 AND label_id=$3
+`
+
+type DeleteLabelPinsParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+	LabelID     string `json:"label_id"`
+}
+
+func (q *Queries) DeleteLabelPins(ctx context.Context, arg DeleteLabelPinsParams) error {
+	_, err := q.db.Exec(ctx, deleteLabelPins, arg.WorkspaceID, arg.Subject, arg.LabelID)
+	return err
 }
 
 const deleteResourceLabelAssignments = `-- name: DeleteResourceLabelAssignments :exec
@@ -82,8 +116,30 @@ func (q *Queries) DeleteWorkspaceLabel(ctx context.Context, arg DeleteWorkspaceL
 	return err
 }
 
+const getSystemLabel = `-- name: GetSystemLabel :one
+SELECT id, workspace_id, mailbox_id, name, system_key FROM mail_label WHERE workspace_id=$1 AND system_key=$2
+`
+
+type GetSystemLabelParams struct {
+	WorkspaceID *string `json:"workspace_id"`
+	SystemKey   *string `json:"system_key"`
+}
+
+func (q *Queries) GetSystemLabel(ctx context.Context, arg GetSystemLabelParams) (MailLabel, error) {
+	row := q.db.QueryRow(ctx, getSystemLabel, arg.WorkspaceID, arg.SystemKey)
+	var i MailLabel
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.MailboxID,
+		&i.Name,
+		&i.SystemKey,
+	)
+	return i, err
+}
+
 const getWorkspaceLabel = `-- name: GetWorkspaceLabel :one
-SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id WHERE l.id=$1 AND COALESCE(l.workspace_id,b.workspace_id)=$2
+SELECT l.id, l.workspace_id, l.mailbox_id, l.name, l.system_key FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id WHERE l.id=$1 AND COALESCE(l.workspace_id,b.workspace_id)=$2
 `
 
 type GetWorkspaceLabelParams struct {
@@ -99,8 +155,24 @@ func (q *Queries) GetWorkspaceLabel(ctx context.Context, arg GetWorkspaceLabelPa
 		&i.WorkspaceID,
 		&i.MailboxID,
 		&i.Name,
+		&i.SystemKey,
 	)
 	return i, err
+}
+
+const insertSystemLabel = `-- name: InsertSystemLabel :exec
+INSERT INTO mail_label(workspace_id,name,system_key) VALUES($1,$2,$3) ON CONFLICT(workspace_id,system_key) DO NOTHING
+`
+
+type InsertSystemLabelParams struct {
+	WorkspaceID *string `json:"workspace_id"`
+	Name        string  `json:"name"`
+	SystemKey   *string `json:"system_key"`
+}
+
+func (q *Queries) InsertSystemLabel(ctx context.Context, arg InsertSystemLabelParams) error {
+	_, err := q.db.Exec(ctx, insertSystemLabel, arg.WorkspaceID, arg.Name, arg.SystemKey)
+	return err
 }
 
 const labelContactExists = `-- name: LabelContactExists :one
@@ -175,8 +247,76 @@ func (q *Queries) ListDriveFileLabels(ctx context.Context, workspaceID string) (
 	return items, nil
 }
 
+const listLabelPins = `-- name: ListLabelPins :many
+SELECT id, workspace_id, subject, label_id, app, pinned, position FROM label_pin WHERE workspace_id=$1 AND subject=$2 ORDER BY position,id
+`
+
+type ListLabelPinsParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+}
+
+func (q *Queries) ListLabelPins(ctx context.Context, arg ListLabelPinsParams) ([]LabelPin, error) {
+	rows, err := q.db.Query(ctx, listLabelPins, arg.WorkspaceID, arg.Subject)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LabelPin
+	for rows.Next() {
+		var i LabelPin
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Subject,
+			&i.LabelID,
+			&i.App,
+			&i.Pinned,
+			&i.Position,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLabeledResources = `-- name: ListLabeledResources :many
+SELECT r.source_id FROM resource_label r JOIN mail_label l ON l.id=r.label_id LEFT JOIN mailbox b ON b.id=l.mailbox_id
+WHERE r.label_id=$1 AND r.source=$2 AND COALESCE(l.workspace_id,b.workspace_id)=$3
+`
+
+type ListLabeledResourcesParams struct {
+	LabelID     string  `json:"label_id"`
+	Source      string  `json:"source"`
+	WorkspaceID *string `json:"workspace_id"`
+}
+
+func (q *Queries) ListLabeledResources(ctx context.Context, arg ListLabeledResourcesParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, listLabeledResources, arg.LabelID, arg.Source, arg.WorkspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var source_id string
+		if err := rows.Scan(&source_id); err != nil {
+			return nil, err
+		}
+		items = append(items, source_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listResourceLabels = `-- name: ListResourceLabels :many
-SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l JOIN resource_label r ON r.label_id=l.id LEFT JOIN mailbox b ON b.id=l.mailbox_id
+SELECT l.id, l.workspace_id, l.mailbox_id, l.name, l.system_key FROM mail_label l JOIN resource_label r ON r.label_id=l.id LEFT JOIN mailbox b ON b.id=l.mailbox_id
 WHERE COALESCE(l.workspace_id,b.workspace_id)=$1 AND r.source=$2 AND r.source_id=$3 ORDER BY l.name,l.id
 `
 
@@ -200,6 +340,7 @@ func (q *Queries) ListResourceLabels(ctx context.Context, arg ListResourceLabels
 			&i.WorkspaceID,
 			&i.MailboxID,
 			&i.Name,
+			&i.SystemKey,
 		); err != nil {
 			return nil, err
 		}
@@ -212,7 +353,7 @@ func (q *Queries) ListResourceLabels(ctx context.Context, arg ListResourceLabels
 }
 
 const listWorkspaceLabels = `-- name: ListWorkspaceLabels :many
-SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id WHERE COALESCE(l.workspace_id,b.workspace_id)=$1 ORDER BY lower(l.name),l.id
+SELECT l.id, l.workspace_id, l.mailbox_id, l.name, l.system_key FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id WHERE COALESCE(l.workspace_id,b.workspace_id)=$1 ORDER BY lower(l.name),l.id
 `
 
 func (q *Queries) ListWorkspaceLabels(ctx context.Context, workspaceID *string) ([]MailLabel, error) {
@@ -229,6 +370,7 @@ func (q *Queries) ListWorkspaceLabels(ctx context.Context, workspaceID *string) 
 			&i.WorkspaceID,
 			&i.MailboxID,
 			&i.Name,
+			&i.SystemKey,
 		); err != nil {
 			return nil, err
 		}
@@ -252,5 +394,31 @@ type RemoveResourceLabelParams struct {
 
 func (q *Queries) RemoveResourceLabel(ctx context.Context, arg RemoveResourceLabelParams) error {
 	_, err := q.db.Exec(ctx, removeResourceLabel, arg.LabelID, arg.Source, arg.SourceID)
+	return err
+}
+
+const saveLabelPin = `-- name: SaveLabelPin :exec
+INSERT INTO label_pin(workspace_id,subject,label_id,app,pinned,position) VALUES($1,$2,$3,$4,$5,$6)
+ON CONFLICT(workspace_id,subject,label_id,app) DO UPDATE SET pinned=EXCLUDED.pinned,position=EXCLUDED.position
+`
+
+type SaveLabelPinParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+	LabelID     string `json:"label_id"`
+	App         string `json:"app"`
+	Pinned      bool   `json:"pinned"`
+	Position    int32  `json:"position"`
+}
+
+func (q *Queries) SaveLabelPin(ctx context.Context, arg SaveLabelPinParams) error {
+	_, err := q.db.Exec(ctx, saveLabelPin,
+		arg.WorkspaceID,
+		arg.Subject,
+		arg.LabelID,
+		arg.App,
+		arg.Pinned,
+		arg.Position,
+	)
 	return err
 }

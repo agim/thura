@@ -4,6 +4,7 @@ import { RecipientInput } from '../components/RecipientInput'
 import { ActionRow } from '../components/ActionRow'
 import { ResourceLabels } from '../components/ResourceLabels'
 import { AppSidebar } from '../components/AppSidebar'
+import { PinnedLabels, useLabelGuard } from '../components/PinnedLabels'
 import { Navigate } from '@tanstack/react-router'
 import { AppPageHeader, NewAction } from '../components/AppPageHeader'
 import { confirmAction } from '../components/ConfirmationHost'
@@ -26,7 +27,8 @@ export function Contacts() { return <Navigate to="/app/contacts" replace /> }
 /**
  * Contacts keep their view in the URL (src/lib/app-view.ts): ?q= is the search
  * (replaced; the workspace header writes it), ?contact= the contact open in
- * the editor and ?new=1 the new-contact editor (each a new history entry). A
+ * the editor and ?new=1 the new-contact editor (each a new history entry);
+ * ?label= is a pinned label narrowing the directory. A
  * save closes the editor in place with a notice; a stale contact falls back to
  * the list with a notice.
  */
@@ -37,7 +39,10 @@ export function ContactBook({ workspaceId, onEmail, onChat, onLoop, handoffPendi
   const [localQuery, setQuery] = useState('')
   const query = search ?? localQuery
   const key = ['contacts', workspaceId]
-  const contacts = useInfiniteQuery({ queryKey: [...key, query], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listContacts({ workspaceId }, { query: { search: query, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined })
+  // ?label= (a pinned label) narrows the directory on the server.
+  const labelId = view.label ?? ''
+  useLabelGuard(workspaceId, labelId, () => { setNotice({ text: 'That label is no longer available. Showing all contacts.' }); set({ label: undefined }, { replace: true }) })
+  const contacts = useInfiniteQuery({ queryKey: [...key, query, labelId], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listContacts({ workspaceId }, { query: { search: query, cursor: pageParam, labelId: labelId || undefined }, signal }), getNextPageParam: page => page.nextCursor || undefined })
   const refresh = () => client.invalidateQueries({ queryKey: key })
   const visible = contacts.isError ? [] : [...new Map(contacts.data?.pages.flatMap(page => page.items).map(item => [item.id, item]) ?? []).values()]
   // The contact in ?contact= comes from the loaded list, or on its own when the list (searched or paged) does not hold it.
@@ -52,13 +57,13 @@ export function ContactBook({ workspaceId, onEmail, onChat, onLoop, handoffPendi
   const close = (change?: { replace?: boolean }) => set({ contact: undefined, new: undefined }, change)
   const remove = useMutation({ mutationFn: (contact: Contact) => api.deleteContact({ workspaceId, id: contact.id }), onSuccess: async (_, contact) => { if (editId === contact.id) close({ replace: true }); setNotice({ text: `Deleted ${contact.name}.` }); await refresh() } })
   return <><AppPageHeader title="Contacts" action={<NewAction label="New contact" onClick={() => set({ new: '1', contact: undefined })} />} /><div className="contacts-browser">
-    <AppSidebar title="Directory" label="Contacts tools" className="contacts-toolbar">{search === undefined && <label><Search size={18} aria-hidden="true" /><input aria-label="Search contacts" placeholder="Search contacts" value={query} onChange={e => setQuery(e.target.value)} /></label>}<span className="app-sidebar-current"><Users size={18} aria-hidden="true" />All contacts</span></AppSidebar><div className="contacts-content">
+    <AppSidebar title="Directory" label="Contacts tools" className="contacts-toolbar">{search === undefined && <label><Search size={18} aria-hidden="true" /><input aria-label="Search contacts" placeholder="Search contacts" value={query} onChange={e => setQuery(e.target.value)} /></label>}{labelId ? <button type="button" className="folder-button" onClick={() => set({ label: undefined })}><Users size={18} aria-hidden="true" />All contacts</button> : <span className="app-sidebar-current"><Users size={18} aria-hidden="true" />All contacts</span>}<PinnedLabels workspaceId={workspaceId} app="contacts" value={labelId} onChange={value => set({ label: value, contact: undefined, new: undefined })} /></AppSidebar><div className="contacts-content">
     {editId && !edit && !lost && <p role="status">Loading contact…</p>}
     {(adding || edit) && <ContactEditor key={edit?.id ?? 'new'} workspaceId={workspaceId} contact={edit} busy={remove.isPending} onClose={() => close()} onSaved={async (saved, created) => { client.setQueryData(['contact', workspaceId, saved.id], saved); close({ replace: true }); setNotice({ text: created ? `Added ${saved.name}.` : `Saved ${saved.name}.` }); await refresh() }} />}
     {contacts.isPending && <p role="status">Loading contacts…</p>}
     {contacts.isError && <p role="alert">{contacts.error.message}</p>}
     {remove.isError && <p role="alert">{remove.error.message}</p>}
-    {contacts.data && visible.length === 0 && <p>{query ? 'No contacts match your search.' : 'No contacts yet.'}</p>}
+    {contacts.data && visible.length === 0 && <p>{labelId ? 'No contacts with this label.' : query ? 'No contacts match your search.' : 'No contacts yet.'}</p>}
     <div className="contact-columns" aria-hidden="true"><span>Name</span><span>Organization</span><span>Actions</span></div><ul className="contact-grid contact-directory">{visible.map(c => <li key={c.id} className="rounded border border-line p-4">
       <span className="contact-avatar" aria-hidden="true">{c.name.split(/\s+/).slice(0, 2).map(n => n[0]).join('')}</span><div className="contact-identity"><h2 className="font-semibold">{c.name}{c.favorite ? ' ★' : ''}</h2><p>{c.email}</p></div><div className="contact-organization"><span>{c.company || 'Personal contact'}</span>{c.phone && <small>{c.phone}</small>}</div>
       <div className="contact-actions"><ContactActions name={c.name}><AssistantAction workspaceId={workspaceId} source="contacts" contextLabel={c.name} initialAction="draft" content={`Contact: ${c.name}\nEmail: ${c.email}\nOrganization: ${c.company || ''}`} /><ResourceLabels workspaceId={workspaceId} source="contact" id={c.id} title={`Labels for ${c.name}`} />{onLoop && <ActionButton type="button" onClick={() => onLoop(c)} aria-label={`Open Loop with ${c.name}`} title="Loop"><Orbit size={18} aria-hidden="true" /><span>Loop</span></ActionButton>}{onEmail && <ActionButton type="button" disabled={handoffPending} onClick={() => onEmail(c)} aria-label={`Email ${c.name}`} title="Email"><Mail size={18} aria-hidden="true" /><span>Email</span></ActionButton>}{onChat && <ActionButton type="button" disabled={handoffPending} onClick={() => onChat(c)} aria-label={`Chat with ${c.name}`} title="Chat"><MessageCircle size={18} aria-hidden="true" /><span>Chat</span></ActionButton>}<ActionButton type="button" disabled={remove.isPending} onClick={() => set({ contact: c.id, new: undefined })} aria-label={`Edit ${c.name}`} title="Edit"><Pencil size={18} aria-hidden="true" /><span>Edit</span></ActionButton><ActionButton type="button" disabled={remove.isPending} onClick={async () => { if (await confirmAction(`Delete ${c.name}?`)) remove.mutate(c) }} aria-label={`Delete ${c.name}`} title="Delete"><Trash2 size={18} aria-hidden="true" /><span>Delete</span></ActionButton></ContactActions></div>

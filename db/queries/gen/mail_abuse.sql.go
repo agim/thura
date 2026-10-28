@@ -12,7 +12,7 @@ import (
 
 const addMailScreening = `-- name: AddMailScreening :one
 INSERT INTO mail_screening(item_id,workspace_id,sender,domain,identity,authenticated,state,score,findings,ai_state,av_state,approval_required,policy_revision,next_attempt,updated_at)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14) RETURNING id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14) RETURNING id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc, person_state, person_source, person_detail
 `
 
 type AddMailScreeningParams struct {
@@ -78,6 +78,9 @@ func (q *Queries) AddMailScreening(ctx context.Context, arg AddMailScreeningPara
 		&i.DkimDomain,
 		&i.DkimAligned,
 		&i.Dmarc,
+		&i.PersonState,
+		&i.PersonSource,
+		&i.PersonDetail,
 	)
 	return i, err
 }
@@ -169,7 +172,7 @@ func (q *Queries) GetMailProtection(ctx context.Context, workspaceID string) (Ma
 }
 
 const getMailScreening = `-- name: GetMailScreening :one
-SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc FROM mail_screening WHERE item_id=$1
+SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc, person_state, person_source, person_detail FROM mail_screening WHERE item_id=$1
 `
 
 func (q *Queries) GetMailScreening(ctx context.Context, itemID string) (MailScreening, error) {
@@ -203,6 +206,9 @@ func (q *Queries) GetMailScreening(ctx context.Context, itemID string) (MailScre
 		&i.DkimDomain,
 		&i.DkimAligned,
 		&i.Dmarc,
+		&i.PersonState,
+		&i.PersonSource,
+		&i.PersonDetail,
 	)
 	return i, err
 }
@@ -254,7 +260,7 @@ func (q *Queries) LockMailFilterFeedback(ctx context.Context, itemID string) (Ma
 }
 
 const lockMailScreening = `-- name: LockMailScreening :one
-SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc FROM mail_screening WHERE item_id=$1 FOR UPDATE
+SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc, person_state, person_source, person_detail FROM mail_screening WHERE item_id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockMailScreening(ctx context.Context, itemID string) (MailScreening, error) {
@@ -288,6 +294,9 @@ func (q *Queries) LockMailScreening(ctx context.Context, itemID string) (MailScr
 		&i.DkimDomain,
 		&i.DkimAligned,
 		&i.Dmarc,
+		&i.PersonState,
+		&i.PersonSource,
+		&i.PersonDetail,
 	)
 	return i, err
 }
@@ -322,6 +331,22 @@ func (q *Queries) MailComplaintCount(ctx context.Context, arg MailComplaintCount
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const mailContactAddress = `-- name: MailContactAddress :one
+SELECT EXISTS(SELECT 1 FROM contact WHERE workspace_id=$1 AND lower(email)=lower($2::text))::bool
+`
+
+type MailContactAddressParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Address     string `json:"address"`
+}
+
+func (q *Queries) MailContactAddress(ctx context.Context, arg MailContactAddressParams) (bool, error) {
+	row := q.db.QueryRow(ctx, mailContactAddress, arg.WorkspaceID, arg.Address)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const mailDomainComplaintCount = `-- name: MailDomainComplaintCount :one
@@ -475,6 +500,43 @@ func (q *Queries) MailScreeningDue(ctx context.Context, nextAttempt time.Time) (
 	return items, nil
 }
 
+const mailSentToCandidates = `-- name: MailSentToCandidates :many
+SELECT i.to_address,i.cc,i.bcc FROM mail_item i JOIN mailbox b ON b.id=i.mailbox_id
+WHERE b.workspace_id=$1 AND i.status NOT IN ('draft','received')
+AND position(lower($2::text) IN lower(i.to_address||','||i.cc||','||i.bcc))>0 LIMIT 20
+`
+
+type MailSentToCandidatesParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Address     string `json:"address"`
+}
+
+type MailSentToCandidatesRow struct {
+	ToAddress string `json:"to_address"`
+	Cc        string `json:"cc"`
+	Bcc       string `json:"bcc"`
+}
+
+func (q *Queries) MailSentToCandidates(ctx context.Context, arg MailSentToCandidatesParams) ([]MailSentToCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, mailSentToCandidates, arg.WorkspaceID, arg.Address)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MailSentToCandidatesRow
+	for rows.Next() {
+		var i MailSentToCandidatesRow
+		if err := rows.Scan(&i.ToAddress, &i.Cc, &i.Bcc); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const moveScreenedMail = `-- name: MoveScreenedMail :exec
 UPDATE mail_item SET folder=$2,updated_at=now() WHERE id=$1
 `
@@ -575,6 +637,27 @@ func (q *Queries) SaveMailFilterFeedback(ctx context.Context, arg SaveMailFilter
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const saveMailPerson = `-- name: SaveMailPerson :exec
+UPDATE mail_screening SET person_state=$2,person_source=$3,person_detail=$4 WHERE item_id=$1
+`
+
+type SaveMailPersonParams struct {
+	ItemID       string `json:"item_id"`
+	PersonState  string `json:"person_state"`
+	PersonSource string `json:"person_source"`
+	PersonDetail string `json:"person_detail"`
+}
+
+func (q *Queries) SaveMailPerson(ctx context.Context, arg SaveMailPersonParams) error {
+	_, err := q.db.Exec(ctx, saveMailPerson,
+		arg.ItemID,
+		arg.PersonState,
+		arg.PersonSource,
+		arg.PersonDetail,
+	)
+	return err
 }
 
 const saveMailProtection = `-- name: SaveMailProtection :one

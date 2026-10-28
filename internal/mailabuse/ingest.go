@@ -60,7 +60,9 @@ func Preflight(ctx context.Context, queries *q.Queries, box q.Mailbox, from stri
 	}
 	return p, nil
 }
-func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q.MailProtection, authenticated bool, envelope Envelope, files []File) (q.MailItem, error) {
+// automated is AutomatedReason of the message's headers ("" when they leave
+// the "Real person" question open).
+func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q.MailProtection, authenticated bool, envelope Envelope, files []File, automated string) (q.MailItem, error) {
 	queries := q.New(tx)
 	directory, err := people(ctx, queries, box.WorkspaceID)
 	if err != nil {
@@ -115,7 +117,22 @@ func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q
 	if err != nil {
 		return item, err
 	}
-	if _, err = queries.AddMailScreening(ctx, q.AddMailScreeningParams{ItemID: item.ID, WorkspaceID: box.WorkspaceID, Sender: sender, Domain: registrable(domain), Identity: id, Authenticated: authenticated, State: state, Score: int32(e.Score), Findings: string(findingJSON), AiState: ai, AvState: av, ApprovalRequired: p.ApproveUnknown && !known, PolicyRevision: p.Revision, NextAttempt: lidza.Now(ctx)}); err != nil {
+	screening, err := queries.AddMailScreening(ctx, q.AddMailScreeningParams{ItemID: item.ID, WorkspaceID: box.WorkspaceID, Sender: sender, Domain: registrable(domain), Identity: id, Authenticated: authenticated, State: state, Score: int32(e.Score), Findings: string(findingJSON), AiState: ai, AvState: av, ApprovalRequired: p.ApproveUnknown && !known, PolicyRevision: p.Revision, NextAttempt: lidza.Now(ctx)})
+	if err != nil {
+		return item, err
+	}
+	// Real person: the headers decide first; otherwise a finished screening
+	// (no model to wait for) uses the fallback now, and the worker decides
+	// pending mail with the model's answer.
+	person := PersonDecision{State: "pending"}
+	if automated != "" {
+		person = PersonDecision{"automated", "header", automated}
+	} else if state != "pending" {
+		if person, err = decidePerson(ctx, queries, box.WorkspaceID, sender, ""); err != nil {
+			return item, err
+		}
+	}
+	if err = settlePerson(ctx, queries, screening, person); err != nil {
 		return item, err
 	}
 	if envelope.IP != "" {

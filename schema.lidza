@@ -918,7 +918,10 @@ model MailLabel {
  workspaceId uuid? @ref(Workspace) @index
  mailboxId uuid? @ref(Mailbox) @index
  name string @min(1) @max(40)
+ // Set on labels the app manages (real_person); they cannot be deleted.
+ systemKey string? @max(40)
  @@unique(mailboxId,name)
+ @@unique(workspaceId,systemKey)
 }
 model MailTag {
  id uuid @id @default(uuid())
@@ -931,6 +934,37 @@ type MailLabelList {
 }
 type MailLabelInput {
  name string @min(1) @max(40)
+}
+// A member's own pinned labels, shown in each app's sidebar. app is one
+// app (mail, drive, calendar, contacts, chat) or all; pinned=false records
+// an explicit unpin, which also hides a system label pinned by default.
+model LabelPin {
+ id uuid @id @default(uuid())
+ workspaceId uuid @ref(Workspace, cascade)
+ subject string @max(255)
+ labelId uuid @ref(MailLabel, cascade) @index
+ app string @max(20)
+ pinned bool @default(true)
+ position int @default(0)
+ @@unique(workspaceId, subject, labelId, app)
+}
+type LabelPinView {
+ labelId uuid
+ app string
+ position int
+ isDefault bool
+ label MailLabel
+}
+type LabelPinList {
+ items LabelPinView[]
+}
+type LabelPinInput {
+ labelId uuid
+ app string @pattern("^(all|mail|drive|calendar|contacts|chat)$")
+}
+type LabelPinOrder {
+ app string @pattern("^(mail|drive|calendar|contacts|chat)$")
+ labelIds uuid[]
 }
 type MailLabelChange {
  labelId uuid
@@ -1470,6 +1504,12 @@ model MailScreening {
  dkimDomain string @default("")
  dkimAligned bool @default(false)
  dmarc string @default("")
+ // Real person classification: personState is "" (not assessed: mail from
+ // before the feature), pending, person, automated or unknown; personSource
+ // says what decided it (header, ai, replied, contact, none).
+ personState string @default("")
+ personSource string @default("")
+ personDetail string @default("")
  @@index(state, nextAttempt)
  @@index(workspaceId, domain, authenticated)
 }
@@ -1557,6 +1597,9 @@ type MailScreeningView {
  feedbackState string
  updatedAt time
  senderAuth MailSenderAuthView?
+ personState string
+ personSource string
+ personDetail string
 }
 type MailSenderAuthView {
  method string
@@ -1579,6 +1622,7 @@ type MailAIClassification {
  risk int @min(0) @max(100)
  category string @max(40)
  explanation string @max(1000)
+ senderKind string? @max(20)
 }
 
 // Team-owned configuration is independent of deployment/operator bootstrap.

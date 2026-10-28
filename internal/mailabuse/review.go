@@ -78,7 +78,7 @@ func View(ctx context.Context, item, subject string) (*schema.MailScreeningView,
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, err
 	}
-	return &schema.MailScreeningView{State: s.State, Score: int(s.Score), Findings: findings, AiState: s.AiState, AvState: s.AvState, Authenticated: s.Authenticated, Sender: s.Sender, Reputation: rep, Complaints: count, Reported: reported, ApprovalRequired: s.ApprovalRequired, Released: s.Released, CanManage: can, FeedbackState: feedback, UpdatedAt: s.UpdatedAt, SenderAuth: senderAuthView(s)}, nil
+	return &schema.MailScreeningView{State: s.State, Score: int(s.Score), Findings: findings, AiState: s.AiState, AvState: s.AvState, Authenticated: s.Authenticated, Sender: s.Sender, Reputation: rep, Complaints: count, Reported: reported, ApprovalRequired: s.ApprovalRequired, Released: s.Released, CanManage: can, FeedbackState: feedback, UpdatedAt: s.UpdatedAt, SenderAuth: senderAuthView(s), PersonState: s.PersonState, PersonSource: s.PersonSource, PersonDetail: s.PersonDetail}, nil
 }
 
 // Review is called only after mailbox.ItemAccess; it fences role changes and
@@ -279,6 +279,13 @@ func Review(ctx context.Context, w, item, subject, action string) error {
 	}
 	if err = save(ctx, queries, s); err != nil {
 		return err
+	}
+	// A released person gets the "Real person" tag; mail sent back to Spam
+	// or rescanned loses it until screening releases it again.
+	if s.PersonState == "person" {
+		if err = syncPersonLabel(ctx, queries, w, item, s.PersonState, s.Released || s.State == "clean"); err != nil {
+			return err
+		}
 	}
 	if err = queries.MoveScreenedMail(ctx, q.MoveScreenedMailParams{ID: item, Folder: i.Folder}); err != nil {
 		return err

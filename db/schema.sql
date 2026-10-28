@@ -524,11 +524,13 @@ CREATE TABLE mail_label (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid REFERENCES workspace(id),
   mailbox_id uuid REFERENCES mailbox(id),
-  name varchar(40) NOT NULL
+  name varchar(40) NOT NULL,
+  system_key varchar(40)
 );
 CREATE INDEX mail_label_workspace_id_idx ON mail_label (workspace_id);
 CREATE INDEX mail_label_mailbox_id_idx ON mail_label (mailbox_id);
 CREATE UNIQUE INDEX mail_label_mailbox_id_name_key ON mail_label (mailbox_id, name);
+CREATE UNIQUE INDEX mail_label_workspace_id_system_key_key ON mail_label (workspace_id, system_key);
 
 CREATE TABLE mail_tag (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -538,6 +540,18 @@ CREATE TABLE mail_tag (
 CREATE INDEX mail_tag_item_id_idx ON mail_tag (item_id);
 CREATE INDEX mail_tag_label_id_idx ON mail_tag (label_id);
 CREATE UNIQUE INDEX mail_tag_item_id_label_id_key ON mail_tag (item_id, label_id);
+
+CREATE TABLE label_pin (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+  subject varchar(255) NOT NULL,
+  label_id uuid NOT NULL REFERENCES mail_label(id) ON DELETE CASCADE,
+  app varchar(20) NOT NULL,
+  pinned boolean NOT NULL DEFAULT true,
+  position integer NOT NULL DEFAULT 0
+);
+CREATE INDEX label_pin_label_id_idx ON label_pin (label_id);
+CREATE UNIQUE INDEX label_pin_workspace_id_subject_label_id_app_key ON label_pin (workspace_id, subject, label_id, app);
 
 CREATE TABLE audit_event (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -891,7 +905,10 @@ CREATE TABLE mail_screening (
   dkim text NOT NULL DEFAULT '',
   dkim_domain text NOT NULL DEFAULT '',
   dkim_aligned boolean NOT NULL DEFAULT false,
-  dmarc text NOT NULL DEFAULT ''
+  dmarc text NOT NULL DEFAULT '',
+  person_state text NOT NULL DEFAULT '',
+  person_source text NOT NULL DEFAULT '',
+  person_detail text NOT NULL DEFAULT ''
 );
 CREATE INDEX mail_screening_workspace_id_idx ON mail_screening (workspace_id);
 CREATE INDEX mail_screening_state_next_attempt_idx ON mail_screening (state, next_attempt);

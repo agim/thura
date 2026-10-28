@@ -51,7 +51,15 @@ func ListContacts(ctx context.Context, req *router.Request[router.None]) (schema
 		}
 		after, afterID = &cursor.Name, cursor.ID
 	}
-	rows, err := queries.New(db.From(ctx)).ListContactsPage(ctx, queries.ListContactsPageParams{WorkspaceID: id, Search: page.Search, AfterName: after, AfterID: afterID, PageLimit: page.Limit + 1})
+	// ?labelId= keeps contacts carrying that workspace label (a pinned label's filter).
+	var label *string
+	if value := req.Raw.URL.Query().Get("labelId"); value != "" {
+		if !workspace.ValidID(value) {
+			return schema.ContactList{}, router.Errorf(422, "labelId must be a label id")
+		}
+		label = &value
+	}
+	rows, err := queries.New(db.From(ctx)).ListContactsPage(ctx, queries.ListContactsPageParams{WorkspaceID: id, Search: page.Search, AfterName: after, AfterID: afterID, LabelID: label, PageLimit: page.Limit + 1})
 	result := schema.ContactList{Items: []schema.Contact{}}
 	if len(rows) > int(page.Limit) {
 		last := rows[page.Limit-1]

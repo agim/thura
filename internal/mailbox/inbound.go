@@ -39,6 +39,9 @@ type ParsedAttachment struct {
 type ParsedMail struct {
 	From, To, Cc, Subject, Text, HTML, Thread, MessageID, InReplyTo, References string
 	Attachments                                                                 []ParsedAttachment
+	// Automated is mailabuse.AutomatedReason of the headers: why the message
+	// is machine-sent, or "" when the headers leave it open.
+	Automated string
 }
 
 func Parse(raw []byte) (ParsedMail, error) {
@@ -55,7 +58,8 @@ func Parse(raw []byte) (ParsedMail, error) {
 	// every reply unsendable, as a subject header can never contain one.
 	subject = strings.NewReplacer("\r\n", " ", "\r", " ", "\n", " ", "\x00", "").Replace(subject)
 	out := ParsedMail{From: m.Header.Get("From"), To: m.Header.Get("To"), Cc: m.Header.Get("Cc"), Subject: subject,
-		MessageID: firstMessageID(m.Header.Get("Message-ID")), InReplyTo: firstMessageID(m.Header.Get("In-Reply-To")), References: cleanReferences(m.Header.Get("References"))}
+		MessageID: firstMessageID(m.Header.Get("Message-ID")), InReplyTo: firstMessageID(m.Header.Get("In-Reply-To")), References: cleanReferences(m.Header.Get("References")),
+		Automated: mailabuse.AutomatedReason(m.Header)}
 	out.Thread = firstMessageID(out.References)
 	if out.Thread == "" {
 		out.Thread = out.InReplyTo
@@ -320,5 +324,5 @@ func persistInbound(ctx context.Context, tx pgx.Tx, mailboxID string, parsed Par
 	for _, a := range parsed.Attachments {
 		files = append(files, mailabuse.File{Name: a.Name, ContentType: a.ContentType, Data: a.Data})
 	}
-	return mailabuse.Enqueue(ctx, tx, box, item, p, authenticated, envelope, files)
+	return mailabuse.Enqueue(ctx, tx, box, item, p, authenticated, envelope, files, parsed.Automated)
 }

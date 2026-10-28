@@ -36,6 +36,16 @@ AI receives sender, subject, plain/HTML bodies, attachment names/types, static f
 
 Mail with pending/unavailable required checks stays in Spam and its attachments remain inaccessible. Workers lease attempts and reconcile crashes every minute. Five failed attempts leave a visible error requiring repair and Rescan; no fake/safe fallback occurs. Settings revisions fence old worker results. Explicit reports/moves/release also fence in-flight results. Turning AI off affects future scan attempts, including queued jobs; use Rescan for previously held/error mail. Disabling AI does not disable static or configured antivirus checks.
 
+## Real person label
+
+Screening also decides whether inbound mail comes from a person or a machine, and tags people with the workspace's **Real person** system label (pinned under Mail's folders for every member until they unpin it). The decision is recorded on the screening row (`personState`, `personSource`, `personDetail`) and shown in the protection panel as "Real person" or "Automated: List-Unsubscribe header". It is made in this order:
+
+1. **Headers decide first** (`mailabuse.AutomatedReason`, at intake): `List-Unsubscribe`, `Auto-Submitted` other than `no`, `Precedence: bulk|list|junk`, or a no-reply / do-not-reply / mailer-daemon / postmaster / bounces sender make the message automated. Nothing the model or the message says changes that; the model's sender answer is ignored for such mail.
+2. **The model**, in the same screening call (no second call): its JSON adds `senderKind` (`person`, `automated` or `unsure`). The prompt tells it to judge the message's form and to ignore statements about who wrote it ("I am a real person"), since the email is untrusted.
+3. **Fallback**, when there is no model (AI off, not ready, skipped after a local hold) or it answers `unsure` or `unknown`: the sender is a person if someone in the workspace has sent mail to that exact address (To, Cc or Bcc of any outgoing message) or it is a saved contact; otherwise "Not recognised as a real person".
+
+Only mail that reached the Inbox carries the tag: spam and quarantined mail are classified but tagged when released, and Report spam, Block sender or Rescan remove the tag until screening releases the message again. Mail received before this feature (no `personState`) is never classified or backfilled. The label is created lazily per workspace (the first time a member's pins are read or a person's mail is tagged; a member-made label named "Real person" is adopted), cannot be deleted, and is unpinned per member with a stored `pinned=false` row, so the default pin needs no row per member.
+
 ## Deployment
 
 The setup wizard exposes infrastructure defaults; existing workspace policy is changed in Mail settings. Keys follow the existing sealed configuration system and environment precedence:

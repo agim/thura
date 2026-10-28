@@ -68,3 +68,11 @@ WHERE item_id=$1 AND revision=$7;
 UPDATE mail_screening SET client_address=$2,client_helo=$3,envelope_sender=$4 WHERE item_id=$1;
 -- name: SaveMailScreeningAuth :exec
 UPDATE mail_screening SET spf=$2,dkim=$3,dkim_domain=$4,dkim_aligned=$5,dmarc=$6 WHERE item_id=$1;
+-- name: SaveMailPerson :exec
+UPDATE mail_screening SET person_state=$2,person_source=$3,person_detail=$4 WHERE item_id=$1;
+-- name: MailSentToCandidates :many
+SELECT i.to_address,i.cc,i.bcc FROM mail_item i JOIN mailbox b ON b.id=i.mailbox_id
+WHERE b.workspace_id=sqlc.arg(workspace_id) AND i.status NOT IN ('draft','received')
+AND position(lower(sqlc.arg(address)::text) IN lower(i.to_address||','||i.cc||','||i.bcc))>0 LIMIT 20;
+-- name: MailContactAddress :one
+SELECT EXISTS(SELECT 1 FROM contact WHERE workspace_id=$1 AND lower(email)=lower(sqlc.arg(address)::text))::bool;

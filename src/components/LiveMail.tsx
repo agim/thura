@@ -25,6 +25,7 @@ import { Reply, ReplyAll, Forward, Undo2, X, Inbox, FilePenLine, Send, Archive, 
 const folderIcons = { inbox: Inbox, drafts: FilePenLine, sent: Send, archive: Archive, spam: ShieldAlert, trash: Trash2 }
 import { MailReader } from './MailReader'
 import { MailLabelFilter, MailConversation } from './MailTools'
+import { PinnedLabels, useLabelGuard } from './PinnedLabels'
 
 // A 4xx (not 429) answer for a message is final: it is gone or no longer shared, so retrying cannot help.
 const clientError = (error: unknown) => error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429
@@ -66,6 +67,7 @@ function MailView({ workspaceId, mailboxId, view, set, setNotice }: MailViewProp
   const selected = view.message ?? ''
   const query = view.q ?? ''
   const labelId = view.label ?? ''
+  useLabelGuard(workspaceId, labelId, () => { setNotice({ text: 'That label is no longer available. Showing all messages.' }); set({ label: undefined }, { replace: true }) })
   const [readerError, setReaderError] = useState('')
   const open = (item: { id: string }) => { setReaderError(''); set({ message: item.id }) }
   const showList = (change?: { replace?: boolean }) => set({ message: undefined }, change)
@@ -115,7 +117,7 @@ function MailView({ workspaceId, mailboxId, view, set, setNotice }: MailViewProp
   return <div id="orbit-mail-vibrant" className={selected ? 'has-message' : ''}>{contextMenu.menu}<AppPageHeader title={folderName(folder)} action={<><AssistantAction workspaceId={workspaceId} source="mail" contextOnly priority={0} contextLabel={`${folder} · visible messages`} content={visible.map(message => `${message.subject}\nFrom: ${message.fromAddress}\n${message.textBody.slice(0, 1500)}`).join("\n\n")} /><NewAction label="New message" disabled={compose.isPending} onClick={() => compose.mutate()} /></>} />
     {(failure || readerError) && <p role="alert" className="inlinepanel">{failure ? userError(failure) : readerError}</p>}
     <div className="layout">
-      <AppSidebar title="Folders" label="Mail navigation" className="folders">{mailFolders.map(f => <button className={`folder-button ${folder === f ? 'on' : ''}`} aria-current={folder === f ? 'page' : undefined} key={f} onClick={() => set({ folder: f === 'inbox' ? undefined : f, message: undefined })}>{(() => { const Icon = folderIcons[f]; return <Icon size={16} aria-hidden="true" /> })()}{folderName(f)}</button>)}<MailLabelFilter scope={{ workspaceId, mailboxId }} value={labelId} onChange={value => set({ label: value }, { replace: true })} /></AppSidebar>
+      <AppSidebar title="Folders" label="Mail navigation" className="folders">{mailFolders.map(f => <button className={`folder-button ${folder === f ? 'on' : ''}`} aria-current={folder === f ? 'page' : undefined} key={f} onClick={() => set({ folder: f === 'inbox' ? undefined : f, message: undefined })}>{(() => { const Icon = folderIcons[f]; return <Icon size={16} aria-hidden="true" /> })()}{folderName(f)}</button>)}<PinnedLabels workspaceId={workspaceId} app="mail" value={labelId} onChange={value => set({ label: value, message: undefined })} /><MailLabelFilter scope={{ workspaceId, mailboxId }} value={labelId} onChange={value => set({ label: value }, { replace: true })} onPinned={text => setNotice({ text })} /></AppSidebar>
       <section className="list" aria-label="Messages">
         {list.isPending && <p role="status" className="empty">Loading messages…</p>}
         {list.data && visible.length === 0 && <p className="empty">No messages in this view.</p>}

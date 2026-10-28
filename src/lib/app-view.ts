@@ -22,9 +22,9 @@ export const teamSteps = ['domains', 'email', 'mailboxes', 'review'] as const
 export const appViews = {
   mail: { path: '/app/mail', params: { mailbox: uuid, folder: oneOf(...mailFolders), message: uuid, q: text, label: uuid } },
   drive: { path: '/app/drive', params: { folder: (value: string) => value === 'trash' || id(value), file: id, edit: oneOf('1'), q: text, label: uuid } },
-  chat: { path: '/app/chat', params: { room: id, q: text } },
-  calendar: { path: '/app/calendar', params: { view: oneOf('month', 'week', 'day', 'list'), date: day, calendar: id, event: id, instance: id, new: oneOf('1') } },
-  contacts: { path: '/app/contacts', params: { contact: uuid, new: oneOf('1'), q: text } },
+  chat: { path: '/app/chat', params: { room: id, q: text, label: uuid } },
+  calendar: { path: '/app/calendar', params: { view: oneOf('month', 'week', 'day', 'list'), date: day, calendar: id, event: id, instance: id, new: oneOf('1'), label: uuid } },
+  contacts: { path: '/app/contacts', params: { contact: uuid, new: oneOf('1'), q: text, label: uuid } },
   loop: { path: '/app/loop', params: { contact: uuid, q: text, people: text, scope: oneOf('organization'), source: oneOf(...loopSources) } },
   meet: { path: '/app/meet', params: { meeting: id, filter: oneOf('ended') } },
   team: { path: '/app/settings/team', params: { team: uuid, step: oneOf(...teamSteps) } },

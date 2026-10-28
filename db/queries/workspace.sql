@@ -21,6 +21,7 @@ SELECT * FROM contact
 WHERE workspace_id=sqlc.arg(workspace_id)
 AND (sqlc.arg(search)::text='' OR strpos(lower(name || ' ' || email || ' ' || company || ' ' || phone), lower(sqlc.arg(search))) > 0)
 AND (sqlc.narg(after_name)::text IS NULL OR (name,id) > (sqlc.narg(after_name)::text,sqlc.arg(after_id)::uuid))
+AND (sqlc.narg(label_id)::uuid IS NULL OR EXISTS (SELECT 1 FROM resource_label r WHERE r.source='contact' AND r.source_id=contact.id AND r.label_id=sqlc.narg(label_id)::uuid))
 ORDER BY name,id LIMIT sqlc.arg(page_limit);
 
 -- name: CreateContact :one

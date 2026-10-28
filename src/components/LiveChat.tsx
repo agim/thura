@@ -5,6 +5,7 @@ import { ActionRow } from './ActionRow'
 import { ResourceLabels } from './ResourceLabels'
 import { Hash, LockKeyhole, MessageCircle, Paperclip, Send, Video, ArrowDown, Search, Users, Reply } from 'lucide-react'
 import { AppSidebar } from './AppSidebar'
+import { PinnedLabels, useLabelGuard } from './PinnedLabels'
 import { displayDate } from '../lib/display-date'
 import { AppPageHeader, NewAction } from './AppPageHeader'
 import { WorkspaceDialog } from './WorkspaceDialog'
@@ -24,7 +25,8 @@ const clientError = (error: unknown) => error instanceof ApiError && error.statu
 
 /**
  * Chat keeps its view in the URL (src/lib/app-view.ts): ?room= is the open
- * conversation (a new history entry) and ?q= its message search (replaced).
+ * conversation (a new history entry), ?q= its message search (replaced) and
+ * ?label= a pinned label narrowing the conversation list.
  * A stale room falls back to the conversation list with a notice.
  */
 export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string; contact?: Contact; onMeet?: (name: string) => void }) {
@@ -32,6 +34,11 @@ export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string
   const { notice, show: setNotice, clear: closeNotice } = useNotice()
   const { view, set } = useAppView('chat', { onInvalid: () => setNotice({ text: 'Part of this chat link could not be opened. Showing your conversations.' }) })
   const rooms = useQuery({ queryKey: ['chat-rooms', workspaceId], queryFn: () => api.listChatRooms({ workspaceId }) })
+  // ?label= (a pinned label) narrows the conversation list on the server.
+  const labelId = view.label ?? ''
+  const labeled = useQuery({ queryKey: ['chat-rooms', workspaceId, 'label', labelId], queryFn: () => api.listChatRooms({ workspaceId }, { query: { labelId } }), enabled: !!labelId })
+  const listed = labelId ? labeled.data?.items : rooms.data?.items
+  useLabelGuard(workspaceId, labelId, () => { setNotice({ text: 'That label is no longer available. Showing all conversations.' }); set({ label: undefined }, { replace: true }) })
   const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.listMembers({ workspaceId }) })
   const session = useQuery({ queryKey: ['session'], queryFn: () => api.authSession() })
   const [roomFilter, setRoomFilter] = useState('')
@@ -61,8 +68,10 @@ export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string
     {contactNotice && <p role="status">{contactNotice}</p>}
     <AppSidebar title="Conversations" className="chat-sidebar" label="Chat navigation">
     <label className="conversation-filter"><span className="sr-only">Find a conversation</span><input aria-label="Find a conversation" placeholder="Find a conversation" value={roomFilter} onChange={e => setRoomFilter(e.target.value)} /></label>
-    <ul aria-label="Chat room">{[...(room && !rooms.data?.items.some(r => r.id === room.id) ? [room] : []), ...(rooms.data?.items || [])].filter(r => r.name.toLowerCase().includes(roomFilter.toLowerCase())).map(r => <li key={r.id}><button aria-pressed={room?.id === r.id} onClick={() => openRoom(r.id)}><span className="conversation-avatar">{r.direct ? <MessageCircle size={18} /> : <Hash size={18} />}</span><span className="conversation-copy"><strong>{r.name}</strong><small>{r.direct ? 'Private conversation' : 'Workspace channel'}</small></span></button></li>)}</ul>
-    {rooms.data && !rooms.data.items.length && <p className="sidebar-empty">Your conversations will appear here.</p>}
+    <PinnedLabels workspaceId={workspaceId} app="chat" value={labelId} onChange={value => set({ label: value }, { replace: false })} />
+    <ul aria-label="Chat room">{[...(room && !labelId && !rooms.data?.items.some(r => r.id === room.id) ? [room] : []), ...(listed || [])].filter(r => r.name.toLowerCase().includes(roomFilter.toLowerCase())).map(r => <li key={r.id}><button aria-pressed={room?.id === r.id} onClick={() => openRoom(r.id)}><span className="conversation-avatar">{r.direct ? <MessageCircle size={18} /> : <Hash size={18} />}</span><span className="conversation-copy"><strong>{r.name}</strong><small>{r.direct ? 'Private conversation' : 'Workspace channel'}</small></span></button></li>)}</ul>
+    {labelId ? labeled.data && !labeled.data.items.length && <p className="sidebar-empty">No conversations with this label.</p> : rooms.data && !rooms.data.items.length && <p className="sidebar-empty">Your conversations will appear here.</p>}
+    {labeled.error && <p role="alert">{userError(labeled.error)}</p>}
     </AppSidebar>{rooms.data && !rooms.data.configured && <p role="status">Matrix chat is not configured. An operator must connect a homeserver before creating a room.</p>}
     {((roomLost ? null : detail.error) || rooms.error || members.error || create.error) && <p role="alert">{userError((roomLost ? null : detail.error) || rooms.error || members.error || create.error)}</p>}
     {room && rooms.data?.configured && <ChatConversation search={view.q ?? ''} onSearch={setSearch} setNotice={setNotice} onMeet={onMeet} key={room.id} room={room} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} />}

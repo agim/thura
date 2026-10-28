@@ -4,11 +4,28 @@ import (
 	"context"
 	"github.com/agim/lidza/pkg/router"
 	"thura/internal/chat"
+	"thura/internal/labels"
 	"thura/schema"
 )
 
 func ListChatRooms(ctx context.Context, r *router.Request[router.None]) (schema.ChatRoomList, error) {
-	return chat.List(ctx, r.Param("workspaceId"))
+	out, err := chat.List(ctx, r.Param("workspaceId"))
+	if err != nil {
+		return out, err
+	}
+	// ?labelId= keeps rooms carrying that workspace label (a pinned label's filter).
+	keep, err := labels.Filter(ctx, r.Param("workspaceId"), "chat", r.Query("labelId"))
+	if err != nil || keep == nil {
+		return out, err
+	}
+	rooms := []schema.ChatRoom{}
+	for _, room := range out.Items {
+		if keep[room.ID] {
+			rooms = append(rooms, room)
+		}
+	}
+	out.Items = rooms
+	return out, nil
 }
 func CreateChatRoom(ctx context.Context, r *router.Request[schema.ChatRoomInput]) (schema.ChatRoom, error) {
 	return chat.Create(ctx, r.Param("workspaceId"), r.Body)

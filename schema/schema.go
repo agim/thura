@@ -1353,6 +1353,7 @@ type MailLabel struct {
 	WorkspaceID *string `json:"workspaceId" db:"workspace_id"`
 	MailboxID   *string `json:"mailboxId" db:"mailbox_id"`
 	Name        string  `json:"name" db:"name"`
+	SystemKey   *string `json:"systemKey" db:"system_key"`
 }
 
 // Validate applies the rules of MailLabel from schema.lidza.
@@ -1366,6 +1367,12 @@ func (v MailLabel) Validate() error {
 	}
 	if len(v.Name) > 40 {
 		errs.Add("name", "max", "at most 40 character(s)")
+	}
+	if v.SystemKey != nil {
+		x := *v.SystemKey
+		if len(x) > 40 {
+			errs.Add("systemKey", "max", "at most 40 character(s)")
+		}
 	}
 	return errs.Result()
 }
@@ -1385,6 +1392,41 @@ func (v MailTag) Validate() error {
 	}
 	if v.LabelID == "" {
 		errs.Add("labelId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// LabelPin is a row of the label_pin table.
+type LabelPin struct {
+	ID          string `json:"id" db:"id"`
+	WorkspaceID string `json:"workspaceId" db:"workspace_id"`
+	Subject     string `json:"subject" db:"subject"`
+	LabelID     string `json:"labelId" db:"label_id"`
+	App         string `json:"app" db:"app"`
+	Pinned      bool   `json:"pinned" db:"pinned"`
+	Position    int    `json:"position" db:"position"`
+}
+
+// Validate applies the rules of LabelPin from schema.lidza.
+func (v LabelPin) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if len(v.Subject) > 255 {
+		errs.Add("subject", "max", "at most 255 character(s)")
+	}
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
+	}
+	if v.App == "" {
+		errs.Add("app", "required", "required")
+	}
+	if len(v.App) > 20 {
+		errs.Add("app", "max", "at most 20 character(s)")
 	}
 	return errs.Result()
 }
@@ -2264,6 +2306,9 @@ type MailScreening struct {
 	DkimDomain       string    `json:"dkimDomain" db:"dkim_domain"`
 	DkimAligned      bool      `json:"dkimAligned" db:"dkim_aligned"`
 	Dmarc            string    `json:"dmarc" db:"dmarc"`
+	PersonState      string    `json:"personState" db:"person_state"`
+	PersonSource     string    `json:"personSource" db:"person_source"`
+	PersonDetail     string    `json:"personDetail" db:"person_detail"`
 }
 
 // Validate applies the rules of MailScreening from schema.lidza.
@@ -2319,6 +2364,15 @@ func (v MailScreening) Validate() error {
 	}
 	if v.Dmarc == "" {
 		errs.Add("dmarc", "required", "required")
+	}
+	if v.PersonState == "" {
+		errs.Add("personState", "required", "required")
+	}
+	if v.PersonSource == "" {
+		errs.Add("personSource", "required", "required")
+	}
+	if v.PersonDetail == "" {
+		errs.Add("personDetail", "required", "required")
 	}
 	return errs.Result()
 }
@@ -4588,6 +4642,86 @@ func (v MailLabelInput) Validate() error {
 	return errs.Result()
 }
 
+// LabelPinView is an API type.
+type LabelPinView struct {
+	LabelID   string    `json:"labelId"`
+	App       string    `json:"app"`
+	Position  int       `json:"position"`
+	IsDefault bool      `json:"isDefault"`
+	Label     MailLabel `json:"label"`
+}
+
+// Validate applies the rules of LabelPinView from schema.lidza.
+func (v LabelPinView) Validate() error {
+	var errs validate.Errors
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
+	}
+	if v.App == "" {
+		errs.Add("app", "required", "required")
+	}
+	if err := v.Label.Validate(); err != nil {
+		errs.Add("label", "nested", err.Error())
+	}
+	return errs.Result()
+}
+
+// LabelPinList is an API type.
+type LabelPinList struct {
+	Items []LabelPinView `json:"items"`
+}
+
+// Validate applies the rules of LabelPinList from schema.lidza.
+func (v LabelPinList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// LabelPinInput is an API type.
+type LabelPinInput struct {
+	LabelID string `json:"labelId"`
+	App     string `json:"app"`
+}
+
+// Validate applies the rules of LabelPinInput from schema.lidza.
+func (v LabelPinInput) Validate() error {
+	var errs validate.Errors
+	if v.LabelID == "" {
+		errs.Add("labelId", "required", "required")
+	}
+	if v.App == "" {
+		errs.Add("app", "required", "required")
+	}
+	if v.App != "" && !validate.Pattern("^(all|mail|drive|calendar|contacts|chat)$", v.App) {
+		errs.Add("app", "pattern", "does not match ^(all|mail|drive|calendar|contacts|chat)$")
+	}
+	return errs.Result()
+}
+
+// LabelPinOrder is an API type.
+type LabelPinOrder struct {
+	App      string   `json:"app"`
+	LabelIDs []string `json:"labelIds"`
+}
+
+// Validate applies the rules of LabelPinOrder from schema.lidza.
+func (v LabelPinOrder) Validate() error {
+	var errs validate.Errors
+	if v.App == "" {
+		errs.Add("app", "required", "required")
+	}
+	if v.App != "" && !validate.Pattern("^(mail|drive|calendar|contacts|chat)$", v.App) {
+		errs.Add("app", "pattern", "does not match ^(mail|drive|calendar|contacts|chat)$")
+	}
+	return errs.Result()
+}
+
 // MailLabelChange is an API type.
 type MailLabelChange struct {
 	LabelID string `json:"labelId"`
@@ -5378,6 +5512,9 @@ type MailScreeningView struct {
 	FeedbackState    string              `json:"feedbackState"`
 	UpdatedAt        time.Time           `json:"updatedAt"`
 	SenderAuth       *MailSenderAuthView `json:"senderAuth"`
+	PersonState      string              `json:"personState"`
+	PersonSource     string              `json:"personSource"`
+	PersonDetail     string              `json:"personDetail"`
 }
 
 // Validate applies the rules of MailScreeningView from schema.lidza.
@@ -5412,6 +5549,15 @@ func (v MailScreeningView) Validate() error {
 		if err := x.Validate(); err != nil {
 			errs.Add("senderAuth", "nested", err.Error())
 		}
+	}
+	if v.PersonState == "" {
+		errs.Add("personState", "required", "required")
+	}
+	if v.PersonSource == "" {
+		errs.Add("personSource", "required", "required")
+	}
+	if v.PersonDetail == "" {
+		errs.Add("personDetail", "required", "required")
 	}
 	return errs.Result()
 }
@@ -5486,9 +5632,10 @@ func (v MailScreenJob) Validate() error {
 
 // MailAIClassification is an API type.
 type MailAIClassification struct {
-	Risk        int    `json:"risk"`
-	Category    string `json:"category"`
-	Explanation string `json:"explanation"`
+	Risk        int     `json:"risk"`
+	Category    string  `json:"category"`
+	Explanation string  `json:"explanation"`
+	SenderKind  *string `json:"senderKind"`
 }
 
 // Validate applies the rules of MailAIClassification from schema.lidza.
@@ -5511,6 +5658,12 @@ func (v MailAIClassification) Validate() error {
 	}
 	if len(v.Explanation) > 1000 {
 		errs.Add("explanation", "max", "at most 1000 character(s)")
+	}
+	if v.SenderKind != nil {
+		x := *v.SenderKind
+		if len(x) > 20 {
+			errs.Add("senderKind", "max", "at most 20 character(s)")
+		}
 	}
 	return errs.Result()
 }

@@ -441,7 +441,7 @@ func (q *Queries) GetMailbox(ctx context.Context, id string) (Mailbox, error) {
 }
 
 const getMailboxLabel = `-- name: GetMailboxLabel :one
-SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id WHERE l.id=$1
+SELECT l.id, l.workspace_id, l.mailbox_id, l.name, l.system_key FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id WHERE l.id=$1
 AND COALESCE(l.workspace_id,b.workspace_id)=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=$2)
 `
 
@@ -458,6 +458,7 @@ func (q *Queries) GetMailboxLabel(ctx context.Context, arg GetMailboxLabelParams
 		&i.WorkspaceID,
 		&i.MailboxID,
 		&i.Name,
+		&i.SystemKey,
 	)
 	return i, err
 }
@@ -532,7 +533,7 @@ func (q *Queries) InsertInboundMail(ctx context.Context, arg InsertInboundMailPa
 }
 
 const listItemLabels = `-- name: ListItemLabels :many
-SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l JOIN mail_tag t ON t.label_id=l.id WHERE t.item_id=$1 ORDER BY l.name,l.id
+SELECT l.id, l.workspace_id, l.mailbox_id, l.name, l.system_key FROM mail_label l JOIN mail_tag t ON t.label_id=l.id WHERE t.item_id=$1 ORDER BY l.name,l.id
 `
 
 func (q *Queries) ListItemLabels(ctx context.Context, itemID string) ([]MailLabel, error) {
@@ -549,6 +550,7 @@ func (q *Queries) ListItemLabels(ctx context.Context, itemID string) ([]MailLabe
 			&i.WorkspaceID,
 			&i.MailboxID,
 			&i.Name,
+			&i.SystemKey,
 		); err != nil {
 			return nil, err
 		}
@@ -758,7 +760,7 @@ func (q *Queries) ListMailboxIDs(ctx context.Context) ([]string, error) {
 }
 
 const listMailboxLabels = `-- name: ListMailboxLabels :many
-SELECT l.id, l.workspace_id, l.mailbox_id, l.name FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id
+SELECT l.id, l.workspace_id, l.mailbox_id, l.name, l.system_key FROM mail_label l LEFT JOIN mailbox b ON b.id=l.mailbox_id
 WHERE COALESCE(l.workspace_id,b.workspace_id)=(SELECT mb.workspace_id FROM mailbox mb WHERE mb.id=$1) ORDER BY l.name,l.id
 `
 
@@ -776,6 +778,7 @@ func (q *Queries) ListMailboxLabels(ctx context.Context, id string) ([]MailLabel
 			&i.WorkspaceID,
 			&i.MailboxID,
 			&i.Name,
+			&i.SystemKey,
 		); err != nil {
 			return nil, err
 		}

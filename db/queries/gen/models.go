@@ -497,6 +497,16 @@ type JobSchedule struct {
 	UpdatedAt time.Time  `json:"updated_at"`
 }
 
+type LabelPin struct {
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+	LabelID     string `json:"label_id"`
+	App         string `json:"app"`
+	Pinned      bool   `json:"pinned"`
+	Position    int32  `json:"position"`
+}
+
 type LlmUsage struct {
 	ID       string    `json:"id"`
 	At       time.Time `json:"at"`
@@ -602,6 +612,7 @@ type MailLabel struct {
 	WorkspaceID *string `json:"workspace_id"`
 	MailboxID   *string `json:"mailbox_id"`
 	Name        string  `json:"name"`
+	SystemKey   *string `json:"system_key"`
 }
 
 type MailMessage struct {
@@ -665,6 +676,9 @@ type MailScreening struct {
 	DkimDomain       string    `json:"dkim_domain"`
 	DkimAligned      bool      `json:"dkim_aligned"`
 	Dmarc            string    `json:"dmarc"`
+	PersonState      string    `json:"person_state"`
+	PersonSource     string    `json:"person_source"`
+	PersonDetail     string    `json:"person_detail"`
 }
 
 type MailSenderPolicy struct {

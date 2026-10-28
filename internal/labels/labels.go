@@ -16,7 +16,7 @@ import (
 )
 
 func View(l q.MailLabel) schema.MailLabel {
-	return schema.MailLabel{ID: l.ID, WorkspaceID: l.WorkspaceID, MailboxID: l.MailboxID, Name: l.Name}
+	return schema.MailLabel{ID: l.ID, WorkspaceID: l.WorkspaceID, MailboxID: l.MailboxID, Name: l.Name, SystemKey: l.SystemKey}
 }
 func List(ctx context.Context, w string) (schema.MailLabelList, error) {
 	out := schema.MailLabelList{Items: []schema.MailLabel{}}
@@ -117,25 +117,25 @@ func CreateAndApply(ctx context.Context, w, source, id, name string) (schema.Mai
 	}
 	return View(l), tx.Commit(ctx)
 }
-func lockLabel(ctx context.Context, w, id string) (pgx.Tx, *q.Queries, error) {
+func lockLabel(ctx context.Context, w, id string) (pgx.Tx, *q.Queries, q.MailLabel, error) {
 	if !workspace.ValidID(id) {
-		return nil, nil, router.Errorf(404, "label not found")
+		return nil, nil, q.MailLabel{}, router.Errorf(404, "label not found")
 	}
 	tx, queries, err := locked(ctx, w)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, q.MailLabel{}, err
 	}
-	_, err = queries.GetWorkspaceLabel(ctx, q.GetWorkspaceLabelParams{ID: id, WorkspaceID: &w})
+	l, err := queries.GetWorkspaceLabel(ctx, q.GetWorkspaceLabelParams{ID: id, WorkspaceID: &w})
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = router.Errorf(404, "label not found")
 	}
 	if err != nil {
-		return nil, nil, errors.Join(err, tx.Rollback(ctx))
+		return nil, nil, l, errors.Join(err, tx.Rollback(ctx))
 	}
-	return tx, queries, nil
+	return tx, queries, l, nil
 }
 func Change(ctx context.Context, w, source, id, labelID string, applied bool) error {
-	tx, queries, err := lockLabel(ctx, w, labelID)
+	tx, queries, _, err := lockLabel(ctx, w, labelID)
 	if err != nil {
 		return err
 	}
@@ -146,11 +146,14 @@ func Change(ctx context.Context, w, source, id, labelID string, applied bool) er
 	return tx.Commit(ctx)
 }
 func Delete(ctx context.Context, w, id string) error {
-	tx, queries, err := lockLabel(ctx, w, id)
+	tx, queries, l, err := lockLabel(ctx, w, id)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
+	if l.SystemKey != nil {
+		return router.Errorf(409, "“%s” is a system label and cannot be deleted; unpin it instead", l.Name)
+	}
 	if err = queries.DeleteLabelTags(ctx, id); err != nil {
 		return err
 	}
@@ -161,4 +164,22 @@ func Delete(ctx context.Context, w, id string) error {
 		return err
 	}
 	return tx.Commit(ctx)
+}
+
+// Filter returns the ids of the resources of one source carrying a label of
+// workspace w, for list routes that take ?labelId=. No label means no filter
+// (nil); a label of another workspace matches nothing.
+func Filter(ctx context.Context, w, source, labelID string) (map[string]bool, error) {
+	if labelID == "" {
+		return nil, nil
+	}
+	if !workspace.ValidID(labelID) {
+		return nil, router.Errorf(422, "labelId must be a label id")
+	}
+	ids, err := q.New(db.From(ctx)).ListLabeledResources(ctx, q.ListLabeledResourcesParams{LabelID: labelID, Source: source, WorkspaceID: &w})
+	out := map[string]bool{}
+	for _, id := range ids {
+		out[id] = true
+	}
+	return out, err
 }

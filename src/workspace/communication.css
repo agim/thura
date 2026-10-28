@@ -1340,3 +1340,14 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 .mail-finding-label { display:inline-block; margin-inline-end:6px; padding:0 6px; border-radius:4px; background:var(--tealsoft, #0001); font-size:12px; font-weight:600; }
 #orbit-workspace.zero-workspace .app-notice { display:flex; align-items:center; gap:12px; }
 #orbit-workspace.zero-workspace .app-notice > .app-action { min-height:32px; height:32px; padding:4px 10px; background:transparent; color:inherit; border:1px solid currentColor; }
+/* Pinned labels under each app's folder list (src/components/PinnedLabels.tsx). */
+#orbit-workspace.zero-workspace .app-sidebar-body > .pinned-labels { display:flex; flex-direction:column; gap:2px; min-width:0; margin:6px 0 2px; padding-top:8px; border-top:1px solid var(--line); }
+#orbit-workspace.zero-workspace .pinned-labels-caption { display:flex; align-items:center; gap:6px; margin:0 0 2px; padding:0 12px; color:var(--quiet); font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
+#orbit-workspace.zero-workspace .pinned-labels > .folder-button { display:flex; align-items:center; justify-content:flex-start; gap:10px; width:100%; min-width:0; min-height:36px; margin:0; padding:8px 12px; border:0; border-radius:8px; background:transparent; color:var(--quiet); font-size:13px; font-weight:500; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#orbit-workspace.zero-workspace .pinned-labels > .folder-button svg { flex:none; }
+#orbit-workspace.zero-workspace .pinned-labels > .folder-button.on { background:var(--tealsoft); color:var(--teal); }
+#orbit-workspace.zero-workspace .app-sidebar-body > label.pin-label-control { flex-direction:row; align-items:center; gap:8px; font-size:12px; }
+.settings-list-row .label-pin-apps { display:flex; flex-wrap:wrap; gap:4px 12px; margin:0; padding:0; border:0; }
+.settings-list-row .label-pin-apps legend { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+.settings-list-row .label-pin-apps label { display:flex; align-items:center; gap:4px; font-size:12px; }
+.settings-list-row .label-system { color:var(--quiet); font-size:12px; }

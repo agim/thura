@@ -7,6 +7,7 @@ import { api } from '@lidza/client'
 import { userError } from '../lib/errors'
 import { SelectControl } from './SelectControl'
 import { WorkspaceDialog } from './WorkspaceDialog'
+import { PinLabelControl, type PinApp } from './PinnedLabels'
 
 type Props = { workspaceId: string; source: 'mail' | 'document' | 'calendar' | 'chat' | 'meeting' | 'contact'; id: string; title?: string }
 /** The same workspace catalog and create-and-apply flow on every resource. */
@@ -48,7 +49,9 @@ function LabelEditor({ workspaceId, source, id, completed }: Props & { completed
   </div>
 }
 
-export function ResourceLabelFilter({ workspaceId, value, onChange }: { workspaceId: string; value: string; onChange: (value: string) => void }) {
+/** The label filter; with `pinApp`, the selected label can be pinned in that app's sidebar. */
+export function ResourceLabelFilter({ workspaceId, value, onChange, pinApp, onPinned }: { workspaceId: string; value: string; onChange: (value: string) => void; pinApp?: PinApp; onPinned?: (text: string) => void }) {
   const catalog = useQuery({ queryKey: ['workspace-labels', workspaceId], queryFn: () => api.listWorkspaceLabels({ workspaceId }) })
-  return <label className="resource-label-filter">Label<SelectControl aria-label="Filter by label" value={value} disabled={catalog.isPending || catalog.isError} onChange={event => onChange(event.target.value)}><option value="">All labels</option>{catalog.data?.items.map(label => <option key={label.id} value={label.id}>{label.name}</option>)}</SelectControl>{catalog.error && <span role="alert">{userError(catalog.error)}</span>}</label>
+  const selected = catalog.data?.items.find(label => label.id === value)
+  return <><label className="resource-label-filter">Label<SelectControl aria-label="Filter by label" value={value} disabled={catalog.isPending || catalog.isError} onChange={event => onChange(event.target.value)}><option value="">All labels</option>{catalog.data?.items.map(label => <option key={label.id} value={label.id}>{label.name}</option>)}</SelectControl>{catalog.error && <span role="alert">{userError(catalog.error)}</span>}</label>{pinApp && selected && <PinLabelControl workspaceId={workspaceId} app={pinApp} labelId={selected.id} name={selected.name} onDone={onPinned} />}</>
 }

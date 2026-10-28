@@ -1,6 +1,8 @@
 import { ActionButton } from './ActionButton'
 import { MessagesSquare } from 'lucide-react'
 import { ResourceLabelFilter } from './ResourceLabels'
+import { isPinned, pinAppNames, pinApps, useLabelPins, usePinLabel, type PinApp } from './PinnedLabels'
+import { userError } from '../lib/errors'
 import { displayDate } from '../lib/display-date'
 import { ModalAction } from './ModalAction'
 import { useState } from 'react'
@@ -25,14 +27,20 @@ export function MailSignature({ scope, box }: { scope: Scope; box: MailboxView }
 export function WorkspaceLabelSettings({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()
   const [name, setName] = useState('')
-  const labels = useQuery({ queryKey: ['workspace-labels', workspaceId], queryFn: () => api.listWorkspaceLabels({ workspaceId: workspaceId }) })
-  const refresh = () => Promise.all([client.invalidateQueries({ queryKey: ['workspace-labels', workspaceId] }), client.invalidateQueries({ queryKey: ['resource-labels', workspaceId] }), client.invalidateQueries({ queryKey: ['drive', workspaceId] }), client.invalidateQueries({ queryKey: ['mail'] }), client.invalidateQueries({ queryKey: ['mail-detail'] })])
-  const create = useMutation({ mutationFn: () => api.createWorkspaceLabel({ workspaceId: workspaceId }, { name }), onSuccess: async () => { setName(''); await refresh() } })
-  const remove = useMutation({ mutationFn: (labelId: string) => api.deleteWorkspaceLabel({ workspaceId: workspaceId, labelId }), onSuccess: refresh })
-  return <section className="settings-form"><h3>Workspace labels</h3><p className="small quiet">Shared across mail, files, contacts, events, chats and meetings.</p><form onSubmit={e => { e.preventDefault(); create.mutate() }}><label>New label<input maxLength={40} required value={name} onChange={e => setName(e.target.value)} /></label><ActionButton className="primary-action" disabled={create.isPending || !name.trim()}>Add label</ActionButton></form>{(labels.error || create.error || remove.error) && <p role="alert">{(labels.error || create.error || remove.error)?.message}</p>}{labels.data?.items.map(label => <div className="settings-list-row" key={label.id}><span>{label.name}</span><ActionButton disabled={remove.isPending} aria-label={`Delete label ${label.name}`} onClick={() => remove.mutate(label.id)}>Delete</ActionButton></div>)}</section>
+  const [notice, setNotice] = useState('')
+  // Pins load first: reading them creates the system labels (Real person), so the catalog includes them.
+  const pins = useLabelPins(workspaceId)
+  const labels = useQuery({ queryKey: ['workspace-labels', workspaceId], queryFn: () => api.listWorkspaceLabels({ workspaceId: workspaceId }), enabled: !pins.isPending })
+  const pin = usePinLabel(workspaceId)
+  const refresh = () => Promise.all([client.invalidateQueries({ queryKey: ['workspace-labels', workspaceId] }), client.invalidateQueries({ queryKey: ['label-pins', workspaceId] }), client.invalidateQueries({ queryKey: ['resource-labels', workspaceId] }), client.invalidateQueries({ queryKey: ['drive', workspaceId] }), client.invalidateQueries({ queryKey: ['mail'] }), client.invalidateQueries({ queryKey: ['mail-detail'] })])
+  const create = useMutation({ mutationFn: () => api.createWorkspaceLabel({ workspaceId: workspaceId }, { name }), onSuccess: async label => { setName(''); setNotice(`“${label.name}” added.`); await refresh() } })
+  const remove = useMutation({ mutationFn: (labelId: string) => api.deleteWorkspaceLabel({ workspaceId: workspaceId, labelId }), onSuccess: async () => { setNotice('Label deleted.'); await refresh() } })
+  const failure = labels.error || pins.error || create.error || remove.error || pin.error
+  const checked = (labelId: string, app: PinApp) => pin.isPending && pin.variables?.labelId === labelId && pin.variables.app === app ? pin.variables.pinned : isPinned(pins.data, labelId, app)
+  return <section className="settings-form"><h3>Workspace labels</h3><p className="small quiet">Shared across mail, files, contacts, events, chats and meetings. Pins are yours: a pinned label appears under that app’s folders for you only.</p><form onSubmit={e => { e.preventDefault(); create.mutate() }}><label>New label<input maxLength={40} required value={name} onChange={e => setName(e.target.value)} /></label><ActionButton className="primary-action" disabled={create.isPending || !name.trim()}>Add label</ActionButton></form>{failure && <p role="alert">{userError(failure)}</p>}{notice && <p role="status">{notice}</p>}{labels.data?.items.map(label => <div className="settings-list-row" key={label.id}><span>{label.name}{label.systemKey && <span className="label-system"> · System label</span>}</span><fieldset className="label-pin-apps"><legend>Pin {label.name} in</legend>{pinApps.map(app => <label key={app}><input type="checkbox" aria-label={`Pin ${label.name} in ${pinAppNames[app]}`} checked={checked(label.id, app)} disabled={pins.isPending || pin.isPending} onChange={e => { const pinned = e.target.checked; setNotice(''); pin.mutate({ labelId: label.id, app, pinned }, { onSuccess: () => setNotice(pinned ? `“${label.name}” pinned in ${pinAppNames[app]}.` : `“${label.name}” unpinned from ${pinAppNames[app]}.`) }) }} />{pinAppNames[app]}</label>)}</fieldset>{label.systemKey ? <span className="small quiet">Can’t be deleted</span> : <ActionButton disabled={remove.isPending} aria-label={`Delete label ${label.name}`} onClick={() => remove.mutate(label.id)}>Delete</ActionButton>}</div>)}</section>
 }
-export function MailLabelFilter({ scope, value, onChange }: { scope: Scope; value: string; onChange: (value: string) => void }) {
-  return <ResourceLabelFilter workspaceId={scope.workspaceId} value={value} onChange={onChange} />
+export function MailLabelFilter({ scope, value, onChange, onPinned }: { scope: Scope; value: string; onChange: (value: string) => void; onPinned?: (text: string) => void }) {
+  return <ResourceLabelFilter workspaceId={scope.workspaceId} value={value} onChange={onChange} pinApp="mail" onPinned={onPinned} />
 }
 export function MailConversation({ scope, item, onSelect }: { scope: Scope; item: MailItem; onSelect: (item: MailItem) => void }) {
   const [open, setOpen] = useState(false)

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	q "thura/db/queries/gen"
 	"thura/internal/calendar"
+	"thura/internal/labels"
 	"thura/schema"
 	"time"
 )
@@ -30,7 +31,14 @@ func ListCalendarEvents(ctx context.Context, r *router.Request[router.None]) (sc
 	if err != nil {
 		return out, err
 	}
+	keep, err := labels.Filter(ctx, r.Param("workspaceId"), "calendar", r.Query("labelId"))
+	if err != nil {
+		return out, err
+	}
 	for _, e := range events {
+		if keep != nil && !keep[e.ID] {
+			continue
+		}
 		d := schema.EventDetail{Event: calendar.ViewEvent(e), Attendees: []schema.EventAttendee{}, Exceptions: []schema.EventException{}}
 		for _, v := range attendees[e.ID] {
 			d.Attendees = append(d.Attendees, calendar.ViewAttendee(v))
@@ -61,7 +69,15 @@ func CalendarInstances(ctx context.Context, r *router.Request[router.None]) (sch
 	if err != nil {
 		return out, err
 	}
+	// ?labelId= keeps events carrying that workspace label (a pinned label's filter).
+	keep, err := labels.Filter(ctx, r.Param("workspaceId"), "calendar", r.Query("labelId"))
+	if err != nil {
+		return out, err
+	}
 	for _, e := range events {
+		if keep != nil && !keep[e.ID] {
+			continue
+		}
 		items, eerr := calendar.Instances(e, c.Color, exceptions[e.ID], from, to)
 		if eerr != nil {
 			return out, eerr
