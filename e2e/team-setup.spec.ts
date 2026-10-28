@@ -50,6 +50,9 @@ for (const width of [1440, 390]) test(`central team setup persists configuration
   await page.getByRole('button', { name: 'Activate team', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('Team active')
   await page.reload()
+  // Refresh keeps the Review step from the URL; the domain shows there and on the Domains step.
+  await expect(page.getByRole('link', { name: 'regional.example.org', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '1. Domains', exact: true }).click()
   await expect(page.getByText('regional.example.org', { exact: true })).toBeVisible()
   for (const row of await page.locator('.team-setup .app-action-row').all()) {
     const buttons = row.locator('button'); const rects = await buttons.evaluateAll(nodes => nodes.filter(n => n.getBoundingClientRect().width).map(n => { const r = n.getBoundingClientRect(); return { y: r.y, height: r.height } }))

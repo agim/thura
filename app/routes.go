@@ -95,6 +95,7 @@ func routes(r *router.Router) {
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/chat/{id}/files", handlers.DownloadChatFile)
 
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts", handlers.ListContacts)
+	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts/{id}", handlers.GetContact)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts/{id}/loop", handlers.GetLoop)
 	router.Route(g, "GET /api/v1/workspaces/{workspaceId}/contacts/{id}/loop/sources", handlers.ListLoopSources)
 	router.Route(g, "PUT /api/v1/workspaces/{workspaceId}/contacts/{id}/loop/links", handlers.LinkLoop)

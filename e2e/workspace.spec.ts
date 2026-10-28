@@ -56,7 +56,7 @@ test('header search opens a matching person in Loop', async ({ page }) => {
   const results = page.getByRole('dialog')
   await expect(results).toBeVisible()
   await results.getByRole('button', { name: new RegExp('^' + name) }).click()
-  await expect(page).toHaveURL(/\/app\/loop$/)
+  await expect(page).toHaveURL(/\/app\/loop\?contact=[0-9a-f-]{36}$/)
   await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
 })
 

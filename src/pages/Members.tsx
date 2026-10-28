@@ -9,6 +9,7 @@ import { Navigate } from '@tanstack/react-router'
 import { ModalAction } from '../components/ModalAction'
 import { Trash2 } from 'lucide-react'
 import { WorkspaceHistory } from '../components/WorkspaceHistory'
+import { AppNotice, useNotice } from '../components/AppNotice'
 
 export function Members() { return <Navigate to="/app/settings/members" replace /> }
 export function WorkspaceMemberSettings({ workspaceId }: { workspaceId: string }) {
@@ -25,11 +26,14 @@ function Membership({ workspaceId, subject }: { workspaceId: string; subject: st
   const [email, setEmail] = useState('')
   const [deliveryEmail, setDeliveryEmail] = useState('')
   const [role, setRole] = useState<WorkspaceRole>('member')
+  // Each action confirms itself with its own notice; a later action replaces an earlier one.
+  const { notice, show: setNotice, clear: closeNotice } = useNotice()
+  const roleName = (role: string) => role[0].toUpperCase() + role.slice(1)
   const refresh = async () => { await client.invalidateQueries({ queryKey: ['members', workspaceId] }); await client.invalidateQueries({ queryKey: ['invitations', workspaceId] }); await client.invalidateQueries({ queryKey: ['workspace-audit', workspaceId] }) }
-  const invite = useMutation({ mutationFn: () => api.inviteMember({ workspaceId }, { email, role, deliveryEmail: deliveryEmail || undefined }), onSuccess: async () => { setEmail(''); setDeliveryEmail(''); await refresh() } })
-  const change = useMutation({ mutationFn: ({ target, role }: { target: string; role: WorkspaceRole }) => api.changeRole({ workspaceId, subject: target }, { role }), onSuccess: refresh })
-  const remove = useMutation({ mutationFn: (target: string) => api.removeMember({ workspaceId, subject: target }), onSuccess: refresh })
-  const revoke = useMutation({ mutationFn: (id: string) => api.revokeInvite({ workspaceId, id }), onSuccess: refresh })
+  const invite = useMutation({ mutationFn: () => api.inviteMember({ workspaceId }, { email, role, deliveryEmail: deliveryEmail || undefined }), onSuccess: async () => { setEmail(''); setDeliveryEmail(''); setNotice({ text: 'Invitation queued for delivery.' }); await refresh() } })
+  const change = useMutation({ mutationFn: ({ target, role }: { target: string; role: WorkspaceRole; name: string }) => api.changeRole({ workspaceId, subject: target }, { role }), onSuccess: async (_, { role, name }) => { setNotice({ text: `${name} is now ${roleName(role)}.` }); await refresh() } })
+  const remove = useMutation({ mutationFn: ({ target }: { target: string; name: string }) => api.removeMember({ workspaceId, subject: target }), onSuccess: async (_, { name }) => { setNotice({ text: `Removed ${name} from this workspace.` }); await refresh() } })
+  const revoke = useMutation({ mutationFn: ({ id }: { id: string; email: string }) => api.revokeInvite({ workspaceId, id }), onSuccess: async (_, { email }) => { setNotice({ text: `Invitation for ${email} revoked.` }); await refresh() } })
   const busy = invite.isPending || change.isPending || remove.isPending || revoke.isPending
   const failure = members.error ?? invites.error ?? invite.error ?? change.error ?? remove.error ?? revoke.error
   function submit(e: FormEvent) { e.preventDefault(); invite.mutate() }
@@ -39,8 +43,8 @@ function Membership({ workspaceId, subject }: { workspaceId: string; subject: st
     <ul className="member-list">{!members.isError && members.data?.items.map(m => <li className="member-list-row" key={`${m.subject}:${m.role}`}>
       <span className="contact-avatar" aria-hidden="true">{(m.name || m.email).split(/\s+/).slice(0,2).map(part => part[0]).join('').toUpperCase()}</span><div className="member-identity"><strong>{m.name || m.email}</strong><small>{m.mailboxAddress || m.email}</small>{m.mailboxAddress && m.mailboxAddress!==m.email && <small>Sign in: {m.email}</small>}</div>
       {manager && (own?.role === 'owner' || m.role === 'member') ? <>
-        <label className="member-role"><span className="visually-hidden">Role for {m.name || m.email}</span><SelectControl aria-label={`Role for ${m.name || m.email}`} disabled={busy || own?.role !== 'owner'} value={m.role} onChange={e => change.mutate({ target: m.subject, role: e.target.value as WorkspaceRole })}>{['member', 'admin', 'owner'].map(r => <option key={r} value={r}>{r[0].toUpperCase() + r.slice(1)}</option>)}</SelectControl></label>
-        <ActionButton className="member-remove" type="button" aria-label={`Remove ${m.name || m.email}`} title={`Remove ${m.name || m.email}`} disabled={busy} onClick={async () => { if (await confirmAction(`Remove ${m.email} from this workspace?`)) remove.mutate(m.subject) }}><Trash2 size={18} /></ActionButton>
+        <label className="member-role"><span className="visually-hidden">Role for {m.name || m.email}</span><SelectControl aria-label={`Role for ${m.name || m.email}`} disabled={busy || own?.role !== 'owner'} value={m.role} onChange={e => change.mutate({ target: m.subject, role: e.target.value as WorkspaceRole, name: m.name || m.email })}>{['member', 'admin', 'owner'].map(r => <option key={r} value={r}>{r[0].toUpperCase() + r.slice(1)}</option>)}</SelectControl></label>
+        <ActionButton className="member-remove" type="button" aria-label={`Remove ${m.name || m.email}`} title={`Remove ${m.name || m.email}`} disabled={busy} onClick={async () => { if (await confirmAction(`Remove ${m.email} from this workspace?`)) remove.mutate({ target: m.subject, name: m.name || m.email }) }}><Trash2 size={18} /></ActionButton>
       </> : <span>{m.role}</span>}
     </li>)}</ul>
     {manager && <>
@@ -52,12 +56,12 @@ function Membership({ workspaceId, subject }: { workspaceId: string; subject: st
         <label>Invitation role<SelectControl className="ml-3 border rounded p-2" value={role} onChange={e => setRole(e.target.value as WorkspaceRole)}>{(own?.role === 'owner' ? ['member', 'admin', 'owner'] : ['member']).map(r => <option key={r} value={r}>{r[0].toUpperCase() + r.slice(1)}</option>)}</SelectControl></label>
         {invite.isError && <p role="alert">{invite.error.message}</p>}<ActionButton className="primary-action" disabled={busy}>Send invitation</ActionButton>
       </form></ModalAction>
-      {invite.isSuccess && <p role="status">Invitation queued for delivery.</p>}
       <h3 className="member-invitations-title">Invitations</h3>
       <ul className="invitation-list">{!invites.isError && invites.data?.items.map(i => <li key={i.id} className="settings-list-row"><span>{i.email} · {i.role} · {i.acceptedAt ? 'Accepted' : i.revokedAt ? 'Revoked' : new Date(i.expiresAt) <= new Date() ? 'Expired' : 'Pending'}</span>
-        {!i.acceptedAt && !i.revokedAt && <ActionButton type="button" disabled={busy} className="ml-4" aria-label={`Revoke ${i.email}`} onClick={() => revoke.mutate(i.id)}>Revoke</ActionButton>}
+        {!i.acceptedAt && !i.revokedAt && <ActionButton type="button" disabled={busy} className="ml-4" aria-label={`Revoke ${i.email}`} onClick={() => revoke.mutate({ id: i.id, email: i.email })}>Revoke</ActionButton>}
       </li>)}</ul>
       <WorkspaceHistory workspaceId={workspaceId} members={members.data?.items ?? []} />
     </>}
+    <AppNotice notice={notice} clear={closeNotice} />
   </div>
 }

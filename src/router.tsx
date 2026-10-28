@@ -81,7 +81,7 @@ const chatRoute = createRoute({ getParentRoute: () => appRoute, path: '/chat', v
 const meetRoute = createRoute({ getParentRoute: () => appRoute, path: '/meet', validateSearch: appSearch('meet'), component: () => null })
 const appContactsRoute = createRoute({ getParentRoute: () => appRoute, path: '/contacts', validateSearch: appSearch('contacts'), component: () => null })
 const settingsRoute = createRoute({ getParentRoute: () => appRoute, path: '/settings', component: () => null })
-const teamSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/team', component: () => null })
+const teamSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/team', validateSearch: appSearch('team'), component: () => null })
 const aiSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/ai', component: () => null })
 const mailSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/mail', component: () => null })
 const memberSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/members', component: () => null })

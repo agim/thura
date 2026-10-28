@@ -15,6 +15,8 @@ const day: Check = value => /^\d{4}-\d{2}-\d{2}$/.test(value)
 const oneOf = (...values: string[]): Check => value => values.includes(value)
 
 export const mailFolders = ['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash'] as const
+export const loopSources = ['mail', 'chat', 'document', 'meeting', 'calendar'] as const
+export const teamSteps = ['domains', 'email', 'mailboxes', 'review'] as const
 
 /** The URL parameters of each app, under /app/<name>. `workspace` is shared by all of them. */
 export const appViews = {
@@ -22,9 +24,10 @@ export const appViews = {
   drive: { path: '/app/drive', params: { folder: (value: string) => value === 'trash' || id(value), file: id, q: text, label: uuid } },
   chat: { path: '/app/chat', params: { room: id, q: text } },
   calendar: { path: '/app/calendar', params: { view: oneOf('month', 'week', 'day', 'list'), date: day, calendar: id, event: id, instance: id } },
-  contacts: { path: '/app/contacts', params: { contact: id, q: text } },
-  loop: { path: '/app/loop', params: { contact: id, q: text } },
-  meet: { path: '/app/meet', params: { meeting: id } },
+  contacts: { path: '/app/contacts', params: { contact: uuid, new: oneOf('1'), q: text } },
+  loop: { path: '/app/loop', params: { contact: uuid, q: text, people: text, scope: oneOf('organization'), source: oneOf(...loopSources) } },
+  meet: { path: '/app/meet', params: { meeting: id, filter: oneOf('ended') } },
+  team: { path: '/app/settings/team', params: { team: uuid, step: oneOf(...teamSteps) } },
 } as const
 export type AppName = keyof typeof appViews
 export type AppView<A extends AppName> = Partial<Record<keyof typeof appViews[A]['params'] | 'workspace', string>>

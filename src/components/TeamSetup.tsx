@@ -1,5 +1,5 @@
 import { confirmAction } from './ConfirmationHost'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type TeamDomainView, type TeamMailInput, type TeamMailView } from '@lidza/client'
 import { ActionButton } from './ActionButton'
@@ -7,32 +7,52 @@ import { ActionRow } from './ActionRow'
 import { SelectControl } from './SelectControl'
 import { RecipientInput } from './RecipientInput'
 import { userError } from '../lib/errors'
+import { teamSteps, useAppView } from '../lib/app-view'
+import { AppNotice, useNotice, type Notice } from './AppNotice'
 import { displayDate } from '../lib/display-date'
 import { Plus, Globe, Mail, Check, ArrowLeft, ArrowRight, Trash2, KeyRound, RefreshCw } from 'lucide-react'
 import './team-setup.css'
 
+// Team mailboxes (every mailbox of the team, for its administrator) are not the
+// signed-in member's mailboxes (['mailboxes', ws], with signatures): own key.
+export const teamMailboxesKey = (workspaceId: string) => ['team-mailboxes', workspaceId]
+
+/**
+ * Teams and domains keep their view in the URL (src/lib/app-view.ts):
+ * ?team= is the team being set up (defaults to this workspace) and ?step= the
+ * setup step (defaults to Domains); each change is a new history entry. A team
+ * that is not in the list falls back to this workspace with a notice.
+ */
 export function TeamSetup({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()
+  const { notice, show: setNotice, clear: closeNotice } = useNotice()
+  const { view, set } = useAppView('team', { onInvalid: () => setNotice({ text: 'Part of this settings link could not be opened. Showing this workspace’s setup.' }) })
   const teams = useQuery({ queryKey: ['managed-teams'], queryFn: () => api.listManagedTeams(), retry: false })
-  const [chosen, setChosen] = useState(workspaceId)
-  const [step, setStep] = useState(0)
+  const missingTeam = !!view.team && !!teams.data && !teams.data.items.some(team => team.id === view.team)
+  const chosen = !missingTeam && view.team ? view.team : workspaceId
+  const step = Math.max(0, teamSteps.indexOf(view.step as typeof teamSteps[number]))
+  const setChosen = (team: string) => set({ team: team === workspaceId ? undefined : team, step: undefined })
+  const setStep = (next: number) => set({ step: next ? teamSteps[next] : undefined })
+  const lostTeam = useRef('')
+  useEffect(() => { if (missingTeam && view.team && lostTeam.current !== view.team) { lostTeam.current = view.team; setNotice({ text: 'That team is not available to your account. Showing this workspace’s setup.' }); set({ team: undefined, step: undefined }, { replace: true }) } }, [missingTeam, view.team, set, setNotice])
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
   const setup = useQuery({ queryKey: ['team-setup', chosen], queryFn: () => api.getTeamSetup({ workspaceId: chosen }), enabled: !!chosen && !!teams.data, retry: false })
   const refresh = () => client.invalidateQueries({ queryKey: ['team-setup', chosen] })
-  const create = useMutation({ mutationFn: () => api.createTeam({ name }), onSuccess: async team => { setChosen(team.id); setStep(0); setCreating(false); setName(''); await client.invalidateQueries({ queryKey: ['managed-teams'] }); await client.invalidateQueries({ queryKey: ['workspaces'] }) } })
+  const create = useMutation({ mutationFn: () => api.createTeam({ name }), onSuccess: async team => { setChosen(team.id); setCreating(false); setName(''); setNotice({ text: `Team “${team.name}” created.` }); await client.invalidateQueries({ queryKey: ['managed-teams'] }); await client.invalidateQueries({ queryKey: ['workspaces'] }) } })
   if (teams.isError) return <p role="status">Teams and domains are configured centrally by the server administrator.</p>
   return <section className="team-setup"><h3>Teams and domains</h3><p>Configure this self-hosted installation’s teams in one place. Each team keeps its own members and data.</p>
     {teams.isPending && <p role="status">Loading teams…</p>}
-    {teams.data && <ActionRow label="Team selection" className="team-selection"><label>Team<SelectControl value={chosen} onChange={e => { setChosen(e.target.value); setStep(0) }}>{teams.data.items.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</SelectControl></label><ActionButton aria-label="Add team" onClick={() => setCreating(!creating)}><Plus size={16} aria-hidden="true" /><span className="action-label">Add team</span></ActionButton></ActionRow>}
+    {teams.data && <ActionRow label="Team selection" className="team-selection"><label>Team<SelectControl value={chosen} onChange={e => setChosen(e.target.value)}>{teams.data.items.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}</SelectControl></label><ActionButton aria-label="Add team" onClick={() => setCreating(!creating)}><Plus size={16} aria-hidden="true" /><span className="action-label">Add team</span></ActionButton></ActionRow>}
     {creating && <form className="settings-form" onSubmit={e => { e.preventDefault(); create.mutate() }}><label>Team name<input required maxLength={120} value={name} onChange={e => setName(e.target.value)} /></label><p>You will own this team as the server administrator and can invite its members.</p><ActionRow label="Create team"><ActionButton type="button" onClick={() => setCreating(false)}>Cancel</ActionButton><ActionButton aria-label="Create team" variant="primary" disabled={create.isPending}><Plus size={16} aria-hidden="true" /><span className="action-label">Create team</span></ActionButton></ActionRow>{create.isError && <p role="alert">{userError(create.error)}</p>}</form>}
     {setup.isError && <p role="alert">{userError(setup.error)}</p>}
     {setup.data && <><nav className="team-steps" aria-label="Team setup steps">{['Domains', 'Email', 'Mailboxes', 'Review'].map((label, i) => <ActionButton key={label} aria-current={step === i ? 'step' : undefined} onClick={() => setStep(i)}>{i + 1}. {label}</ActionButton>)}</nav>
       {step === 0 && <Domains workspaceId={chosen} domains={setup.data.domains} refresh={refresh} />}
-      {step === 1 && <><h4>Email delivery</h4><p>API providers are recommended. Receiving through the included Postfix service is independent of outgoing delivery.</p>{setup.data.domains.filter(d => d.mail).map(domain => <MailProvider key={domain.id} workspaceId={chosen} domain={domain} current={setup.data.mail.find(c => c.domainId === domain.id)} refresh={refresh} />)}{!setup.data.domains.some(d => d.mail) && <p>Add an email domain first, or continue if this team does not use email.</p>}</>}
+      {step === 1 && <><h4>Email delivery</h4><p>API providers are recommended. Receiving through the included Postfix service is independent of outgoing delivery.</p>{setup.data.domains.filter(d => d.mail).map(domain => <MailProvider key={domain.id} workspaceId={chosen} domain={domain} current={setup.data.mail.find(c => c.domainId === domain.id)} refresh={refresh} setNotice={setNotice} />)}{!setup.data.domains.some(d => d.mail) && <p>Add an email domain first, or continue if this team does not use email.</p>}</>}
       {step === 2 && <Mailboxes workspaceId={chosen} domains={setup.data.domains.filter(d => d.mail)} />}
       {step === 3 && <Publish workspaceId={chosen} domains={setup.data.domains} primaryDomain={setup.data.primaryDomain} status={setup.data.status} refresh={refresh} />}
       <ActionRow label="Setup navigation"><ActionButton aria-label="Back" disabled={step === 0} onClick={() => setStep(step - 1)}><ArrowLeft size={16} aria-hidden="true" /><span className="action-label">Back</span></ActionButton><ActionButton aria-label="Continue" disabled={step === 3} onClick={() => setStep(step + 1)}><span className="action-label">Continue</span><ArrowRight size={16} aria-hidden="true" /></ActionButton></ActionRow></>}
+    <AppNotice notice={notice} clear={closeNotice} />
   </section>
 }
 function Domains({ workspaceId, domains, refresh }: { workspaceId: string; domains: TeamDomainView[]; refresh: () => Promise<unknown> }) {
@@ -44,10 +64,10 @@ function Domains({ workspaceId, domains, refresh }: { workspaceId: string; domai
     <p>Point each web domain’s A/AAAA records at this server and configure HTTPS in your reverse proxy. For email, point the domain’s MX record to the server’s mail hostname. Configure your provider’s SPF, DKIM and DMARC records before sending.</p>
   </>
 }
-function MailProvider({ workspaceId, domain, current, refresh }: { workspaceId: string; domain: TeamDomainView; current?: TeamMailView; refresh: () => Promise<unknown> }) {
+function MailProvider({ workspaceId, domain, current, refresh, setNotice }: { workspaceId: string; domain: TeamDomainView; current?: TeamMailView; refresh: () => Promise<unknown>; setNotice: (notice: Notice | null) => void }) {
   const [form, setForm] = useState<TeamMailInput>(() => ({ provider: current?.provider || 'mailgun', region: current?.region || 'us', smtpHost: current?.smtpHost || '', smtpPort: current?.smtpPort || 587, smtpUsername: current?.smtpUsername || '', smtpSecurity: current?.smtpSecurity || 'starttls', enabled: current?.enabled ?? true, smip: current?.smip ?? true, postfix: current?.postfix ?? true }))
   const save = useMutation({ mutationFn: () => api.saveTeamMail({ workspaceId, id: domain.id }, form), onSuccess: async () => { setForm(f => ({ ...f, apiKey: undefined, smtpPassword: undefined, inboundSecret: undefined })); await refresh() } })
-  const rotate = useMutation({ mutationFn: () => api.rotateTeamIdentity({ workspaceId, id: domain.id }), onSuccess: refresh })
+  const rotate = useMutation({ mutationFn: () => api.rotateTeamIdentity({ workspaceId, id: domain.id }), onSuccess: async () => { setNotice({ text: `SMIP key rotated for ${domain.name}. Peers must trust the new key ID.` }); await refresh() } })
   const set = <K extends keyof TeamMailInput>(key: K, value: TeamMailInput[K]) => setForm(f => ({ ...f, [key]: value }))
   return <form className="settings-form" onSubmit={e => { e.preventDefault(); save.mutate() }}><h4>{domain.name}</h4><label>Outgoing provider<SelectControl value={form.provider} onChange={e => set('provider', e.target.value)}>{['mailgun', 'sendgrid', 'postmark', 'resend', 'smtp', 'postfix'].map(p => <option value={p} key={p}>{({ mailgun: 'Mailgun API', sendgrid: 'SendGrid API', postmark: 'Postmark API', resend: 'Resend API', smtp: 'SMTP', postfix: 'Local Postfix' })[p as 'mailgun']}</option>)}</SelectControl></label>
     {!['smtp', 'postfix'].includes(form.provider) && <><label>API key<input type="password" autoComplete="new-password" value={form.apiKey || ''} placeholder={current?.hasApiKey && current.provider === form.provider ? 'Saved securely · leave blank to keep' : 'Provider API key'} onChange={e => set('apiKey', e.target.value || undefined)} /></label><label>API region<SelectControl value={form.region} onChange={e => set('region', e.target.value)}><option value="us">US</option><option value="eu">EU</option></SelectControl></label></>}
@@ -70,8 +90,9 @@ function SmipStatus({ workspaceId, domain }: { workspaceId: string; domain: Team
 }
 function Mailboxes({ workspaceId, domains }: { workspaceId: string; domains: TeamDomainView[] }) {
   const client = useQueryClient(); const [name, setName] = useState(''); const [address, setAddress] = useState('')
-  const boxes = useQuery({ queryKey: ['mailboxes', workspaceId], queryFn: () => api.listTeamMailboxes({ workspaceId }), retry: false })
-  const create = useMutation({ mutationFn: () => api.createTeamMailbox({ workspaceId }, { name, address }), onSuccess: async () => { setName(''); setAddress(''); await client.invalidateQueries({ queryKey: ['mailboxes', workspaceId] }) } })
+  const boxes = useQuery({ queryKey: teamMailboxesKey(workspaceId), queryFn: () => api.listTeamMailboxes({ workspaceId }), retry: false })
+  // A new team mailbox can also be one of the member's own mailboxes: refresh both lists.
+  const create = useMutation({ mutationFn: () => api.createTeamMailbox({ workspaceId }, { name, address }), onSuccess: async () => { setName(''); setAddress(''); await client.invalidateQueries({ queryKey: teamMailboxesKey(workspaceId) }); await client.invalidateQueries({ queryKey: ['mailboxes', workspaceId] }) } })
   return <><h4>Mailboxes</h4>{boxes.data?.items.map(box => <div className="settings-list-row" key={box.id}>{box.name}<small>{box.address}</small></div>)}<p>Create addresses on {domains.map(d => d.name).join(', ') || 'a configured email domain'}.</p><form className="settings-form" onSubmit={e => { e.preventDefault(); create.mutate() }}><label>Mailbox name<input required value={name} onChange={e => setName(e.target.value)} /></label><RecipientInput multiple={false} label="Mailbox address" required value={address} onChange={setAddress} /><ActionRow label="Mailbox actions"><ActionButton aria-label="Create mailbox" disabled={create.isPending || !domains.length}><Plus size={16} aria-hidden="true" /><span className="action-label">Create mailbox</span></ActionButton></ActionRow>{create.isError && <p role="alert">{userError(create.error)}</p>}</form></>
 }
 function Publish({ workspaceId, domains, primaryDomain, status, refresh }: { workspaceId: string; domains: TeamDomainView[]; primaryDomain: string; status: string; refresh: () => Promise<unknown> }) {
