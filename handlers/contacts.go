@@ -99,6 +99,23 @@ func CreateContact(ctx context.Context, req *router.Request[schema.ContactInput]
 	return contact(c), err
 }
 
+// GetContact answers one contact of the workspace, so a link to it (an open
+// editor, a Loop timeline) opens even when it is not on the first page.
+func GetContact(ctx context.Context, req *router.Request[router.None]) (schema.Contact, error) {
+	id, cid := req.Param("workspaceId"), req.Param("id")
+	if err := workspace.RequireMember(ctx, id); err != nil {
+		return schema.Contact{}, err
+	}
+	if !workspace.ValidID(cid) {
+		return schema.Contact{}, router.Errorf(http.StatusNotFound, "contact not found")
+	}
+	c, err := queries.New(db.From(ctx)).GetCorrespondenceContact(ctx, queries.GetCorrespondenceContactParams{WorkspaceID: id, ID: cid})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return schema.Contact{}, router.Errorf(http.StatusNotFound, "contact not found")
+	}
+	return contact(c), err
+}
+
 func UpdateContact(ctx context.Context, req *router.Request[schema.ContactInput]) (schema.Contact, error) {
 	id, cid := req.Param("workspaceId"), req.Param("id")
 	if err := workspace.RequireMember(ctx, id); err != nil {

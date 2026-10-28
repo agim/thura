@@ -5,11 +5,13 @@ import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@lidza/client'
 import { userError } from '../lib/errors'
+import { AppNotice, useNotice } from './AppNotice'
 
 // The paired transport inbox is separate from Matrix's conversations. React
 // renders chat bodies as text; accepted files need explicit authorized import.
 export function SmipReview({ workspaceId, manager }: { workspaceId: string; manager: boolean }) {
   const client = useQueryClient()
+  const { notice, show: setNotice, clear: closeNotice } = useNotice()
   const key = ['smip-inbox', workspaceId]
   const bindings = useQuery({ queryKey: ['smip-bindings', workspaceId], refetchInterval: 5000, retry: false, queryFn: ({ signal }) => api.listSmipBindings({ workspaceId }, { signal }) })
   const ready = bindings.data?.configured === true && !bindings.isError
@@ -29,7 +31,7 @@ export function SmipReview({ workspaceId, manager }: { workspaceId: string; mana
   const send = useMutation({ mutationFn: (id: string) => api.queueSmipMessage({ workspaceId }, { transactionId: id, bindingId: sendBinding, body: sendFile ? '' : sendBody, fileId: sendFile || undefined }), onSuccess: async () => { setSendBody(''); setSendFile(''); setTransactionId(''); await client.invalidateQueries({ queryKey: ['smip-outbox', workspaceId] }) } })
   const cancel = useMutation({ mutationFn: (id: string) => api.cancelSmipMessage({ workspaceId, id }), onSuccess: () => client.invalidateQueries({ queryKey: ['smip-outbox', workspaceId] }) })
   const resume = useMutation({ mutationFn: (id: string) => api.resumeSmipMessage({ workspaceId, id }), onSuccess: () => client.invalidateQueries({ queryKey: ['smip-outbox', workspaceId] }) })
-  const consent = useMutation({ mutationFn: (id: string) => api.createSmipBinding({ workspaceId }, { requestId: id, peer, stream, sender, recipient }), onSuccess: async () => { setRequestId(''); await client.invalidateQueries({ queryKey: ['smip-bindings', workspaceId] }) } })
+  const consent = useMutation({ mutationFn: (id: string) => api.createSmipBinding({ workspaceId }, { requestId: id, peer, stream, sender, recipient }), onSuccess: async binding => { setRequestId(''); setPeer(''); setStream(''); setSender(''); setRecipient(''); setNotice({ text: `Authorized ${binding.sender} → ${binding.recipient} on stream ${binding.stream}.` }); await client.invalidateQueries({ queryKey: ['smip-bindings', workspaceId] }) } })
   const disable = useMutation({ mutationFn: (id: string) => api.disableSmipBinding({ workspaceId, id }), onSuccess: () => client.invalidateQueries({ queryKey: ['smip-bindings', workspaceId] }) })
   const importFile = useMutation({ mutationFn: (id: string) => api.importSmipFile({ workspaceId, id }, { folderId: folderId || undefined }), onSuccess: async () => { await client.invalidateQueries({ queryKey: key }); await client.invalidateQueries({ queryKey: ['drive', workspaceId] }) } })
   if (bindings.isError) return <p role="alert">SMIP status unavailable: {userError(bindings.error)}</p>
@@ -47,6 +49,7 @@ export function SmipReview({ workspaceId, manager }: { workspaceId: string; mana
       <label>Local recipient<input required maxLength={382} value={recipient} onChange={event => { setRecipient(event.target.value); setRequestId('') }} /></label>
       <ActionButton disabled={consent.isPending}>Authorize SMIP stream</ActionButton>
     </form>}
+    <AppNotice notice={notice} clear={closeNotice} />
     <ul>{bindings.data?.items.map(binding => <li key={binding.id}>{binding.sender} → {binding.recipient} · {binding.stream} · {binding.enabled ? 'Authorized' : 'Disabled'} {manager && binding.enabled && <ActionButton disabled={disable.isPending} onClick={() => disable.mutate(binding.id)}>Disable {binding.stream}</ActionButton>}</li>)}</ul>
     {(bindings.data?.items.some(binding => binding.enabled && bindings.data?.sendablePeers?.includes(binding.peer))) && <form onSubmit={event => { event.preventDefault(); const id = transactionId || crypto.randomUUID(); setTransactionId(id); send.mutate(id) }}>
       <h4>Send through SMIP</h4>

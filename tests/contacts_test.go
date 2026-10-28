@@ -76,8 +76,15 @@ func TestContactsWorkspaceIsolation(t *testing.T) {
 	if c.Name != in.Name {
 		t.Fatalf("update: %+v", c)
 	}
+	var one schema.Contact
+	status("GET", base+"/"+c.ID, nil, &one, http.StatusOK)
+	if one.ID != c.ID || one.Name != in.Name {
+		t.Fatalf("get contact: %+v", one)
+	}
+	status("GET", base+"/not-a-uuid", nil, nil, http.StatusNotFound)
 	forbidden := "/api/v1/workspaces/" + other.ID + "/contacts"
 	status("GET", forbidden, nil, nil, http.StatusNotFound)
+	status("GET", forbidden+"/"+c.ID, nil, nil, http.StatusNotFound)
 	status("POST", forbidden, in, nil, http.StatusNotFound)
 	status("PATCH", forbidden+"/"+c.ID, in, nil, http.StatusNotFound)
 	status("DELETE", forbidden+"/"+c.ID, nil, nil, http.StatusNotFound)
@@ -94,7 +101,9 @@ func TestContactsWorkspaceIsolation(t *testing.T) {
 	}
 	status("PATCH", forbidden+"/"+c.ID, in, nil, http.StatusNotFound)
 	status("DELETE", forbidden+"/"+c.ID, nil, nil, http.StatusNotFound)
+	status("GET", forbidden+"/"+c.ID, nil, nil, http.StatusNotFound)
 	status("DELETE", base+"/"+c.ID, nil, nil, http.StatusNoContent)
+	status("GET", base+"/"+c.ID, nil, nil, http.StatusNotFound)
 	status("GET", base, nil, &contacts, http.StatusOK)
 	if len(contacts.Items) != 0 {
 		t.Fatalf("deleted contact still visible: %+v", contacts)
