@@ -703,6 +703,7 @@ type Mailbox struct {
 	Private      bool      `json:"private"`
 	OwnerSubject *string   `json:"owner_subject"`
 	Signature    string    `json:"signature"`
+	SenderName   string    `json:"sender_name"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

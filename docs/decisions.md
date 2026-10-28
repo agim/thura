@@ -561,3 +561,7 @@ Touches: internal/smiptrust, internal/smipmail/discovery.go, internal/federation
 Why: Each uncached SMIP status can take up to six seconds, and checking every team domain inside the team-setup response blocked the page. The status moved to its own server-administrator route per domain (and an administrator-only setup JSON endpoint for the wizard, with a no-script inline recheck), keeping the one-minute cache and bounded timeouts; the page shows Checking until it answers and says the check could not run when the request fails, never a fabricated pass.
 
 Touches: handlers/teams.go, src/components/TeamSetup.tsx, internal/setup/smip_status.go, internal/setup/admin-controls.js
+
+## 2026-10-28: Outgoing mail carries a sender name
+
+Why: Gmail and other clients showed Thura mail as a bare address. Each mailbox gets an optional senderName; when empty, a private mailbox sends under its owner's auth profile name and a shared one under the workspace name, else the bare address. The mailbox name is not used: it holds internal labels such as 'Team mail'. The From is built with net/mail.Address so commas, quotes and non-ASCII stay one valid address; SMIP still compares only the plain address with the envelope sender, rejects decoded names with control characters and re-encodes the name in the stored MIME copy.

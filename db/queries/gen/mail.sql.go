@@ -198,7 +198,7 @@ func (q *Queries) CreateDraft(ctx context.Context, arg CreateDraftParams) (MailI
 }
 
 const createMailbox = `-- name: CreateMailbox :one
-INSERT INTO mailbox(workspace_id,name,address,config_prefix) VALUES($1,$2,$3,$4) RETURNING id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at
+INSERT INTO mailbox(workspace_id,name,address,config_prefix) VALUES($1,$2,$3,$4) RETURNING id, workspace_id, name, address, config_prefix, private, owner_subject, signature, sender_name, created_at
 `
 
 type CreateMailboxParams struct {
@@ -225,6 +225,7 @@ func (q *Queries) CreateMailbox(ctx context.Context, arg CreateMailboxParams) (M
 		&i.Private,
 		&i.OwnerSubject,
 		&i.Signature,
+		&i.SenderName,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -418,7 +419,7 @@ func (q *Queries) GetMailItem(ctx context.Context, id string) (MailItem, error) 
 }
 
 const getMailbox = `-- name: GetMailbox :one
-SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox WHERE id=$1
+SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, sender_name, created_at FROM mailbox WHERE id=$1
 `
 
 func (q *Queries) GetMailbox(ctx context.Context, id string) (Mailbox, error) {
@@ -433,6 +434,7 @@ func (q *Queries) GetMailbox(ctx context.Context, id string) (Mailbox, error) {
 		&i.Private,
 		&i.OwnerSubject,
 		&i.Signature,
+		&i.SenderName,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -786,7 +788,7 @@ func (q *Queries) ListMailboxLabels(ctx context.Context, id string) ([]MailLabel
 }
 
 const listMailboxes = `-- name: ListMailboxes :many
-SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox WHERE workspace_id=$1 ORDER BY name,id
+SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, sender_name, created_at FROM mailbox WHERE workspace_id=$1 ORDER BY name,id
 `
 
 func (q *Queries) ListMailboxes(ctx context.Context, workspaceID string) ([]Mailbox, error) {
@@ -807,6 +809,7 @@ func (q *Queries) ListMailboxes(ctx context.Context, workspaceID string) ([]Mail
 			&i.Private,
 			&i.OwnerSubject,
 			&i.Signature,
+			&i.SenderName,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -849,7 +852,7 @@ func (q *Queries) ListPostfixAliases(ctx context.Context) ([]MailboxAlias, error
 }
 
 const listVisibleMailboxes = `-- name: ListVisibleMailboxes :many
-SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox WHERE workspace_id=$1
+SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, sender_name, created_at FROM mailbox WHERE workspace_id=$1
 AND (NOT private OR owner_subject=$2) ORDER BY name,id
 `
 
@@ -876,6 +879,7 @@ func (q *Queries) ListVisibleMailboxes(ctx context.Context, arg ListVisibleMailb
 			&i.Private,
 			&i.OwnerSubject,
 			&i.Signature,
+			&i.SenderName,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -926,7 +930,7 @@ func (q *Queries) LockMailItem(ctx context.Context, id string) (MailItem, error)
 }
 
 const lockMailbox = `-- name: LockMailbox :one
-SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox WHERE id=$1 FOR UPDATE
+SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, sender_name, created_at FROM mailbox WHERE id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockMailbox(ctx context.Context, id string) (Mailbox, error) {
@@ -941,6 +945,7 @@ func (q *Queries) LockMailbox(ctx context.Context, id string) (Mailbox, error) {
 		&i.Private,
 		&i.OwnerSubject,
 		&i.Signature,
+		&i.SenderName,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -955,6 +960,21 @@ func (q *Queries) MailObjectReferenced(ctx context.Context, objectKey string) (b
 	var referenced bool
 	err := row.Scan(&referenced)
 	return referenced, err
+}
+
+const mailboxSenderDefault = `-- name: MailboxSenderDefault :one
+SELECT (CASE WHEN m.private THEN COALESCE(u.name,'') ELSE w.name END)::text AS name
+FROM mailbox m JOIN workspace w ON w.id=m.workspace_id LEFT JOIN auth_user u ON u.subject=m.owner_subject
+WHERE m.id=$1
+`
+
+// The name outgoing mail carries when the mailbox sets none: the owner's
+// profile name for a private mailbox, the workspace name for a shared one.
+func (q *Queries) MailboxSenderDefault(ctx context.Context, id string) (string, error) {
+	row := q.db.QueryRow(ctx, mailboxSenderDefault, id)
+	var name string
+	err := row.Scan(&name)
+	return name, err
 }
 
 const queueMailItem = `-- name: QueueMailItem :one
@@ -1015,7 +1035,7 @@ func (q *Queries) RemoveMailTag(ctx context.Context, arg RemoveMailTagParams) er
 
 const reservePersonalMailbox = `-- name: ReservePersonalMailbox :one
 INSERT INTO mailbox(workspace_id,name,address,config_prefix,private)
-VALUES($1,$2,$3,'',true) RETURNING id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at
+VALUES($1,$2,$3,'',true) RETURNING id, workspace_id, name, address, config_prefix, private, owner_subject, signature, sender_name, created_at
 `
 
 type ReservePersonalMailboxParams struct {
@@ -1036,13 +1056,14 @@ func (q *Queries) ReservePersonalMailbox(ctx context.Context, arg ReservePersona
 		&i.Private,
 		&i.OwnerSubject,
 		&i.Signature,
+		&i.SenderName,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const reusableInvitationMailbox = `-- name: ReusableInvitationMailbox :one
-SELECT b.id, b.workspace_id, b.name, b.address, b.config_prefix, b.private, b.owner_subject, b.signature, b.created_at FROM mailbox b WHERE b.workspace_id=$1 AND b.address=$2
+SELECT b.id, b.workspace_id, b.name, b.address, b.config_prefix, b.private, b.owner_subject, b.signature, b.sender_name, b.created_at FROM mailbox b WHERE b.workspace_id=$1 AND b.address=$2
 AND b.private AND b.owner_subject IS NULL
 AND EXISTS(SELECT 1 FROM invitation i WHERE i.mailbox_id=b.id AND i.email=$3)
 AND NOT EXISTS(SELECT 1 FROM invitation i WHERE i.mailbox_id=b.id AND (i.accepted_at IS NOT NULL OR (i.revoked_at IS NULL AND i.expires_at>$4::timestamptz)))
@@ -1073,6 +1094,7 @@ func (q *Queries) ReusableInvitationMailbox(ctx context.Context, arg ReusableInv
 		&i.Private,
 		&i.OwnerSubject,
 		&i.Signature,
+		&i.SenderName,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -1272,17 +1294,18 @@ func (q *Queries) UpdateMailFlags(ctx context.Context, arg UpdateMailFlagsParams
 	return i, err
 }
 
-const updateMailboxSignature = `-- name: UpdateMailboxSignature :one
-UPDATE mailbox SET signature=$2 WHERE id=$1 RETURNING id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at
+const updateMailboxSettings = `-- name: UpdateMailboxSettings :one
+UPDATE mailbox SET signature=$2,sender_name=$3 WHERE id=$1 RETURNING id, workspace_id, name, address, config_prefix, private, owner_subject, signature, sender_name, created_at
 `
 
-type UpdateMailboxSignatureParams struct {
-	ID        string `json:"id"`
-	Signature string `json:"signature"`
+type UpdateMailboxSettingsParams struct {
+	ID         string `json:"id"`
+	Signature  string `json:"signature"`
+	SenderName string `json:"sender_name"`
 }
 
-func (q *Queries) UpdateMailboxSignature(ctx context.Context, arg UpdateMailboxSignatureParams) (Mailbox, error) {
-	row := q.db.QueryRow(ctx, updateMailboxSignature, arg.ID, arg.Signature)
+func (q *Queries) UpdateMailboxSettings(ctx context.Context, arg UpdateMailboxSettingsParams) (Mailbox, error) {
+	row := q.db.QueryRow(ctx, updateMailboxSettings, arg.ID, arg.Signature, arg.SenderName)
 	var i Mailbox
 	err := row.Scan(
 		&i.ID,
@@ -1293,6 +1316,7 @@ func (q *Queries) UpdateMailboxSignature(ctx context.Context, arg UpdateMailboxS
 		&i.Private,
 		&i.OwnerSubject,
 		&i.Signature,
+		&i.SenderName,
 		&i.CreatedAt,
 	)
 	return i, err

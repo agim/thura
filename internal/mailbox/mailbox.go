@@ -108,7 +108,37 @@ func Text(s *string) string {
 	return *s
 }
 func ViewMailbox(m queries.Mailbox) schema.Mailbox {
-	return schema.Mailbox{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Private: m.Private, OwnerSubject: m.OwnerSubject, Signature: m.Signature, CreatedAt: m.CreatedAt}
+	return schema.Mailbox{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Private: m.Private, OwnerSubject: m.OwnerSubject, Signature: m.Signature, SenderName: m.SenderName, CreatedAt: m.CreatedAt}
+}
+
+// MailboxView is the mailbox as its members see it, with the sender name
+// outgoing mail uses when the mailbox sets none (mailaccess.SenderDefault).
+func MailboxView(ctx context.Context, q *queries.Queries, m queries.Mailbox) (schema.MailboxView, error) {
+	fallback, err := mailaccess.SenderDefault(ctx, q, m)
+	return schema.MailboxView{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Private: m.Private, OwnerSubject: m.OwnerSubject, Signature: m.Signature, SenderName: m.SenderName, SenderDefault: fallback, CreatedAt: m.CreatedAt}, err
+}
+
+// UpdateSettings saves the mailbox's signature and, when given, its sender
+// name: trimmed, one line, at most mailaccess.MaxSenderName characters.
+func UpdateSettings(ctx context.Context, workspaceID, mailboxID string, in schema.MailSignatureInput) (schema.MailboxView, error) {
+	box, err := Access(ctx, workspaceID, mailboxID)
+	if err != nil {
+		return schema.MailboxView{}, err
+	}
+	name := box.SenderName
+	if in.SenderName != nil {
+		clean, ok := mailaccess.CleanSenderName(*in.SenderName)
+		if !ok {
+			return schema.MailboxView{}, router.Errorf(422, "sender name must be one line of at most %d characters", mailaccess.MaxSenderName)
+		}
+		name = clean
+	}
+	q := queries.New(db.From(ctx))
+	box, err = q.UpdateMailboxSettings(ctx, queries.UpdateMailboxSettingsParams{ID: box.ID, Signature: Text(in.Signature), SenderName: name})
+	if err != nil {
+		return schema.MailboxView{}, err
+	}
+	return MailboxView(ctx, q, box)
 }
 func View(i queries.MailItem) schema.MailItem {
 	formatted := ReaderHTML(i.HTMLBody)
@@ -203,7 +233,11 @@ func Queue(ctx context.Context, workspaceID, mailboxID, itemID string, in schema
 	if err != nil {
 		return schema.MailItem{}, err
 	}
-	msg, err := compose(box, i)
+	from, err := mailaccess.From(ctx, q, box)
+	if err != nil {
+		return schema.MailItem{}, err
+	}
+	msg, err := compose(from, i)
 	if err != nil {
 		return schema.MailItem{}, err
 	}
@@ -325,7 +359,11 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 		}
 		return err
 	}
-	msg, err := compose(m, i)
+	from, err := mailaccess.From(ctx, q, m)
+	if err != nil {
+		return err
+	}
+	msg, err := compose(from, i)
 	if err == nil {
 		err = smipmail.Check(msg)
 	}
@@ -384,8 +422,9 @@ func Deliver(ctx context.Context, payload json.RawMessage) error {
 }
 
 // compose builds the outgoing message without its attachments: Queue checks it
-// and Deliver adds the stored files.
-func compose(m queries.Mailbox, i queries.MailItem) (mail.Message, error) {
+// and Deliver adds the stored files. from is the mailbox's resolved From
+// (mailaccess.From): its address with the sender name, never the mailbox name.
+func compose(from string, i queries.MailItem) (mail.Message, error) {
 	cc, err := addresses(i.Cc)
 	if err != nil {
 		return mail.Message{}, err
@@ -394,7 +433,7 @@ func compose(m queries.Mailbox, i queries.MailItem) (mail.Message, error) {
 	if err != nil {
 		return mail.Message{}, err
 	}
-	msg := mail.Message{To: i.ToAddress, Cc: cc, Bcc: bcc, From: m.Address, Subject: i.Subject, Text: i.TextBody, HTML: i.HTMLBody, Headers: map[string]string{}}
+	msg := mail.Message{To: i.ToAddress, Cc: cc, Bcc: bcc, From: from, Subject: i.Subject, Text: i.TextBody, HTML: i.HTMLBody, Headers: map[string]string{}}
 	if i.InReplyTo != "" {
 		msg.Headers["In-Reply-To"] = i.InReplyTo
 	}

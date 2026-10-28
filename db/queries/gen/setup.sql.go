@@ -211,7 +211,7 @@ func (q *Queries) LatestMatchingSetupProbe(ctx context.Context, arg LatestMatchi
 }
 
 const listPostfixMailboxes = `-- name: ListPostfixMailboxes :many
-SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, created_at FROM mailbox ORDER BY address,id LIMIT 1001
+SELECT id, workspace_id, name, address, config_prefix, private, owner_subject, signature, sender_name, created_at FROM mailbox ORDER BY address,id LIMIT 1001
 `
 
 func (q *Queries) ListPostfixMailboxes(ctx context.Context) ([]Mailbox, error) {
@@ -232,6 +232,7 @@ func (q *Queries) ListPostfixMailboxes(ctx context.Context) ([]Mailbox, error) {
 			&i.Private,
 			&i.OwnerSubject,
 			&i.Signature,
+			&i.SenderName,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

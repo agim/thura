@@ -14,6 +14,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	stdmail "net/mail"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -49,9 +50,10 @@ func TestPersistentMailAndConnectorRouting(t *testing.T) {
 			w.Write([]byte(`{"id":"provider-fixture-id","message":"Queued"}`))
 		}))
 	}
-	a := transport(&sendsA, "fixture-key-a", "a@example.com")
+	// Shared mailboxes send under the workspace name (no sender name set).
+	a := transport(&sendsA, "fixture-key-a", (&stdmail.Address{Name: "Mail workspace", Address: "a@example.com"}).String())
 	defer a.Close()
-	b := transport(&sendsB, "fixture-key-b", "b@example.com")
+	b := transport(&sendsB, "fixture-key-b", (&stdmail.Address{Name: "Mail workspace", Address: "b@example.com"}).String())
 	defer b.Close()
 	// Each mailbox has an operator-controlled credential namespace.
 	for prefix, config := range map[string][2]string{"ROUTE_A_": {a.URL, "fixture-key-a"}, "ROUTE_B_": {b.URL, "fixture-key-b"}} {
