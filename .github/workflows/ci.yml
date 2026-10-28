@@ -13,7 +13,7 @@ env:
   DATABASE_URL: postgres://postgres:postgres@localhost:5432/thura_test?sslmode=disable
   AUTH_SECRET: ci-only-secret-never-use-in-production-0123456789
   MAIL_PROVIDER: outbox
-  LLM_PROVIDER: fake
+  # .env.test supplies fake AI without masking operator-settings tests.
   STORAGE_PROVIDER: local
   STORAGE_DIR: .lidza/ci-storage
   ADMIN_USERS: admin@example.com
@@ -60,6 +60,7 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: lidza verify --strict
         run: |
+          umask 077
           git add -A
           JOBS_WORKERS=0 lidza verify --strict
       - name: govulncheck (known vulnerabilities in code the app calls)
