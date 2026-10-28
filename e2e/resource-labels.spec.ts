@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { test } from './label-fixture'
 import { expect } from '@playwright/test'
 import { chooseOption, labelIsApplied } from './controls'
@@ -43,6 +44,9 @@ for (const width of [390, 1440]) {
     await page.getByRole('button', { name: 'Apply labels', exact: true }).click()
     await expect.poll(() => labelIsApplied(dialog, name)).toBe(true)
     await dialog.getByRole('button', { name: 'Close Apply labels' }).click()
+    // Setup: this run's own contact, so the step below never depends on what other specs left behind.
+    const contact = await page.request.post('/api/v1/workspaces/a0000000-0000-4000-8000-000000000001/contacts', { headers: { 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'same-origin' }, data: { name: `Label contact ${randomUUID()}`, email: `label-${randomUUID()}@example.com`, favorite: false } })
+    expect(contact.status()).toBe(201)
     await page.getByRole('link', { name: 'Contacts', exact: true }).click()
     if (width < 1000) await page.getByRole('button', { name: /^Actions for / }).first().click()
     await page.getByRole('button', { name: /^Labels for / }).first().click()
