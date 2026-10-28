@@ -733,7 +733,6 @@
 }
 @media(max-width:999px) {
  #orbit-workspace.zero-workspace .live-calendar:has(.calendar-view.editing) > .app-sidebar-browse,
- #orbit-workspace.zero-workspace #orbit-mail-vibrant.has-message .layout > .app-sidebar-browse,
  #orbit-workspace.zero-workspace .correspondence.has-person .correspondence-layout > .app-sidebar-browse { display:none; }
 }
 #orbit-workspace.zero-workspace .app-sidebar-body > ul { margin:0; padding:0; list-style:none; }
@@ -1326,3 +1325,13 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 /* Dense commands opt into the shared icon row, retaining names and hints. */
 :is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) .app-action-row[data-compact] > button:has(svg):has(.action-label) { width:44px; padding:10px; }
 :is(#orbit-workspace.zero-workspace, .thura-public, .workspace-dialog) .app-action-row[data-compact] > button:has(svg) .action-label { display:none; }
+
+/* Rows that must keep their words (distinct review actions) wrap instead of collapsing to icons. */
+#orbit-workspace.zero-workspace :is(#orbit-mail-vibrant, .workspace-content) .app-action-row[data-wrap] { flex-wrap:wrap; overflow:visible; }
+#orbit-workspace.zero-workspace :is(#orbit-mail-vibrant, .workspace-content) .app-action-row[data-wrap] > button.app-action:has(svg):has(.action-label) { width:auto; padding:8px 12px; }
+#orbit-workspace.zero-workspace :is(#orbit-mail-vibrant, .workspace-content) .app-action-row[data-wrap] > button:has(svg) .action-label { display:inline; }
+.mail-screening-reason { margin:8px 0 4px; font-weight:600; }
+.mail-screening-notice { margin:8px 0 0; font-size:13px; color:var(--teal, inherit); }
+.mail-finding-label { display:inline-block; margin-inline-end:6px; padding:0 6px; border-radius:4px; background:var(--tealsoft, #0001); font-size:12px; font-weight:600; }
+#orbit-workspace.zero-workspace .app-notice { display:flex; align-items:center; gap:12px; }
+#orbit-workspace.zero-workspace .app-notice > .app-action { min-height:32px; height:32px; padding:4px 10px; background:transparent; color:inherit; border:1px solid currentColor; }

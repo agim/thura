@@ -99,6 +99,8 @@ test('AI stays unavailable until configured and preserves input after provider f
   await expect(dialog.getByRole('button', { name: 'Generate', exact: true })).toBeDisabled()
   ready = true
   await page.reload()
+  // Refresh reopens the open draft; return to the list to start a new message.
+  await page.getByRole('button', { name: 'Back to messages', exact: true }).click()
   await page.getByRole('button', { name: 'New message', exact: true }).click()
   await page.getByRole('button', { name: 'Help me write', exact: true }).click()
   await dialog.getByLabel('AI instructions', { exact: true }).fill('Draft a thank-you')

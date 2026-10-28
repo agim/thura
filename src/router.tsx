@@ -13,6 +13,7 @@ import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@lidza/client'
 import pageMetadata from '../app/page-metadata.json'
+import { appSearch, parseSearch, stringifySearch, workspaceSearch } from './lib/app-view'
 
 function PageHead() {
   const path = useRouterState({ select: state => state.location.pathname })
@@ -71,14 +72,14 @@ const rsvpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rsvp', 
 const guestMeetRoute = createRoute({ getParentRoute: () => rootRoute, path: '/meet', component: lazyRouteComponent(() => import('./pages/GuestMeet'), 'GuestMeet'), staticData: { module: 'src/pages/GuestMeet.tsx' } })
 const shareRoute = createRoute({ getParentRoute: () => rootRoute, path: '/share', component: lazyRouteComponent(() => import('./pages/Share'), 'SharedFile'), staticData: { module: 'src/pages/Share.tsx' } })
 
-const appRoute = createRoute({ getParentRoute: () => rootRoute, path: '/app', component: lazyRouteComponent(() => import('./pages/App'), 'AppWorkspace'), staticData: { module: 'src/pages/App.tsx' } })
-const loopRoute = createRoute({ getParentRoute: () => appRoute, path: '/loop', component: () => null })
-const mailRoute = createRoute({ getParentRoute: () => appRoute, path: '/mail', component: () => null })
-const driveRoute = createRoute({ getParentRoute: () => appRoute, path: '/drive', component: () => null })
-const calendarRoute = createRoute({ getParentRoute: () => appRoute, path: '/calendar', component: () => null })
-const chatRoute = createRoute({ getParentRoute: () => appRoute, path: '/chat', component: () => null })
-const meetRoute = createRoute({ getParentRoute: () => appRoute, path: '/meet', component: () => null })
-const appContactsRoute = createRoute({ getParentRoute: () => appRoute, path: '/contacts', component: () => null })
+const appRoute = createRoute({ getParentRoute: () => rootRoute, path: '/app', validateSearch: workspaceSearch, component: lazyRouteComponent(() => import('./pages/App'), 'AppWorkspace'), staticData: { module: 'src/pages/App.tsx' } })
+const loopRoute = createRoute({ getParentRoute: () => appRoute, path: '/loop', validateSearch: appSearch('loop'), component: () => null })
+const mailRoute = createRoute({ getParentRoute: () => appRoute, path: '/mail', validateSearch: appSearch('mail'), component: () => null })
+const driveRoute = createRoute({ getParentRoute: () => appRoute, path: '/drive', validateSearch: appSearch('drive'), component: () => null })
+const calendarRoute = createRoute({ getParentRoute: () => appRoute, path: '/calendar', validateSearch: appSearch('calendar'), component: () => null })
+const chatRoute = createRoute({ getParentRoute: () => appRoute, path: '/chat', validateSearch: appSearch('chat'), component: () => null })
+const meetRoute = createRoute({ getParentRoute: () => appRoute, path: '/meet', validateSearch: appSearch('meet'), component: () => null })
+const appContactsRoute = createRoute({ getParentRoute: () => appRoute, path: '/contacts', validateSearch: appSearch('contacts'), component: () => null })
 const settingsRoute = createRoute({ getParentRoute: () => appRoute, path: '/settings', component: () => null })
 const teamSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/team', component: () => null })
 const aiSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/ai', component: () => null })
@@ -92,7 +93,8 @@ const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).
 export function createAppRouter(history?: RouterHistory) {
-  return createRouter({ routeTree, defaultErrorComponent: RouteError, history })
+  // App view state lives in plain string search parameters (src/lib/app-view.ts).
+  return createRouter({ routeTree, defaultErrorComponent: RouteError, history, parseSearch, stringifySearch })
 }
 
 declare module '@tanstack/react-router' {

@@ -59,8 +59,9 @@ test('formatted mail resolves only requested private CID images and preserves pl
   await page.setViewportSize({ width: 390, height: 844 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.reload()
-  await page.getByLabel('Search mail', { exact: true }).fill(subject)
-  await page.locator('.mailrow').filter({ hasText: subject }).click()
+  // Refresh keeps the open message (and its search) from the URL, in plain view again.
+  await expect(page).toHaveURL(new RegExp(`[?&]q=`))
+  await expect(page.getByRole('heading', { name: subject, exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'View formatted email', exact: true }).click()
   await expect(body.getByText('Formatted private mail', { exact: true })).toBeVisible()
   await expect(body.locator('img')).toHaveCount(0)
