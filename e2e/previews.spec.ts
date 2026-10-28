@@ -55,7 +55,7 @@ test('a rendered HTML file keeps harmless styles but cannot cover the screen wit
   try {
     // Phones open HTML files in the read-only renderer rather than the editor.
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.reload()
+    await page.goto('/app/drive')
     await page.getByRole('button', { name, exact: true }).click()
     const rendered = page.locator('.drive-rendered-file')
     const link = rendered.getByRole('link', { name: 'Claim prize', exact: true })

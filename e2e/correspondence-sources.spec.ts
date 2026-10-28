@@ -52,7 +52,7 @@ test('Correspondence links source records and opens the existing apps', async ({
     await expect(page.getByRole('button', { name: title, exact: true })).toBeVisible()
     await chooseOption(page.getByLabel('Source', { exact: true }), type)
     await page.getByRole('button', { name: title, exact: true }).click()
-    await expect(page).toHaveURL(new RegExp('/app/' + app.toLowerCase() + '$'))
+    await expect(page).toHaveURL(new RegExp('/app/' + app.toLowerCase() + '(\\?.*)?$'))
     await expect(page.getByRole('heading', { name: type === 'calendar' ? 'Edit event' : app, exact: true })).toBeVisible()
     if (type === 'calendar') await expect(page.getByLabel(selector, { exact: true })).toHaveValue(title)
     else await expect(page.getByLabel(selector, { exact: true })).toContainText(title)

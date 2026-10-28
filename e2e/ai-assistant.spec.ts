@@ -157,7 +157,7 @@ test('AI appends to a Drive document without removing existing formatting or sav
   await page.getByRole('button', { name: 'New document', exact: true }).click()
   await page.getByLabel('Document name', { exact: true }).fill(`AI draft ${Date.now()}`)
   await page.getByRole('button', { name: 'Create document', exact: true }).click()
-  await openViewedFile(page)
+  await expect(page.getByRole('textbox', { name: 'Document', exact: true })).toBeVisible()
   const editor = page.getByRole('textbox', { name: 'Document', exact: true })
   await editor.fill('Existing planning')
   await editor.press('ControlOrMeta+a')
