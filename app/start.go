@@ -113,6 +113,10 @@ func appHeaders() []middleware.Middleware {
 	// blocked and retaining the default script policy.
 	policy := middleware.AddCSP(middleware.DefaultCSP, "style-src", "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='")
 	policy = middleware.AddCSP(policy, "frame-src", "'self'")
+	// FullCalendar ships its arrow icon font inline as a data: URL; without it
+	// the toolbar's previous/next buttons render empty boxes. Fonts cannot run
+	// script and style-src stays restricted, so data: fonts add no script path.
+	policy = middleware.AddCSP(policy, "font-src", "data:")
 	permissions := middleware.DefaultPermissionsPolicy
 	if cfg, err := livekit.Load(); err == nil {
 		policy = middleware.AddCSP(policy, "connect-src", cfg.PublicURL)
