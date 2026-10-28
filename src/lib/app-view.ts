@@ -19,9 +19,9 @@ export const mailFolders = ['inbox', 'drafts', 'sent', 'archive', 'spam', 'trash
 /** The URL parameters of each app, under /app/<name>. `workspace` is shared by all of them. */
 export const appViews = {
   mail: { path: '/app/mail', params: { mailbox: uuid, folder: oneOf(...mailFolders), message: uuid, q: text, label: uuid } },
-  drive: { path: '/app/drive', params: { folder: (value: string) => value === 'trash' || id(value), file: id, q: text, label: uuid } },
+  drive: { path: '/app/drive', params: { folder: (value: string) => value === 'trash' || id(value), file: id, edit: oneOf('1'), q: text, label: uuid } },
   chat: { path: '/app/chat', params: { room: id, q: text } },
-  calendar: { path: '/app/calendar', params: { view: oneOf('month', 'week', 'day', 'list'), date: day, calendar: id, event: id, instance: id } },
+  calendar: { path: '/app/calendar', params: { view: oneOf('month', 'week', 'day', 'list'), date: day, calendar: id, event: id, instance: id, new: oneOf('1') } },
   contacts: { path: '/app/contacts', params: { contact: id, q: text } },
   loop: { path: '/app/loop', params: { contact: id, q: text } },
   meet: { path: '/app/meet', params: { meeting: id } },

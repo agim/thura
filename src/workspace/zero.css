@@ -175,6 +175,9 @@
 .thura-signin .signin-error { padding: 12px; border: 1px solid light-dark(#fecaca, #7f3030); border-radius: 7px; background: light-dark(#fff1f2, #321b20); color: light-dark(#b42336, #ffb4bd); font-size: 13px; overflow-wrap: anywhere; }
 @media(max-width:480px) { .thura-signin { padding: 28px 16px; } .thura-signin .signin-card { padding: 24px; } }
 .thura-loading-screen { color-scheme: inherit; min-height: 100dvh; padding: 20px; background: light-dark(#f5f5f5,#141414); color: light-dark(#18181b,#fafafa); font: 14px/1.55 system-ui,sans-serif; }
+/* The color scheme comes from an attribute, not a style attribute: the CSP refuses inline styles in the prerendered HTML. */
+.thura-signin[data-scheme="light"], .thura-loading-screen[data-scheme="light"] { color-scheme: light; }
+.thura-signin[data-scheme="dark"], .thura-loading-screen[data-scheme="dark"] { color-scheme: dark; }
 .workspace-frame:has(.thura-loading-screen) { padding: 0; }
 .loading-brand { display: flex; align-items: center; gap: 10px; font-size: 21px; font-weight: 700; margin-bottom: 24px; }
 .loading-brand > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: light-dark(#18181b,#fafafa); color: light-dark(#fff,#18181b); }

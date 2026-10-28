@@ -18,7 +18,7 @@ export function SignIn({ setup = false }: { setup?: boolean }) {
     onSuccess: async () => { setPassword(''); await client.invalidateQueries({ queryKey: ['session'] }); await client.invalidateQueries({ queryKey: ['setup-status'] }) },
   })
   function submit(event: FormEvent) { event.preventDefault(); login.mutate() }
-  return <section className={`thura-signin ${setup ? 'signin-embedded' : ''}`} style={{ colorScheme: dark ? 'dark' : 'light' }} aria-label="Thura sign in">
+  return <section className={`thura-signin ${setup ? 'signin-embedded' : ''}`} data-scheme={dark ? 'dark' : 'light'} aria-label="Thura sign in">
     <div className="signin-wrap">
       <div className="signin-brand"><span aria-hidden="true">t</span>thura</div>
       <form onSubmit={submit} className="signin-card" aria-busy={login.isPending}>

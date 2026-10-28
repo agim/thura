@@ -210,6 +210,8 @@
 }
 @media(max-width:999px) {
  #orbit-workspace.zero-workspace .live-calendar .calendar-view.editing form.calendar-editor { padding-bottom: 110px; }
+ /* Event tools after the form (meeting, invitations) stay reachable above the fixed save bar. */
+ #orbit-workspace.zero-workspace .live-calendar .calendar-view.editing:has(> form.calendar-editor:not(:last-child)) { padding-bottom: 110px; }
 }
 @media(min-width:1000px) {
  #orbit-workspace.zero-workspace .live-meet .meeting-sidebar { float: left; margin-right: var(--app-column-gap); }
@@ -1008,6 +1010,9 @@
 }
 .app-action-hint { position: fixed; z-index: 10000; transform: translateX(-50%); max-width: min(240px, calc(100vw - 24px)); padding: 6px 10px; background: #202124; color: #fff; border-radius: 6px; font: 500 12px/1.4 var(--font-sans, sans-serif); pointer-events: none; }
 #orbit-workspace.zero-workspace .app-toast { position: fixed; z-index: 100; left: 50%; bottom: 24px; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); padding: 12px 16px; margin: 0; border-radius: 8px; background: var(--ink); color: var(--paper); box-shadow: 0 4px 20px #0002; font-size: 13px; }
+/* The toast never blocks the page under it; only its Undo takes clicks. */
+#orbit-workspace.zero-workspace .app-toast { pointer-events: none; }
+#orbit-workspace.zero-workspace .app-toast button { pointer-events: auto; }
 @media (min-width: 1000px) {
  #orbit-workspace.zero-workspace .contact-directory > li { grid-template-columns: 42px minmax(0,1fr) minmax(130px,.65fr) 364px; }
  #orbit-workspace.zero-workspace .contact-columns { grid-template-columns: minmax(0,1fr) minmax(130px,.65fr) 364px; }
