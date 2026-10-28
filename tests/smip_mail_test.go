@@ -20,6 +20,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	stdmail "net/mail"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -315,7 +316,7 @@ func TestSmipMailTwoIsolatedServersLostReceiptAndBidirectionalDelivery(t *testin
 		t.Fatalf("reverse delivery failed: %+v", got)
 	}
 	a.request(t, "GET", a.base()+"?folder=inbox", nil, &inbox, 200)
-	if len(inbox.Items) != 1 || inbox.Items[0].FromAddress != b.box.Address {
+	if len(inbox.Items) != 1 || inbox.Items[0].FromAddress != (&stdmail.Address{Name: b.workspace.Name, Address: b.box.Address}).String() {
 		t.Fatal("reverse inbox missing")
 	}
 	t.Logf("Two separate databases, TLS 1.3 HTTP listeners: %s <-> %s; lost receipt recovered; one inbox copy per send", a.config.Domain, b.config.Domain)
@@ -960,7 +961,7 @@ func TestSmipMailPrivateDeploymentFormsDeliverWithoutRestart(t *testing.T) {
 	}
 	var inbox schema.MailItemList
 	b.request(t, "GET", b.base()+"?folder=inbox", nil, &inbox, 200)
-	if len(inbox.Items) != 1 || inbox.Items[0].FromAddress != a.box.Address {
+	if len(inbox.Items) != 1 || inbox.Items[0].FromAddress != (&stdmail.Address{Name: a.workspace.Name, Address: a.box.Address}).String() {
 		t.Fatalf("remote inbox: %+v", inbox)
 	}
 	reverse := b.queue(t, a.box.Address)

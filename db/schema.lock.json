@@ -872,6 +872,25 @@
           "Line": 160
         },
         {
+          "Name": "senderName",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "\"\"",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": 120,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 161
+        },
+        {
           "Name": "createdAt",
           "Type": "time",
           "Optional": false,
@@ -888,7 +907,7 @@
           "URL": false,
           "Timezone": false,
           "Pattern": "",
-          "Line": 161
+          "Line": 162
         }
       ],
       "Indexes": null,

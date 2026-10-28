@@ -34,6 +34,7 @@ CREATE TABLE mailbox (
   private boolean NOT NULL DEFAULT false,
   owner_subject text,
   signature text NOT NULL DEFAULT '',
+  sender_name varchar(120) NOT NULL DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX mailbox_workspace_id_idx ON mailbox (workspace_id);

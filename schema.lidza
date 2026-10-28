@@ -158,6 +158,7 @@ model Mailbox {
   private bool @default(false)
   ownerSubject string? @index
   signature text @default("")
+  senderName string @max(120) @default("")
   createdAt time @default(now())
 }
 model MailboxAlias {
@@ -206,8 +207,21 @@ model MailAttachment {
   objectKey string @index
   contentId string @default("")
 }
+type MailboxView {
+  id uuid
+  workspaceId uuid
+  name string
+  address string
+  configPrefix string
+  private bool
+  ownerSubject string?
+  signature string
+  senderName string
+  senderDefault string
+  createdAt time
+}
 type MailboxList {
-  items Mailbox[]
+  items MailboxView[]
 }
 type MailItemList {
   items MailItem[]
@@ -924,6 +938,7 @@ type MailLabelChange {
 }
 type MailSignatureInput {
  signature string? @max(5000)
+ senderName string? @max(120)
 }
 
 type BindMeetingInput {

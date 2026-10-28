@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	mailpack "github.com/agim/lidza/packs/mail"
@@ -27,7 +28,9 @@ type Payload struct {
 
 func plainAddress(raw string) (string, error) {
 	address, err := mail.ParseAddress(raw)
-	if err != nil || strings.ContainsAny(raw, "\r\n\x00") {
+	// A display name is checked after decoding too: an encoded word can carry
+	// a CR or LF that the raw text does not show.
+	if err != nil || strings.ContainsAny(raw, "\r\n\x00") || strings.ContainsFunc(address.Name, unicode.IsControl) {
 		return "", errors.New("invalid email address")
 	}
 	local, domain, ok := strings.Cut(address.Address, "@")
@@ -35,6 +38,22 @@ func plainAddress(raw string) (string, error) {
 		return "", errors.New("invalid email domain")
 	}
 	return local + "@" + strings.ToLower(domain), nil
+}
+
+// fromHeader re-encodes a validated From for the MIME copy: the plain
+// address alone, or the decoded display name quoted or encoded by net/mail,
+// so a peer's raw spelling never reaches the header as written.
+func fromHeader(raw string) (string, error) {
+	sender, err := plainAddress(raw)
+	if err != nil {
+		return "", err
+	}
+	parsed, _ := mail.ParseAddress(raw)
+	name := strings.TrimSpace(parsed.Name)
+	if name == "" {
+		return sender, nil
+	}
+	return (&mail.Address{Name: name, Address: sender}).String(), nil
 }
 func recipients(msg mailpack.Message) ([]string, error) {
 	groups := []string{msg.To, strings.Join(msg.Cc, ","), strings.Join(msg.Bcc, ",")}
@@ -201,7 +220,11 @@ func (p Payload) MIME() ([]byte, error) {
 	if err := mixed.Close(); err != nil {
 		return nil, err
 	}
-	header := textproto.MIMEHeader{"From": {p.Message.From}, "Subject": {mime.QEncoding.Encode("utf-8", p.Message.Subject)}, "Date": {time.Unix(p.Created, 0).UTC().Format(time.RFC1123Z)}, "Message-ID": {p.MessageID}, "MIME-Version": {"1.0"}, "Content-Type": {mime.FormatMediaType("multipart/mixed", map[string]string{"boundary": mixed.Boundary()})}}
+	from, err := fromHeader(p.Message.From)
+	if err != nil {
+		return nil, err
+	}
+	header := textproto.MIMEHeader{"From": {from}, "Subject": {mime.QEncoding.Encode("utf-8", p.Message.Subject)}, "Date": {time.Unix(p.Created, 0).UTC().Format(time.RFC1123Z)}, "Message-ID": {p.MessageID}, "MIME-Version": {"1.0"}, "Content-Type": {mime.FormatMediaType("multipart/mixed", map[string]string{"boundary": mixed.Boundary()})}}
 	if p.Message.To != "" {
 		header.Set("To", p.Message.To)
 	}

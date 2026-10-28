@@ -51,8 +51,6 @@ ON CONFLICT (mailbox_id,external_id) DO UPDATE SET external_id=EXCLUDED.external
 -- name: DeleteMailAttachment :execrows
 DELETE FROM mail_attachment WHERE id=$1 AND item_id=$2;
 
--- name: UpdateMailboxSignature :one
-UPDATE mailbox SET signature=$2 WHERE id=$1 RETURNING *;
 -- name: SetMailThreadHeaders :one
 UPDATE mail_item SET in_reply_to=$2,references_header=$3,thread_id=$4 WHERE id=$1 RETURNING *;
 -- name: ListMailboxIDs :many
@@ -103,3 +101,11 @@ FOR UPDATE;
 
 -- name: RevokeReservedMailboxInvitations :exec
 UPDATE invitation SET revoked_at=now() WHERE workspace_id=$1 AND mailbox_id=$2 AND accepted_at IS NULL AND revoked_at IS NULL;
+-- name: UpdateMailboxSettings :one
+UPDATE mailbox SET signature=$2,sender_name=$3 WHERE id=$1 RETURNING *;
+-- name: MailboxSenderDefault :one
+-- The name outgoing mail carries when the mailbox sets none: the owner's
+-- profile name for a private mailbox, the workspace name for a shared one.
+SELECT (CASE WHEN m.private THEN COALESCE(u.name,'') ELSE w.name END)::text AS name
+FROM mailbox m JOIN workspace w ON w.id=m.workspace_id LEFT JOIN auth_user u ON u.subject=m.owner_subject
+WHERE m.id=$1;

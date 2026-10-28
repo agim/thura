@@ -246,6 +246,7 @@ type Mailbox struct {
 	Private      bool      `json:"private" db:"private"`
 	OwnerSubject *string   `json:"ownerSubject" db:"owner_subject"`
 	Signature    string    `json:"signature" db:"signature"`
+	SenderName   string    `json:"senderName" db:"sender_name"`
 	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
 }
 
@@ -278,6 +279,12 @@ func (v Mailbox) Validate() error {
 	}
 	if v.Signature == "" {
 		errs.Add("signature", "required", "required")
+	}
+	if v.SenderName == "" {
+		errs.Add("senderName", "required", "required")
+	}
+	if len(v.SenderName) > 120 {
+		errs.Add("senderName", "max", "at most 120 character(s)")
 	}
 	return errs.Result()
 }
@@ -3030,9 +3037,54 @@ func (v FilePreview) Validate() error {
 	return errs.Result()
 }
 
+// MailboxView is an API type.
+type MailboxView struct {
+	ID            string    `json:"id"`
+	WorkspaceID   string    `json:"workspaceId"`
+	Name          string    `json:"name"`
+	Address       string    `json:"address"`
+	ConfigPrefix  string    `json:"configPrefix"`
+	Private       bool      `json:"private"`
+	OwnerSubject  *string   `json:"ownerSubject"`
+	Signature     string    `json:"signature"`
+	SenderName    string    `json:"senderName"`
+	SenderDefault string    `json:"senderDefault"`
+	CreatedAt     time.Time `json:"createdAt"`
+}
+
+// Validate applies the rules of MailboxView from schema.lidza.
+func (v MailboxView) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.Address == "" {
+		errs.Add("address", "required", "required")
+	}
+	if v.ConfigPrefix == "" {
+		errs.Add("configPrefix", "required", "required")
+	}
+	if v.Signature == "" {
+		errs.Add("signature", "required", "required")
+	}
+	if v.SenderName == "" {
+		errs.Add("senderName", "required", "required")
+	}
+	if v.SenderDefault == "" {
+		errs.Add("senderDefault", "required", "required")
+	}
+	return errs.Result()
+}
+
 // MailboxList is an API type.
 type MailboxList struct {
-	Items []Mailbox `json:"items"`
+	Items []MailboxView `json:"items"`
 }
 
 // Validate applies the rules of MailboxList from schema.lidza.
@@ -4553,7 +4605,8 @@ func (v MailLabelChange) Validate() error {
 
 // MailSignatureInput is an API type.
 type MailSignatureInput struct {
-	Signature *string `json:"signature"`
+	Signature  *string `json:"signature"`
+	SenderName *string `json:"senderName"`
 }
 
 // Validate applies the rules of MailSignatureInput from schema.lidza.
@@ -4563,6 +4616,12 @@ func (v MailSignatureInput) Validate() error {
 		x := *v.Signature
 		if len(x) > 5000 {
 			errs.Add("signature", "max", "at most 5000 character(s)")
+		}
+	}
+	if v.SenderName != nil {
+		x := *v.SenderName
+		if len(x) > 120 {
+			errs.Add("senderName", "max", "at most 120 character(s)")
 		}
 	}
 	return errs.Result()

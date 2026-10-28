@@ -5,14 +5,22 @@ import { displayDate } from '../lib/display-date'
 import { ModalAction } from './ModalAction'
 import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, type MailItem } from '@lidza/client'
+import { api, type MailItem, type MailboxView } from '@lidza/client'
 
 type Scope = { workspaceId: string; mailboxId: string }
-export function MailSignature({ scope, signature }: { scope: Scope; signature: string }) {
+export function MailSignature({ scope, box }: { scope: Scope; box: MailboxView }) {
   const client = useQueryClient()
-  const [value, setValue] = useState(signature)
-  const save = useMutation({ mutationFn: () => api.updateMailSignature(scope, { signature: value }), onSuccess: () => client.invalidateQueries({ queryKey: ['mailboxes', scope.workspaceId] }) })
-  return <form className="settings-form" onSubmit={e => { e.preventDefault(); save.mutate() }}><h3>Mailbox signature</h3><label>Signature<textarea aria-label="Signature" maxLength={5000} value={value} onChange={e => setValue(e.target.value)} /></label><p className="small quiet">Shared by this mailbox. Added to new drafts and replies.</p><ActionButton className="primary-action" disabled={save.isPending}>Save signature</ActionButton>{save.isError && <p role="alert">{save.error.message}</p>}{save.isSuccess && <p role="status">Signature saved.</p>}</form>
+  const [value, setValue] = useState(box.signature)
+  const [sender, setSender] = useState(box.senderName)
+  const refresh = () => client.invalidateQueries({ queryKey: ['mailboxes', scope.workspaceId] })
+  const save = useMutation({ mutationFn: () => api.updateMailSignature(scope, { signature: value }), onSuccess: refresh })
+  // The sender form keeps the saved signature; each form saves only its own field.
+  const saveSender = useMutation({ mutationFn: () => api.updateMailSignature(scope, { signature: box.signature, senderName: sender }), onSuccess: view => { setSender(view.senderName); return refresh() } })
+  const fallback = box.senderDefault ? `Default: ${box.senderDefault}` : 'Default: the address alone'
+  return <>
+    <form className="settings-form" onSubmit={e => { e.preventDefault(); saveSender.mutate() }}><h3>Sender name</h3><label>Sender name<input aria-label="Sender name" maxLength={120} placeholder={fallback} value={sender} onChange={e => setSender(e.target.value)} /></label><p className="small quiet">Recipients see this name beside {box.address}. {box.senderDefault ? `Leave it empty to use the default, ${box.private ? 'your profile name' : 'the workspace name'}: ${box.senderDefault}.` : 'Leave it empty to send from the address alone.'}</p><ActionButton className="primary-action" disabled={saveSender.isPending}>Save sender name</ActionButton>{saveSender.isError && <p role="alert">{saveSender.error.message}</p>}{saveSender.isSuccess && <p role="status">Sender name saved.</p>}</form>
+    <form className="settings-form" onSubmit={e => { e.preventDefault(); save.mutate() }}><h3>Mailbox signature</h3><label>Signature<textarea aria-label="Signature" maxLength={5000} value={value} onChange={e => setValue(e.target.value)} /></label><p className="small quiet">Shared by this mailbox. Added to new drafts and replies.</p><ActionButton className="primary-action" disabled={save.isPending}>Save signature</ActionButton>{save.isError && <p role="alert">{save.error.message}</p>}{save.isSuccess && <p role="status">Signature saved.</p>}</form>
+  </>
 }
 export function WorkspaceLabelSettings({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()

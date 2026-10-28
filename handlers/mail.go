@@ -26,12 +26,20 @@ func ListMailboxes(ctx context.Context, r *router.Request[router.None]) (schema.
 	if err := workspace.RequireMember(ctx, id); err != nil {
 		return schema.MailboxList{}, err
 	}
-	rows, err := queries.New(db.From(ctx)).ListVisibleMailboxes(ctx, queries.ListVisibleMailboxesParams{WorkspaceID: id, Subject: &auth.CurrentUser(ctx).ID})
-	out := schema.MailboxList{Items: []schema.Mailbox{}}
-	for _, m := range rows {
-		out.Items = append(out.Items, mailbox.ViewMailbox(m))
+	q := queries.New(db.From(ctx))
+	rows, err := q.ListVisibleMailboxes(ctx, queries.ListVisibleMailboxesParams{WorkspaceID: id, Subject: &auth.CurrentUser(ctx).ID})
+	out := schema.MailboxList{Items: []schema.MailboxView{}}
+	if err != nil {
+		return out, err
 	}
-	return out, err
+	for _, m := range rows {
+		view, err := mailbox.MailboxView(ctx, q, m)
+		if err != nil {
+			return out, err
+		}
+		out.Items = append(out.Items, view)
+	}
+	return out, nil
 }
 
 func ReceiveMail(ctx context.Context, r *router.Request[router.File]) (schema.MailItem, error) {
@@ -257,13 +265,8 @@ func DeleteMailLabel(ctx context.Context, r *router.Request[router.None]) (route
 func ChangeMailLabel(ctx context.Context, r *router.Request[schema.MailLabelChange]) (router.None, error) {
 	return router.None{}, mailbox.ChangeLabel(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Param("id"), r.Body)
 }
-func UpdateMailSignature(ctx context.Context, r *router.Request[schema.MailSignatureInput]) (schema.Mailbox, error) {
-	box, err := mailbox.Access(ctx, r.Param("workspaceId"), r.Param("mailboxId"))
-	if err != nil {
-		return schema.Mailbox{}, err
-	}
-	box, err = queries.New(db.From(ctx)).UpdateMailboxSignature(ctx, queries.UpdateMailboxSignatureParams{ID: box.ID, Signature: mailbox.Text(r.Body.Signature)})
-	return mailbox.ViewMailbox(box), err
+func UpdateMailSignature(ctx context.Context, r *router.Request[schema.MailSignatureInput]) (schema.MailboxView, error) {
+	return mailbox.UpdateSettings(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Body)
 }
 func ListMailThread(ctx context.Context, r *router.Request[router.None]) (schema.MailItemList, error) {
 	item, err := mailbox.ItemAccess(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Param("id"))

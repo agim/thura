@@ -108,13 +108,13 @@ func ListManagedTeams(ctx context.Context, r *router.Request[router.None]) (sche
 
 func ListTeamMailboxes(ctx context.Context, r *router.Request[router.None]) (schema.MailboxList, error) {
 	id := r.Param("workspaceId")
-	out := schema.MailboxList{Items: []schema.Mailbox{}}
+	out := schema.MailboxList{Items: []schema.MailboxView{}}
 	if e := tenancy.Manage(ctx, id); e != nil {
 		return out, e
 	}
 	rows, e := q.New(db.From(ctx)).ListMailboxes(ctx, id)
 	for _, m := range rows {
-		out.Items = append(out.Items, schema.Mailbox{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Private: m.Private, OwnerSubject: m.OwnerSubject, CreatedAt: m.CreatedAt})
+		out.Items = append(out.Items, schema.MailboxView{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Private: m.Private, OwnerSubject: m.OwnerSubject, SenderName: m.SenderName, CreatedAt: m.CreatedAt})
 	}
 	return out, e
 }

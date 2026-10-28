@@ -77,7 +77,9 @@ func SendTx(ctx context.Context, tx pgx.Tx, id, author string, n Notice) (string
 	if box.ID == "" {
 		return "", errors.New("configure a team mailbox and provider before sending notifications")
 	}
-	msg.From = box.Address
+	if msg.From, e = mailaccess.From(ctx, queries, box); e != nil {
+		return "", e
+	}
 	filed := msg
 	if !box.Private && n.Stored != nil {
 		filed.Subject, filed.Text, filed.HTML = n.Stored.Subject, n.Stored.Text, n.Stored.HTML
