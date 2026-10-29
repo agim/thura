@@ -24,7 +24,7 @@ SELECT * FROM mail_screening WHERE item_id=$1 FOR UPDATE;
 INSERT INTO mail_screening(item_id,workspace_id,sender,domain,identity,authenticated,state,score,findings,ai_state,av_state,approval_required,policy_revision,next_attempt,updated_at)
 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14) RETURNING *;
 -- name: SaveMailScreening :exec
-UPDATE mail_screening SET state=$2,score=$3,findings=$4,ai_state=$5,av_state=$6,approval_required=$7,released=$8,attempts=$9,attempt_id=$10,policy_revision=$11,next_attempt=$12,updated_at=$13 WHERE item_id=$1;
+UPDATE mail_screening SET state=$2,score=$3,findings=$4,ai_state=$5,av_state=$6,approval_required=$7,released=$8,attempts=$9,attempt_id=$10,policy_revision=$11,next_attempt=$12,updated_at=$13,sender_approved=$14 WHERE item_id=$1;
 -- name: MailScreeningDue :many
 SELECT item_id FROM mail_screening WHERE state IN ('pending','scanning','error') AND attempts<5 AND next_attempt<=$1 ORDER BY next_attempt,item_id LIMIT 50;
 -- name: MoveScreenedMail :exec

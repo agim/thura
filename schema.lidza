@@ -1491,6 +1491,10 @@ model MailScreening {
  aiState string @default("pending")
  avState string @default("pending")
  approvalRequired bool @default(false)
+ // An administrator approved the sender on this message: it is known for
+ // the approval gate whatever its SPF/DKIM/DMARC result. Later mail from
+ // the trusted sender is known only when its own authentication verifies.
+ senderApproved bool @default(false)
  released bool @default(false)
  attempts int @default(0)
  attemptId string @default("")

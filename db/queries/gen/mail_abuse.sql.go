@@ -12,7 +12,7 @@ import (
 
 const addMailScreening = `-- name: AddMailScreening :one
 INSERT INTO mail_screening(item_id,workspace_id,sender,domain,identity,authenticated,state,score,findings,ai_state,av_state,approval_required,policy_revision,next_attempt,updated_at)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14) RETURNING id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc, person_state, person_source, person_detail
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14) RETURNING id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, sender_approved, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc, person_state, person_source, person_detail
 `
 
 type AddMailScreeningParams struct {
@@ -64,6 +64,7 @@ func (q *Queries) AddMailScreening(ctx context.Context, arg AddMailScreeningPara
 		&i.AiState,
 		&i.AvState,
 		&i.ApprovalRequired,
+		&i.SenderApproved,
 		&i.Released,
 		&i.Attempts,
 		&i.AttemptID,
@@ -172,7 +173,7 @@ func (q *Queries) GetMailProtection(ctx context.Context, workspaceID string) (Ma
 }
 
 const getMailScreening = `-- name: GetMailScreening :one
-SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc, person_state, person_source, person_detail FROM mail_screening WHERE item_id=$1
+SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, sender_approved, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc, person_state, person_source, person_detail FROM mail_screening WHERE item_id=$1
 `
 
 func (q *Queries) GetMailScreening(ctx context.Context, itemID string) (MailScreening, error) {
@@ -192,6 +193,7 @@ func (q *Queries) GetMailScreening(ctx context.Context, itemID string) (MailScre
 		&i.AiState,
 		&i.AvState,
 		&i.ApprovalRequired,
+		&i.SenderApproved,
 		&i.Released,
 		&i.Attempts,
 		&i.AttemptID,
@@ -260,7 +262,7 @@ func (q *Queries) LockMailFilterFeedback(ctx context.Context, itemID string) (Ma
 }
 
 const lockMailScreening = `-- name: LockMailScreening :one
-SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc, person_state, person_source, person_detail FROM mail_screening WHERE item_id=$1 FOR UPDATE
+SELECT id, item_id, workspace_id, sender, domain, identity, authenticated, state, score, findings, ai_state, av_state, approval_required, sender_approved, released, attempts, attempt_id, policy_revision, next_attempt, updated_at, client_address, client_helo, envelope_sender, spf, dkim, dkim_domain, dkim_aligned, dmarc, person_state, person_source, person_detail FROM mail_screening WHERE item_id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockMailScreening(ctx context.Context, itemID string) (MailScreening, error) {
@@ -280,6 +282,7 @@ func (q *Queries) LockMailScreening(ctx context.Context, itemID string) (MailScr
 		&i.AiState,
 		&i.AvState,
 		&i.ApprovalRequired,
+		&i.SenderApproved,
 		&i.Released,
 		&i.Attempts,
 		&i.AttemptID,
@@ -700,7 +703,7 @@ func (q *Queries) SaveMailProtection(ctx context.Context, arg SaveMailProtection
 }
 
 const saveMailScreening = `-- name: SaveMailScreening :exec
-UPDATE mail_screening SET state=$2,score=$3,findings=$4,ai_state=$5,av_state=$6,approval_required=$7,released=$8,attempts=$9,attempt_id=$10,policy_revision=$11,next_attempt=$12,updated_at=$13 WHERE item_id=$1
+UPDATE mail_screening SET state=$2,score=$3,findings=$4,ai_state=$5,av_state=$6,approval_required=$7,released=$8,attempts=$9,attempt_id=$10,policy_revision=$11,next_attempt=$12,updated_at=$13,sender_approved=$14 WHERE item_id=$1
 `
 
 type SaveMailScreeningParams struct {
@@ -717,6 +720,7 @@ type SaveMailScreeningParams struct {
 	PolicyRevision   int32     `json:"policy_revision"`
 	NextAttempt      time.Time `json:"next_attempt"`
 	UpdatedAt        time.Time `json:"updated_at"`
+	SenderApproved   bool      `json:"sender_approved"`
 }
 
 func (q *Queries) SaveMailScreening(ctx context.Context, arg SaveMailScreeningParams) error {
@@ -734,6 +738,7 @@ func (q *Queries) SaveMailScreening(ctx context.Context, arg SaveMailScreeningPa
 		arg.PolicyRevision,
 		arg.NextAttempt,
 		arg.UpdatedAt,
+		arg.SenderApproved,
 	)
 	return err
 }

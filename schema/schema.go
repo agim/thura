@@ -2292,6 +2292,7 @@ type MailScreening struct {
 	AiState          string    `json:"aiState" db:"ai_state"`
 	AvState          string    `json:"avState" db:"av_state"`
 	ApprovalRequired bool      `json:"approvalRequired" db:"approval_required"`
+	SenderApproved   bool      `json:"senderApproved" db:"sender_approved"`
 	Released         bool      `json:"released" db:"released"`
 	Attempts         int       `json:"attempts" db:"attempts"`
 	AttemptID        string    `json:"attemptId" db:"attempt_id"`

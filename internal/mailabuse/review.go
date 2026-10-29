@@ -229,9 +229,11 @@ func Review(ctx context.Context, w, item, subject, action string) error {
 			s.State = "quarantined"
 			s.Released = false
 			s.AttemptID = ""
+			s.SenderApproved = false
 			i.Folder = q.MailFolderSpam
 		} else {
 			s.ApprovalRequired = false
+			s.SenderApproved = true
 		}
 	case "release":
 		rep, _, err := reputation(ctx, queries, w, s.Identity)
@@ -320,7 +322,9 @@ func HoldMove(ctx context.Context, queries *q.Queries, s q.MailScreening) error 
 }
 
 func knownSender(ctx context.Context, queries *q.Queries, workspace string, screening q.MailScreening, rep string) (bool, error) {
-	if rep == "trusted" {
+	// An administrator approved the sender on this very message; otherwise a
+	// trusted reputation needs this message's own verified authentication.
+	if screening.SenderApproved || rep == "trusted" && senderVerified(screening) {
 		return true, nil
 	}
 	if !screening.Authenticated {

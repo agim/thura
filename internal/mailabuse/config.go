@@ -43,7 +43,7 @@ func manager(ctx context.Context, queries *q.Queries, w, subject string) (bool, 
 	return role == "owner" || role == "admin", err
 }
 func save(ctx context.Context, queries *q.Queries, s q.MailScreening) error {
-	return queries.SaveMailScreening(ctx, q.SaveMailScreeningParams{ItemID: s.ItemID, State: s.State, Score: s.Score, Findings: s.Findings, AiState: s.AiState, AvState: s.AvState, ApprovalRequired: s.ApprovalRequired, Released: s.Released, Attempts: s.Attempts, AttemptID: s.AttemptID, PolicyRevision: s.PolicyRevision, NextAttempt: s.NextAttempt, UpdatedAt: lidza.Now(ctx)})
+	return queries.SaveMailScreening(ctx, q.SaveMailScreeningParams{ItemID: s.ItemID, State: s.State, Score: s.Score, Findings: s.Findings, AiState: s.AiState, AvState: s.AvState, ApprovalRequired: s.ApprovalRequired, Released: s.Released, Attempts: s.Attempts, AttemptID: s.AttemptID, PolicyRevision: s.PolicyRevision, NextAttempt: s.NextAttempt, UpdatedAt: lidza.Now(ctx), SenderApproved: s.SenderApproved})
 }
 func Settings(ctx context.Context, w, subject string) (schema.MailProtectionView, error) {
 	if err := workspace.RequireMember(ctx, w); err != nil {

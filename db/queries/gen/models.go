@@ -662,6 +662,7 @@ type MailScreening struct {
 	AiState          string    `json:"ai_state"`
 	AvState          string    `json:"av_state"`
 	ApprovalRequired bool      `json:"approval_required"`
+	SenderApproved   bool      `json:"sender_approved"`
 	Released         bool      `json:"released"`
 	Attempts         int32     `json:"attempts"`
 	AttemptID        string    `json:"attempt_id"`

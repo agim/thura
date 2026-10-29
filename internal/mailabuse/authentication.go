@@ -1,6 +1,7 @@
 package mailabuse
 
 import (
+	"context"
 	"net/netip"
 	"strings"
 	"unicode"
@@ -88,4 +89,51 @@ func senderAuthView(s q.MailScreening) *schema.MailSenderAuthView {
 	}
 	a := storedAuthentication(s)
 	return &schema.MailSenderAuthView{Method: authSMTP, Verified: a.Verified(), FromDomain: a.FromDomain, Spf: a.SPF, SpfAligned: a.SPFAligned, Dkim: a.DKIM, DkimDomain: a.DKIMDomain, DkimAligned: a.DKIMAligned, Dmarc: a.DMARC}
+}
+
+// senderVerified reports whether this message is authentically from its From
+// address's domain: SMIP, or a stored Rspamd SPF/DKIM/DMARC result that
+// verifies. A message not scanned yet, or scanned without Rspamd, is not.
+func senderVerified(s q.MailScreening) bool {
+	return s.Authenticated || s.Spf != "" && storedAuthentication(s).Verified()
+}
+
+// authenticationFailed reports a checked, unverified result in which at least
+// one mechanism reached a verdict (a fail, an unaligned pass, an error),
+// rather than a sender that simply publishes nothing to check against.
+func authenticationFailed(a rspamd.Authentication) bool {
+	if a.Verified() {
+		return false
+	}
+	verdict := func(v string) bool { return v != "" && v != rspamd.NotChecked && v != rspamd.None }
+	return verdict(a.SPF) || verdict(a.DKIM) || verdict(a.DMARC)
+}
+
+// approvedAddress reports whether the From address is one the workspace vouches
+// for: an approved (trusted) sender under either identity, or a member's own
+// address. A message claiming such an address that fails authentication is
+// a likely forgery.
+func approvedAddress(ctx context.Context, queries *q.Queries, w, sender, rep string) (bool, error) {
+	if rep == "trusted" {
+		return true, nil
+	}
+	for _, id := range []string{identity(sender, true), identity(sender, false)} {
+		r, _, err := reputation(ctx, queries, w, id)
+		if err != nil {
+			return false, err
+		}
+		if r == "trusted" {
+			return true, nil
+		}
+	}
+	accounts, err := queries.MailKnownAccounts(ctx, w)
+	if err != nil {
+		return false, err
+	}
+	for _, a := range accounts {
+		if email, _, _ := address(a.Email); email != "" && email == sender {
+			return true, nil
+		}
+	}
+	return false, nil
 }

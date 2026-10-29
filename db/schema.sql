@@ -892,6 +892,7 @@ CREATE TABLE mail_screening (
   ai_state text NOT NULL DEFAULT 'pending',
   av_state text NOT NULL DEFAULT 'pending',
   approval_required boolean NOT NULL DEFAULT false,
+  sender_approved boolean NOT NULL DEFAULT false,
   released boolean NOT NULL DEFAULT false,
   attempts integer NOT NULL DEFAULT 0,
   attempt_id text NOT NULL DEFAULT '',

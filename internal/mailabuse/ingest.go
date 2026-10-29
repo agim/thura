@@ -81,8 +81,12 @@ func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q
 	if rep == "poor" || rep == "poor-domain" {
 		e.add("sender_complaints", "danger", "Sender or domain has repeated workspace spam complaints", 80)
 	}
-	known := rep == "trusted"
+	// Before the scan only SMIP proves the sender: a trusted relay sender
+	// stays unknown (held, or pending the scan) until the worker has its
+	// SPF/DKIM/DMARC result. No-reply or automated senders get no exemption.
+	known := false
 	if authenticated {
+		known = rep == "trusted"
 		for _, person := range directory {
 			email, _, _ := address(person.Email)
 			known = known || email == sender

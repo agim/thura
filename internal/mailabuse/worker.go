@@ -294,12 +294,25 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	if ownComplaints > 0 {
 		e.add("reported_spam", "danger", "Workspace members reported this message as spam", 100)
 	}
+	// A trusted reputation counts only for a message whose own sender
+	// authentication verifies (SMIP, or SPF/DKIM/DMARC); without a result
+	// (no Rspamd, a failed scan) the message is not known through trust.
+	verified := s.Authenticated || authChecked && auth.Verified()
+	if !s.Authenticated && authChecked && authenticationFailed(auth) {
+		vouched, err := approvedAddress(ctx, queries, s.WorkspaceID, s.Sender, rep)
+		if err != nil {
+			return err
+		}
+		if vouched {
+			e.add("trusted_sender_unverified", "danger", "This sender is approved, but this message failed SPF/DKIM/DMARC — it may be forged", 100)
+		}
+	}
 	latest.State = "clean"
 	latest.Score = int32(e.Score)
 	latest.AiState = ai
 	latest.AvState = av
 	latest.NextAttempt = lidza.Now(ctx).Add(retryDelay)
-	known := rep == "trusted"
+	known := latest.SenderApproved || rep == "trusted" && verified
 	if s.Authenticated {
 		for _, person := range directory {
 			sender, _, _ := address(person.Email)

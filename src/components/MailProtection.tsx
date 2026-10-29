@@ -40,7 +40,7 @@ function findingParts(f: MailFinding): { label: string; text: string } {
 }
 const findingText=(f: MailFinding)=>{ const p=findingParts(f); return p.label?`${p.label} · ${p.text}`:p.text }
 const reviewNotice:Record<string,(s:MailScreeningView)=>string>={
- 'approve-sender':s=>`Sender approved. Future mail from ${s.sender||'this sender'} is trusted.${s.state!=='clean'&&!s.released?' Release this email to move it to Inbox.':''}`,
+ 'approve-sender':s=>`Sender approved. Future mail from ${s.sender||'this sender'} is trusted when it passes SPF/DKIM/DMARC.${s.state!=='clean'&&!s.released?' Release this email to move it to Inbox.':''}`,
  'block-sender':()=>'Sender blocked. This email stays in Spam.',
  release:()=>'Released to Inbox.',
  'not-spam':()=>'Marked as not spam and moved to Inbox.',
