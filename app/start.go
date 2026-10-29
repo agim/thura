@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
 	"thura/internal/calendar"
 	"thura/internal/chat"
@@ -119,8 +118,7 @@ func appHeaders() []middleware.Middleware {
 	policy = middleware.AddCSP(policy, "font-src", "data:")
 	permissions := middleware.DefaultPermissionsPolicy
 	if cfg, err := livekit.Load(); err == nil {
-		policy = middleware.AddCSP(policy, "connect-src", cfg.PublicURL)
-		policy = middleware.AddCSP(policy, "connect-src", strings.Replace(strings.Replace(cfg.PublicURL, "wss://", "https://", 1), "ws://", "http://", 1))
+		policy = middleware.AddCSP(policy, "connect-src", cfg.PublicOrigins()...)
 		policy = middleware.AddCSP(policy, "media-src", "'self'", "blob:")
 		policy = middleware.AddCSP(policy, "style-src-attr", "'unsafe-inline'")
 		permissions = "camera=(self), microphone=(self), display-capture=(self), geolocation=()"

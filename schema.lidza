@@ -899,6 +899,7 @@ type MeetingInput {
 type MeetingList {
  items Meeting[]
  configured bool
+ unavailable string
 }
 type MeetingAccess {
  token string

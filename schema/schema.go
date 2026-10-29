@@ -4553,8 +4553,9 @@ func (v MeetingInput) Validate() error {
 
 // MeetingList is an API type.
 type MeetingList struct {
-	Items      []Meeting `json:"items"`
-	Configured bool      `json:"configured"`
+	Items       []Meeting `json:"items"`
+	Configured  bool      `json:"configured"`
+	Unavailable string    `json:"unavailable"`
 }
 
 // Validate applies the rules of MeetingList from schema.lidza.
@@ -4565,6 +4566,9 @@ func (v MeetingList) Validate() error {
 			errs.Add("items", "nested", err.Error())
 			break
 		}
+	}
+	if v.Unavailable == "" {
+		errs.Add("unavailable", "required", "required")
 	}
 	return errs.Result()
 }

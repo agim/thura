@@ -40,6 +40,10 @@ func List(ctx context.Context, w string) (schema.MeetingList, error) {
 	}
 	_, err := provider.Load()
 	out.Configured = err == nil
+	if err != nil {
+		// Which setting is wrong, by name only: no value reaches the page.
+		out.Unavailable = err.Error()
+	}
 	rows, err := q.New(db.From(ctx)).ListMeetings(ctx, w)
 	for _, m := range rows {
 		out.Items = append(out.Items, View(m))

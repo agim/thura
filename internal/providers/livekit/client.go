@@ -29,23 +29,32 @@ func Load() (Config, error) {
 	}
 	c.URL = strings.TrimRight(c.URL, "/")
 	c.PublicURL = strings.TrimRight(c.PublicURL, "/")
-	if len(c.Secret) < 32 || c.Key == "" {
-		return c, router.Errorf(503, "Meet service is not configured")
+	if c.Key == "" || len(c.Secret) < 32 {
+		return c, router.Errorf(503, "LIVEKIT_API_KEY and a LIVEKIT_API_SECRET of at least 32 characters are required")
 	}
-	for i, s := range []string{c.URL, c.PublicURL} {
-		u, err := url.Parse(s)
-		if err != nil || u.Host == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
-			return c, router.Errorf(503, "invalid meeting service origins")
-		}
-		if i == 0 && u.Scheme != "http" && u.Scheme != "https" {
-			return c, router.Errorf(503, "invalid meeting API origin")
-		}
-		if i == 1 && u.Scheme != "ws" && u.Scheme != "wss" {
-			return c, router.Errorf(503, "invalid meeting WebSocket origin")
-		}
+	api, err := url.Parse(c.URL)
+	if err != nil || (api.Scheme != "http" && api.Scheme != "https") || api.Host == "" || api.User != nil || api.Path != "" || api.RawQuery != "" || api.Fragment != "" {
+		return c, router.Errorf(503, "LIVEKIT_SERVER_URL must be an http(s) origin without a path")
+	}
+	// The public URL may carry a path: a proxy that forwards /rtc to LiveKit
+	// and strips it serves wss://<domain>/rtc (deploy/lidza.stack.json).
+	public, err := url.Parse(c.PublicURL)
+	if err != nil || (public.Scheme != "ws" && public.Scheme != "wss") || public.Host == "" || public.User != nil || public.RawQuery != "" || public.Fragment != "" {
+		return c, router.Errorf(503, "LIVEKIT_PUBLIC_URL must be a ws(s) URL without credentials, query or fragment")
 	}
 
 	return c, nil
+}
+
+// PublicOrigins are the WebSocket origin of PublicURL and its HTTP twin, the
+// CSP connect-src entries the browser needs; an origin covers every path.
+func (c Config) PublicOrigins() []string {
+	u, err := url.Parse(c.PublicURL)
+	if err != nil {
+		return nil
+	}
+	scheme := map[string]string{"wss": "https", "ws": "http"}[u.Scheme]
+	return []string{u.Scheme + "://" + u.Host, scheme + "://" + u.Host}
 }
 func (c Config) Token(subject, name, room string) (string, error) {
 	yes, no := true, false

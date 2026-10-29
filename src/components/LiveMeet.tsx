@@ -65,7 +65,7 @@ export function LiveMeet({ workspaceId, initialName, onLink }: { workspaceId: st
       </AppSidebar>
       <div className="meeting-lobby">
 
-      {meetings.data && !meetings.data.configured && <div className="service-unavailable" role="status"><VideoOff size={18} /><div><strong>Meet is not connected yet</strong><p>Meet service is not configured. An operator must connect LiveKit before starting a meeting.</p></div></div>}
+      {meetings.data && !meetings.data.configured && <div className="service-unavailable" role="status"><VideoOff size={18} /><div><strong>Meet is not connected yet</strong><p>Meet service is not configured. An operator must connect LiveKit before starting a meeting.</p>{meetings.data.unavailable && <p className="small quiet">{meetings.data.unavailable}</p>}</div></div>}
       {selected && detail.isPending && <p role="status">Loading meeting…</p>}
       {meeting ? <section className="meeting-prejoin" aria-label="Meeting details">
         <div className="meeting-preview">{meeting.endedAt ? <><Clock size={36} /><span>This meeting has ended</span></> : <><div className="meeting-preview-avatar">{(session.data?.user?.name || session.data?.user?.email || 'You').slice(0, 1).toUpperCase()}</div><span>Your camera is off</span><div className="meeting-device-state"><span><MicOff size={18} />Microphone off</span><span><VideoOff size={18} />Camera off</span></div></>}</div>
