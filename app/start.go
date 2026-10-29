@@ -106,11 +106,22 @@ func appMiddleware() []middleware.Middleware {
 	}}
 }
 
+// readerStyleHashes are the SHA-256 hashes of htmlStyle and markdownStyle in
+// src/components/MailReader.tsx. Update them with the strings;
+// e2e/mail-markdown.spec.ts fails when the reader's stylesheet is blocked.
+var readerStyleHashes = []string{
+	"'sha256-P+nVxmu1Ch776ezPZq802aa2z5fUjOZEwsTTMzPh9XE='",
+	"'sha256-gLs+gvFSQCGCwwUgQPLt43lJEGzX92GKSDW4bj+iHGo='",
+}
+
 func appHeaders() []middleware.Middleware {
 	// FullCalendar creates an empty style element and adds its rules through
 	// CSSOM. Allow only that empty element's hash, keeping other inline styles
 	// blocked and retaining the default script policy.
 	policy := middleware.AddCSP(middleware.DefaultCSP, "style-src", "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='")
+	// The mail reader's sandboxed srcdoc frame inherits this policy, so its two
+	// fixed stylesheets (src/components/MailReader.tsx) are admitted by hash.
+	policy = middleware.AddCSP(policy, "style-src", readerStyleHashes...)
 	policy = middleware.AddCSP(policy, "frame-src", "'self'")
 	// FullCalendar ships its arrow icon font inline as a data: URL; without it
 	// the toolbar's previous/next buttons render empty boxes. Fonts cannot run
