@@ -56,7 +56,7 @@ test('person-first correspondence supports private contacts, organization rollup
   await page.screenshot({ path: testInfo.outputPath('correspondence-mobile.png'), fullPage: true })
   await page.getByRole('button', { name: subject, exact: true }).click()
   await expect(page.getByRole('heading', { name: subject, exact: true })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Reading pane' }).getByText('Personal history searchable here.', { exact: true })).toBeVisible()
+  await expect(page.frameLocator('iframe[title="Email body · external content blocked"]').getByText('Personal history searchable here.', { exact: true })).toBeVisible()
   const updated = await page.request.patch(base + '/contacts/' + contact.id, { data: { name, email, company: 'Charm City Networks', favorite: false }, headers: { 'Sec-Fetch-Site': 'same-origin' } })
   expect(updated.status()).toBe(200)
   await page.getByRole('link', { name: 'Loop', exact: true }).click()

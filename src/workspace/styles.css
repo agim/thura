@@ -362,7 +362,8 @@
   margin: 14px 0 20px;
 }
 #orbit-mail-vibrant .message {
-  white-space: pre-line;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   padding: 18px 0 24px;
   line-height: 1.8;
 }

@@ -1,17 +1,73 @@
 import { ActionRow } from './ActionRow'
 import { ActionButton } from './ActionButton'
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { api, type AttachmentView } from '@lidza/client'
-import DOMPurify from 'dompurify'
+import DOMPurify, { type Config } from 'dompurify'
+import { Marked } from 'marked'
 import { userError } from '../lib/errors'
+
+const escapeHTML = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+
+// A text/plain body is read as GitHub-flavoured Markdown. Raw HTML in it is
+// shown as text, never parsed; setext headings are off so a signature line
+// ("--") or an underlined line in ordinary mail stays a paragraph. The output
+// still goes through the reader sanitiser below, like any HTML part.
+const markdown = new Marked({
+  gfm: true, breaks: true, async: false,
+  renderer: { html: ({ text, block }) => block ? `<p>${escapeHTML(text.trim())}</p>\n` : escapeHTML(text) },
+  tokenizer: { lheading: () => undefined },
+})
+
+const htmlPolicy: Config = { FORBID_TAGS: ['style', 'svg', 'math', 'iframe', 'form', 'video', 'audio'], FORBID_ATTR: ['style', 'href', 'srcset', 'action'] }
+// Markdown output gets an explicit allowlist: the server's reader tags plus
+// the few Markdown adds. Links keep their text and lose their address.
+const markdownPolicy: Config = {
+  ALLOWED_TAGS: ['p', 'br', 'div', 'span', 'strong', 'em', 'b', 'i', 'u', 's', 'del', 'blockquote', 'ul', 'ol', 'li', 'pre', 'code', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'img', 'a'],
+  ALLOWED_ATTR: ['src', 'alt', 'align'], FORBID_ATTR: ['style', 'href', 'srcset', 'action'], ALLOW_DATA_ATTR: false, ALLOW_ARIA_ATTR: false,
+}
+
+const squash = (value: string) => value.replace(/\s+/g, ' ').trim()
+// Some senders wrap the text part in a single <pre> as their HTML part; that
+// is the same text, not authored formatting, so it is read like text/plain.
+function preWrappedText(html: string, text: string) {
+  if (!html || !text) return false
+  const body = new DOMParser().parseFromString(DOMPurify.sanitize(html, htmlPolicy), 'text/html').body
+  const nodes = [...body.childNodes].filter(node => node.nodeType !== Node.TEXT_NODE || node.textContent?.trim())
+  return nodes.length === 1 && nodes[0].nodeName === 'PRE' && squash(nodes[0].textContent || '') === squash(text)
+}
+
+const subscribeScheme = (change: () => void) => {
+  const observer = new MutationObserver(change)
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class'] })
+  return () => observer.disconnect()
+}
+const useDarkScheme = () => useSyncExternalStore(subscribeScheme, () => document.documentElement.style.colorScheme === 'dark', () => false)
+
+// The reader document inherits the app's Content-Security-Policy, which
+// admits these two exact stylesheets by hash (app/start.go, readerStyleHashes).
+// Changing either string means updating its hash there; e2e/mail-markdown.spec.ts
+// fails when a stylesheet is blocked.
+const htmlStyle = 'body{font:14px/1.6 system-ui;overflow-wrap:anywhere}img{max-width:100%;height:auto}table{max-width:100%}pre{white-space:pre-wrap}'
+const markdownStyle = ':root{--bg:#fff;--fg:#18181b;--quiet:#52525b;--soft:#f4f4f5;--line:#e4e4e7;color-scheme:light;background:var(--bg)}'
+  + ':root.dark{--bg:#18181b;--fg:#e4e4e7;--quiet:#a1a1aa;--soft:#27272a;--line:#3f3f46;color-scheme:dark}'
+  + 'body{margin:8px;color:var(--fg);font:14px/1.6 system-ui,sans-serif;overflow-wrap:anywhere}'
+  + 'h1,h2,h3,h4,h5,h6{line-height:1.3;margin:1em 0 .4em;font-weight:600}h1{font-size:1.3em}h2{font-size:1.18em}h3{font-size:1.08em}h4,h5,h6{font-size:1em}'
+  + 'p,ul,ol,blockquote,pre,div{margin:0 0 .8em}blockquote{padding-left:10px;border-left:3px solid var(--line);color:var(--quiet)}hr{border:0;border-top:1px solid var(--line)}'
+  + 'img{max-width:100%;height:auto}code{font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--soft);border-radius:4px;padding:1px 4px}'
+  + 'pre{background:var(--soft);border-radius:6px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere}pre code{padding:0;background:none}'
+  + 'div{max-width:100%;overflow-x:auto}table{border-collapse:collapse}th,td{border:1px solid var(--line);padding:4px 10px;overflow-wrap:normal;vertical-align:top}th{background:var(--soft);text-align:left}'
+  + '[align=right]{text-align:right}[align=center]{text-align:center}[align=left]{text-align:left}'
 
 export function MailReader({ workspaceId, mailboxId, id, html, text, attachments }: {
   workspaceId: string; mailboxId: string; id: string; html: string; text: string; attachments: AttachmentView[]
 }) {
-  const [formatted, setFormatted] = useState(!text)
+  // Formatted is the default; the choice lasts while this message is open
+  // (the reader is keyed by message), and is not stored anywhere.
+  const [formatted, setFormatted] = useState(true)
   const [images, setImages] = useState<Map<string, string>>(new Map())
   const [imageError, setImageError] = useState('')
+  const dark = useDarkScheme()
   const embedded = attachments.filter(a => a.contentId && /^image\/(png|jpeg|gif)$/i.test(a.contentType))
     .filter(a => attachments.filter(other => other.contentId === a.contentId).length === 1)
   const load = useMutation({ mutationFn: async () => {
@@ -28,11 +84,11 @@ export function MailReader({ workspaceId, mailboxId, id, html, text, attachments
     }
     return { loaded, failed }
   }, onSuccess: result => { setImages(result.loaded); setImageError(result.failed) } })
+  const asMarkdown = !!text && (!html || preWrappedText(html, text))
+  const policy = asMarkdown ? markdownPolicy : htmlPolicy
   // Both passes strip source URLs. Only authenticated, re-encoded PNG bytes
   // are substituted, then the result is sanitized again and sandboxed.
-  const fragment = DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true,
-    FORBID_TAGS: ['style', 'svg', 'math', 'iframe', 'form', 'video', 'audio'],
-    FORBID_ATTR: ['style', 'href', 'srcset', 'action'] })
+  const fragment = DOMPurify.sanitize(asMarkdown ? markdown.parse(text) as string : html, { ...policy, RETURN_DOM_FRAGMENT: true })
   for (const image of fragment.querySelectorAll('img')) {
     const src = image.getAttribute('src') || ''
     const cid = /^cid:/i.test(src) ? src.slice(4) : ''
@@ -40,12 +96,17 @@ export function MailReader({ workspaceId, mailboxId, id, html, text, attachments
     if (replacement) image.setAttribute('src', replacement)
     else image.remove()
   }
+  if (asMarkdown) {
+    for (const cell of fragment.querySelectorAll('[align]')) if (!/^(left|right|center)$/.test(cell.getAttribute('align') || '')) cell.removeAttribute('align')
+    // Each table scrolls inside its own box, never the page.
+    for (const table of fragment.querySelectorAll('table')) { const box = document.createElement('div'); table.replaceWith(box); box.append(table) }
+  }
   const container = document.createElement('div')
   container.append(fragment)
-  const clean = DOMPurify.sanitize(container.innerHTML, { FORBID_TAGS: ['style', 'svg', 'math', 'iframe', 'form', 'video', 'audio'], FORBID_ATTR: ['style', 'href', 'srcset', 'action'] })
-  const srcDoc = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>body{font:14px/1.6 system-ui;overflow-wrap:anywhere}img{max-width:100%;height:auto}table{max-width:100%}pre{white-space:pre-wrap}</style>${clean}`
+  const clean = DOMPurify.sanitize(container.innerHTML, policy)
+  const srcDoc = `${asMarkdown && dark ? '<html class="dark">' : ''}<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'"><style>${asMarkdown ? markdownStyle : htmlStyle}</style>${clean}`
   return <div>
-    <ActionRow label="Email display actions">{text && html && <ActionButton onClick={() => setFormatted(value => !value)}>{formatted ? 'View plain text' : 'View formatted email'}</ActionButton>}
+    <ActionRow label="Email display actions">{text && <ActionButton onClick={() => setFormatted(value => !value)}>{formatted ? 'View plain text' : 'View formatted email'}</ActionButton>}
     {formatted && embedded.length > 0 && <ActionButton disabled={load.isPending} onClick={() => load.mutate()}>{images.size ? 'Reload embedded images' : 'Show embedded images'}</ActionButton>}</ActionRow>
     {formatted ? <>
       <p className="small quiet">External images and links are blocked. Embedded images load only when requested.</p>
