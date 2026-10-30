@@ -26,7 +26,7 @@ async function savedMailbox(page: Page) {
 test('mailbox sender name shows its default, saves, survives reload and refuses line breaks', async ({ page }) => {
   await signIn(page)
   const before = await savedMailbox(page)
-  const name = `Vatrëja Desk, ${Date.now()}`
+  const name = `Nörthwind Desk, ${Date.now()}`
   try {
     await openSettings(page, 'mail')
     const field = page.getByLabel('Sender name', { exact: true })

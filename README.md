@@ -52,3 +52,9 @@ The process needs that file plus `DATABASE_URL` and `LIDZA_MASTER_KEY`;
 container. With the domains set the binary serves HTTPS itself. New servers create their first administrator at `/setup` and configure providers
 in the resumable `/admin/setup` wizard. Existing servers authorize operator
 accounts explicitly through `ADMIN_USERS`.
+
+## License
+
+Thura is free software under the [GNU Affero General Public License v3.0](LICENSE)
+(AGPL-3.0-only). You may run, study, change and share it; if you run a modified
+version as a network service, you must offer its users the corresponding source.

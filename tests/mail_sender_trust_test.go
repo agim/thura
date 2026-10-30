@@ -29,9 +29,9 @@ func switchableRspamd(t *testing.T) (*httptest.Server, func(string), func() int)
 }
 
 const (
-	trustPassSymbols = `{"R_SPF_ALLOW":{"options":["+ip4:203.0.113.0/24"]},"R_DKIM_ALLOW":{"options":["vatreja.example:s=sel1"]},"DMARC_POLICY_ALLOW":{"options":["vatreja.example","reject"]}}`
-	trustFailSymbols = `{"R_SPF_FAIL":{},"R_DKIM_NA":{},"DMARC_POLICY_REJECT":{"options":["vatreja.example","reject"]}}`
-	trustMessage     = "From: Vatreja <no-reply@vatreja.example>\r\nTo: %s\r\nSubject: Your statement %s\r\nList-Unsubscribe: <mailto:unsubscribe@vatreja.example>\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nYour monthly statement is ready.\r\n"
+	trustPassSymbols = `{"R_SPF_ALLOW":{"options":["+ip4:203.0.113.0/24"]},"R_DKIM_ALLOW":{"options":["northwind.example:s=sel1"]},"DMARC_POLICY_ALLOW":{"options":["northwind.example","reject"]}}`
+	trustFailSymbols = `{"R_SPF_FAIL":{},"R_DKIM_NA":{},"DMARC_POLICY_REJECT":{"options":["northwind.example","reject"]}}`
+	trustMessage     = "From: Northwind <no-reply@northwind.example>\r\nTo: %s\r\nSubject: Your statement %s\r\nList-Unsubscribe: <mailto:unsubscribe@northwind.example>\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nYour monthly statement is ready.\r\n"
 )
 
 func hasFinding(s *schema.MailScreeningView, code string) bool {
@@ -55,8 +55,8 @@ func TestTrustedSenderCountsOnlyWhenItsMailIsAuthenticated(t *testing.T) {
 	t.Setenv("MAIL_RSPAMD_URL", server.URL)
 	fake := llm.From(n.server.Context()).Fake()
 	fake.Reset()
-	genuine := encodedEnvelope("203.0.113.7", "mx.vatreja.example", "bounce@vatreja.example")
-	forged := encodedEnvelope("198.51.100.9", "spoof.invalid", "no-reply@vatreja.example")
+	genuine := encodedEnvelope("203.0.113.7", "mx.northwind.example", "bounce@northwind.example")
+	forged := encodedEnvelope("198.51.100.9", "spoof.invalid", "no-reply@northwind.example")
 	deliver := func(delivery, envelope string) schema.MailItem {
 		raw := fmt.Sprintf(trustMessage, n.box.Address, delivery)
 		return relayWithEnvelope(t, n, delivery, raw, envelope, envelope, 200)
@@ -121,7 +121,7 @@ func TestTrustedSenderCountsOnlyWhenItsMailIsAuthenticated(t *testing.T) {
 	// Authentication not checked (no Rspamd): held for approval like an unknown
 	// sender, without claiming a forgery.
 	t.Setenv("MAIL_RSPAMD_URL", "")
-	unchecked := receiveAbuse(t, n, "unchecked", "Vatreja <no-reply@vatreja.example>", "Your monthly statement is ready.", "", 200)
+	unchecked := receiveAbuse(t, n, "unchecked", "Northwind <no-reply@northwind.example>", "Your monthly statement is ready.", "", 200)
 	screenAbuse(t, n, unchecked, 5, "benign")
 	got = n.detail(t, unchecked)
 	if got.Screening.State != "quarantined" || !got.Screening.ApprovalRequired || got.Screening.SenderAuth != nil || hasFinding(got.Screening, "trusted_sender_unverified") {

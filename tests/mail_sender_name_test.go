@@ -47,11 +47,11 @@ func TestOutgoingMailSenderName(t *testing.T) {
 	suffix := time.Now().UnixNano()
 	email := fmt.Sprintf("sender-owner-%d@example.com", suffix)
 	pw := "harbor violet compass ember 6271"
-	owner, err := auth.From(ctx).CreateUser(ctx, email, "Agim Mehmeti", pw)
+	owner, err := auth.From(ctx).CreateUser(ctx, email, "Ada Lovelace", pw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	teamName := "Agim Mehmeti, Vatrëja"
+	teamName := "Ada Lovelace, Nörthwind"
 	w, err := workspace.Create(ctx, schema.CreateWorkspaceInput{Name: teamName, OwnerEmail: email})
 	if err != nil {
 		t.Fatal(err)
@@ -131,7 +131,7 @@ func TestOutgoingMailSenderName(t *testing.T) {
 		t.Fatalf("shared default name %q want %q", got.Name, teamName)
 	}
 	// A private mailbox defaults to its owner's profile name.
-	if got := send(private); got.Name != "Agim Mehmeti" {
+	if got := send(private); got.Name != "Ada Lovelace" {
 		t.Fatalf("private default name %q", got.Name)
 	}
 	// The mailbox list shows each default for the settings placeholder.
@@ -141,11 +141,11 @@ func TestOutgoingMailSenderName(t *testing.T) {
 	for _, item := range list.Items {
 		defaults[item.ID] = item.SenderDefault
 	}
-	if defaults[shared.ID] != teamName || defaults[private.ID] != "Agim Mehmeti" {
+	if defaults[shared.ID] != teamName || defaults[private.ID] != "Ada Lovelace" {
 		t.Fatalf("sender defaults %v", defaults)
 	}
 	// An explicit name wins, trimmed; quotes and commas stay one address.
-	explicit := `Info "Desk", Vatrëja`
+	explicit := `Info "Desk", Nörthwind`
 	if view := settings(shared, "  "+explicit+"  ", 200); view.SenderName != explicit || view.SenderDefault != teamName {
 		t.Fatalf("saved sender name %q default %q", view.SenderName, view.SenderDefault)
 	}
