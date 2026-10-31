@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type MailDetail, type MailFinding, type MailProtectionInput, type MailProtectionView, type MailScreeningView } from '@lidza/client'
 import { ActionButton } from './ActionButton'
 import { ActionRow } from './ActionRow'
-import { ShieldAlert, ShieldCheck, Flag, RotateCw, UserCheck, Ban, Inbox, MailCheck } from 'lucide-react'
+import { ChevronDown, ShieldAlert, ShieldCheck, Flag, RotateCw, UserCheck, Ban, Inbox, MailCheck } from 'lucide-react'
 import { userError } from '../lib/errors'
 
 export function MailProtectionSettings({workspaceId}:{workspaceId:string}) {
@@ -47,16 +47,45 @@ const reviewNotice:Record<string,(s:MailScreeningView)=>string>={
  'report-spam':()=>'Reported as spam and moved to Spam.',
  rescan:()=>'Rescan started. Results appear here when screening finishes.',
 }
+// The collapsed panel's verdict: whether the mail is safe, in a few words.
+// A held message adds its one-line hold reason below it.
+function verdict(s:MailScreeningView):{tone:'safe'|'pending'|'held'|'danger'|'unscreened';title:string;qualifier:string}{
+ if (s.state==='not_screened') return {tone:'unscreened',title:'Not screened',qualifier:''}
+ if (s.released) return {tone:'safe',title:'Safe',qualifier:'Released after review'}
+ if (s.state==='pending'||s.state==='scanning') return {tone:'pending',title:'Checking…',qualifier:''}
+ const dangers=s.findings.filter(f=>f.severity==='danger')
+ // The model's phishing or malware verdict outranks the static findings.
+ const strongest=dangers.find(f=>/^AI: (phishing|malware)$/.test(findingParts(f).label))??dangers[0]
+ if (strongest) { const label=findingParts(strongest).label; return {tone:'danger',title:label?`Warning: possible ${label.slice(4)}`:`Warning: ${strongest.detail}`,qualifier:''} }
+ if (s.state!=='clean') return {tone:'held',title:'Held for review',qualifier:''}
+ if (s.senderAuth?.verified||s.senderAuth?.method==='smip') return {tone:'safe',title:'Safe',qualifier:'Sender verified'}
+ return {tone:'safe',title:'Safe',qualifier:''}
+}
 export function MailScreening({workspaceId,mailboxId,id,screening,onChange}:{workspaceId:string;mailboxId:string;id:string;screening:MailScreeningView;onChange:()=>Promise<void>}){
  const client=useQueryClient()
  const [notice,setNotice]=useState('')
+ // Collapsed by default. The choice lasts while this message is open (LiveMail
+ // keys the panel by message) and is not stored anywhere.
+ const [expanded,setExpanded]=useState(false)
+ const detailsId=useId()
  // The response is the new screening state: show it at once, then refresh the message and lists.
  const review=useMutation({mutationFn:(action:string)=>api.reviewMail({workspaceId,mailboxId,id},{action}),onMutate:()=>setNotice(''),onSuccess:async(view,action)=>{client.setQueryData<MailDetail>(['mail-detail',id],data=>data&&{...data,screening:view});setNotice(reviewNotice[action]?.(view)??'Review saved.');await onChange()}})
  const unscanned=screening.state==='not_screened'
  const held=!unscanned&&!screening.released&&screening.state!=='clean'
  const Icon=held?ShieldAlert:ShieldCheck
  const restore=held||screening.reported
- return <section className={`mail-screening ${held?'mail-screening-held':''}`} aria-label="Mail protection"><div className="mail-screening-title"><Icon size={18} aria-hidden="true"/><strong>{unscanned?'Not screened · historical email':held?'Quarantined · review required':screening.released?'Released after review':'Screening complete'}</strong></div>{held&&<p className="mail-screening-reason">{holdReason(screening)}</p>}<p className="small quiet">{senderAuthLine(screening)} · Reputation: {screening.reputation} · {screening.complaints} spam {screening.complaints===1?'complaint':'complaints'}</p>{personLine(screening)&&<p className="small mail-person" data-person={screening.personState}>{personLine(screening)}</p>}<p className="small">AI: {screening.aiState.replaceAll('_',' ')} · Message antivirus: {screening.avState.replaceAll('_',' ')}{screening.approvalRequired?' · Unknown sender approval required':''}</p>{screening.findings.length>0&&<ul>{screening.findings.map((f,index)=>{const part=findingParts(f);return <li key={`${f.code}:${index}`}><strong>{f.severity==='danger'?'Warning: ':''}</strong>{part.label&&<span className="mail-finding-label">{part.label}</span>}{part.text}</li>})}</ul>}{screening.feedbackState&&<p className="small quiet" role="status">{screening.feedbackState==='learned'?'Spam filter updated':screening.feedbackState==='error'?'Learning will retry':screening.feedbackState==='cancelled'?'Correction cancelled':screening.feedbackState==='recorded'?'Correction saved':'Learning queued'}</p>}<ActionRow label="Mail protection actions" wrap><ActionButton disabled={review.isPending||(restore&&(['infected','pending','error'].includes(screening.avState)||(screening.approvalRequired&&!screening.canManage)))} onClick={()=>review.mutate(restore?'not-spam':'report-spam')} aria-label={restore?'Not spam':'Report spam'}>{restore?<MailCheck size={16} aria-hidden="true"/>:<Flag size={16} aria-hidden="true"/>}<span className="action-label">{restore?'Not spam':'Report spam'}</span></ActionButton>{screening.canManage&&<>{held&&<ActionButton disabled={review.isPending||screening.avState==='infected'} onClick={()=>review.mutate('release')} aria-label="Release reviewed email"><Inbox size={16} aria-hidden="true"/><span className="action-label">Release to Inbox</span></ActionButton>}<ActionButton disabled={review.isPending} onClick={()=>review.mutate('rescan')} aria-label="Rescan email"><RotateCw size={16} aria-hidden="true"/><span className="action-label">Rescan</span></ActionButton><ActionButton disabled={review.isPending} onClick={()=>review.mutate('approve-sender')} aria-label="Approve sender"><UserCheck size={16} aria-hidden="true"/><span className="action-label">Approve sender</span></ActionButton><ActionButton disabled={review.isPending} onClick={()=>review.mutate('block-sender')} aria-label="Block sender"><Ban size={16} aria-hidden="true"/><span className="action-label">Block sender</span></ActionButton></>}</ActionRow>{review.isPending&&<p className="small quiet">Saving review…</p>}{notice&&!review.isPending&&<p className="mail-screening-notice" role="status">{notice}</p>}{review.error&&<p role="alert">{userError(review.error)}</p>}</section>
+ const summary=verdict(screening)
+ // Held or reported mail keeps Not spam (and, for managers, Release) in the
+ // collapsed row; Report spam, Rescan, Approve and Block are in the details.
+ const restoreButton=<ActionButton disabled={review.isPending||(restore&&(['infected','pending','error'].includes(screening.avState)||(screening.approvalRequired&&!screening.canManage)))} onClick={()=>review.mutate(restore?'not-spam':'report-spam')} aria-label={restore?'Not spam':'Report spam'}>{restore?<MailCheck size={16} aria-hidden="true"/>:<Flag size={16} aria-hidden="true"/>}<span className="action-label">{restore?'Not spam':'Report spam'}</span></ActionButton>
+ return <section className={`mail-screening ${held?'mail-screening-held':''}`} aria-label="Mail protection" data-verdict={summary.tone}>
+  <div className="mail-screening-summary"><Icon size={18} aria-hidden="true"/><p className="mail-screening-verdict"><strong>{summary.title}</strong>{summary.qualifier&&<span className="quiet"> · {summary.qualifier}</span>}</p><ActionButton variant="ghost" className="mail-screening-toggle" aria-expanded={expanded} aria-controls={detailsId} onClick={()=>setExpanded(value=>!value)}><span>Details</span><ChevronDown size={16} aria-hidden="true"/></ActionButton></div>
+  {held&&<p className="mail-screening-reason">{holdReason(screening)}</p>}
+  {restore&&<ActionRow label="Mail review actions" wrap>{restoreButton}{screening.canManage&&held&&<ActionButton disabled={review.isPending||screening.avState==='infected'} onClick={()=>review.mutate('release')} aria-label="Release reviewed email"><Inbox size={16} aria-hidden="true"/><span className="action-label">Release to Inbox</span></ActionButton>}</ActionRow>}
+  <div id={detailsId} className="mail-screening-details" hidden={!expanded}><p className="mail-screening-title"><strong>{unscanned?'Not screened · historical email':held?'Quarantined · review required':screening.released?'Released after review':'Screening complete'}</strong></p><p className="small quiet">{senderAuthLine(screening)} · Reputation: {screening.reputation} · {screening.complaints} spam {screening.complaints===1?'complaint':'complaints'}</p>{personLine(screening)&&<p className="small mail-person" data-person={screening.personState}>{personLine(screening)}</p>}<p className="small">AI: {screening.aiState.replaceAll('_',' ')} · Message antivirus: {screening.avState.replaceAll('_',' ')}{screening.approvalRequired?' · Unknown sender approval required':''}</p>{screening.findings.length>0&&<ul>{screening.findings.map((f,index)=>{const part=findingParts(f);return <li key={`${f.code}:${index}`}><strong>{f.severity==='danger'?'Warning: ':''}</strong>{part.label&&<span className="mail-finding-label">{part.label}</span>}{part.text}</li>})}</ul>}{(!restore||screening.canManage)&&<ActionRow label="Mail protection actions" wrap>{!restore&&restoreButton}{screening.canManage&&<><ActionButton disabled={review.isPending} onClick={()=>review.mutate('rescan')} aria-label="Rescan email"><RotateCw size={16} aria-hidden="true"/><span className="action-label">Rescan</span></ActionButton><ActionButton disabled={review.isPending} onClick={()=>review.mutate('approve-sender')} aria-label="Approve sender"><UserCheck size={16} aria-hidden="true"/><span className="action-label">Approve sender</span></ActionButton><ActionButton disabled={review.isPending} onClick={()=>review.mutate('block-sender')} aria-label="Block sender"><Ban size={16} aria-hidden="true"/><span className="action-label">Block sender</span></ActionButton></>}</ActionRow>}</div>
+  {/* Results of an action stay outside the details, so a collapsed panel never hides them. */}
+  {screening.feedbackState&&<p className="small quiet" role="status">{screening.feedbackState==='learned'?'Spam filter updated':screening.feedbackState==='error'?'Learning will retry':screening.feedbackState==='cancelled'?'Correction cancelled':screening.feedbackState==='recorded'?'Correction saved':'Learning queued'}</p>}{review.isPending&&<p className="small quiet">Saving review…</p>}{notice&&!review.isPending&&<p className="mail-screening-notice" role="status">{notice}</p>}{review.error&&<p role="alert">{userError(review.error)}</p>}
+ </section>
 }
 // The "Real person" decision: headers first, then the screening model, then
 // the workspace's own history with the sender (docs/mail-protection.md).

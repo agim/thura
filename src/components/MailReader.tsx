@@ -37,6 +37,57 @@ function preWrappedText(html: string, text: string) {
   return nodes.length === 1 && nodes[0].nodeName === 'PRE' && squash(nodes[0].textContent || '') === squash(text)
 }
 
+// A <pre> in an HTML part whose text is strongly Markdown is a report pasted
+// as text: an ATX heading ("# " or "## ") plus a GFM table or a heading at the
+// other level. Shell comments ("# x"
+// lines, one level, no alignment row) and scripts with a shebang stay code.
+function strongMarkdown(text: string) {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n')
+  if (/^#!/.test(lines.find(line => line.trim()) ?? '')) return false
+  const levels = new Set<number>()
+  let table = false
+  lines.forEach((line, index) => {
+    const heading = /^(#{1,2}) +\S/.exec(line)
+    if (heading) levels.add(heading[1].length)
+    if (index > 0 && lines[index - 1].includes('|') && line.includes('|') && /-{3}/.test(line) && /^[\s|:-]+$/.test(line)) table = true
+  })
+  return levels.size > 0 && (table || levels.size > 1)
+}
+
+// The block's text with its line breaks: a <br> ends a line.
+function blockText(element: Element) {
+  const copy = element.cloneNode(true) as Element
+  for (const br of copy.querySelectorAll('br')) br.replaceWith('\n')
+  return copy.textContent || ''
+}
+
+// Rendered Markdown for one block: the same marked configuration and allowlist
+// as a text/plain body, tables boxed, unknown alignments dropped.
+function markdownFragment(text: string) {
+  const fragment = DOMPurify.sanitize(markdown.parse(text) as string, { ...markdownPolicy, RETURN_DOM_FRAGMENT: true })
+  for (const cell of fragment.querySelectorAll('[align]')) if (!/^(left|right|center)$/.test(cell.getAttribute('align') || '')) cell.removeAttribute('align')
+  // Each table scrolls inside its own box, never the page.
+  for (const table of fragment.querySelectorAll('table')) { const box = fragment.ownerDocument.createElement('div'); table.replaceWith(box); box.append(table) }
+  return fragment
+}
+
+// Replaces strongly-Markdown <pre> blocks of a sanitised HTML fragment in
+// place; the rest of the HTML stays as it is. A monospace pre-wrap <div> cannot
+// be recognised here: the API's reader HTML (internal/mailbox/reader.go) keeps
+// no style attribute.
+function renderMarkdownBlocks(fragment: DocumentFragment) {
+  for (const block of fragment.querySelectorAll('pre')) {
+    // Document order: a <pre> nested in one already replaced is gone.
+    if (!fragment.contains(block)) continue
+    const text = blockText(block)
+    if (!strongMarkdown(text)) continue
+    const box = fragment.ownerDocument.createElement('div')
+    box.setAttribute('data-markdown', '')
+    box.append(markdownFragment(text))
+    block.replaceWith(box)
+  }
+}
+
 const subscribeScheme = (change: () => void) => {
   const observer = new MutationObserver(change)
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class'] })
@@ -49,6 +100,10 @@ const useDarkScheme = () => useSyncExternalStore(subscribeScheme, () => document
 // Changing either string means updating its hash there; e2e/mail-markdown.spec.ts
 // fails when a stylesheet is blocked.
 const htmlStyle = 'body{font:14px/1.6 system-ui;overflow-wrap:anywhere}img{max-width:100%;height:auto}table{max-width:100%}pre{white-space:pre-wrap}'
+  + '[data-markdown] :is(h1,h2,h3,h4,h5,h6){line-height:1.3;margin:1em 0 .4em;font-weight:600}[data-markdown] h1{font-size:1.3em}[data-markdown] h2{font-size:1.18em}[data-markdown] h3{font-size:1.08em}'
+  + '[data-markdown] code{font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}[data-markdown] div{max-width:100%;overflow-x:auto;margin:0 0 .8em}'
+  + '[data-markdown] table{border-collapse:collapse}[data-markdown] :is(th,td){border:1px solid #d4d4d8;padding:4px 10px;overflow-wrap:normal;vertical-align:top}[data-markdown] th{text-align:left}'
+  + '[data-markdown] [align=right]{text-align:right}[data-markdown] [align=center]{text-align:center}'
 const markdownStyle = ':root{--bg:#fff;--fg:#18181b;--quiet:#52525b;--soft:#f4f4f5;--line:#e4e4e7;color-scheme:light;background:var(--bg)}'
   + ':root.dark{--bg:#18181b;--fg:#e4e4e7;--quiet:#a1a1aa;--soft:#27272a;--line:#3f3f46;color-scheme:dark}'
   + 'body{margin:8px;color:var(--fg);font:14px/1.6 system-ui,sans-serif;overflow-wrap:anywhere}'
@@ -88,18 +143,14 @@ export function MailReader({ workspaceId, mailboxId, id, html, text, attachments
   const policy = asMarkdown ? markdownPolicy : htmlPolicy
   // Both passes strip source URLs. Only authenticated, re-encoded PNG bytes
   // are substituted, then the result is sanitized again and sandboxed.
-  const fragment = DOMPurify.sanitize(asMarkdown ? markdown.parse(text) as string : html, { ...policy, RETURN_DOM_FRAGMENT: true })
+  const fragment = asMarkdown ? markdownFragment(text) : DOMPurify.sanitize(html, { ...htmlPolicy, RETURN_DOM_FRAGMENT: true })
+  if (!asMarkdown) renderMarkdownBlocks(fragment)
   for (const image of fragment.querySelectorAll('img')) {
     const src = image.getAttribute('src') || ''
     const cid = /^cid:/i.test(src) ? src.slice(4) : ''
     const replacement = images.get(cid)
     if (replacement) image.setAttribute('src', replacement)
     else image.remove()
-  }
-  if (asMarkdown) {
-    for (const cell of fragment.querySelectorAll('[align]')) if (!/^(left|right|center)$/.test(cell.getAttribute('align') || '')) cell.removeAttribute('align')
-    // Each table scrolls inside its own box, never the page.
-    for (const table of fragment.querySelectorAll('table')) { const box = document.createElement('div'); table.replaceWith(box); box.append(table) }
   }
   const container = document.createElement('div')
   container.append(fragment)

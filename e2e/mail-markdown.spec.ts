@@ -184,3 +184,135 @@ test('an HTML part is kept as HTML; a text part merely wrapped in <pre> reads as
   await expect(frame.locator('td').nth(1)).toHaveAttribute('align', 'right')
   await expect(frame.locator('pre')).toHaveCount(0)
 })
+
+const escapeHTML = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+for (const width of [390, 1440]) {
+  test(`Markdown inside a <pre> of HTML mail renders below its brand line at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    const subject = `Vatreja report ${width} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const source = [
+      '# Weekly infrastructure report',
+      '',
+      'All services stayed within their targets this week.',
+      '',
+      '## Backups',
+      '',
+      '| Host | Last backup | Size GiB |',
+      '|---|---|---:|',
+      '| db-primary | 2026-10-30 02:00 | 412.8 |',
+      '| files-01 | 2026-10-30 03:15 | 96.1 |',
+      '',
+      '## Next steps',
+      '',
+      '- Rotate the **staging** certificates',
+      '- Review `pg_stat_statements` for slow queries',
+    ].join('\n')
+    await signIn(page)
+    // As in the real mail, the brand line is in the HTML part only, so the
+    // HTML is not merely the text part wrapped in one <pre>.
+    await deliver(page, subject, source, `<div>Vatreja</div><pre>${escapeHTML(source)}</pre>`)
+    await open(page, subject)
+    const frame = body(page)
+    await expect(frame.getByText('Vatreja', { exact: true })).toBeVisible()
+    await expect(frame.getByRole('heading', { level: 1, name: 'Weekly infrastructure report', exact: true })).toBeVisible()
+    await expect(frame.getByRole('heading', { level: 2, name: 'Backups', exact: true })).toBeVisible()
+    await expect(frame.getByRole('heading', { level: 2, name: 'Next steps', exact: true })).toBeVisible()
+    await expect(frame.locator('pre')).toHaveCount(0)
+    const table = frame.locator('table')
+    await expect(table.locator('th')).toHaveText(['Host', 'Last backup', 'Size GiB'])
+    await expect(table.locator('th').nth(2)).toHaveAttribute('align', 'right')
+    await expect(table.locator('td').nth(2)).toHaveText('412.8')
+    expect(await table.locator('td').nth(2).evaluate(cell => getComputedStyle(cell).textAlign)).toMatch(/right$/)
+    await expect(frame.locator('li strong')).toHaveText('staging')
+    await expect(frame.locator('code')).toHaveText('pg_stat_statements')
+    // The brand line stays the sender's HTML, ahead of the rendered Markdown.
+    expect(await frame.locator('body').evaluate(element => element.firstElementChild?.nodeName + ':' + element.firstElementChild?.textContent)).toBe('DIV:Vatreja')
+    // The reader stylesheet applies (admitted by hash): a proportional body, a collapsed, bordered table.
+    expect(await frame.locator('h1').evaluate(h => getComputedStyle(h).fontFamily)).toMatch(/system-ui/)
+    expect(await table.evaluate(t => getComputedStyle(t).borderCollapse)).toBe('collapse')
+    expect(await table.locator('td').first().evaluate(td => getComputedStyle(td).borderTopStyle)).toBe('solid')
+    expect(await frame.locator('body').evaluate(element => element.ownerDocument.documentElement.scrollWidth <= element.ownerDocument.documentElement.clientWidth)).toBe(true)
+    await expectNoSidewaysScroll(page)
+  })
+}
+
+test('code in a <pre> of HTML mail stays code, even with # comment lines', async ({ page }) => {
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const subject = `Shell script ${stamp}`
+  const script = [
+    '# Back up the database',
+    'pg_dump --format=custom thura > /srv/backups/thura.dump',
+    '',
+    '# Keep two weeks of dumps',
+    'find /srv/backups -name "*.dump" -mtime +14 -delete | tee /var/log/prune.log',
+    '#',
+    'echo "done"',
+  ].join('\n')
+  const lone = `Lone hash ${stamp}`
+  await signIn(page)
+  await deliver(page, subject, 'Run this nightly.', `<p>Run this nightly:</p><pre>${escapeHTML(script)}</pre>`)
+  await deliver(page, lone, 'Header', '<p>Header</p><pre>#\n## not a report\nvalue | other</pre>')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await open(page, subject)
+  const frame = body(page)
+  await expect(frame.getByText('Run this nightly:', { exact: true })).toBeVisible()
+  await expect(frame.getByRole('heading')).toHaveCount(0)
+  await expect(frame.locator('pre')).toHaveCount(1)
+  expect(await frame.locator('pre').evaluate(pre => pre.textContent)).toBe(script)
+  expect(await frame.locator('pre').evaluate(pre => getComputedStyle(pre).fontFamily)).toMatch(/mono/i)
+  await expectNoSidewaysScroll(page)
+  await open(page, lone)
+  await expect(frame.getByText('Header', { exact: true })).toBeVisible()
+  await expect(frame.getByRole('heading')).toHaveCount(0)
+  await expect(frame.locator('pre')).toContainText('## not a report')
+})
+
+test('Markdown inside a <pre> of HTML mail gains no script, handler, link, remote image or style', async ({ page }) => {
+  let tracker = 0
+  let dialogs = 0
+  await page.route('https://tracker.example/**', route => { tracker++; return route.abort() })
+  await page.route('**/x', route => { tracker++; return route.abort() })
+  page.on('dialog', dialog => { dialogs++; void dialog.dismiss() })
+  const subject = `Pre hostile ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const source = [
+    '# Hostile report',
+    '',
+    '## Inside a pre',
+    '',
+    '<script>document.body.dataset.injected=1;alert(1)</script>',
+    '',
+    '<img src=x onerror="document.body.dataset.injected=1;alert(1)">',
+    '',
+    'Inline <b onclick="alert(1)">bold</b> and <style>body{display:none}</style>',
+    '',
+    '[click me](javascript:alert(1)) and <javascript:alert(2)>',
+    '',
+    '![pixel](https://tracker.example/p.png)',
+    '',
+    'Autolink https://tracker.example/landing',
+    '',
+    'Entities &lt;script&gt;alert(3)&lt;/script&gt; &amp;copy; &#106;avascript:alert(4)',
+  ].join('\n')
+  await signIn(page)
+  await deliver(page, subject, 'Hostile report', `<div>Brand</div><pre>${escapeHTML(source)}</pre>`)
+  await open(page, subject)
+  const frame = body(page)
+  await expect(frame.getByRole('heading', { level: 1, name: 'Hostile report', exact: true })).toBeVisible()
+  await expect(frame.getByText('Brand', { exact: true })).toBeVisible()
+  // Raw HTML in the <pre> text is shown as text, never parsed.
+  await expect(frame.getByText('<script>document.body.dataset.injected=1;alert(1)</script>', { exact: true })).toBeVisible()
+  await expect(frame.getByText('<img src=x onerror="document.body.dataset.injected=1;alert(1)">', { exact: true })).toBeVisible()
+  await expect(frame.locator('p').filter({ hasText: 'Inline' })).toContainText('<b onclick="alert(1)">bold</b> and <style>body{display:none}</style>')
+  await expect(frame.getByText('click me', { exact: true })).toBeVisible()
+  await expect(frame.getByText('Autolink https://tracker.example/landing', { exact: false })).toBeVisible()
+  await expect(frame.locator('p').filter({ hasText: 'Entities' })).toContainText('<script>alert(3)</script>')
+  await expect(frame.locator('body').locator('script, style, img, iframe, object, embed, svg, a[href], [onclick], [onerror], [style], [class], [id]')).toHaveCount(0)
+  await expect(frame.locator('b')).toHaveCount(0)
+  expect(await frame.locator('body').evaluate(element => element.ownerDocument.body.dataset.injected)).toBeUndefined()
+  expect(await page.locator('body').getAttribute('data-injected')).toBeNull()
+  expect(tracker).toBe(0)
+  expect(dialogs).toBe(0)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expectNoSidewaysScroll(page)
+})

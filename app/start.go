@@ -110,7 +110,7 @@ func appMiddleware() []middleware.Middleware {
 // src/components/MailReader.tsx. Update them with the strings;
 // e2e/mail-markdown.spec.ts fails when the reader's stylesheet is blocked.
 var readerStyleHashes = []string{
-	"'sha256-P+nVxmu1Ch776ezPZq802aa2z5fUjOZEwsTTMzPh9XE='",
+	"'sha256-/x4nHdW7FHYkGp+z6wuAlwCvSBuTvUb4HTk9kYJiI80='",
 	"'sha256-gLs+gvFSQCGCwwUgQPLt43lJEGzX92GKSDW4bj+iHGo='",
 }
 

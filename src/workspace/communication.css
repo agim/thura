@@ -1323,7 +1323,18 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 
 .mail-screening { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-block: 12px; overflow-wrap: anywhere; }
 .mail-screening-held { border-inline-start: 4px solid var(--gold, #946b08); }
-.mail-screening-title { display:flex; align-items:center; gap:8px; }
+.mail-screening-title { display:flex; align-items:center; gap:8px; margin:12px 0 4px; }
+.mail-screening[data-verdict=danger] { border-inline-start: 4px solid var(--coral, #b42318); }
+/* Collapsed by default: one row with the verdict and a Details disclosure. */
+.mail-screening:has(> .mail-screening-details[hidden]) { padding-block: 6px; }
+.mail-screening-summary { display:flex; align-items:center; gap:8px; min-height:36px; }
+.mail-screening-summary > svg { flex:none; }
+.mail-screening-verdict { flex:1; min-width:0; margin:0; }
+.mail-screening-toggle.app-action { flex:none; display:inline-flex; align-items:center; gap:4px; min-height:32px; padding:4px 8px; }
+.mail-screening-toggle > svg { transition: transform .15s ease; }
+.mail-screening-toggle[aria-expanded=true] > svg { transform: rotate(180deg); }
+.mail-screening-summary + .mail-screening-reason { margin-top:2px; }
+.mail-screening-details > p { margin-block: 4px; }
 .mail-screening ul { padding-inline-start:20px; font-size:13px; }
 .mail-screening li + li { margin-block-start:6px; }
 
