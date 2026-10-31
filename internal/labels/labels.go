@@ -145,7 +145,13 @@ func Change(ctx context.Context, w, source, id, labelID string, applied bool) er
 	}
 	return tx.Commit(ctx)
 }
+
+// Delete removes a workspace label from every item. Any member creates and
+// applies labels; only owners and admins remove one for everyone.
 func Delete(ctx context.Context, w, id string) error {
+	if err := workspace.RequireManager(ctx, w); err != nil {
+		return err
+	}
 	tx, queries, l, err := lockLabel(ctx, w, id)
 	if err != nil {
 		return err

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"github.com/agim/lidza/pkg/router"
+	"thura/internal/platform/providererr"
 	"thura/internal/platform/servicehttp"
 	"thura/internal/providers/collabora"
 	"thura/internal/wopi"
@@ -17,12 +18,19 @@ func GetOfficeCapabilities(ctx context.Context, r *router.Request[router.None]) 
 	result := schema.OfficeCapabilities{Extensions: []string{}, ContentTypes: []string{}}
 	config, err := collabora.Load()
 	if err != nil {
-		return result, err
+		return result, editorError(ctx, err)
 	}
 	result.Extensions, result.ContentTypes, err = config.Formats(ctx)
-	return result, err
+	return result, editorError(ctx, err)
 }
 
 func OpenOfficeDocument(ctx context.Context, r *router.Request[router.None]) (schema.OfficeConfig, error) {
-	return wopi.Open(ctx, r.Param("workspaceId"), r.Param("id"), r.Query("theme"), servicehttp.Origin(r.Raw), r.Query("mode") == "view")
+	out, err := wopi.Open(ctx, r.Param("workspaceId"), r.Param("id"), r.Query("theme"), servicehttp.Origin(r.Raw), r.Query("mode") == "view")
+	return out, editorError(ctx, err)
+}
+
+// editorError keeps Collabora's own wording in the log
+// (internal/platform/providererr).
+func editorError(ctx context.Context, err error) error {
+	return providererr.Hide(ctx, "collabora", providererr.Editor, err)
 }

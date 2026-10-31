@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"github.com/agim/lidza/packs/audit"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/pkg/router"
@@ -187,7 +188,13 @@ func RequestDriveOCR(ctx context.Context, r *router.Request[router.None]) (schem
 	return drive.RequestOCRPreview(ctx, r.Param("workspaceId"), r.Param("id"))
 }
 func ConvertOfficeDocument(ctx context.Context, r *router.Request[schema.OfficeConversionInput]) (schema.OfficeConversion, error) {
-	return wopi.Convert(ctx, r.Param("workspaceId"), r.Param("id"), r.Body.Target)
+	out, err := wopi.Convert(ctx, r.Param("workspaceId"), r.Param("id"), r.Body.Target)
+	var failed *router.HTTPError
+	if errors.As(err, &failed) && failed.Status == 502 {
+		// The conversion's own advice (use Extract scanned PDF) helps the member.
+		return out, err
+	}
+	return out, editorError(ctx, err)
 }
 func ReconstructWordDocument(ctx context.Context, r *router.Request[schema.WordCopyInput]) (schema.OfficeConversion, error) {
 	return office.ReviewedWord(ctx, r.Param("workspaceId"), r.Param("id"), r.Body)

@@ -11,6 +11,7 @@ import (
 	"strings"
 	q "thura/db/queries/gen"
 	provider "thura/internal/providers/livekit"
+	"thura/internal/setup"
 	"thura/internal/workspace"
 	"thura/schema"
 	"time"
@@ -40,8 +41,10 @@ func List(ctx context.Context, w string) (schema.MeetingList, error) {
 	}
 	_, err := provider.Load()
 	out.Configured = err == nil
-	if err != nil {
-		// Which setting is wrong, by name only: no value reaches the page.
+	if err != nil && setup.Allow(ctx) {
+		// Which setting is wrong, by name only, and only for the server
+		// administrator who can fix it: no value reaches the page, and a
+		// member reads the plain notice instead.
 		out.Unavailable = err.Error()
 	}
 	rows, err := q.New(db.From(ctx)).ListMeetings(ctx, w)

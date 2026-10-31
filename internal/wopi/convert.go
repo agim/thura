@@ -3,6 +3,7 @@ package wopi
 import (
 	"context"
 	"encoding/base64"
+	"github.com/agim/lidza"
 	"github.com/agim/lidza/pkg/router"
 	"path"
 	"strings"
@@ -38,7 +39,8 @@ func Convert(ctx context.Context, w, id, target string) (schema.OfficeConversion
 	}
 	converted, err := config.Convert(ctx, f.Name, target, data)
 	if err != nil {
-		return schema.OfficeConversion{}, router.Errorf(502, "Collabora could not convert this file. For a PDF, use Extract scanned PDF to review its recognized text and save a Word copy")
+		lidza.Log(ctx).Warn("document conversion failed", "file", f.ID, "error", err)
+		return schema.OfficeConversion{}, router.Errorf(502, "This file could not be converted. For a PDF, use Extract scanned PDF to review its recognized text and save a Word copy")
 	}
 	return office.Converted(ctx, w, f, target, converted)
 }

@@ -212,7 +212,6 @@ type MailboxView {
   workspaceId uuid
   name string
   address string
-  configPrefix string
   private bool
   ownerSubject string?
   signature string
@@ -240,6 +239,7 @@ type MailDetail {
   labels MailLabel[]
   deliveries MailDeliveryView[]
   screening MailScreeningView?
+  canManage bool
 }
 type DraftInput {
   forwardId uuid?

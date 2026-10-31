@@ -23,5 +23,5 @@ function CollaboraFrame({config}:{config:OfficeConfig}) {
   if(!config.editorUrl.startsWith('/api/v1/collabora/browser/') || !config.accessToken){setFailure('Invalid document editor configuration.');return}
   form.current?.submit()
  },[config])
- return <div className="office-editor-host">{failure && <p role="alert">{failure}</p>}<iframe title="Collabora document editor" name={id} allow="clipboard-read; clipboard-write; fullscreen"/><form hidden ref={form} method="post" action={config.editorUrl} target={id}><input type="hidden" name="access_token" value={config.accessToken}/><input type="hidden" name="access_token_ttl" value={config.accessTokenTTL}/></form></div>
+ return <div className="office-editor-host">{failure && <p role="alert">{failure}</p>}<iframe title="Document editor" name={id} allow="clipboard-read; clipboard-write; fullscreen"/><form hidden ref={form} method="post" action={config.editorUrl} target={id}><input type="hidden" name="access_token" value={config.accessToken}/><input type="hidden" name="access_token_ttl" value={config.accessTokenTTL}/></form></div>
 }

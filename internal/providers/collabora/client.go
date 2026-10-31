@@ -105,7 +105,7 @@ func (c Config) Editor(ctx context.Context, ext, contentType string, readOnly bo
 		}
 	}
 
-	return "", false, router.Errorf(422, "Collabora does not support this file format")
+	return "", false, router.Errorf(422, "The document editor does not support this file format")
 }
 
 func (c Config) Formats(ctx context.Context) ([]string, []string, error) {

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"thura/internal/platform/providererr"
 	"time"
 
 	"github.com/agim/lidza"
@@ -46,6 +47,10 @@ func Settings(ctx context.Context, w string) (schema.AISettings, error) {
 	}
 	if out.CanConfigure {
 		out.BaseURL = cfg.BaseURL
+	} else {
+		// Which vendor and model serve the workspace is the administrator's
+		// setting; a member only needs to know whether AI is on.
+		out.Provider, out.Model, out.HasKey = "", "", false
 	}
 	return out, nil
 }
@@ -154,7 +159,7 @@ func snapshot(ctx context.Context) (*llm.LLM, llm.Config, error) {
 	defer configuration.RUnlock()
 	service := llm.From(ctx)
 	if !enabled() || (service.Provider() == "fake" && credentials.Mode() != "test") {
-		return nil, llm.Config{}, router.Errorf(503, "AI is not configured. Ask your server administrator to enable a model in Settings")
+		return nil, llm.Config{}, router.Errorf(503, "AI assistance isn't available. Ask your administrator.")
 	}
 	var cfg llm.Config
 	if err := env.Load(".", &cfg); err != nil {
@@ -203,16 +208,25 @@ func Generate(ctx context.Context, w string, in schema.AssistantInput) (schema.A
 	if err != nil {
 		return schema.AssistantResult{}, err
 	}
-	return cachedResponse(call, w, key, func() (schema.AssistantResult, error) {
+	operator := setup.Allow(ctx)
+	out, err := cachedResponse(call, w, key, func() (schema.AssistantResult, error) {
 		result, err := service.Chat(call, request)
 		if err != nil {
-			return schema.AssistantResult{}, router.Errorf(502, "The model could not complete this request. Check the connection in Settings and try again")
+			if operator {
+				lidza.Log(ctx).Warn("model request failed", "error", err)
+				return schema.AssistantResult{}, router.Errorf(502, "The model could not complete this request. Check the connection in Settings and try again")
+			}
+			return schema.AssistantResult{}, providererr.Hide(ctx, "llm", providererr.Assistant, err)
 		}
 		if strings.TrimSpace(result.Text) == "" {
 			return schema.AssistantResult{}, router.Errorf(502, "The model returned no text. Try again")
 		}
 		return schema.AssistantResult{Text: result.Text, Model: result.Model, Truncated: result.Stop == "length"}, nil
 	})
+	if !operator {
+		out.Model = ""
+	}
+	return out, err
 }
 
 func TestConnection(ctx context.Context, w string) (schema.AssistantResult, error) {

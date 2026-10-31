@@ -3098,7 +3098,6 @@ type MailboxView struct {
 	WorkspaceID   string    `json:"workspaceId"`
 	Name          string    `json:"name"`
 	Address       string    `json:"address"`
-	ConfigPrefix  string    `json:"configPrefix"`
 	Private       bool      `json:"private"`
 	OwnerSubject  *string   `json:"ownerSubject"`
 	Signature     string    `json:"signature"`
@@ -3121,9 +3120,6 @@ func (v MailboxView) Validate() error {
 	}
 	if v.Address == "" {
 		errs.Add("address", "required", "required")
-	}
-	if v.ConfigPrefix == "" {
-		errs.Add("configPrefix", "required", "required")
 	}
 	if v.Signature == "" {
 		errs.Add("signature", "required", "required")
@@ -3209,6 +3205,7 @@ type MailDetail struct {
 	Labels      []MailLabel        `json:"labels"`
 	Deliveries  []MailDeliveryView `json:"deliveries"`
 	Screening   *MailScreeningView `json:"screening"`
+	CanManage   bool               `json:"canManage"`
 }
 
 // Validate applies the rules of MailDetail from schema.lidza.
