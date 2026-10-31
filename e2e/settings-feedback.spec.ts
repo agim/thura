@@ -23,6 +23,7 @@ async function teamFixture(page: Page) {
   const domain = { id: randomUUID(), name: `${run}.example`, status: 'verified', web: true, mail: true, txtName: '', txtValue: '' }
   const mail = { domainId: domain.id, provider: 'postmark', region: 'us', smtpHost: '', smtpPort: 0, smtpUsername: '', smtpSecurity: '', hasApiKey: true, hasSmtpPassword: false, enabled: true, smip: true, postfix: true, keyId: `key-${run.slice(0, 8)}`, publicKey: 'public-test-value' }
   const teamBox = { id: randomUUID(), name: `Team-only box ${run.slice(0, 8)}`, address: `team-only@${domain.name}` }
+  await page.route('**/api/v1/setup/status', route => route.fulfill({ json: { open: false, claimed: true, published: true, active: true, restartRequired: false, administrator: true } }))
   await page.route('**/api/v1/managed-teams', route => route.fulfill({ json: { items: [{ id: workspace, name: 'Browser test workspace', createdAt: '2026-10-19T12:00:00Z' }, other] } }))
   await page.route('**/team-setup', route => route.fulfill({ json: { workspaceId: route.request().url().split('/workspaces/')[1].split('/')[0], name: 'Team', status: 'draft', primaryDomain: '', canManage: true, domains: [domain], mail: [mail] } }))
   await page.route('**/team-setup/mailboxes', route => route.fulfill({ json: { items: [teamBox] } }))

@@ -129,5 +129,5 @@ test('a saved Calendar event prepares a meeting without claiming an unconfigured
   await expect(page.getByLabel('Meeting name', { exact: true })).toHaveValue(title)
   await expect(page.getByRole('button', { name: 'Create meeting', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: 'Close New meeting', exact: true }).click()
-  await expect(page.getByRole('status')).toContainText('Meet service is not configured')
+  await expect(page.getByRole('status')).toContainText('Meetings aren’t available yet. Ask your administrator.')
 })

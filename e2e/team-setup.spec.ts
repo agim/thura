@@ -8,6 +8,7 @@ for (const width of [1440, 390]) test(`central team setup persists configuration
   const state: { workspaceId: string; name: string; status: string; primaryDomain: string; canManage: boolean; domains: object[]; mail: object[] } = { workspaceId: id, name: team.name, status: 'draft', primaryDomain: '', canManage: true, domains: [], mail: [] }
   await page.route('**/api/v1/workspaces', route => route.fulfill({ json: { items: [team] } }))
   await page.route('**/api/v1/managed-teams', route => route.fulfill({ json: { items: [team] } }))
+  await page.route('**/api/v1/setup/status', route => route.fulfill({ json: { open: false, claimed: true, published: true, active: true, restartRequired: false, administrator: true } }))
   await page.route('**/team-setup', route => route.fulfill({ json: state }))
   await page.route('**/team-setup/mailboxes', route => route.fulfill({ json: { items: [] } }))
   await page.route(`**/workspaces/${id}/domains`, async route => {
@@ -78,6 +79,7 @@ test('team setup renders before the SMIP status and shows an honest status per d
   const state = { workspaceId: id, name: team.name, status: 'draft', primaryDomain: '', canManage: true, domains: [domain(domainId, 'regional.example.org'), domain(failingId, 'branch.example.org')], mail: [mail(domainId), mail(failingId)] }
   await page.route('**/api/v1/workspaces', route => route.fulfill({ json: { items: [team] } }))
   await page.route('**/api/v1/managed-teams', route => route.fulfill({ json: { items: [team] } }))
+  await page.route('**/api/v1/setup/status', route => route.fulfill({ json: { open: false, claimed: true, published: true, active: true, restartRequired: false, administrator: true } }))
   await page.route('**/team-setup', route => route.fulfill({ json: state }))
   let release: () => void = () => {}
   const released = new Promise<void>(resolve => { release = resolve })

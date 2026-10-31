@@ -73,6 +73,6 @@ test('publication keeps a first installation locked until runtime activation', a
   await page.route('**/api/v1/setup/status', route => route.fulfill({ json: { open: false, claimed: true, published: true, active: false, restartRequired: true, administrator: false } }))
   await page.goto('/app')
   await expect(page).toHaveURL(/\/setup$/)
-  await expect(page.getByText('Configuration is published. Restart the server to activate it; the app remains locked until activation succeeds.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Thura is being updated. Try again shortly.', { exact: true })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCount(0)
 })

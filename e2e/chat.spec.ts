@@ -9,7 +9,7 @@ test('Chat presents homeserver configuration truthfully and does not simulate de
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('link', { name: 'Chat', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Chat', exact: true })).toBeVisible()
-  await expect(page.getByRole('status')).toContainText('Matrix chat is not configured')
+  await expect(page.getByRole('status')).toContainText('Chat isn’t available yet. Ask your administrator.')
   await page.getByRole('button', { name: 'New chat', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Create room', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: 'Close New chat', exact: true }).click()
