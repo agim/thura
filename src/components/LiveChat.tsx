@@ -12,14 +12,13 @@ import { WorkspaceDialog } from './WorkspaceDialog'
 import { confirmAction } from './ConfirmationHost'
 import { SelectControl } from './SelectControl'
 import { CompactDisclosure } from './CompactDisclosure'
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError, type ChatRoom, type ChatMessage, type Contact } from '@lidza/client'
 import { downloadContent } from '../lib/download'
 import { userError } from '../lib/errors'
 import { useAppView } from '../lib/app-view'
 import { AppNotice, useNotice, type Notice } from './AppNotice'
-const SmipReview = lazy(() => import('./SmipReview').then(module => ({ default: module.SmipReview })))
 // A 4xx (not 429) answer for a room is final: it is gone or no longer shared, so retrying cannot help.
 const clientError = (error: unknown) => error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429
 
@@ -77,7 +76,6 @@ export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string
     {room && rooms.data?.configured && <ChatConversation search={view.q ?? ''} onSearch={setSearch} setNotice={setNotice} onMeet={onMeet} key={room.id} room={room} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} />}
     {(!room || !rooms.data?.configured) && !rooms.isPending && <div className="communication-empty"><MessageCircle size={32} /><h3>Your conversations, together</h3><p>Choose a conversation or start a new chat with your workspace.</p></div>}
     <p className="app-service-note chat-service-note"><LockKeyhole size={12} /> Rooms are server-readable; this version does not enable end-to-end encryption.</p>
-    <Suspense fallback={null}><SmipReview key={workspaceId} workspaceId={workspaceId} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} /></Suspense>
     <AppNotice notice={notice} clear={closeNotice} />
   </section>
 }

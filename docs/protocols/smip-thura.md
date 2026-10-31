@@ -1,10 +1,10 @@
 # Experimental SMIP in Thura
 
-SMIP is a separate opt-in track beyond the completed first release. The app supports paired-server chat/file packets, their review in Chat, and explicit file import into Drive. It also sends workspace-authorized chat and immutable Drive file copies through durable jobs. Matrix conversations remain separate. The standalone reference sender outbox can target this endpoint using `smip.NewApplicationClient`.
+SMIP is a separate opt-in track beyond the completed first release. The app supports paired-server chat/file packets, their review in Settings → SMIP streams (workspace owners and admins only), and explicit file import into Drive. It also sends workspace-authorized chat and immutable Drive file copies through durable jobs. Matrix conversations remain separate. The standalone reference sender outbox can target this endpoint using `smip.NewApplicationClient`.
 
 ## Operator configuration
 
-Default: `SMIP_ENABLED=false`. No keys are generated silently and no trusted peers are discovered from packets. When disabled, the peer endpoint returns 503 and the review panel is absent. Authenticated workspace APIs remain scoped to current membership.
+Default: `SMIP_ENABLED=false`. No keys are generated silently and no trusted peers are discovered from packets. When disabled, the peer endpoint returns 503 and Settings → SMIP streams shows one line pointing to Server setup instead of its forms. Authenticated workspace APIs remain scoped to current membership.
 
 Set `SMIP_ENABLED=true`; the setup wizard generates `SMIP_CONFIG` (the local identity) when the server address is saved and stores it sealed. Operators may also supply the JSON themselves: `domain` (logical lowercase DNS identity), `seed` (canonical unpadded base64url of 32 random Ed25519 seed bytes), `notBefore` / `notAfter` (Unix signing interval), and optionally `peers` (domain → key-ID → trusted public key) with `origins` (sending peer domains → explicit HTTPS origins; an absent origin makes that peer receive-only), `originKeys` (local historical public signing keys and revocation flags for queued packets; the current signing key is added automatically if omitted) and `caFile` (a path to a private PEM trust bundle added to system roots for explicitly paired private deployments; certificate verification is never disabled). The CA bundle is normally saved on the admin page instead (below); the JSON `caFile` is the advanced alternative. A trusted public key object uses `Public` (standard padded base64 of 32 public bytes), `NotBefore`, `NotAfter` and `Revoked`, matching `smip.Key`. Key IDs are SHA-256 fingerprints. Never use the public test seeds for deployments.
 
@@ -32,13 +32,13 @@ Use one logical SMIP identity and consistent frozen configuration across every a
 
 ## Workspace consent and review
 
-An owner/admin authorizes a binding using the operator-configured peer domain, remote sender, local service-recipient address, and stream. This is consent to receive into the entire local workspace, not a private direct conversation. Every workspace member can review accepted content. A remote server's sender assertion does not prove a human identity. Local and remote workspace IDs never serve as bearer permissions.
+An owner/admin authorizes a binding using the operator-configured peer domain, remote sender, local service-recipient address, and stream. This is consent to receive into the entire local workspace, not a private direct conversation. The SMIP streams screen, where accepted content is reviewed, is shown to owners and admins only; members never see SMIP in Chat. A remote server's sender assertion does not prove a human identity. Local and remote workspace IDs never serve as bearer permissions.
 
 A binding's ID is a caller-allocated UUID used for idempotent creation. Reusing it with different content returns 409. One `(peer, stream, recipient)` mapping can belong to only one workspace; at most 50 retained bindings exist per workspace. Disable is irreversible through this API; it preserves consent history and existing receipts rather than deleting deduplication state. A later authorization uses a different stream. New admissions recheck the binding under the workspace lock. A revoked peer key still blocks duplicates even when a durable receipt exists.
 
 Accepted packets and their receipts/public verification keys commit together in Postgres before a successful response. The receiver uses `(origin, message ID)` for deduplication, preserves original receipt bytes after restart and refuses changed content under the same ID. Each workspace retains at most 1,000 records and 64 MiB of decoded content, including imported files. At capacity it returns 503; operators must address retention without destroying idempotency history. There is no automatic deletion policy.
 
-Chat review renders plain text. Inbox pages contain at most 50 metadata/text rows, ordered by UUID; cursors mark live positions, not snapshots or permissions. File payloads and key configuration never appear in list responses. The signed packet remains server-readable in private Postgres storage; backup encryption is the operator's responsibility.
+The review renders plain text. Inbox pages contain at most 50 metadata/text rows, ordered by UUID; cursors mark live positions, not snapshots or permissions. File payloads and key configuration never appear in list responses. The signed packet remains server-readable in private Postgres storage; backup encryption is the operator's responsibility.
 
 ## Explicit Drive import
 
@@ -54,7 +54,7 @@ All local operations use Līdza authentication and generated client methods:
 
 | Route under `/api/v1/workspaces/{workspaceId}/smip` | Permission / result |
 | --- | --- |
-| `GET /bindings` | Current member; consent metadata and enabled capability. |
+| `GET /bindings` | Current owner/admin (403 for members); consent metadata, enabled capability, the local SMIP domain, paired peers with an unrevoked key and the workspace's shared mailboxes as recipient choices. |
 | `POST /bindings` | Current owner/admin; idempotent authorization, audited in transaction. |
 | `DELETE /bindings/{id}` | Current owner/admin; disable new admissions, audited in transaction. |
 | `POST /outbox` | Current member; queue chat or a verified immutable Drive snapshot and its job atomically. |
@@ -64,7 +64,7 @@ All local operations use Līdza authentication and generated client methods:
 | `GET /inbox?cursor=…` | Current member; bounded text/metadata without file payloads. |
 | `POST /inbox/{id}/import` | Current member; explicit Drive import with optional local `folderId`. |
 
-The Chat panel appears only for enabled deployments. Owners/admins manage bindings there; members review content and import files. The screen labels the feature experimental and distinguishes queued, cancelled, uncertain, blocked, accepted and expired sends from incoming acceptance and Drive import. Sending controls appear only for enabled bindings with an operator-configured outgoing endpoint.
+The panel lives in Settings → SMIP streams (`/app/settings/smip`), listed only for workspace owners and admins; a member who opens the address directly is told it is for owners and admins and nothing is fetched. Chat shows no SMIP controls. With SMIP disabled the screen is one line pointing to Server setup; with no paired peer it points to the SMIP peers admin page. The authorization form offers the peer domain as a select of paired peers and the local recipient as a select of the workspace's shared mailboxes at the SMIP domain (`<local part>@<SMIP domain>`); the remote stream and the remote sender's name are free text because a peer does not publish them, validated against the wire token alphabet (`[A-Za-z0-9._-]`, 1–128), with the sender's domain fixed to the chosen peer. Caveats sit behind a Details disclosure. The screen labels the feature experimental and distinguishes queued, cancelled, uncertain, blocked, accepted and expired sends from incoming acceptance and Drive import. Sending controls appear only for enabled bindings with an operator-configured outgoing endpoint.
 
 ## Durable app sending
 

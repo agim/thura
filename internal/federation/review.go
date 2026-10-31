@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/agim/lidza"
@@ -28,13 +29,19 @@ import (
 func bindingView(r q.SmipBinding) schema.SmipBinding {
 	return schema.SmipBinding{ID: r.ID, WorkspaceID: r.WorkspaceID, Peer: r.Peer, Stream: r.Stream, Sender: r.Sender, Recipient: r.Recipient, Enabled: r.Enabled, CreatedBy: r.CreatedBy, CreatedAt: r.CreatedAt}
 }
+// ListBindings is the operator view of a workspace's streams: owners and
+// admins only, like creating and disabling them. It also lists the choices
+// the authorization form offers: paired peers with an unrevoked key and the
+// workspace's shared mailboxes as recipients at the local SMIP domain.
 func ListBindings(ctx context.Context, w string) (schema.SmipBindingList, error) {
-	out := schema.SmipBindingList{Items: []schema.SmipBinding{}, SendablePeers: []string{}}
-	if err := workspace.RequireMember(ctx, w); err != nil {
+	out := schema.SmipBindingList{Items: []schema.SmipBinding{}, SendablePeers: []string{}, Peers: []string{}, Recipients: []schema.SmipRecipientOption{}}
+	if err := workspace.RequireManager(ctx, w); err != nil {
 		return out, err
 	}
-	out.Configured = From(ctx).domain != ""
-	trust, err := From(ctx).Trust(ctx)
+	g := From(ctx)
+	out.Configured = g.domain != ""
+	out.Domain = g.domain
+	trust, err := g.Trust(ctx)
 	if err != nil {
 		return out, err
 	}
@@ -42,12 +49,36 @@ func ListBindings(ctx context.Context, w string) (schema.SmipBindingList, error)
 		out.SendablePeers = append(out.SendablePeers, peer)
 	}
 	sort.Strings(out.SendablePeers)
-	rows, err := q.New(db.From(ctx)).ListSmipBindings(ctx, w)
+	for peer, keys := range trust.Peers {
+		if hasActiveKey(keys) {
+			out.Peers = append(out.Peers, peer)
+		}
+	}
+	sort.Strings(out.Peers)
+	queries := q.New(db.From(ctx))
+	rows, err := queries.ListSmipBindings(ctx, w)
 	if err != nil {
 		return out, err
 	}
 	for _, row := range rows {
 		out.Items = append(out.Items, bindingView(row))
+	}
+	if g.domain == "" {
+		return out, nil
+	}
+	boxes, err := queries.ListMailboxes(ctx, w)
+	if err != nil {
+		return out, err
+	}
+	seen := map[string]bool{}
+	for _, box := range boxes {
+		local, _, found := strings.Cut(box.Address, "@")
+		address := local + "@" + g.domain
+		if box.Private || !found || seen[address] || !smip.AddressAt(address, g.domain) {
+			continue
+		}
+		seen[address] = true
+		out.Recipients = append(out.Recipients, schema.SmipRecipientOption{Address: address, Mailbox: box.Name})
 	}
 	return out, nil
 }

@@ -1,4 +1,5 @@
 import { TeamSetup } from './TeamSetup'
+import { SmipSettings } from './SmipSettings'
 import { MailProtectionSettings } from './MailProtection'
 import { AISettings } from './AISettings'
 import { ActionButton } from './ActionButton'
@@ -10,16 +11,22 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@lidza/client'
-import { Sun, Moon, Mail, CalendarDays, Settings, Users, Tag, Sparkles } from 'lucide-react'
+import { Sun, Moon, Mail, CalendarDays, Settings, Users, Tag, Sparkles, ShieldCheck } from 'lucide-react'
 import { MailSignature, WorkspaceLabelSettings } from './MailTools'
 import { useCalendarTimezone } from '../lib/workspace-preferences'
 import { userError } from '../lib/errors'
 
-const settingsItems = [{ to: '/app/settings', id: 'general', name: 'General', icon: Settings }, { to: '/app/settings/team', id: 'team', name: 'Teams and domains', icon: Users }, { to: '/app/settings/ai', id: 'ai', name: 'AI', icon: Sparkles }, { to: '/app/settings/mail', id: 'mail', name: 'Mail', icon: Mail }, { to: '/app/settings/labels', id: 'labels', name: 'Labels', icon: Tag }, { to: '/app/settings/calendar', id: 'calendar', name: 'Calendar', icon: CalendarDays }, { to: '/app/settings/members', id: 'members', name: 'Members', icon: Users }] as const
+const settingsItems = [{ to: '/app/settings', id: 'general', name: 'General', icon: Settings }, { to: '/app/settings/team', id: 'team', name: 'Teams and domains', icon: Users }, { to: '/app/settings/ai', id: 'ai', name: 'AI', icon: Sparkles }, { to: '/app/settings/mail', id: 'mail', name: 'Mail', icon: Mail }, { to: '/app/settings/labels', id: 'labels', name: 'Labels', icon: Tag }, { to: '/app/settings/calendar', id: 'calendar', name: 'Calendar', icon: CalendarDays }, { to: '/app/settings/members', id: 'members', name: 'Members', icon: Users }, { to: '/app/settings/smip', id: 'smip', name: 'SMIP streams', icon: ShieldCheck }] as const
 const settingsSections: Record<string, string> = Object.fromEntries(settingsItems.map(item => [item.id, item.name]))
 
+// Owner/admin-only categories: hidden from members, and their routes refuse members too.
+const managerSections = new Set<string>(['smip'])
+
 export function WorkspaceSettings({ workspaceId, section, dark, onDark }: { workspaceId: string; section: string; dark: boolean; onDark: (dark: boolean) => void }) {
-  return <section className="ws-page workspace-settings"><AppPageHeader title="Settings" /><div className="settings-layout"><AppSidebar title="Categories" label="Settings categories" className="settings-sidebar" noun="category" current={settingsSections[section] ?? 'General'}>{settingsItems.map(item => <Link key={item.id} activeOptions={{ exact: true }} to={item.to} aria-current={section === item.id ? 'page' : undefined}><item.icon size={18} />{item.name}</Link>)}</AppSidebar><div className="settings-content">{section === 'team' ? <TeamSetup workspaceId={workspaceId} /> : section === 'ai' ? <AISettings workspaceId={workspaceId} /> : section === 'members' ? <WorkspaceMemberSettings workspaceId={workspaceId} /> : section === 'mail' ? <MailSettings workspaceId={workspaceId} /> : section === 'labels' ? <WorkspaceLabelSettings workspaceId={workspaceId} /> : section === 'calendar' ? <CalendarSettings workspaceId={workspaceId} /> : <section className="settings-form"><h3>Appearance</h3><p>Choose how Thura looks on this device.</p><button onClick={() => onDark(!dark)}>{dark ? <Moon size={18} /> : <Sun size={18} />}{dark ? 'Dark' : 'Light'}</button></section>}</div></div></section>
+  const members = useQuery({ queryKey: ['members', workspaceId], queryFn: () => api.listMembers({ workspaceId }) })
+  const session = useQuery({ queryKey: ['session'], queryFn: () => api.authSession() })
+  const manager = members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false
+  return <section className="ws-page workspace-settings"><AppPageHeader title="Settings" /><div className="settings-layout"><AppSidebar title="Categories" label="Settings categories" className="settings-sidebar" noun="category" current={settingsSections[section] ?? 'General'}>{settingsItems.filter(item => manager || !managerSections.has(item.id)).map(item => <Link key={item.id} activeOptions={{ exact: true }} to={item.to} aria-current={section === item.id ? 'page' : undefined}><item.icon size={18} />{item.name}</Link>)}</AppSidebar><div className="settings-content">{section === 'team' ? <TeamSetup workspaceId={workspaceId} /> : section === 'ai' ? <AISettings workspaceId={workspaceId} /> : section === 'members' ? <WorkspaceMemberSettings workspaceId={workspaceId} /> : section === 'mail' ? <MailSettings workspaceId={workspaceId} /> : section === 'labels' ? <WorkspaceLabelSettings workspaceId={workspaceId} /> : section === 'calendar' ? <CalendarSettings workspaceId={workspaceId} /> : section === 'smip' ? (members.isPending || session.isPending ? <p role="status">Loading…</p> : <SmipSettings key={workspaceId} workspaceId={workspaceId} manager={manager} />) : <section className="settings-form"><h3>Appearance</h3><p>Choose how Thura looks on this device.</p><button onClick={() => onDark(!dark)}>{dark ? <Moon size={18} /> : <Sun size={18} />}{dark ? 'Dark' : 'Light'}</button></section>}</div></div></section>
 }
 function MailSettings({ workspaceId }: { workspaceId: string }) {
   const boxes = useQuery({ queryKey: ['mailboxes', workspaceId], queryFn: () => api.listMailboxes({ workspaceId }) })

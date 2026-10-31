@@ -4837,9 +4837,12 @@ func (v SmipBindingInput) Validate() error {
 
 // SmipBindingList is an API type.
 type SmipBindingList struct {
-	Items         []SmipBinding `json:"items"`
-	SendablePeers []string      `json:"sendablePeers"`
-	Configured    bool          `json:"configured"`
+	Items         []SmipBinding         `json:"items"`
+	SendablePeers []string              `json:"sendablePeers"`
+	Configured    bool                  `json:"configured"`
+	Domain        string                `json:"domain"`
+	Peers         []string              `json:"peers"`
+	Recipients    []SmipRecipientOption `json:"recipients"`
 }
 
 // Validate applies the rules of SmipBindingList from schema.lidza.
@@ -4850,6 +4853,33 @@ func (v SmipBindingList) Validate() error {
 			errs.Add("items", "nested", err.Error())
 			break
 		}
+	}
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	for _, x := range v.Recipients {
+		if err := x.Validate(); err != nil {
+			errs.Add("recipients", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// SmipRecipientOption is an API type.
+type SmipRecipientOption struct {
+	Address string `json:"address"`
+	Mailbox string `json:"mailbox"`
+}
+
+// Validate applies the rules of SmipRecipientOption from schema.lidza.
+func (v SmipRecipientOption) Validate() error {
+	var errs validate.Errors
+	if v.Address == "" {
+		errs.Add("address", "required", "required")
+	}
+	if v.Mailbox == "" {
+		errs.Add("mailbox", "required", "required")
 	}
 	return errs.Result()
 }
