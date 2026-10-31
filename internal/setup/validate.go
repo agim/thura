@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"thura/internal/federation"
+	"thura/internal/providers/livekit"
 	"thura/internal/rspamd"
 	"thura/internal/smipmail"
 	"time"
@@ -126,7 +127,7 @@ func validate(v map[string]string) error {
 			}
 		}
 	}
-	for _, group := range [][]string{{"MATRIX_SERVER_URL", "MATRIX_SERVER_NAME", "MATRIX_AS_TOKEN"}, {"COLLABORA_SERVER_URL", "COLLABORA_APP_URL", "COLLABORA_TOKEN_SECRET"}, {"LIVEKIT_SERVER_URL", "LIVEKIT_PUBLIC_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"}} {
+	for _, group := range [][]string{{"MATRIX_SERVER_URL", "MATRIX_SERVER_NAME", "MATRIX_AS_TOKEN"}, {"COLLABORA_SERVER_URL", "COLLABORA_APP_URL", "COLLABORA_TOKEN_SECRET"}, {"LIVEKIT_SERVER_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"}} {
 		if v[group[0]] == "" {
 			continue
 		}
@@ -144,7 +145,12 @@ func validate(v map[string]string) error {
 		return errors.New("collabora requires an HTTPS app origin and a secret of at least 32 characters")
 	}
 	if v["LIVEKIT_SERVER_URL"] != "" {
-		u, e := url.Parse(v["LIVEKIT_PUBLIC_URL"])
+		// Blank is wss://<APP_URL host>/rtc; APP_URL is HTTPS by now.
+		public := v["LIVEKIT_PUBLIC_URL"]
+		if public == "" {
+			public = livekit.DefaultPublicURL(v["APP_URL"])
+		}
+		u, e := url.Parse(public)
 		if e != nil || u.Scheme != "wss" || u.Hostname() == "" || u.User != nil {
 			return errors.New("livekit requires a secure WSS endpoint")
 		}

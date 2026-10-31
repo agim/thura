@@ -370,6 +370,52 @@
     };
     void load();
   }
+  // The Meetings checks load from meet-status.json after the page, as text.
+  for (const section of document.querySelectorAll('[data-meet-status]')) {
+    const message = section.querySelector('[data-meet-status-message]');
+    const button = section.querySelector('[data-meet-recheck]');
+    const labels = {passed:'Passed', failed:'Needs attention', skipped:'Waiting', manual:'To do on the network'};
+    const load = async () => {
+      button.disabled = true;
+      message.textContent = 'Checking meetings…';
+      try {
+        const response = await fetch('setup/meet-status.json', {credentials:'same-origin', cache:'no-store', signal:AbortSignal.timeout(30000)});
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data.checks)) throw new Error('unavailable');
+        for (const check of data.checks) {
+          const row = section.querySelector('[data-meet-check="' + CSS.escape(String(check.id)) + '"]');
+          if (!row) continue;
+          row.dataset.state = String(check.state);
+          row.querySelector('[data-meet-check-state]').textContent = labels[check.state] || 'Unknown';
+          row.querySelector('[data-meet-check-detail]').textContent = String(check.detail || '');
+          row.querySelector('[data-meet-check-fix]').textContent = String(check.fix || '');
+        }
+        message.textContent = 'Checked just now.';
+      } catch { message.textContent = 'The Meetings check could not run. Try again.'; }
+      button.disabled = false;
+    };
+    button.addEventListener('click', () => { void load(); });
+    void load();
+  }
+  for (const copy of document.querySelectorAll('[data-copy-snippet]')) {
+    copy.addEventListener('click', async () => {
+      const source = document.getElementById(copy.dataset.copySnippet);
+      const status = copy.closest('section').querySelector('[data-copy-status]');
+      try {
+        await navigator.clipboard.writeText(source.textContent);
+        copy.textContent = 'Copied';
+        status.textContent = 'Copied. Paste it into your proxy configuration.';
+        setTimeout(() => { copy.textContent = 'Copy'; }, 2000);
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(source);
+        const selection = getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        status.textContent = 'Copy was unavailable. The rule is selected; press Ctrl+C or Cmd+C.';
+      }
+    });
+  }
   for (const checkbox of document.querySelectorAll('[data-setup-field] input[type=checkbox][id]')) checkbox.addEventListener('change', refresh);
   document.addEventListener('input', e => { if (e.target.matches('[data-setup-field] input')) applyDerived(); });
   refresh();

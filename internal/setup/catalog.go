@@ -116,7 +116,7 @@ func Catalog() []Step {
 			field("COLLABORA_APP_URL", "Collabora-accessible Thura URL", "url", "", "Thura address reachable by the document server. Public origins require HTTPS; deployment-managed private origins are preconfigured."),
 			field("COLLABORA_TOKEN_SECRET", "Collabora access-token secret", "secret", "", "At least 32 characters; used by Thura to sign file-scoped access."),
 			field("LIVEKIT_SERVER_URL", "LiveKit server URL", "url", "", "Public services require HTTPS; deployment-managed private origins are preconfigured. TURN and device checks remain deployment tasks."),
-			field("LIVEKIT_PUBLIC_URL", "LiveKit public WSS URL", "text", "", "Browser-reachable secure WebSocket endpoint."),
+			field("LIVEKIT_PUBLIC_URL", "LiveKit public WSS URL", "text", "", "Browser-reachable secure WebSocket endpoint. Leave blank to use wss://<public address>/rtc, which the proxy forwards to LiveKit port 7880."),
 			field("LIVEKIT_API_KEY", "LiveKit API key", "secret", "", "Required with LiveKit."),
 			field("LIVEKIT_API_SECRET", "LiveKit API secret", "secret", "", "Required with LiveKit."),
 			field("SMIP_ENABLED", "SMIP chat and files", "checkbox", "false", "Required before publishing. Thura generates this server’s identity; pair trusted servers explicitly when enabling cross-server exchange.", "false", "true"),

@@ -47,3 +47,7 @@ INSERT INTO chat_room(id,workspace_id,matrix_room_id,request_id,name,direct,crea
 VALUES ('a0000000-0000-4000-8000-000000000030','a0000000-0000-4000-8000-000000000001','!correspondence-fixture:example.invalid','a0000000-0000-4000-8000-000000000030','Correspondence fixture conversation',false,'thura-e2e-owner') ON CONFLICT(id) DO NOTHING;
 INSERT INTO meeting(id,workspace_id,request_id,name,created_by,ended_at)
 VALUES ('a0000000-0000-4000-8000-000000000031','a0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000031','Correspondence fixture meeting','thura-e2e-owner',now()) ON CONFLICT(id) DO NOTHING;
+
+-- Server administrator for the native setup pages (ADMIN_USERS in .env.test);
+-- no workspace membership, so workspace fixtures stay unchanged.
+INSERT INTO auth_user(subject,email,name,password_hash) VALUES ('thura-e2e-server-admin','server-admin-e2e@example.com','Test Server Administrator','$argon2id$v=19$m=65536,t=3,p=2$wwjJYHkBhjBqsUkagwIJLA$96ZgNf8PIpnIC6wkfHuoh39j5n77Hs1ufezVtQrRIV4') ON CONFLICT(subject) DO NOTHING;

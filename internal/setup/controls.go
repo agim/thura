@@ -16,6 +16,7 @@ import (
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/llm"
 	q "thura/db/queries/gen"
+	"thura/internal/providers/livekit"
 )
 
 const apiMailProviders = "mailgun sendgrid postmark resend"
@@ -155,6 +156,9 @@ func derivedDefault(v map[string]string, name string) string {
 		if v["LLM_PROVIDER"] == "ollama" {
 			return managedModelURL
 		}
+	case "LIVEKIT_PUBLIC_URL":
+		// Shown only: the blank field keeps following APP_URL (livekit.Resolve).
+		return livekit.DefaultPublicURL(v["APP_URL"])
 	}
 	return ""
 }

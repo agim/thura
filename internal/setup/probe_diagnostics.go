@@ -19,6 +19,9 @@ func probeDiagnostic(err error) string {
 	if err == nil {
 		return ""
 	}
+	if meet, ok := meetDiagnostic(err); ok {
+		return meet
+	}
 	text := err.Error()
 	var parts []string
 	for _, stage := range []string{"configuration", "initialization", "write", "read", "metadata", "listing", "deletion", "deletion verification", "read verification", "metadata verification", "listing verification"} {

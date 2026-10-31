@@ -116,7 +116,7 @@ func probeMessage(kind, state string) string {
 		if kind == "storage" {
 			return "Storage write, read, metadata, listing and deletion checks passed. Bucket privacy, durability and backups still require deployment verification."
 		}
-		return map[string]string{"matrix": "Matrix application-service registration and authenticated identity checks passed.", "collabora": "Collabora discovery confirms Word and Excel editing. Actual document saves and mobile rendering still require acceptance.", "livekit": "LiveKit authenticated room creation and deletion passed. Camera, microphone and mobile network calls still require acceptance.", "ai": "The selected AI model returned an actual response to a connection test.", "smip": "SMIP identity validation and public TLS 1.3 transport challenge passed. Peer delivery still requires a two-server acceptance test."}[kind]
+		return map[string]string{"matrix": "Matrix application-service registration and authenticated identity checks passed.", "collabora": "Collabora discovery confirms Word and Excel editing. Actual document saves and mobile rendering still require acceptance.", "livekit": "LiveKit settings, authenticated room creation and deletion, and public signalling through the proxy passed. Open TCP 7881 and UDP 7882 to the internet; camera, microphone and mobile network calls still require acceptance.", "ai": "The selected AI model returned an actual response to a connection test.", "smip": "SMIP identity validation and public TLS 1.3 transport challenge passed. Peer delivery still requires a two-server acceptance test."}[kind]
 	case "superseded":
 		return "A later check replaced this result. Complete the newer check before publishing."
 	case "failed":

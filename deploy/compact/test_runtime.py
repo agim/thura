@@ -53,5 +53,14 @@ class CompactRuntimeTests(unittest.TestCase):
             self.assertEqual(start.call_args_list[0].kwargs['env']['GOMEMLIMIT'],'256MiB')
             self.assertEqual(start.call_args_list[1].kwargs['env']['GOMEMLIMIT'],'96MiB')
 
+    def test_thura_knows_livekit_runs_beside_it(self):
+        children=[mock.Mock(pid=100),mock.Mock(pid=101)]
+        children[0].poll.return_value=1
+        children[1].poll.return_value=None
+        with mock.patch.object(app,'configure',return_value=Path('/private/livekit.json')), mock.patch.object(app.socket,'create_connection'), mock.patch.object(app.subprocess,'Popen',side_effect=children) as start, mock.patch.object(app.Path,'write_text'), mock.patch.object(app.signal,'signal'):
+            with self.assertRaises(RuntimeError):app.main()
+        self.assertEqual(start.call_args_list[0].kwargs['env']['THURA_BUNDLED_LIVEKIT'],'true')
+        self.assertNotIn('THURA_BUNDLED_LIVEKIT',start.call_args_list[1].kwargs['env'])
+
 
 if __name__ == '__main__': unittest.main()
