@@ -4,7 +4,7 @@ import { RecipientInput } from '../components/RecipientInput'
 import { ActionRow } from '../components/ActionRow'
 import { ResourceLabels } from '../components/ResourceLabels'
 import { AppSidebar } from '../components/AppSidebar'
-import { PinnedLabels, useLabelGuard } from '../components/PinnedLabels'
+import { PinnedLabels, useLabelGuard, useLabelName } from '../components/PinnedLabels'
 import { Navigate } from '@tanstack/react-router'
 import { AppPageHeader, NewAction } from '../components/AppPageHeader'
 import { confirmAction } from '../components/ConfirmationHost'
@@ -41,6 +41,7 @@ export function ContactBook({ workspaceId, onEmail, onChat, onLoop, handoffPendi
   const key = ['contacts', workspaceId]
   // ?label= (a pinned label) narrows the directory on the server.
   const labelId = view.label ?? ''
+  const labelName = useLabelName(workspaceId, labelId)
   useLabelGuard(workspaceId, labelId, () => { setNotice({ text: 'That label is no longer available. Showing all contacts.' }); set({ label: undefined }, { replace: true }) })
   const contacts = useInfiniteQuery({ queryKey: [...key, query, labelId], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listContacts({ workspaceId }, { query: { search: query, cursor: pageParam, labelId: labelId || undefined }, signal }), getNextPageParam: page => page.nextCursor || undefined })
   const refresh = () => client.invalidateQueries({ queryKey: key })
@@ -57,7 +58,7 @@ export function ContactBook({ workspaceId, onEmail, onChat, onLoop, handoffPendi
   const close = (change?: { replace?: boolean }) => set({ contact: undefined, new: undefined }, change)
   const remove = useMutation({ mutationFn: (contact: Contact) => api.deleteContact({ workspaceId, id: contact.id }), onSuccess: async (_, contact) => { if (editId === contact.id) close({ replace: true }); setNotice({ text: `Deleted ${contact.name}.` }); await refresh() } })
   return <><AppPageHeader title="Contacts" action={<NewAction label="New contact" onClick={() => set({ new: '1', contact: undefined })} />} /><div className="contacts-browser">
-    <AppSidebar title="Directory" label="Contacts tools" className="contacts-toolbar">{search === undefined && <label><Search size={18} aria-hidden="true" /><input aria-label="Search contacts" placeholder="Search contacts" value={query} onChange={e => setQuery(e.target.value)} /></label>}{labelId ? <button type="button" className="folder-button" onClick={() => set({ label: undefined })}><Users size={18} aria-hidden="true" />All contacts</button> : <span className="app-sidebar-current"><Users size={18} aria-hidden="true" />All contacts</span>}<PinnedLabels workspaceId={workspaceId} app="contacts" value={labelId} onChange={value => set({ label: value, contact: undefined, new: undefined })} /></AppSidebar><div className="contacts-content">
+    <AppSidebar title="Directory" label="Contacts tools" className="contacts-toolbar" noun="list" current={labelName || undefined}>{search === undefined && <label><Search size={18} aria-hidden="true" /><input aria-label="Search contacts" placeholder="Search contacts" value={query} onChange={e => setQuery(e.target.value)} /></label>}{labelId ? <button type="button" className="folder-button" onClick={() => set({ label: undefined })}><Users size={18} aria-hidden="true" />All contacts</button> : <span className="app-sidebar-current"><Users size={18} aria-hidden="true" />All contacts</span>}<PinnedLabels workspaceId={workspaceId} app="contacts" value={labelId} onChange={value => set({ label: value, contact: undefined, new: undefined })} /></AppSidebar><div className="contacts-content">
     {editId && !edit && !lost && <p role="status">Loading contact…</p>}
     {(adding || edit) && <ContactEditor key={edit?.id ?? 'new'} workspaceId={workspaceId} contact={edit} busy={remove.isPending} onClose={() => close()} onSaved={async (saved, created) => { client.setQueryData(['contact', workspaceId, saved.id], saved); close({ replace: true }); setNotice({ text: created ? `Added ${saved.name}.` : `Saved ${saved.name}.` }); await refresh() }} />}
     {contacts.isPending && <p role="status">Loading contacts…</p>}

@@ -40,7 +40,7 @@ export function Loop({ workspaceId, contactId, onOpen, onContacts, personSearch:
   return <section className={`ws-page correspondence ${contactId ? 'has-person' : ''}`}>
     <AppPageHeader title="Loop" action={<NewAction label="New contact" onClick={onContacts} />} />
     <div className="correspondence-layout">
-      <AppSidebar title="People" label="Loop contacts" showContentOnCompact={!contactId}>
+      <AppSidebar title="People" label="Loop contacts" showContentOnCompact={!contactId} noun="person">
 
 
         {people.isPending && <p role="status">Loading people…</p>}

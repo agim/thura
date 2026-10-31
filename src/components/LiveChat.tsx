@@ -66,7 +66,7 @@ export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string
 
     {selected && detail.isPending && <p role="status">Loading conversation…</p>}
     {contactNotice && <p role="status">{contactNotice}</p>}
-    <AppSidebar title="Conversations" className="chat-sidebar" label="Chat navigation">
+    <AppSidebar title="Conversations" className="chat-sidebar" label="Chat navigation" noun="conversation" current={room?.name}>
     <label className="conversation-filter"><span className="sr-only">Find a conversation</span><input aria-label="Find a conversation" placeholder="Find a conversation" value={roomFilter} onChange={e => setRoomFilter(e.target.value)} /></label>
     <PinnedLabels workspaceId={workspaceId} app="chat" value={labelId} onChange={value => set({ label: value }, { replace: false })} />
     <ul aria-label="Chat room">{[...(room && !labelId && !rooms.data?.items.some(r => r.id === room.id) ? [room] : []), ...(listed || [])].filter(r => r.name.toLowerCase().includes(roomFilter.toLowerCase())).map(r => <li key={r.id}><button aria-pressed={room?.id === r.id} onClick={() => openRoom(r.id)}><span className="conversation-avatar">{r.direct ? <MessageCircle size={18} /> : <Hash size={18} />}</span><span className="conversation-copy"><strong>{r.name}</strong><small>{r.direct ? 'Private conversation' : 'Workspace channel'}</small></span></button></li>)}</ul>
@@ -75,7 +75,7 @@ export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string
     </AppSidebar>{rooms.data && !rooms.data.configured && <p role="status">Matrix chat is not configured. An operator must connect a homeserver before creating a room.</p>}
     {((roomLost ? null : detail.error) || rooms.error || members.error || create.error) && <p role="alert">{userError((roomLost ? null : detail.error) || rooms.error || members.error || create.error)}</p>}
     {room && rooms.data?.configured && <ChatConversation search={view.q ?? ''} onSearch={setSearch} setNotice={setNotice} onMeet={onMeet} key={room.id} room={room} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} />}
-    {(!room || !rooms.data?.configured) && !rooms.isPending && <div className="communication-empty"><MessageCircle size={32} /><h3>Your conversations, together</h3><p>Choose a conversation from Browse or start a new chat with your workspace.</p></div>}
+    {(!room || !rooms.data?.configured) && !rooms.isPending && <div className="communication-empty"><MessageCircle size={32} /><h3>Your conversations, together</h3><p>Choose a conversation or start a new chat with your workspace.</p></div>}
     <p className="app-service-note chat-service-note"><LockKeyhole size={12} /> Rooms are server-readable; this version does not enable end-to-end encryption.</p>
     <Suspense fallback={null}><SmipReview key={workspaceId} workspaceId={workspaceId} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} /></Suspense>
     <AppNotice notice={notice} clear={closeNotice} />

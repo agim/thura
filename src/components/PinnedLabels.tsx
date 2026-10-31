@@ -98,6 +98,12 @@ export function PinLabelControl({ workspaceId, app, labelId, name, onDone }: { w
   </>
 }
 
+/** The name of the label an app filters by, for its page title; empty until the catalog is known. */
+export function useLabelName(workspaceId: string, labelId: string) {
+  const catalog = useQuery({ queryKey: ['workspace-labels', workspaceId], queryFn: () => api.listWorkspaceLabels({ workspaceId }), enabled: !!labelId })
+  return labelId ? catalog.data?.items.find(label => label.id === labelId)?.name ?? '' : ''
+}
+
 /** A stale ?label= (deleted, or of another workspace) calls onLost once, so the app drops it with a notice. */
 export function useLabelGuard(workspaceId: string, labelId: string, onLost: () => void) {
   const catalog = useQuery({ queryKey: ['workspace-labels', workspaceId], queryFn: () => api.listWorkspaceLabels({ workspaceId }), enabled: !!labelId })

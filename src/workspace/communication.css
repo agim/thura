@@ -519,6 +519,26 @@
 #orbit-workspace.zero-workspace .app-page-header h2 { margin: 0; font-size: var(--app-font-title); line-height: 1.3; font-weight: 600; letter-spacing: -.5px; }
 #orbit-workspace.zero-workspace .app-page-actions { display: flex; align-items: center; flex-shrink: 0; }
 #orbit-workspace.zero-workspace .app-page-header .new-action { width: 100px; min-height: 44px; margin: 0; padding: 10px 16px; border-radius: var(--app-radius-control); }
+/* Small screens: the title is the switcher that opens the app's sidebar (AppPageHeader). */
+#orbit-workspace.zero-workspace .app-page-header.has-switcher { gap: 12px; }
+#orbit-workspace.zero-workspace .app-heading-switcher { position: relative; display: flex; align-items: center; gap: 4px; flex: 0 1 auto; min-width: 0; min-height: 44px; border-radius: var(--app-radius-control, 8px); }
+#orbit-workspace.zero-workspace .app-heading-switcher > h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#orbit-workspace.zero-workspace .app-heading-switcher.stacked { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; }
+#orbit-workspace.zero-workspace .app-heading-switcher.stacked > h2 { max-width: 100%; line-height: 1.2; }
+#orbit-workspace.zero-workspace .app-heading-switcher.stacked > .app-heading-button > svg { width: 16px; height: 16px; }
+#orbit-workspace.zero-workspace .app-heading-button { position: static; display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+#orbit-workspace.zero-workspace .app-heading-button::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+#orbit-workspace.zero-workspace .app-heading-button:focus-visible { outline: none; }
+#orbit-workspace.zero-workspace .app-heading-switcher:has(.app-heading-button:focus-visible) { outline: 2px solid var(--teal); outline-offset: 2px; }
+#orbit-workspace.zero-workspace .app-heading-button > svg { flex-shrink: 0; color: var(--quiet); }
+#orbit-workspace.zero-workspace .app-heading-current { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; line-height: 1.4; font-weight: 500; }
+#orbit-workspace.zero-workspace .app-heading-switcher:hover .app-heading-button > svg { color: var(--ink); }
+#orbit-workspace.zero-workspace .app-heading-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media(max-width:999px) {
+ /* The reading view keeps the switcher where Browse sat, without the list's actions. */
+ #orbit-workspace.zero-workspace #orbit-mail-vibrant.has-message > .app-page-header.has-switcher { display: flex; }
+ #orbit-workspace.zero-workspace #orbit-mail-vibrant.has-message > .app-page-header.has-switcher > .app-page-actions { display: none; }
+}
 #orbit-workspace.zero-workspace .app-sidebar-caption { display: block; margin-bottom: 12px; color: var(--quiet); font-size: 12px; }
 #orbit-workspace.zero-workspace .app-sidebar-current { display: block; padding: 10px 12px; border-radius: 8px; background: var(--tealsoft); color: var(--teal); font-size: 13px; font-weight: 500; }
 #orbit-workspace.zero-workspace .contacts-toolbar { display: block; margin: 0; }
