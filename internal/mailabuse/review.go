@@ -246,7 +246,7 @@ func Review(ctx context.Context, w, item, subject, action string) error {
 		if s.AvState == "infected" {
 			return router.Errorf(409, "Antivirus detected malware; this attachment cannot be released")
 		}
-		if (p.AiEnabled && s.AiState != "complete" && s.AiState != "skipped_local") || s.AvState == "pending" || s.AvState == "error" || s.State == "scanning" {
+		if (p.AiEnabled && s.AiState != "complete" && s.AiState != "skipped_local" && s.AiState != aiUnavailable) || s.AvState == "pending" || s.AvState == "error" || s.State == "scanning" {
 			return router.Errorf(409, "Required scans have not completed; rescan after fixing the service or changing settings")
 		}
 		if p.ApproveUnknown {

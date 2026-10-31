@@ -38,14 +38,20 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	if err != nil {
 		return err
 	}
-	if terminal(s) || lidza.Now(ctx).Before(s.NextAttempt) || s.Attempts >= 5 {
+	// A message delivered while the model was unavailable (aiUnavailable) is
+	// screened again for the AI verdict it missed; it stays where it is until a
+	// verdict arrives, and a verdict that would hold it moves it to Spam.
+	aiRetry := s.State == "clean" && s.AiState == aiUnavailable && !s.Released
+	if terminal(s) && !aiRetry || lidza.Now(ctx).Before(s.NextAttempt) || s.Attempts >= 5 {
 		return nil
 	}
 	p, err := Policy(ctx, queries, s.WorkspaceID)
 	if err != nil {
 		return err
 	}
-	s.State = "scanning"
+	if !aiRetry {
+		s.State = "scanning"
+	}
 	s.Attempts++
 	s.AttemptID = uuid.NewString()
 	s.PolicyRevision = p.Revision
@@ -97,6 +103,10 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	// read from the same screening call; never a second model call.
 	aiKind := ""
 	failed := readFailure
+	// aiFailure is why the model gave no verdict (unreachable, invalid output,
+	// timeout); whether that holds the message is decided once the sender's
+	// verification and the other checks are known.
+	aiFailure := ""
 	deferred := false
 	locallyHeld := false
 	localFailed := false
@@ -186,12 +196,7 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 		if !authChecked {
 			_, auth.FromDomain, _ = address(item.FromAddress)
 		}
-		payload, xerr := json.Marshal(struct {
-			From, Subject, Text, HTML string
-			SenderAuthentication      senderEvidence
-			Files                     []string
-			Findings                  []schema.MailFinding
-		}{item.FromAddress, item.Subject, item.TextBody, item.HTMLBody, evidenceFor(s.Authenticated, auth, authChecked), fileNames(attachments), e.Findings})
+		payload, xerr := buildAIEvidence(item.FromAddress, item.Subject, item.TextBody, item.HTMLBody, evidenceFor(s.Authenticated, auth, authChecked), fileNames(attachments), e.Findings)
 		if xerr != nil {
 			return xerr
 		}
@@ -208,12 +213,14 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 			}
 		}
 		if !deferred {
-			classification, xerr = assistant.ScreenMail(ctx, string(payload))
+			classification, xerr = assistant.ScreenMail(ctx, payload)
 		}
 
-		if xerr != nil {
+		if xerr != nil && deferred {
 			failed = true
 			e.add("ai_unavailable", "warning", xerr.Error(), 0)
+		} else if xerr != nil {
+			aiFailure = xerr.Error()
 		} else {
 			ai = "complete"
 			if classification.SenderKind != nil {
@@ -268,12 +275,19 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 		return err
 	}
 	if current.Revision != p.Revision {
-		latest.State = "pending"
+		if !aiRetry {
+			latest.State = "pending"
+			latest.AiState = "pending"
+		}
 		latest.Attempts = 0
-		latest.AiState = "pending"
 		latest.NextAttempt = lidza.Now(ctx)
 		if err = save(ctx, queries, latest); err != nil {
 			return err
+		}
+		if aiRetry {
+			if err = scheduleAIRetry(ctx, finish, latest); err != nil {
+				return err
+			}
 		}
 		return finish.Commit(ctx)
 	}
@@ -307,6 +321,34 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 			e.add("trusted_sender_unverified", "danger", "This sender is approved, but this message failed SPF/DKIM/DMARC — it may be forged", 100)
 		}
 	}
+	// A retry that again produced no verdict leaves the delivered message, and
+	// what its panel shows, as it was; only the next attempt is scheduled.
+	if aiRetry && (aiFailure != "" || failed || deferred) {
+		latest.NextAttempt = lidza.Now(ctx).Add(aiRetryDelay(latest.Attempts))
+		if deferred {
+			latest.Attempts--
+			latest.NextAttempt = lidza.Now(ctx).UTC().Truncate(time.Hour).Add(time.Hour)
+		}
+		if err = save(ctx, queries, latest); err != nil {
+			return err
+		}
+		if err = scheduleAIRetry(ctx, finish, latest); err != nil {
+			return err
+		}
+		return finish.Commit(ctx)
+	}
+	// The model gave no verdict. A verified sender whose other checks are all
+	// clean is delivered (unknown-sender approval still applies) and the AI
+	// review is retried; anything else is held as an incomplete check.
+	if aiFailure != "" {
+		if verified && !failed && (av == "clean" || av == "not_configured") && !hasDanger(e.Findings) && e.Score < int(p.SpamThreshold) {
+			ai = aiUnavailable
+			e.add("ai_unavailable", "info", "AI review unavailable ("+aiFailure+"); delivered because the sender is verified and other checks are clean", 0)
+		} else {
+			failed = true
+			e.add("ai_unavailable", "warning", aiFailure, 0)
+		}
+	}
 	latest.State = "clean"
 	latest.Score = int32(e.Score)
 	latest.AiState = ai
@@ -336,6 +378,12 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 		return err
 	}
 	latest.Findings = string(encoded)
+	if latest.State == "clean" && ai == aiUnavailable {
+		latest.NextAttempt = lidza.Now(ctx).Add(aiRetryDelay(latest.Attempts))
+		if err = scheduleAIRetry(ctx, finish, latest); err != nil {
+			return err
+		}
+	}
 	if err = save(ctx, queries, latest); err != nil {
 		return err
 	}
@@ -356,7 +404,49 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 			return err
 		}
 	}
+	// A delivered message whose late AI verdict holds it goes to Spam, as a
+	// rescan would move it, and loses the Real person tag until released.
+	if aiRetry && latest.State != "clean" {
+		if err = syncPersonLabel(ctx, queries, s.WorkspaceID, s.ItemID, latest.PersonState, false); err != nil {
+			return err
+		}
+		if currentItem.Folder != q.MailFolderSpam && currentItem.Folder != q.MailFolderTrash {
+			if err = queries.MoveScreenedMail(ctx, q.MoveScreenedMailParams{ID: item.ID, Folder: q.MailFolderSpam}); err != nil {
+				return err
+			}
+		}
+	}
 	return finish.Commit(ctx)
+}
+
+// aiUnavailable is the AI state of a message delivered without a model verdict
+// because its sender is verified and every other check is clean.
+const aiUnavailable = "unavailable"
+
+// aiRetryDelay spaces the AI retries of a delivered message: 10, 20, 30 and
+// 40 minutes after attempts 1 to 4, then none (the worker stops at 5).
+func aiRetryDelay(attempts int32) time.Duration {
+	return time.Duration(attempts) * 10 * time.Minute
+}
+
+// scheduleAIRetry queues the next AI review of a delivered message with the
+// screening's own transaction. Reconcile only picks up held mail, so delivered
+// mail is retried by these delayed jobs alone, never by a scan of clean rows.
+func scheduleAIRetry(ctx context.Context, tx pgx.Tx, s q.MailScreening) error {
+	if s.Attempts >= 5 {
+		return nil
+	}
+	_, err := jobs.From(ctx).EnqueueTx(ctx, tx, ScreenJob, schema.MailScreenJob{ID: s.ItemID}, jobs.Unique(s.ItemID+":ai-retry:"+s.NextAttempt.UTC().Format(time.RFC3339Nano)), jobs.RunAt(s.NextAttempt))
+	return err
+}
+
+func hasDanger(findings []schema.MailFinding) bool {
+	for _, f := range findings {
+		if f.Severity == "danger" {
+			return true
+		}
+	}
+	return false
 }
 func fileNames(files []q.MailAttachment) []string {
 	names := []string{}
