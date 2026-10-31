@@ -63,6 +63,7 @@ for (const width of [320,390,1440]) test(`incoming protection settings, quaranti
    return route.fulfill({json:{...originalDetail,screening:{...originalDetail.screening,state:scanState,aiState:scanState}}})
   })
   const node=await protection.elementHandle()
+  await protection.getByRole('button',{name:'Details',exact:true}).click()
   const approve=protection.getByRole('button',{name:'Approve sender',exact:true})
   await approve.focus()
   const before=await protection.boundingBox()

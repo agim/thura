@@ -72,6 +72,7 @@ for (const width of [390, 1440]) {
     const protection = page.getByRole('region', { name: 'Mail protection', exact: true })
     await expect(protection).toContainText('Quarantined · review required')
     await expect(protection.getByText(/^Held because/)).toBeVisible()
+    await protection.getByRole('button', { name: 'Details', exact: true }).click()
     for (const label of ['Not spam', 'Rescan', 'Approve sender', 'Block sender']) await expect(protection.getByText(label, { exact: true })).toBeVisible()
     await expect(page.getByText(/^Received [A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2} [AP]M/)).toBeVisible()
     await protection.getByRole('button', { name: 'Approve sender', exact: true }).click()
