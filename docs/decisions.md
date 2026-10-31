@@ -595,3 +595,8 @@ Touches: internal/assistant/mail.go, internal/mailabuse/evidence.go, internal/ma
 ## 2026-10-31: Default the LiveKit URLs instead of requiring them
 
 Why: A real deployment failed with every LiveKit setting present. LIVEKIT_PUBLIC_URL now defaults to wss://<APP_URL host>/rtc (the stack's /rtc route), LIVEKIT_SERVER_URL to http://127.0.0.1:7880 only when deploy/compact runs LiveKit beside Thura (THURA_BUNDLED_LIVEKIT), and an empty process variable no longer hides a saved setting (Compose passes it through empty). An explicit value always wins. The CSP follows the settings, rechecked at most once a second, so admin-page changes need no restart.
+## 2026-10-31: Labels are views across folders, not filters on the current folder
+
+Why: The user asked for Gmail labels: clicking a label showed only that label's messages in the current folder (Sent stayed Sent). Now ?labelId= without ?folder= lists the label's messages from every folder of the mailbox, newest first, through a separate ListLabeledMailPage query with the folder listing's cursor, search and workspace check; Spam and Trash stay out unless includeSpamTrash=true (the Mail all=1 toggle), as in Gmail. Folder and label are mutually exclusive in the Mail and Drive URLs, so a folder click clears the label and a label view remembers no folder; ?folder= with ?labelId= is kept for API callers. Drive already lists the whole workspace, so its label view needs no new route; Calendar keeps filtering the selected calendar (a cross-calendar label view is left for later) but changing calendar now clears the label.
+
+Touches: db/queries/mail.sql, handlers/mail.go, src/components/LiveMail.tsx, src/components/LiveDrive.tsx, src/components/LiveCalendar.tsx, src/lib/app-view.ts

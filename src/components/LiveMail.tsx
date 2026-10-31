@@ -41,9 +41,10 @@ function patchMail(client: QueryClient, mailboxId: string, id: string, change: (
 
 /**
  * Mail keeps its view in the URL (src/lib/app-view.ts): ?mailbox= &folder=
- * &message= &q= &label=. Opening a folder or message pushes a history entry,
- * search and label filters replace it, and a folder move returns to the
- * folder's list with nothing selected.
+ * &message= &q= &label= &all=. A label is a view of its own (every folder but
+ * Spam and Trash), never combined with a folder. Opening a folder, a label or
+ * a message pushes a history entry, search replaces it, and a move out of
+ * the view returns to its list with nothing selected.
  */
 export function LiveMail({ workspaceId }: { workspaceId: string }) {
   const { notice, show: setNotice, clear: closeNotice } = useNotice()
@@ -63,20 +64,35 @@ type MailViewProps = { workspaceId: string; mailboxId: string; view: AppView<'ma
 function MailView({ workspaceId, mailboxId, view, set, setNotice }: MailViewProps) {
   const client = useQueryClient()
   const contextMenu = useResourceContextMenu()
-  const folder = (mailFolders as readonly string[]).includes(view.folder ?? '') ? view.folder as MailFolder : 'inbox'
+  // A label is a view, not a filter (as in Gmail): ?label= lists the label's
+  // messages in every folder but Spam and Trash (?all=1 adds them), and a
+  // folder click leaves it. Folder and label never share the URL.
+  const labelId = view.label ?? ''
+  const labelView = !!labelId
+  const folder = !labelView && (mailFolders as readonly string[]).includes(view.folder ?? '') ? view.folder as MailFolder : 'inbox'
+  const withSpamTrash = labelView && view.all === '1'
   const selected = view.message ?? ''
   const query = view.q ?? ''
-  const labelId = view.label ?? ''
   const labelName = useLabelName(workspaceId, labelId)
-  useLabelGuard(workspaceId, labelId, () => { setNotice({ text: 'That label is no longer available. Showing all messages.' }); set({ label: undefined }, { replace: true }) })
+  // A link carrying both (an older bookmark) keeps the label view and drops the folder.
+  useEffect(() => { if (labelView && view.folder) set({ folder: undefined }, { replace: true }) }, [labelView, view.folder, set])
+  useEffect(() => { if (!labelView && view.all) set({ all: undefined }, { replace: true }) }, [labelView, view.all, set])
+  useLabelGuard(workspaceId, labelId, () => { setNotice({ text: 'That label is no longer available. Showing your Inbox.' }); set({ label: undefined, all: undefined }, { replace: true }) })
+  const placeName = labelView ? labelName || 'Label' : folderName(folder)
+  const openLabel = (value: string | undefined, change?: { replace?: boolean }) => set({ label: value || undefined, folder: undefined, all: undefined, message: undefined }, change)
+  const openFolder = (f: MailFolder) => set({ folder: f === 'inbox' ? undefined : f, label: undefined, all: undefined, message: undefined })
+  // Whether a message in this folder still belongs to the current view.
+  // A folder row names its sender in Inbox; a label view mixes folders, so each row decides by its own folder.
+  const showSender = (item: MailItem) => labelView ? item.folder === 'inbox' || item.folder === 'spam' || item.status === 'received' : folder === 'inbox'
+  const belongs = (to: MailFolder) => labelView ? withSpamTrash || (to !== 'spam' && to !== 'trash') : to === folder
   const [readerError, setReaderError] = useState('')
   const open = (item: { id: string }) => { setReaderError(''); set({ message: item.id }) }
   const showList = (change?: { replace?: boolean }) => set({ message: undefined }, change)
-  const list = useInfiniteQuery({ queryKey: ['mail', mailboxId, folder, query, labelId], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listMail({ workspaceId, mailboxId }, { query: { folder, labelId, search: query, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined, refetchInterval: 5000 })
+  const list = useInfiniteQuery({ queryKey: ['mail', mailboxId, labelView ? 'label' : folder, query, labelId, withSpamTrash], initialPageParam: '', queryFn: ({ pageParam, signal }) => api.listMail({ workspaceId, mailboxId }, { query: labelView ? { labelId, includeSpamTrash: withSpamTrash ? 'true' : undefined, search: query, cursor: pageParam } : { folder, search: query, cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined, refetchInterval: 5000 })
   const detail = useQuery({ queryKey: ['mail-detail', selected], queryFn: () => api.getMail({ workspaceId, mailboxId, id: selected }), enabled: !!selected, retry: (count, error) => !clientError(error) && count < 3, refetchInterval: query => ['queued', 'delivery_pending'].includes(query.state.data?.item.status ?? '') || ['pending','scanning','error'].includes(query.state.data?.screening?.state ?? '') ? 5000 : false })
   const refresh = async (id = selected) => { await client.invalidateQueries({ queryKey: ['mail', mailboxId] }); if (id) await client.invalidateQueries({ queryKey: ['mail-detail', id] }) }
   // A new or reply draft opens at once from the response; the editor reads the stored draft itself.
-  const openDraft = async (draft: MailItem) => { client.setQueryData<MailDetail>(['mail-detail', draft.id], { item: draft, attachments: [], deliveries: [], labels: [] }); set({ folder: 'drafts', message: draft.id }); await refresh(draft.id) }
+  const openDraft = async (draft: MailItem) => { client.setQueryData<MailDetail>(['mail-detail', draft.id], { item: draft, attachments: [], deliveries: [], labels: [] }); set({ folder: 'drafts', label: undefined, all: undefined, message: draft.id }); await refresh(draft.id) }
   const compose = useMutation({ mutationFn: () => api.createMailDraft({ workspaceId, mailboxId }, {}), onSuccess: openDraft })
   // Star and read state change on screen before the server answers; a failure restores the stored state.
   const flags = useMutation({ mutationFn: ({ id, values }: { id: string; values: { starred?: boolean; unread?: boolean } }) => api.updateMailFlags({ workspaceId, mailboxId, id }, values),
@@ -85,8 +101,10 @@ function MailView({ workspaceId, mailboxId, view, set, setNotice }: MailViewProp
   // Folder moves leave the open message: the list the user came from (the URL's folder) returns with nothing selected.
   const move = useMutation({ mutationFn: ({ item, to }: { item: MailItem; to: MailFolder; undo?: boolean }) => api.updateMailFlags({ workspaceId, mailboxId, id: item.id }, { folder: to }),
     onSuccess: async (moved, { item, to, undo }) => {
-      if (moved.folder !== folder) patchMail(client, mailboxId, item.id, () => null)
-      if (selected === item.id && moved.folder !== folder) showList({ replace: true })
+      // In a label view an archived message stays (its folder chip changes); Spam and Trash take it out.
+      const stays = belongs(moved.folder)
+      patchMail(client, mailboxId, item.id, () => stays ? moved : null)
+      if (selected === item.id && !stays) showList({ replace: true })
       setNotice(undo ? { text: `Moved back to ${folderName(moved.folder)}.` } : { text: movedText[to], undo: () => move.mutate({ item: moved, to: item.folder, undo: true }) })
       await refresh(item.id)
     } })
@@ -94,7 +112,7 @@ function MailView({ workspaceId, mailboxId, view, set, setNotice }: MailViewProp
   const accessLost = clientError(detail.error)
   // A stale ?message= (deleted, moved to another mailbox, no longer shared) returns to the list with a notice.
   const lostMessage = useRef('')
-  useEffect(() => { if (accessLost && lostMessage.current !== selected) { lostMessage.current = selected; setNotice({ text: `That message is no longer available. Showing ${folderName(folder)}.` }); set({ message: undefined }, { replace: true }) } }, [accessLost, selected, folder, set, setNotice])
+  useEffect(() => { if (accessLost && lostMessage.current !== selected) { lostMessage.current = selected; setNotice({ text: `That message is no longer available. Showing ${placeName}.` }); set({ message: undefined }, { replace: true }) } }, [accessLost, selected, placeName, set, setNotice])
   const visible = list.isError ? [] : [...new Map(list.data?.pages.flatMap(page => page.items).map(item => [item.id, item]) ?? []).values()]
   const current = accessLost || !selected ? undefined : detail.data?.item ?? visible.find(item => item.id === selected)
   const editing = current?.status === 'draft' ? current : null
@@ -115,14 +133,15 @@ function MailView({ workspaceId, mailboxId, view, set, setNotice }: MailViewProp
     {label:'Archive',icon:<Archive size={16}/>,disabled:move.isPending || item.status==='queued' || item.folder==='archive',run:()=>move.mutate({item,to:'archive'})},
     {label:'Trash',icon:<Trash2 size={16}/>,danger:true,disabled:move.isPending || item.status==='queued' || item.folder==='trash',run:()=>move.mutate({item,to:'trash'})},
   ] }
-  return <div id="orbit-mail-vibrant" className={selected ? 'has-message' : ''}>{contextMenu.menu}<AppPageHeader title={folderName(folder)} action={<><AssistantAction workspaceId={workspaceId} source="mail" contextOnly priority={0} contextLabel={`${folder} · visible messages`} content={visible.map(message => `${message.subject}\nFrom: ${message.fromAddress}\n${message.textBody.slice(0, 1500)}`).join("\n\n")} /><NewAction label="New message" disabled={compose.isPending} onClick={() => compose.mutate()} /></>} />
+  return <div id="orbit-mail-vibrant" className={selected ? 'has-message' : ''}>{contextMenu.menu}<AppPageHeader title={placeName} action={<><AssistantAction workspaceId={workspaceId} source="mail" contextOnly priority={0} contextLabel={`${labelView ? placeName : folder} · visible messages`} content={visible.map(message => `${message.subject}\nFrom: ${message.fromAddress}\n${message.textBody.slice(0, 1500)}`).join("\n\n")} /><NewAction label="New message" disabled={compose.isPending} onClick={() => compose.mutate()} /></>} />
     {(failure || readerError) && <p role="alert" className="inlinepanel">{failure ? userError(failure) : readerError}</p>}
     <div className="layout">
-      <AppSidebar title="Folders" label="Mail navigation" className="folders" noun="folder" current={labelName || undefined}>{mailFolders.map(f => <button className={`folder-button ${folder === f ? 'on' : ''}`} aria-current={folder === f ? 'page' : undefined} key={f} onClick={() => set({ folder: f === 'inbox' ? undefined : f, message: undefined })}>{(() => { const Icon = folderIcons[f]; return <Icon size={16} aria-hidden="true" /> })()}{folderName(f)}</button>)}<PinnedLabels workspaceId={workspaceId} app="mail" value={labelId} onChange={value => set({ label: value, message: undefined })} /><MailLabelFilter scope={{ workspaceId, mailboxId }} value={labelId} onChange={value => set({ label: value }, { replace: true })} onPinned={text => setNotice({ text })} /></AppSidebar>
+      <AppSidebar title="Folders" label="Mail navigation" className="folders" noun="folder" current={labelView ? placeName : undefined}>{mailFolders.map(f => { const on = !labelView && folder === f; return <button className={`folder-button ${on ? 'on' : ''}`} aria-current={on ? 'page' : undefined} key={f} onClick={() => openFolder(f)}>{(() => { const Icon = folderIcons[f]; return <Icon size={16} aria-hidden="true" /> })()}{folderName(f)}</button> })}<PinnedLabels workspaceId={workspaceId} app="mail" value={labelId} onChange={value => value ? openLabel(value) : openFolder('inbox')} /><MailLabelFilter scope={{ workspaceId, mailboxId }} value={labelId} onChange={value => openLabel(value)} onPinned={text => setNotice({ text })} /></AppSidebar>
       <section className="list" aria-label="Messages">
+        {labelView && <p className="mail-label-scope small quiet">{withSpamTrash ? 'Every folder, including Spam and Trash.' : 'Every folder except Spam and Trash.'} <button type="button" className="link-button" aria-pressed={withSpamTrash} onClick={() => set({ all: withSpamTrash ? undefined : '1', message: undefined }, { replace: true })}>{withSpamTrash ? 'Leave out Spam and Trash' : 'Include Spam and Trash'}</button></p>}
         {list.isPending && <p role="status" className="empty">Loading messages…</p>}
         {list.data && visible.length === 0 && <p className="empty">No messages in this view.</p>}
-        {visible.map(i => <button onContextMenu={e=>contextMenu.show(e,messageCommands(i))} onKeyDown={e=>{if(e.key==='ContextMenu' || e.key==='F10'&&e.shiftKey)contextMenu.show(e,messageCommands(i))}} className={`mailrow ${i.unread ? 'unread' : ''} ${selected === i.id ? 'selected' : ''}`} key={i.id} onClick={() => { open(i); read(i) }}><span className="mail-avatar" aria-hidden="true">{(folder === 'inbox' ? i.fromAddress : i.toAddress || 'D').slice(0, 1).toUpperCase()}</span><span className="sendername">{folder === 'inbox' ? i.fromAddress : i.toAddress || 'No recipients'}</span><span className="subject"><span>{i.subject || '(No subject)'}</span><small className="mail-snippet">{i.textBody.slice(0, 160)}</small></span><time className="mail-date" dateTime={i.updatedAt}>{new Date(i.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time><span className="small quiet">{deliveryStatus(i.status)}{i.starred ? ' · ★' : ''}</span></button>)}
+        {visible.map(i => <button onContextMenu={e=>contextMenu.show(e,messageCommands(i))} onKeyDown={e=>{if(e.key==='ContextMenu' || e.key==='F10'&&e.shiftKey)contextMenu.show(e,messageCommands(i))}} className={`mailrow ${i.unread ? 'unread' : ''} ${selected === i.id ? 'selected' : ''}`} key={i.id} onClick={() => { open(i); read(i) }}><span className="mail-avatar" aria-hidden="true">{(showSender(i) ? i.fromAddress : i.toAddress || 'D').slice(0, 1).toUpperCase()}</span><span className="sendername">{showSender(i) ? i.fromAddress : i.toAddress || 'No recipients'}</span><span className="subject"><span>{i.subject || '(No subject)'}</span><small className="mail-snippet">{i.textBody.slice(0, 160)}</small></span><time className="mail-date" dateTime={i.updatedAt}>{new Date(i.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time><span className="small quiet">{labelView && <span className="mail-folder-chip" data-folder={i.folder}>{folderName(i.folder)}</span>}{deliveryStatus(i.status)}{i.starred ? ' · ★' : ''}</span></button>)}
         {list.hasNextPage && <ActionButton disabled={list.isFetchingNextPage} onClick={() => void list.fetchNextPage()}>Load more messages</ActionButton>}
         <p className="mail-count">{visible.length} {visible.length === 1 ? 'message' : 'messages'}{list.hasNextPage ? ' loaded' : ''}</p>
       </section>
