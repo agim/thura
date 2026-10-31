@@ -58,9 +58,22 @@ func ListMail(ctx context.Context, r *router.Request[router.None]) (schema.MailI
 	if _, err := mailbox.Access(ctx, r.Param("workspaceId"), r.Param("mailboxId")); err != nil {
 		return schema.MailItemList{}, err
 	}
-	folder := queries.MailFolder(r.Raw.URL.Query().Get("folder"))
+	// ?labelId= without ?folder= is a label view: the label's messages in every
+	// folder but Spam and Trash (?includeSpamTrash=true adds them). With a
+	// folder, the label narrows that folder.
+	values := r.Raw.URL.Query()
+	labelView := values.Get("folder") == "" && values.Get("labelId") != ""
+	folder := queries.MailFolder(values.Get("folder"))
 	if folder == "" {
 		folder = queries.MailFolderInbox
+	}
+	includeSpamTrash := false
+	switch values.Get("includeSpamTrash") {
+	case "", "false":
+	case "true":
+		includeSpamTrash = true
+	default:
+		return schema.MailItemList{}, router.Errorf(422, "includeSpamTrash must be true or false")
 	}
 	switch folder {
 	case "inbox", "drafts", "sent", "archive", "trash", "spam":
@@ -76,7 +89,7 @@ func ListMail(ctx context.Context, r *router.Request[router.None]) (schema.MailI
 		return schema.MailItemList{}, err
 	}
 	var labelID *string
-	if value := r.Raw.URL.Query().Get("labelId"); value != "" {
+	if value := values.Get("labelId"); value != "" {
 		if !workspace.ValidID(value) {
 			return schema.MailItemList{}, router.Errorf(404, "label not found")
 		}
@@ -87,6 +100,10 @@ func ListMail(ctx context.Context, r *router.Request[router.None]) (schema.MailI
 			return schema.MailItemList{}, err
 		}
 		labelID = &value
+	}
+	if labelView {
+		rows, err := queries.New(db.From(ctx)).ListLabeledMailPage(ctx, queries.ListLabeledMailPageParams{MailboxID: r.Param("mailboxId"), LabelID: *labelID, IncludeSpamTrash: includeSpamTrash, Search: page.Search, BeforeTime: before, BeforeID: beforeID, PageLimit: page.Limit + 1})
+		return mailPage(rows, page.Limit), err
 	}
 	rows, err := queries.New(db.From(ctx)).ListMailItemsPage(ctx, queries.ListMailItemsPageParams{MailboxID: r.Param("mailboxId"), Folder: folder, LabelID: labelID, Search: page.Search, BeforeTime: before, BeforeID: beforeID, PageLimit: page.Limit + 1})
 	return mailPage(rows, page.Limit), err

@@ -1382,3 +1382,7 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 .settings-list-row .label-pin-apps legend { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
 .settings-list-row .label-pin-apps label { display:flex; align-items:center; gap:4px; font-size:12px; }
 .settings-list-row .label-system { color:var(--quiet); font-size:12px; }
+/* A label view mixes folders: each row names its folder, and the scope line offers Spam and Trash. */
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .mail-folder-chip { display: inline-block; margin-inline-end: 6px; padding: 0 6px; border-radius: 4px; background: var(--tealsoft); color: var(--teal); font-weight: 600; line-height: 1.6; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .mail-label-scope { margin: 8px 16px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+#orbit-workspace.zero-workspace #orbit-mail-vibrant .mail-label-scope .link-button { min-height: 0; padding: 0; border: 0; background: none; color: var(--teal); font: inherit; text-decoration: underline; cursor: pointer; }

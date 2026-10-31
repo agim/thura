@@ -20,7 +20,7 @@ export const teamSteps = ['domains', 'email', 'mailboxes', 'review'] as const
 
 /** The URL parameters of each app, under /app/<name>. `workspace` is shared by all of them. */
 export const appViews = {
-  mail: { path: '/app/mail', params: { mailbox: uuid, folder: oneOf(...mailFolders), message: uuid, q: text, label: uuid } },
+  mail: { path: '/app/mail', params: { mailbox: uuid, folder: oneOf(...mailFolders), message: uuid, q: text, label: uuid, all: oneOf('1') } },
   drive: { path: '/app/drive', params: { folder: (value: string) => value === 'trash' || id(value), file: id, edit: oneOf('1'), q: text, label: uuid } },
   chat: { path: '/app/chat', params: { room: id, q: text, label: uuid } },
   calendar: { path: '/app/calendar', params: { view: oneOf('month', 'week', 'day', 'list'), date: day, calendar: id, event: id, instance: id, new: oneOf('1'), label: uuid } },

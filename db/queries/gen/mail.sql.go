@@ -562,6 +562,82 @@ func (q *Queries) ListItemLabels(ctx context.Context, itemID string) ([]MailLabe
 	return items, nil
 }
 
+const listLabeledMailPage = `-- name: ListLabeledMailPage :many
+SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, delivery_reason, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at FROM mail_item
+WHERE mailbox_id=$1
+AND EXISTS (SELECT 1 FROM mail_tag t WHERE t.item_id=mail_item.id AND t.label_id=$2::uuid)
+AND ($3::bool OR folder NOT IN ('spam','trash'))
+AND ($4::text='' OR strpos(lower(from_address || ' ' || to_address || ' ' || subject || ' ' || text_body), lower($4)) > 0)
+AND ($5::timestamptz IS NULL OR (updated_at,id) < ($5::timestamptz,$6::uuid))
+ORDER BY updated_at DESC,id DESC LIMIT $7
+`
+
+type ListLabeledMailPageParams struct {
+	MailboxID        string     `json:"mailbox_id"`
+	LabelID          string     `json:"label_id"`
+	IncludeSpamTrash bool       `json:"include_spam_trash"`
+	Search           string     `json:"search"`
+	BeforeTime       *time.Time `json:"before_time"`
+	BeforeID         string     `json:"before_id"`
+	PageLimit        int32      `json:"page_limit"`
+}
+
+// A label view: every message of the mailbox carrying the label, in any
+// folder, newest first. Spam and Trash stay out unless include_spam_trash.
+func (q *Queries) ListLabeledMailPage(ctx context.Context, arg ListLabeledMailPageParams) ([]MailItem, error) {
+	rows, err := q.db.Query(ctx, listLabeledMailPage,
+		arg.MailboxID,
+		arg.LabelID,
+		arg.IncludeSpamTrash,
+		arg.Search,
+		arg.BeforeTime,
+		arg.BeforeID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MailItem
+	for rows.Next() {
+		var i MailItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.MailboxID,
+			&i.AuthorID,
+			&i.Folder,
+			&i.FromAddress,
+			&i.ToAddress,
+			&i.Cc,
+			&i.Bcc,
+			&i.Subject,
+			&i.TextBody,
+			&i.HTMLBody,
+			&i.Status,
+			&i.Starred,
+			&i.Unread,
+			&i.ProviderID,
+			&i.DeliveryReason,
+			&i.RawKey,
+			&i.ExternalID,
+			&i.ThreadID,
+			&i.MessageID,
+			&i.InReplyTo,
+			&i.ReferencesHeader,
+			&i.SendAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMailAttachments = `-- name: ListMailAttachments :many
 SELECT id, item_id, name, content_type, size, object_key, content_id FROM mail_attachment WHERE item_id=$1 ORDER BY id
 `

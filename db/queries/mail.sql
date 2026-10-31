@@ -22,6 +22,16 @@ AND (sqlc.narg(label_id)::uuid IS NULL OR EXISTS (SELECT 1 FROM mail_tag t WHERE
 AND (sqlc.arg(search)::text='' OR strpos(lower(from_address || ' ' || to_address || ' ' || subject || ' ' || text_body), lower(sqlc.arg(search))) > 0)
 AND (sqlc.narg(before_time)::timestamptz IS NULL OR (updated_at,id) < (sqlc.narg(before_time)::timestamptz,sqlc.arg(before_id)::uuid))
 ORDER BY updated_at DESC,id DESC LIMIT sqlc.arg(page_limit);
+-- name: ListLabeledMailPage :many
+-- A label view: every message of the mailbox carrying the label, in any
+-- folder, newest first. Spam and Trash stay out unless include_spam_trash.
+SELECT * FROM mail_item
+WHERE mailbox_id=sqlc.arg(mailbox_id)
+AND EXISTS (SELECT 1 FROM mail_tag t WHERE t.item_id=mail_item.id AND t.label_id=sqlc.arg(label_id)::uuid)
+AND (sqlc.arg(include_spam_trash)::bool OR folder NOT IN ('spam','trash'))
+AND (sqlc.arg(search)::text='' OR strpos(lower(from_address || ' ' || to_address || ' ' || subject || ' ' || text_body), lower(sqlc.arg(search))) > 0)
+AND (sqlc.narg(before_time)::timestamptz IS NULL OR (updated_at,id) < (sqlc.narg(before_time)::timestamptz,sqlc.arg(before_id)::uuid))
+ORDER BY updated_at DESC,id DESC LIMIT sqlc.arg(page_limit);
 -- name: GetMailItem :one
 SELECT * FROM mail_item WHERE id=$1;
 -- name: LockMailItem :one
