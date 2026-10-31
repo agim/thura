@@ -63,13 +63,17 @@ described in [Collabora deployment](collabora.md). `THURA_WOPI_ORIGIN` defaults 
 `http://thura:3000` callback; Thura explicitly recognizes that internal host alias.
 Use a public HTTPS origin instead when your domain/proxy configuration requires
 it. Collabora's service port and LiveKit signaling port are published only on
-loopback, for the operator's existing HTTPS proxy. Set `LIVEKIT_PUBLIC_URL` to its
-browser-reachable `wss://` origin (`scripts/init-compose.py` writes
-`wss://<APP_DOMAIN>/rtc`, so forward `/rtc` to port 7880). Setup publication
-requires it: an empty value fails the wizard's LiveKit check, and a non-empty
-process environment value must match what the wizard holds. An empty value in
-the environment does not count as an override; it never generates insecure
-public meeting links.
+loopback, for the operator's existing HTTPS proxy. Meet connects browsers to
+`wss://<public address>/rtc` by default (derived from the setup's public HTTPS
+address when `LIVEKIT_PUBLIC_URL` is blank; `scripts/init-compose.py` also
+writes it), so forward `/rtc/` to port 7880 with the prefix stripped and
+WebSocket upgrades passed through. The wizard's Chat, documents, meetings and
+SMIP step shows the nginx and Caddy rule for your domain, ready to copy, and
+checks each piece by name: settings, the LiveKit API, public signalling through
+the proxy, and the media ports (a checklist item it cannot verify). A non-empty
+process environment value must match what the wizard holds; an empty one does
+not count as an override and never hides a saved value. LiveKit settings saved
+in the admin pages apply without a restart.
 
 Expose TCP 7881 and UDP 7882 directly for media. On a NAT host, set
 `THURA_RTC_NODE_IP` to its reachable public IP when automatic discovery is unsuitable.

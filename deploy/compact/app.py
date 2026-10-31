@@ -103,6 +103,9 @@ def main():
             if 'ollama' in command[0]:
                 environment.update({'HOME':str(model_state),'OLLAMA_MODELS':str(model_state/'models'),'OLLAMA_HOST':'127.0.0.1:11434','OLLAMA_NO_CLOUD':'1','OLLAMA_CONTEXT_LENGTH':'2048','OLLAMA_NUM_PARALLEL':'1','OLLAMA_MAX_LOADED_MODELS':'1','OLLAMA_MAX_QUEUE':'2','OLLAMA_KEEP_ALIVE':'0'})
             environment['GOMEMLIMIT'] = '96MiB' if 'livekit-server' in command[0] else '256MiB'
+            if command[0] == '/app/thura':
+                # LiveKit runs beside Thura: its API defaults to 127.0.0.1:7880.
+                environment['THURA_BUNDLED_LIVEKIT'] = 'true'
             children.append(subprocess.Popen(command, user=65532, group=65532, extra_groups=[], env=environment))
         Path('/run/thura/processes.json').write_text(json.dumps({str(index): child.pid for index, child in enumerate(children)}))
         while not stopping:

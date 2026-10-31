@@ -19,11 +19,42 @@ open the same meeting from a Calendar location/description or Matrix message.
 
 Seal `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` (at least 32 characters). Configure
 `LIVEKIT_SERVER_URL` as the Go control-plane HTTP(S) origin and
-`LIVEKIT_PUBLIC_URL` as the browser's WS(S) origin. Use HTTPS/WSS publicly. The
-app permits connections only to that configured origin, with same-origin camera,
+`LIVEKIT_PUBLIC_URL` as the browser's WS(S) URL. Use HTTPS/WSS publicly.
+
+Defaults (`internal/providers/livekit`, `Load` and `Resolve`):
+
+- A blank `LIVEKIT_PUBLIC_URL` is `wss://<APP_URL host>/rtc`, the proxy route of
+  `deploy/lidza.stack.json` (forward `/rtc/` to port 7880 with the prefix
+  stripped). An explicit value always wins, and may carry a path. The
+  development address `pkg/env` invents for `APP_URL` is never used to derive it.
+- A blank `LIVEKIT_SERVER_URL` is `http://127.0.0.1:7880` only beside the bundled
+  LiveKit (`deploy/compact/app.py` sets `THURA_BUNDLED_LIVEKIT=true` for Thura);
+  elsewhere it stays required and the checks say so.
+- An empty process variable counts as unset: Compose passes
+  `LIVEKIT_PUBLIC_URL: ${LIVEKIT_PUBLIC_URL:-}`, and a value saved in the app's
+  settings (admin pages or the published setup) still applies.
+
+The setup wizard's Meetings check reports four named steps, each with a fix:
+settings present and valid (`Load`'s messages), LiveKit API reachable and
+authenticated (room create and delete in Review; a room list on the Chat,
+documents, meetings and SMIP step), public signalling reachable through the
+proxy (one GET from the server to `<public URL>/rtc/validate`, what
+livekit-client asks: a plain 400/401/403 from LiveKit passes, a 404, 502,
+redirect or HTML page means `/rtc` is not forwarded), and media ports, which
+stay a checklist item: open TCP 7881 and UDP 7882 and set `THURA_RTC_NODE_IP`
+behind NAT. The signalling request is bounded to 8 seconds, follows no
+redirect, dials only the addresses it checked and refuses private, link-local
+and metadata addresses unless the host is the app's own domain resolving
+locally (link-local is always refused). The same step shows copy-ready nginx
+and Caddy rules for the domain.
+
+The app permits connections only to that configured origin, with same-origin camera,
 microphone and display-capture permissions. It permits style attributes needed
 by the media UI, while keeping inline scripts blocked. App API calls use the
 generated Līdza client; the media SDK speaks LiveKit's explicit service protocol.
+The security headers follow the current LiveKit settings: they are reloaded at
+most once a second and rebuilt only when they change, so settings saved in the
+admin pages need no restart.
 
 Configure LiveKit `room.auto_create: false`, so possession of an old join token
 cannot recreate a deleted meeting room. Route signed webhooks to

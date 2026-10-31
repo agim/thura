@@ -30,6 +30,7 @@ type View struct {
 	IntegrationChecks                           []IntegrationCheckView
 	ReviewChecks                                []ReviewCheckView
 	ConfigurationError                          string
+	Meet                                        *MeetView
 }
 
 //go:embed admin-controls.js
@@ -42,7 +43,7 @@ func Page() admin.Page {
 		if _, err := io.WriteString(w, adminControls); err != nil {
 			slog.WarnContext(r.Context(), "serve setup controls", "error", err)
 		}
-	}, "models.json": modelsJSON, "smip-status.json": smipStatusJSON}, Data: func(r *http.Request) (any, error) {
+	}, "models.json": modelsJSON, "smip-status.json": smipStatusJSON, "meet-status.json": meetStatusJSON}, Data: func(r *http.Request) (any, error) {
 		row, e := q.New(db.From(r.Context())).GetServerSetup(r.Context())
 		if e != nil {
 			return nil, e
@@ -97,6 +98,9 @@ func Page() admin.Page {
 			if (f.Name == "STORAGE_ENDPOINT" || f.Name == "STORAGE_REGION") && v["THURA_STORAGE_PROFILE"] != "custom" && v["THURA_STORAGE_PROFILE"] != "" {
 				view.Step.Fields[i].ReadOnly = true
 			}
+		}
+		if step.ID == "integrations" {
+			view.Meet = meetView(v, r.Host)
 		}
 		if step.ID == "review" {
 			view.Probes, e = probeViews(r.Context(), v)

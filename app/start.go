@@ -4,7 +4,9 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"thura/internal/calendar"
 	"thura/internal/chat"
 	"time"
@@ -96,14 +98,49 @@ func appMiddleware() []middleware.Middleware {
 	if os.Getenv("LIDZA_MODE") == "dev" {
 		return []middleware.Middleware{setup.Gate, tenancy.Middleware}
 	}
-	return []middleware.Middleware{setup.Gate, tenancy.Middleware, func(next http.Handler) http.Handler {
-		var once sync.Once
-		var handler http.Handler
+	return []middleware.Middleware{setup.Gate, tenancy.Middleware, liveHeaders(livekit.Load, time.Second)}
+}
+
+// headerState is the security-header handler built for one LiveKit state:
+// whether Meet is configured and the origins its browser connects to.
+type headerState struct {
+	handler   http.Handler
+	ok        bool
+	origins   string
+	checkedAt time.Time
+}
+
+// liveHeaders follows the LiveKit settings without a restart: a request
+// reuses the handler built for the current settings, and at most once per
+// interval one request reloads them, rebuilding the handler only when they
+// changed. The hot path is an atomic load and a clock read.
+func liveHeaders(load func() (livekit.Config, error), interval time.Duration) middleware.Middleware {
+	return func(next http.Handler) http.Handler {
+		var current atomic.Pointer[headerState]
+		var mu sync.Mutex
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			once.Do(func() { handler = appHeaders()[0](next) })
-			handler.ServeHTTP(w, r)
+			state := current.Load()
+			if now := time.Now(); state == nil || now.Sub(state.checkedAt) >= interval {
+				mu.Lock()
+				if state = current.Load(); state == nil || now.Sub(state.checkedAt) >= interval {
+					cfg, err := load()
+					fresh := &headerState{ok: err == nil, checkedAt: now}
+					if fresh.ok {
+						fresh.origins = strings.Join(cfg.PublicOrigins(), " ")
+					}
+					if state != nil && state.ok == fresh.ok && state.origins == fresh.origins {
+						fresh.handler = state.handler
+					} else {
+						fresh.handler = appHeaders(cfg, fresh.ok)[0](next)
+					}
+					current.Store(fresh)
+					state = fresh
+				}
+				mu.Unlock()
+			}
+			state.handler.ServeHTTP(w, r)
 		})
-	}}
+	}
 }
 
 // readerStyleHashes are the SHA-256 hashes of htmlStyle and markdownStyle in
@@ -114,7 +151,7 @@ var readerStyleHashes = []string{
 	"'sha256-gLs+gvFSQCGCwwUgQPLt43lJEGzX92GKSDW4bj+iHGo='",
 }
 
-func appHeaders() []middleware.Middleware {
+func appHeaders(cfg livekit.Config, meet bool) []middleware.Middleware {
 	// FullCalendar creates an empty style element and adds its rules through
 	// CSSOM. Allow only that empty element's hash, keeping other inline styles
 	// blocked and retaining the default script policy.
@@ -128,7 +165,7 @@ func appHeaders() []middleware.Middleware {
 	// script and style-src stays restricted, so data: fonts add no script path.
 	policy = middleware.AddCSP(policy, "font-src", "data:")
 	permissions := middleware.DefaultPermissionsPolicy
-	if cfg, err := livekit.Load(); err == nil {
+	if meet {
 		policy = middleware.AddCSP(policy, "connect-src", cfg.PublicOrigins()...)
 		policy = middleware.AddCSP(policy, "media-src", "'self'", "blob:")
 		policy = middleware.AddCSP(policy, "style-src-attr", "'unsafe-inline'")

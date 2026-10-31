@@ -15,7 +15,6 @@ import (
 	"strings"
 	"thura/internal/platform/ingress"
 	"thura/internal/providers/collabora"
-	"thura/internal/providers/livekit"
 	"thura/internal/providers/matrix"
 	"time"
 )
@@ -29,7 +28,8 @@ func checkNames(kind string) []string {
 	case "collabora":
 		return []string{"COLLABORA_SERVER_URL", "COLLABORA_APP_URL", "COLLABORA_TOKEN_SECRET"}
 	case "livekit":
-		return []string{"LIVEKIT_SERVER_URL", "LIVEKIT_PUBLIC_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"}
+		// APP_URL: a blank public URL is derived from it.
+		return []string{"LIVEKIT_SERVER_URL", "LIVEKIT_PUBLIC_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "APP_URL"}
 	case "ai":
 		return []string{"THURA_AI_ENABLED", "LLM_PROVIDER", "LLM_MODEL", "LLM_BASE_URL", "LLM_API_KEY", "LLM_MAX_TOKENS"}
 	case "smip":
@@ -70,15 +70,9 @@ func checkIntegration(ctx context.Context, kind string, v map[string]string, id 
 		}
 		return nil
 	case "livekit":
-		c := livekit.Config{URL: v["LIVEKIT_SERVER_URL"], PublicURL: v["LIVEKIT_PUBLIC_URL"], Key: v["LIVEKIT_API_KEY"], Secret: v["LIVEKIT_API_SECRET"]}
-		room := "thura-setup-" + id
-		// Always attempt deletion after an uncertain create; never leave a room that
-		// another user can accidentally join, and never retry a submitted create.
-		err := c.Call(ctx, "CreateRoom", room, map[string]any{"name": room, "empty_timeout": 1, "max_participants": 1}, nil)
-		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		removed := c.Call(cleanup, "DeleteRoom", room, map[string]string{"room": room}, nil)
-		return errors.Join(err, removed)
+		// Each named step reports on its own (meet_checks.go); the API step
+		// still runs when only the public URL is wrong.
+		return meetFailed(meetChecks(ctx, v, createDeleteRoom(id)))
 	case "ai":
 		if err := ensureLocalModel(ctx, v); err != nil {
 			return err

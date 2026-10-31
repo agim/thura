@@ -87,6 +87,16 @@
 .setup-checks {display:grid;gap:0;border:1px solid var(--admin-line);border-radius:10px;overflow:hidden;margin:16px 0}
 .setup-check {padding:10px 14px;border-bottom:1px solid var(--admin-line);min-width:0}
 .setup-check:last-child {border-bottom:0}
+.setup-meet {margin-top:24px;min-width:0}
+.setup-meet-checks {list-style:none;padding:0;margin:0 0 12px;border:1px solid var(--admin-line);border-radius:8px}
+.setup-meet-check {padding:10px 14px;border-bottom:1px solid var(--admin-line);min-width:0;overflow-wrap:anywhere}
+.setup-meet-check:last-child {border-bottom:0}
+.setup-meet-check .form-hint:empty {display:none}
+.setup-meet-check[data-state=failed] [data-meet-check-state] {color:var(--admin-fg);font-weight:600}
+.setup-snippet {margin:12px 0;min-width:0}
+.setup-snippet-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.setup-snippet pre {margin:0;padding:12px;border:1px solid var(--admin-line);border-radius:8px;overflow-x:auto;max-width:100%;font-size:13px;line-height:1.45;white-space:pre;tab-size:4}
+.setup-meet h4 {margin-top:20px}
 .setup-check-heading {display:flex;align-items:center;gap:12px;min-height:36px}
 .setup-check-heading strong {flex:1}
 .setup-check-heading [data-check-status] {font-size:13px;color:var(--admin-muted)}

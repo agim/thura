@@ -42,6 +42,20 @@
 {{else}}<p>No identity saved yet. Enable SMIP above and save this step to generate it and display the DNS records.</p>{{end}}
 </section>{{end}}
 <div class="setup-save"><button class="btn btn-primary" type="submit">Save this step</button><span>Changes stay in your draft.</span></div></form>
+{{with .Meet}}<section class="setup-meet" aria-labelledby="setup-meet-title" data-meet-status>
+<h3 id="setup-meet-title">Meetings connection</h3>
+<p>Checks the saved draft. Save this step first after changing a Meetings setting.{{if and .PublicURL (not .FromPage)}} Browsers connect to <code>{{.PublicURL}}</code>.{{end}}</p>
+<ul class="setup-meet-checks" aria-label="Meetings checks">{{range .Checks}}<li class="setup-meet-check" data-meet-check="{{.ID}}" data-state="{{.State}}"><div class="setup-check-heading"><strong>{{.Name}}</strong><span data-meet-check-state>{{if eq .State "manual"}}To do on the network{{else}}Not checked yet{{end}}</span></div><p class="form-hint" data-meet-check-detail>{{.Detail}}</p><p class="form-hint" data-meet-check-fix>{{.Fix}}</p></li>{{end}}</ul>
+<p role="status" data-meet-status-message></p>
+<div class="setup-save"><button type="button" class="btn btn-secondary" data-meet-recheck>Check meetings</button><span>Reads only: lists LiveKit rooms and requests the public signalling address once.</span></div>
+<noscript><p>JavaScript is disabled. Review and publish runs the same Meetings checks.</p></noscript>
+<h4>Proxy rules</h4>
+{{if .Domain}}{{if .FromPage}}<p class="form-hint">No public HTTPS address is saved yet, so these rules use the address of this page. Save it in <a href="?step=server">Server and workspace</a> to change them.</p>{{end}}<p>Forward <code>https://{{.Domain}}{{.Prefix}}/</code> to LiveKit port 7880 with the prefix removed and WebSocket upgrades passed through. Use the rule for your proxy, then reload it.</p>
+<div class="setup-snippet"><div class="setup-snippet-heading"><strong id="setup-nginx-title">nginx</strong><button type="button" class="btn btn-secondary" data-copy-snippet="setup-nginx" aria-label="Copy nginx rule">Copy</button></div><pre aria-labelledby="setup-nginx-title"><code id="setup-nginx">{{.Nginx}}</code></pre></div>
+<div class="setup-snippet"><div class="setup-snippet-heading"><strong id="setup-caddy-title">Caddy</strong><button type="button" class="btn btn-secondary" data-copy-snippet="setup-caddy" aria-label="Copy Caddy rule">Copy</button></div><pre aria-labelledby="setup-caddy-title"><code id="setup-caddy">{{.Caddy}}</code></pre></div>
+<p role="status" data-copy-status></p>
+{{else}}<p>Save the public HTTPS address in <a href="?step=server">Server and workspace</a> to see the proxy rules for your domain.</p>{{end}}
+</section>{{end}}
 {{else}}
 <div data-setup-review data-configured="{{if .ConfigurationError}}false{{else}}true{{end}}">
 <p data-review-status role="status">{{if .ConfigurationError}}Complete the missing configuration before checks can run.{{else}}Connections are checked automatically. This sends one test email, tests private storage and makes one small AI request.{{end}}</p>
