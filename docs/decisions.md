@@ -605,3 +605,9 @@ Why: A real deployment failed with every LiveKit setting present. LIVEKIT_PUBLIC
 Why: The user asked for Gmail labels: clicking a label showed only that label's messages in the current folder (Sent stayed Sent). Now ?labelId= without ?folder= lists the label's messages from every folder of the mailbox, newest first, through a separate ListLabeledMailPage query with the folder listing's cursor, search and workspace check; Spam and Trash stay out unless includeSpamTrash=true (the Mail all=1 toggle), as in Gmail. Folder and label are mutually exclusive in the Mail and Drive URLs, so a folder click clears the label and a label view remembers no folder; ?folder= with ?labelId= is kept for API callers. Drive already lists the whole workspace, so its label view needs no new route; Calendar keeps filtering the selected calendar (a cross-calendar label view is left for later) but changing calendar now clears the label.
 
 Touches: db/queries/mail.sql, handlers/mail.go, src/components/LiveMail.tsx, src/components/LiveDrive.tsx, src/components/LiveCalendar.tsx, src/lib/app-view.ts
+
+## 2026-10-31: SMIP inbox, outbox, import and queue routes for owners and admins only
+
+Why: The developer decided the whole SMIP workspace API is operator plumbing, matching the Settings → SMIP streams screen: listing and reading the inbox, importing a file, queueing a send and listing the outbox now require owner/admin (workspace.RequireManager, or the workspace-locked role check), and members get 403. The dispatch worker still rechecks only that the originating actor is a current member before an attempt.
+
+Touches: internal/federation/review.go, internal/federation/send.go, tests/smip_stream_access_test.go

@@ -8,8 +8,9 @@ import (
 	"thura/schema"
 )
 
-// SMIP streams are operator plumbing: listing, authorizing and disabling them
-// is for workspace owners and admins, and a member is refused every one.
+// SMIP streams are operator plumbing: listing, authorizing and disabling them,
+// and the inbox, outbox, import and queue routes, are for workspace owners and
+// admins; a member is refused every one.
 func TestSmipStreamRoutesRefuseMembers(t *testing.T) {
 	a := newSmipApp(t, "streams-local.example", "streams-peer.example")
 	ctx := a.server.Context()
@@ -39,6 +40,15 @@ func TestSmipStreamRoutesRefuseMembers(t *testing.T) {
 	a.request(t, "POST", a.base()+"/bindings", in, nil, 403)
 	a.request(t, "GET", a.base()+"/bindings", nil, nil, 403)
 	a.request(t, "DELETE", a.base()+"/bindings/"+binding.ID, nil, nil, 403)
+	// The inbox, outbox, import and queue routes are the same operator screen.
+	a.request(t, "GET", a.base()+"/inbox", nil, nil, 403)
+	a.request(t, "POST", a.base()+"/inbox/"+uuid.NewString()+"/import", schema.SmipImportInput{}, nil, 403)
+	a.request(t, "GET", a.base()+"/outbox", nil, nil, 403)
+	a.request(t, "POST", a.base()+"/outbox", schema.SmipSendInput{TransactionID: uuid.NewString(), BindingID: binding.ID, Body: smipText("member send")}, nil, 403)
+	var queued int
+	if err := db.From(ctx).QueryRow(ctx, "SELECT COUNT(*) FROM smip_outbox WHERE workspace_id=$1", a.workspace.ID).Scan(&queued); err != nil || queued != 0 {
+		t.Fatal("a member queued a SMIP send", queued, err)
+	}
 	var count int
 	if err := db.From(ctx).QueryRow(ctx, "SELECT COUNT(*) FROM smip_binding WHERE workspace_id=$1 AND enabled", a.workspace.ID).Scan(&count); err != nil || count != 1 {
 		t.Fatal("a member changed SMIP streams", count, err)

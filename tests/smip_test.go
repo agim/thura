@@ -203,6 +203,9 @@ func TestSmipTwoAppServersConsentDurabilityAndReview(t *testing.T) {
 	if err != nil || duplicate != first {
 		t.Fatal("duplicate acknowledgement changed", err)
 	}
+	// Review is for owners and admins: the member is refused, the owner reads.
+	b.request(t, "GET", b.base()+"/inbox", nil, nil, 403)
+	b.login(t, b.owner)
 	var list schema.SmipInboxList
 	b.request(t, "GET", b.base()+"/inbox", nil, &list, 200)
 	if len(list.Items) != 1 || list.Items[0].Body != "<script>plain text</script>" || list.Items[0].Digest != p.Digest() {
@@ -575,8 +578,13 @@ func TestSmipAppSenderLostReceiptImmutableRetryAndRevocation(t *testing.T) {
 		t.Fatal("sender duplicated/lost remote chat")
 	}
 	// A separate queued intent is stopped before HTTP when membership is removed.
+	// Queueing is for owners and admins: the member is refused until promoted.
 	a.login(t, a.member)
 	in.TransactionID = uuid.NewString()
+	a.request(t, "POST", a.base()+"/outbox", in, nil, 403)
+	if _, err := db.From(a.server.Context()).Exec(a.server.Context(), "UPDATE auth_member SET role='admin' WHERE subject=$1 AND scope=$2", a.member.Subject, a.workspace.ID); err != nil {
+		t.Fatal(err)
+	}
 	a.request(t, "POST", a.base()+"/outbox", in, &queued, 200)
 	if _, err := db.From(a.server.Context()).Exec(a.server.Context(), "DELETE FROM auth_member WHERE subject=$1 AND scope=$2", a.member.Subject, a.workspace.ID); err != nil {
 		t.Fatal(err)

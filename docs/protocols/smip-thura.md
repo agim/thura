@@ -44,7 +44,7 @@ The review renders plain text. Inbox pages contain at most 50 metadata/text rows
 
 A file packet may contain at most 10 MiB, matching the app's Drive limit. Names must already satisfy Drive's filename policy; traversal/path-like names are refused. Files are opaque `application/octet-stream` downloads, not executable previews. This adapter does not provide malware scanning.
 
-A member explicitly selects a local folder or Drive root and imports an accepted file. The transaction rechecks current membership, file integrity, folder access, retained/reserved quota and the file-count limit. It writes immutable bytes through the storage pack, then commits the version, source-transfer marker and audit event together. Concurrent retries return the same file/version. A trashed/purged prior import is not silently recreated. Failed/ambiguous commits leave any unreferenced private object for ordinary Drive sweeping after its grace period; immediate deletion could destroy a committed object.
+An owner or admin explicitly selects a local folder or Drive root and imports an accepted file. The transaction rechecks the current owner/admin role, file integrity, folder access, retained/reserved quota and the file-count limit. It writes immutable bytes through the storage pack, then commits the version, source-transfer marker and audit event together. Concurrent retries return the same file/version. A trashed/purged prior import is not silently recreated. Failed/ambiguous commits leave any unreferenced private object for ordinary Drive sweeping after its grace period; immediate deletion could destroy a committed object.
 
 Transport acceptance, import completion and human reading are different states. Disabling a binding does not erase accepted workspace content. Removing workspace membership revokes review/import access. No automatic fallback to SMTP, Matrix or a new message ID occurs.
 
@@ -57,12 +57,12 @@ All local operations use Līdza authentication and generated client methods:
 | `GET /bindings` | Current owner/admin (403 for members); consent metadata, enabled capability, the local SMIP domain, paired peers with an unrevoked key and the workspace's shared mailboxes as recipient choices. |
 | `POST /bindings` | Current owner/admin; idempotent authorization, audited in transaction. |
 | `DELETE /bindings/{id}` | Current owner/admin; disable new admissions, audited in transaction. |
-| `POST /outbox` | Current member; queue chat or a verified immutable Drive snapshot and its job atomically. |
-| `GET /outbox?cursor=…` | Current member; bounded delivery metadata without signed payloads or keys. |
+| `POST /outbox` | Current owner/admin (403 for members); queue chat or a verified immutable Drive snapshot and its job atomically. |
+| `GET /outbox?cursor=…` | Current owner/admin (403 for members); bounded delivery metadata without signed payloads or keys. |
 | `POST /outbox/{id}/cancel` | Current owner/admin; idempotently cancel a pending/blocked packet before any network attempt, audited atomically. |
 | `POST /outbox/{id}/resume` | Current owner/admin; resume a blocked original packet within the retry budget. |
-| `GET /inbox?cursor=…` | Current member; bounded text/metadata without file payloads. |
-| `POST /inbox/{id}/import` | Current member; explicit Drive import with optional local `folderId`. |
+| `GET /inbox?cursor=…` | Current owner/admin (403 for members); bounded text/metadata without file payloads. |
+| `POST /inbox/{id}/import` | Current owner/admin (403 for members); explicit Drive import with optional local `folderId`. |
 
 The panel lives in Settings → SMIP streams (`/app/settings/smip`), listed only for workspace owners and admins; a member who opens the address directly is told it is for owners and admins and nothing is fetched. Chat shows no SMIP controls. With SMIP disabled the screen is one line pointing to Server setup; with no paired peer it points to the SMIP peers admin page. The authorization form offers the peer domain as a select of paired peers and the local recipient as a select of the workspace's shared mailboxes at the SMIP domain (`<local part>@<SMIP domain>`); the remote stream and the remote sender's name are free text because a peer does not publish them, validated against the wire token alphabet (`[A-Za-z0-9._-]`, 1–128), with the sender's domain fixed to the chosen peer. Caveats sit behind a Details disclosure. The screen labels the feature experimental and distinguishes queued, cancelled, uncertain, blocked, accepted and expired sends from incoming acceptance and Drive import. Sending controls appear only for enabled bindings with an operator-configured outgoing endpoint.
 
@@ -70,7 +70,7 @@ The panel lives in Settings → SMIP streams (`/app/settings/smip`), listed only
 
 Both operators authorize matching streams and service addresses. The sender uses the binding in reverse: its local recipient becomes the signed sender, the remote sender becomes the packet recipient, and the stream remains unchanged. These are workspace service identities, not a claim that a remote human account authored the message. A server signature never substitutes for local membership checks.
 
-`POST /outbox` takes a caller-generated UUID `transactionId`, `bindingId`, and either `body` or `fileId`. It checks current membership under the workspace lock, enabled consent, the configured endpoint, signing-key validity and retained queue capacity. File copies read and verify the authorized current Drive version before signing. The signed packet and durable job commit together. Retrying the same transaction preserves its original intent; changed content or another actor under that ID returns 409. Changing or trashing the original file does not change a queued snapshot.
+`POST /outbox` takes a caller-generated UUID `transactionId`, `bindingId`, and either `body` or `fileId`. It checks the current owner/admin role under the workspace lock, enabled consent, the configured endpoint, signing-key validity and retained queue capacity. File copies read and verify the authorized current Drive version before signing. The signed packet and durable job commit together. Retrying the same transaction preserves its original intent; changed content or another actor under that ID returns 409. Changing or trashing the original file does not change a queued snapshot.
 
 A worker rechecks the originating member and binding immediately before authorizing an attempt. Revoked membership, withdrawn consent, changed mappings, unavailable origin keys and missing endpoints pause attempts before network contact. A previously authorized in-flight transmission cannot be recalled; removal is not a claim that earlier attempts never reached the peer.
 

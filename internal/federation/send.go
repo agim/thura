@@ -31,7 +31,7 @@ func Queue(ctx context.Context, w string, in schema.SmipSendInput) (schema.SmipO
 	if in.Body != nil {
 		body = *in.Body
 	}
-	tx, queries, err := lockAccess(ctx, w, false)
+	tx, queries, err := lockAccess(ctx, w, true)
 	if err != nil {
 		return schema.SmipOutbound{}, err
 	}
@@ -143,7 +143,7 @@ func Queue(ctx context.Context, w string, in schema.SmipSendInput) (schema.SmipO
 }
 func ListOutbox(ctx context.Context, w, cursor string) (schema.SmipOutboxList, error) {
 	out := schema.SmipOutboxList{Items: []schema.SmipOutbound{}}
-	if err := workspace.RequireMember(ctx, w); err != nil {
+	if err := workspace.RequireManager(ctx, w); err != nil {
 		return out, err
 	}
 	if cursor != "" && !workspace.ValidID(cursor) {

@@ -199,7 +199,7 @@ func item(row q.ListSmipInboxRow) schema.SmipInboxItem {
 }
 func ListInbox(ctx context.Context, w, cursor string) (schema.SmipInboxList, error) {
 	out := schema.SmipInboxList{Items: []schema.SmipInboxItem{}}
-	if err := workspace.RequireMember(ctx, w); err != nil {
+	if err := workspace.RequireManager(ctx, w); err != nil {
 		return out, err
 	}
 	if cursor != "" && !workspace.ValidID(cursor) {
@@ -219,7 +219,7 @@ func ListInbox(ctx context.Context, w, cursor string) (schema.SmipInboxList, err
 	return out, nil
 }
 func ImportFile(ctx context.Context, w, id string, in schema.SmipImportInput) (schema.DriveFile, error) {
-	tx, queries, err := lockAccess(ctx, w, false)
+	tx, queries, err := lockAccess(ctx, w, true)
 	if err != nil {
 		return schema.DriveFile{}, err
 	}
