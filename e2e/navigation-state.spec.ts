@@ -27,7 +27,7 @@ async function deliver(page: Page, subject: string) {
 }
 
 async function openFolder(page: Page, width: number, name: string) {
-  if (width < 1000) await page.getByRole('button', { name: 'Browse', exact: true }).click()
+  if (width < 1000) await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
   await page.getByRole('button', { name, exact: true }).click()
   await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
 }

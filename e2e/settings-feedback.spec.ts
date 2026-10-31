@@ -109,7 +109,7 @@ for (const width of [390, 1440]) {
     let release: () => void = () => {}
     const released = new Promise<void>(resolve => { release = resolve })
     await page.route(`**/api/v1/workspaces/${workspace}/mailboxes`, async route => { await released; await route.continue() })
-    if (width < 1000) await page.getByRole('button', { name: 'Browse', exact: true }).click()
+    if (width < 1000) await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
     await page.getByRole('complementary', { name: 'Settings categories' }).getByRole('link', { name: 'Mail', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Mail settings', exact: true })).toBeVisible()
     await expect(page.getByText('Loading mailboxes…', { exact: true })).toBeVisible()

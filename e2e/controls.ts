@@ -11,7 +11,7 @@ export async function openSettings(page: Page, section?: 'mail' | 'calendar') {
   if (section) {
     const sidebar = page.getByRole('complementary', { name:'Settings categories' })
     await expect(page.getByRole('heading', { name:'Settings', exact:true })).toBeVisible()
-    if ((page.viewportSize()?.width ?? 1280) < 1000) await page.getByRole('button', {name:'Browse',exact:true}).click()
+    if ((page.viewportSize()?.width ?? 1280) < 1000) await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
     await sidebar.getByRole('link', { name: section === 'mail' ? 'Mail' : 'Calendar', exact: true }).click()
   }
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()

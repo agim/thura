@@ -85,7 +85,7 @@ for (const width of [390, 1440]) {
     // Trash is a view in the URL too.
     await page.getByRole('button', { name: `Move to trash ${name}`, exact: true }).click()
     await expect(toast(page)).toContainText('Moved to trash.')
-    if (width < 1000) await page.getByRole('button', { name: 'Browse', exact: true }).click()
+    if (width < 1000) await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
     await page.getByRole('button', { name: 'Trash', exact: true }).click()
     expect(search(page).get('folder')).toBe('trash')
     await page.reload()

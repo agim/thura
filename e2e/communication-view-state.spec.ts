@@ -19,7 +19,7 @@ async function signIn(page: Page, path: string) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 }
 async function browse(page: Page, width: number) {
-  if (width < 1000) await page.getByRole('button', { name: 'Browse', exact: true }).click()
+  if (width < 1000) await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
 }
 
 for (const width of [390, 1440]) {
@@ -170,7 +170,7 @@ for (const width of [390, 1440]) {
     await page.reload()
     await browse(page, width)
     await chooseOption(page.getByLabel('Calendar', { exact: true }), calendar.id)
-    await page.getByText(title, { exact: true }).first().click()
+    await page.locator('.fc').getByText(title, { exact: true }).first().click()
     await page.getByRole('button', { name: 'Prepare meeting for this event', exact: true }).click()
     await expect(page.getByLabel('Meeting name', { exact: true })).toHaveValue(title)
     await expect(page).toHaveURL(/\/app\/meet/)

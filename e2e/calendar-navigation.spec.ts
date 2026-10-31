@@ -45,7 +45,7 @@ async function fixture(page: Page, label: string, event: Record<string, unknown>
 async function pickCalendar(page: Page, width: number, id: string) {
   // The calendar was created after the page loaded its list.
   await page.reload()
-  if (width < 1000) await page.getByRole('button', { name: 'Browse', exact: true }).click()
+  if (width < 1000) await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
   await chooseOption(page.getByLabel('Calendar', { exact: true }), id)
 }
 
@@ -181,8 +181,8 @@ for (const width of [390, 1440]) {
     await page.getByRole('button', { name: 'Back to schedule', exact: true }).click()
     const importedTitle = `Imported ${randomUUID()}`
     const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')
-    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//thura e2e//EN', 'BEGIN:VEVENT', `UID:${randomUUID()}@${randomUUID()}.example`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${tomorrow.replace(/-/g, '')}`, `SUMMARY:${importedTitle}`, 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n')
-    if (width < 1000) await page.getByRole('button', { name: 'Browse', exact: true }).click()
+    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//thura e2e//EN', 'BEGIN:VEVENT', `UID:${randomUUID()}@${randomUUID()}.example`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${days().today.replace(/-/g, '')}`, `SUMMARY:${importedTitle}`, 'END:VEVENT', 'END:VCALENDAR', ''].join('\r\n')
+    if (width < 1000) await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
     await page.getByRole('button', { name: 'Import or export', exact: true }).click()
     const transfer = page.getByRole('dialog', { name: 'Import or export', exact: true })
     await transfer.getByLabel('Import ICS', { exact: true }).setInputFiles({ name: 'import.ics', mimeType: 'text/calendar', buffer: Buffer.from(ics) })

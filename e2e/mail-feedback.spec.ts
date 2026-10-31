@@ -19,7 +19,7 @@ for (const width of [390,1440]) test(`Junk correction restores mail and queues l
  const item=await received.json(),path=`${base}/mailboxes/${box.id}/messages/${item.id}`
  expect((await page.request.post(`${path}/review`,{data:{action:'report-spam'}})).status()).toBe(200)
  await page.goto('/app/mail')
- if(width<1000) await page.getByRole('button',{name:'Browse',exact:true}).click()
+ if(width<1000) await page.getByRole('button',{ name: /^Switch [a-z]+ · / }).click()
  await page.getByRole('button',{name:'Spam',exact:true}).click()
  await page.locator('.mailrow').filter({hasText:subject}).click()
  const protection=page.getByRole('region',{name:'Mail protection',exact:true})

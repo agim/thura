@@ -26,7 +26,7 @@ async function deliver(page: Page, subject: string, run: string): Promise<{ id: 
 
 async function openIn(page: Page, width: number, folder: 'Inbox' | 'Spam', subject: string) {
   await page.goto('/app/mail')
-  if (width < 1000) await page.getByRole('button', { name: 'Browse', exact: true }).click()
+  if (width < 1000) await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
   await page.getByRole('button', { name: folder, exact: true }).click()
   await page.getByLabel('Search mail', { exact: true }).fill(subject)
   await page.locator('.mailrow').filter({ hasText: subject }).click()

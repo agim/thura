@@ -22,7 +22,7 @@ async function receive(page: Page, box: { id: string; address: string }, from: s
   return response.json()
 }
 async function openSidebar(page: Page, width: number) {
-  if (width < 1000) await page.getByRole('button', { name: 'Browse', exact: true }).click()
+  if (width < 1000) await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
 }
 async function closeFile(page: Page) {
   const back = page.getByRole('button', { name: 'Back to files', exact: true })

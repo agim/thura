@@ -32,7 +32,7 @@ for (const width of [320,390,1440]) test(`incoming protection settings, quaranti
   const response=await page.request.post(`/api/v1/inbound/${box.id}`,{data:raw,headers:{'Content-Type':'message/rfc822','X-Thura-Timestamp':stamp,'X-Thura-Delivery':delivery,'X-Thura-Signature':signature}})
   expect(response.status()).toBe(200);const item=await response.json();expect(item.folder).toBe('spam')
   await page.goto('/app/mail')
-  if(width<1000) await page.getByRole('button',{name:'Browse',exact:true}).click()
+  if(width<1000) await page.getByRole('button',{ name: /^Switch [a-z]+ · / }).click()
   await page.getByRole('button',{name:'Spam',exact:true}).click()
   await page.locator('.mailrow').filter({hasText:subject}).click()
   const protection=page.getByRole('region',{name:'Mail protection',exact:true})

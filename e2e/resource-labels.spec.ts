@@ -38,7 +38,7 @@ for (const width of [390, 1440]) {
     expect(bounds!.width).toBeLessThanOrEqual(width)
     await dialog.getByRole('button', { name: 'Close Apply labels' }).click()
     await page.reload()
-    if (width < 1000) await page.getByRole('button', { name: 'Browse', exact: true }).click()
+    if (width < 1000) await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
     await page.getByRole('button', { name: 'Drafts', exact: true }).click()
     await page.locator('.mailrow').filter({ hasText: name }).click()
     await page.getByRole('button', { name: 'Apply labels', exact: true }).click()

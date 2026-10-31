@@ -138,7 +138,7 @@ test('all app headers share typography, placement and the same New action', asyn
       await page.getByRole('navigation', { name: 'Workspace applications' }).getByRole('link', { name: name === 'Mail' ? 'Inbox' : name, exact: true }).click()
       const header = page.locator('.app-page-header')
       await expect(header).toBeVisible()
-      const action = header.getByRole('button')
+      const action = header.locator('.new-action')
       await expect(action).toHaveText('New')
       await expect(action.locator('svg')).toHaveCount(1)
       await expect(header.getByRole('heading')).toHaveCSS('font-size', '20px')
@@ -167,7 +167,7 @@ test('app sidebars share the same desktop breakpoint', async ({ page }) => {
       const sidebar = page.locator(selector)
       if (width === 900) {
         await expect(page.locator('.app-sidebar:not(.app-sidebar-inline)')).toBeHidden()
-        await page.getByRole('button', {name:'Browse',exact:true}).click()
+        await page.getByRole('button', { name: /^Switch [a-z]+ · / }).click()
         const menu = page.getByRole('dialog')
         await expect(menu).toBeVisible()
         await expect(menu.getByRole('complementary')).toBeVisible()
