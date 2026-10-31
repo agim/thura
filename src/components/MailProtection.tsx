@@ -93,7 +93,7 @@ function personLine(s:MailScreeningView){
  switch(s.personState){
  case 'person': return s.personSource==='ai'?'Real person':`Real person · ${s.personDetail}`
  // Not a warning: automated mail (no-reply, lists, alerts) is screened like any other and never held for it.
- case 'automated': return `Not from a person · Automated: ${s.personDetail}`
+ case 'automated': return `Not from a person · ${s.personDetail}`
  case 'unknown': return 'Not recognised as a real person'
  case 'pending': return 'Real person check pending'
  default: return ''

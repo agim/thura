@@ -78,7 +78,7 @@ for (const width of [390, 1440]) {
       await page.locator('.mailrow').filter({ hasText: personal }).waitFor()
       await page.goBack()
       await page.locator('.mailrow').filter({ hasText: newsletter }).click()
-      await expect(protection).toContainText('Automated: List-Unsubscribe header')
+      await expect(protection).toContainText('Not from a person · List-Unsubscribe header')
 
       // Unpin in Settings → Labels; it stays unpinned after a reload and in Mail.
       await page.goto('/app/settings/labels')

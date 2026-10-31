@@ -226,11 +226,6 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 			if classification.SenderKind != nil {
 				aiKind = *classification.SenderKind
 			}
-			if classification.Category == "unknown" {
-				failed = true
-				ai = "uncertain"
-				aiKind = ""
-			}
 			severity := "info"
 			if classification.Risk >= int(p.SpamThreshold) {
 				severity = "danger"
@@ -239,10 +234,30 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 			if (classification.Category == "phishing" || classification.Category == "malware") && risk < 80 {
 				risk = 80
 			}
-			if classification.Category == "unknown" && risk < 70 {
-				risk = 70
+			switch {
+			case aiRetry && classification.Category == "unknown":
+				// Already delivered: an uncertain late verdict is recorded and
+				// leaves the message in place; only danger pulls it back.
+				ai = "uncertain"
+				aiKind = ""
+				e.add("ai_uncertain_after_delivery", "info", "AI review uncertain after delivery: "+classification.Explanation, 0)
+			case aiRetry && (classification.Category == "spam" || classification.Category == "phishing" || classification.Category == "malware"):
+				// A late spam, phishing or malware verdict always quarantines.
+				if risk < int(p.SpamThreshold) {
+					risk = int(p.SpamThreshold)
+				}
+				e.add("ai_assessment", "danger", classification.Category+": "+classification.Explanation, risk)
+			default:
+				if classification.Category == "unknown" {
+					failed = true
+					ai = "uncertain"
+					aiKind = ""
+					if risk < 70 {
+						risk = 70
+					}
+				}
+				e.add("ai_assessment", severity, classification.Category+": "+classification.Explanation, risk)
 			}
-			e.add("ai_assessment", severity, classification.Category+": "+classification.Explanation, risk)
 		}
 	}
 	finish, err := db.From(ctx).Begin(ctx)

@@ -164,6 +164,20 @@ func TestAIFailureDeliversOnlyVerifiedCleanMail(t *testing.T) {
 		t.Fatalf("late danger verdict did not quarantine: %+v folder %s", got.Screening, got.Item.Folder)
 	}
 
+	// A late uncertain verdict is not a danger verdict: the delivered message
+	// stays in the Inbox with an info finding.
+	late := relayWithEnvelope(t, n, "fallback-late-unknown", message("Usage report late"), envelope, envelope, 200)
+	fake.Reply("the model connection dropped")
+	runScreening(t, n, late)
+	n.server.Clock.Advance(10 * time.Minute)
+	screenAbuse(t, n, late, 75, "unknown")
+	if got = n.detail(t, late); got.Screening.State != "clean" || got.Item.Folder != schema.MailFolderInbox || got.Screening.AiState != "uncertain" {
+		t.Fatalf("late uncertain verdict pulled delivered mail back: %+v folder %s", got.Screening, got.Item.Folder)
+	}
+	if f := finding(got.Screening, "ai_uncertain_after_delivery"); f == nil || f.Severity != "info" || !strings.Contains(f.Detail, "AI review uncertain after delivery") {
+		t.Fatalf("late uncertain verdict not recorded: %+v", got.Screening.Findings)
+	}
+
 	// An unverified sender is held when the model fails, as before.
 	setSymbols(trustFailSymbols)
 	forged := relayWithEnvelope(t, n, "fallback-unverified", message("Usage report again"), envelope, envelope, 200)
