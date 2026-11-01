@@ -448,6 +448,9 @@
 #orbit-workspace.zero-workspace .settings-form > h3 { margin: 0; }
 #orbit-workspace.zero-workspace .settings-form :is(input,select,textarea):not([type=checkbox]) { width: 100%; }
 #orbit-workspace.zero-workspace .settings-form textarea { min-height: 120px; }
+#orbit-workspace.zero-workspace .smip-settings .smip-address { display:flex; align-items:center; gap:4px; min-width:0; }
+#orbit-workspace.zero-workspace .smip-settings .smip-address > span { color:var(--quiet); overflow-wrap:anywhere; }
+#orbit-workspace.zero-workspace .smip-settings li { overflow-wrap:anywhere; }
 #orbit-workspace.zero-workspace :is(.settings-form,.settings-mailbox) label, #orbit-workspace.zero-workspace label.settings-mailbox { display: flex; flex-direction: column; gap: 7px; }
 #orbit-workspace.zero-workspace .settings-form label:has(>input[type=checkbox]) { flex-direction: row; align-items: center; }
 #orbit-workspace.zero-workspace .settings-form input[type=checkbox] { width: 18px; height: 18px; }

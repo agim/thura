@@ -1045,6 +1045,16 @@ type SmipBindingList {
   items SmipBinding[]
   sendablePeers string[]
   configured bool
+  // The local SMIP/0.1 domain, the paired peers a stream can be authorized
+  // for and the workspace's shared mailboxes as local recipient addresses,
+  // so the operator form offers choices instead of free text.
+  domain string
+  peers string[]
+  recipients SmipRecipientOption[]
+}
+type SmipRecipientOption {
+  address string
+  mailbox string
 }
 type SmipInboxItem {
   id uuid

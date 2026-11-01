@@ -592,6 +592,11 @@ Why: A long legitimate alert from a verified no-reply sender was held because th
 
 Touches: internal/assistant/mail.go, internal/mailabuse/evidence.go, internal/mailabuse/worker.go, internal/mailabuse/review.go, src/components/MailProtection.tsx, docs/mail-protection.md
 
+## 2026-10-31: SMIP streams move from Chat to owner/admin Settings
+
+Why: A regular member saw the SMIP review panel (four free-text fields, outgoing packets, import) at the bottom of Chat with nothing they could do there. Bindings are workspace-scoped and owner/admin-authorized (the SMIP peers admin page is server-wide), so the panel moved to Settings → SMIP streams, listed only for owners and admins; GET /bindings now refuses members like POST and DELETE already did. It shows one setup pointer when SMIP is off and a pairing pointer when no peer is paired. The server lists paired peers with an unrevoked key and the workspace's shared mailboxes at the SMIP domain, so peer and local recipient are selects; stream and sender name stay validated free text because a peer does not publish them. Inbox, outbox and import routes keep their member access for the API; Chat keeps its small, general Matrix server-readable notice.
+
+Touches: src/components/SmipSettings.tsx, src/components/LiveChat.tsx, src/components/WorkspaceSettings.tsx, internal/federation/review.go, schema.lidza SmipBindingList
 ## 2026-10-31: Default the LiveKit URLs instead of requiring them
 
 Why: A real deployment failed with every LiveKit setting present. LIVEKIT_PUBLIC_URL now defaults to wss://<APP_URL host>/rtc (the stack's /rtc route), LIVEKIT_SERVER_URL to http://127.0.0.1:7880 only when deploy/compact runs LiveKit beside Thura (THURA_BUNDLED_LIVEKIT), and an empty process variable no longer hides a saved setting (Compose passes it through empty). An explicit value always wins. The CSP follows the settings, rechecked at most once a second, so admin-page changes need no restart.
@@ -604,3 +609,8 @@ Touches: db/queries/mail.sql, handlers/mail.go, src/components/LiveMail.tsx, src
 ## 2026-10-31: Members see member wording, not operator wording
 
 Why: An audit found members reading admin forms and operator text (setting names, Postfix/Rspamd/ClamAV/SMIP, Matrix/LiveKit/Collabora errors, provider delivery replies, storage keys). Server: provider errors go through internal/platform/providererr; Meet's unavailable reason only for setup.Allow; mail views drop configPrefix, providerId, rawKey and externalId (nothing reads them; the relay ingress keeps them) and give members a plain delivery reason and recipient state while owners and admins keep the provider text and SMIP route (MailDetail.canManage); AI settings hide provider and model from non-administrators. Developer decisions enforced on the server: a shared mailbox's sender name and signature change only for workspace owners and admins (a private mailbox stays its owner's), and only owners and admins delete a workspace label while any member creates and applies one; the Real person system label stays undeletable. The UI hides what the server refuses: no AI or protection form, no Teams and domains category (setupStatus.administrator), a disabled shared-mailbox form with a note, no label delete.
+## 2026-10-31: SMIP inbox, outbox, import and queue routes for owners and admins only
+
+Why: The developer decided the whole SMIP workspace API is operator plumbing, matching the Settings → SMIP streams screen: listing and reading the inbox, importing a file, queueing a send and listing the outbox now require owner/admin (workspace.RequireManager, or the workspace-locked role check), and members get 403. The dispatch worker still rechecks only that the originating actor is a current member before an attempt.
+
+Touches: internal/federation/review.go, internal/federation/send.go, tests/smip_stream_access_test.go

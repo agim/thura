@@ -200,6 +200,9 @@ func MailAddressAt(address, domain string) bool {
 	local, host, ok := strings.Cut(address, "@")
 	return err == nil && parsed.Address == address && ok && local != "" && len(local) <= 64 && host == domain && validDomain(domain) && !strings.ContainsAny(address, "\r\n\x00")
 }
+
+// AddressAt reports whether address is a SMIP/0.1 service identity at domain.
+func AddressAt(address, domain string) bool                          { return addressAt(address, domain) }
 func ValidDomain(domain string) bool                                 { return validDomain(domain) }
 func NewReceipt(p Packet, key ed25519.PrivateKey, now int64) Receipt { return receiptFor(p, key, now) }
 func DecodePacket(raw []byte) (Packet, error) {

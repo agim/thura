@@ -1,12 +1,11 @@
 import { chooseOption } from './controls'
 import { expect, test, type Page } from '@playwright/test'
 
-async function openChat(page: Page) {
-  await page.goto('/app')
+async function openSmipSettings(page: Page) {
+  await page.goto('/app/settings/smip')
   await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
   await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByRole('link', { name: 'Chat', exact: true }).click()
 }
 const at = '2026-10-08T12:00:00Z'
 const bindingID = '11111111-1111-4111-8111-111111111111'
@@ -31,7 +30,7 @@ test('SMIP safely reviews text and requires explicit file import with retry', as
     imported = true
     await route.fulfill({ json: { id: fileID, workspaceId: route.request().url().split('/workspaces/')[1].split('/')[0], name: 'receipt.bin', contentType: 'application/octet-stream', size: 9, currentVersion: 1, trashed: false, createdAt: at, updatedAt: at } })
   })
-  await openChat(page)
+  await openSmipSettings(page)
   const review = page.getByRole('region', { name: 'SMIP review' })
   await expect(review.getByText(unsafe, { exact: true })).toBeVisible()
   await expect(review.locator('img')).toHaveCount(0)
@@ -49,7 +48,7 @@ test('SMIP hides retained review content after authorization failure', async ({ 
   let denied = false
   await page.route('**/smip/bindings', route => route.fulfill({ json: { configured: true, items: [] } }))
   await page.route('**/smip/inbox?**', route => route.fulfill(denied ? { status: 404, json: { error: 'workspace not found' } } : { json: { nextCursor: '', items: [{ id: transferID, bindingId: bindingID, origin: 'peer.example', messageId: 'private-chat', sender: 'team@peer.example', recipient: 'team@local.example', stream: 'private', kind: 'chat', body: 'Private accepted content', name: '', size: 24, digest: 'c'.repeat(64), acceptedAt: at }] } }))
-  await openChat(page)
+  await openSmipSettings(page)
   const review = page.getByRole('region', { name: 'SMIP review' })
   await expect(review.getByText('Private accepted content', { exact: true })).toBeVisible()
   denied = true
@@ -77,7 +76,7 @@ test('SMIP send retries keep the same intent and distinguish queued from accepte
     }
     await route.fulfill({ json: { items: queued ? [entry()] : [], nextCursor: '' } })
   })
-  await openChat(page)
+  await openSmipSettings(page)
   const review = page.getByRole('region', { name: 'SMIP review' })
   await chooseOption(review.getByLabel('SMIP destination'), bindingID)
   await review.getByLabel('SMIP message').fill('A signed chat')
@@ -109,7 +108,7 @@ test('SMIP cancellation recovers failed responses and never offers recall after 
     cancelled = true // Server committed, but the first response was lost.
     return route.fulfill(cancelCalls === 1 ? { status: 500, json: { error: 'Cancellation response lost' } } : { json: entry(transferID, 'Withdraw this copy', 'cancelled', 0) })
   })
-  await openChat(page)
+  await openSmipSettings(page)
   const review = page.getByRole('region', { name: 'SMIP review' })
   await expect(review.getByRole('button', { name: `Cancel ${attemptedID}`, exact: true })).toHaveCount(0)
   await review.getByRole('button', { name: `Cancel ${transferID}`, exact: true }).click()
