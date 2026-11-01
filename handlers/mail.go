@@ -52,7 +52,7 @@ func ReceiveMail(ctx context.Context, r *router.Request[router.File]) (schema.Ma
 		return schema.MailItem{}, err
 	}
 	item, err := mailbox.Receive(ctx, id, r.Raw.Header.Get("X-Thura-Timestamp"), r.Raw.Header.Get("X-Thura-Delivery"), r.Raw.Header.Get("X-Thura-Signature"), r.Raw.Header.Get("X-Thura-Envelope"), raw)
-	return mailbox.View(item), err
+	return mailbox.RelayView(item), err
 }
 func ListMail(ctx context.Context, r *router.Request[router.None]) (schema.MailItemList, error) {
 	if _, err := mailbox.Access(ctx, r.Param("workspaceId"), r.Param("mailboxId")); err != nil {
@@ -103,10 +103,10 @@ func ListMail(ctx context.Context, r *router.Request[router.None]) (schema.MailI
 	}
 	if labelView {
 		rows, err := queries.New(db.From(ctx)).ListLabeledMailPage(ctx, queries.ListLabeledMailPageParams{MailboxID: r.Param("mailboxId"), LabelID: *labelID, IncludeSpamTrash: includeSpamTrash, Search: page.Search, BeforeTime: before, BeforeID: beforeID, PageLimit: page.Limit + 1})
-		return mailPage(rows, page.Limit), err
+		return mailPage(rows, page.Limit, workspace.IsManager(ctx, r.Param("workspaceId"))), err
 	}
 	rows, err := queries.New(db.From(ctx)).ListMailItemsPage(ctx, queries.ListMailItemsPageParams{MailboxID: r.Param("mailboxId"), Folder: folder, LabelID: labelID, Search: page.Search, BeforeTime: before, BeforeID: beforeID, PageLimit: page.Limit + 1})
-	return mailPage(rows, page.Limit), err
+	return mailPage(rows, page.Limit, workspace.IsManager(ctx, r.Param("workspaceId"))), err
 }
 
 type mailCursor struct {
@@ -120,7 +120,8 @@ func GetMail(ctx context.Context, r *router.Request[router.None]) (schema.MailDe
 		return schema.MailDetail{}, err
 	}
 	rows, err := queries.New(db.From(ctx)).ListMailAttachments(ctx, i.ID)
-	out := schema.MailDetail{Item: mailbox.View(i), Attachments: []schema.AttachmentView{}, Labels: []schema.MailLabel{}, Deliveries: []schema.MailDeliveryView{}}
+	manager := workspace.IsManager(ctx, r.Param("workspaceId"))
+	out := schema.MailDetail{Item: mailbox.ReaderView(i, manager), CanManage: manager, Attachments: []schema.AttachmentView{}, Labels: []schema.MailLabel{}, Deliveries: []schema.MailDeliveryView{}}
 	for _, a := range rows {
 		out.Attachments = append(out.Attachments, mailbox.Attachment(a))
 	}
@@ -136,7 +137,13 @@ func GetMail(ctx context.Context, r *router.Request[router.None]) (schema.MailDe
 	}
 	deliveries, err := smipmail.Deliveries(ctx, i.ID)
 	for _, d := range deliveries {
-		out.Deliveries = append(out.Deliveries, schema.MailDeliveryView{ID: d.ID, Recipient: d.Recipient, Transport: d.Route, State: d.State, Reason: d.Reason, Attempts: int(d.Attempts), UpdatedAt: d.UpdatedAt})
+		view := schema.MailDeliveryView{ID: d.ID, Recipient: d.Recipient, Transport: d.Route, State: d.State, Reason: d.Reason, Attempts: int(d.Attempts), UpdatedAt: d.UpdatedAt}
+		if !manager {
+			// A member sees whom it reached and whether; the route and the
+			// SMIP reason codes are for the managers who can act on them.
+			view.Transport, view.Reason, view.Attempts = "", "", 0
+		}
+		out.Deliveries = append(out.Deliveries, view)
 	}
 	if err != nil {
 		return out, err
@@ -154,7 +161,7 @@ func CreateMailDraft(ctx context.Context, r *router.Request[schema.DraftInput]) 
 	if err == nil {
 		r.Status(http.StatusCreated)
 	}
-	return mailbox.View(i), err
+	return mailbox.ReaderView(i, workspace.IsManager(ctx, r.Param("workspaceId"))), err
 }
 func UpdateMailDraft(ctx context.Context, r *router.Request[schema.DraftInput]) (schema.MailItem, error) {
 	i, err := mailbox.ItemAccess(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Param("id"))
@@ -175,7 +182,7 @@ func UpdateMailDraft(ctx context.Context, r *router.Request[schema.DraftInput]) 
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = router.Errorf(409, "draft changed while saving")
 	}
-	return mailbox.View(i), err
+	return mailbox.ReaderView(i, workspace.IsManager(ctx, r.Param("workspaceId"))), err
 }
 func UpdateMailFlags(ctx context.Context, r *router.Request[schema.MailFlags]) (schema.MailItem, error) {
 	tx, q, i, err := mailbox.Lock(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Param("id"))
@@ -211,7 +218,7 @@ func UpdateMailFlags(ctx context.Context, r *router.Request[schema.MailFlags]) (
 	if err != nil {
 		return schema.MailItem{}, err
 	}
-	return mailbox.View(i), tx.Commit(ctx)
+	return mailbox.ReaderView(i, workspace.IsManager(ctx, r.Param("workspaceId"))), tx.Commit(ctx)
 }
 func SendMail(ctx context.Context, r *router.Request[schema.SendMailInput]) (schema.MailItem, error) {
 	return mailbox.Queue(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Param("id"), r.Body)
@@ -299,7 +306,7 @@ func ListMailThread(ctx context.Context, r *router.Request[router.None]) (schema
 		return schema.MailItemList{}, err
 	}
 	rows, err := queries.New(db.From(ctx)).ListMailThreadPage(ctx, queries.ListMailThreadPageParams{MailboxID: item.MailboxID, ItemID: item.ID, ThreadID: item.ThreadID, BeforeTime: before, BeforeID: beforeID, PageLimit: page.Limit + 1})
-	return mailPage(rows, page.Limit), err
+	return mailPage(rows, page.Limit, workspace.IsManager(ctx, r.Param("workspaceId"))), err
 }
 
 func readMailCursor(value string) (*time.Time, string, error) {
@@ -316,7 +323,7 @@ func readMailCursor(value string) (*time.Time, string, error) {
 	return &cursor.Time, cursor.ID, nil
 }
 
-func mailPage(rows []queries.MailItem, limit int32) schema.MailItemList {
+func mailPage(rows []queries.MailItem, limit int32, manager bool) schema.MailItemList {
 	out := schema.MailItemList{Items: []schema.MailItem{}}
 	if len(rows) > int(limit) {
 		last := rows[limit-1]
@@ -324,7 +331,7 @@ func mailPage(rows []queries.MailItem, limit int32) schema.MailItemList {
 		rows = rows[:limit]
 	}
 	for _, row := range rows {
-		out.Items = append(out.Items, mailbox.View(row))
+		out.Items = append(out.Items, mailbox.ReaderView(row, manager))
 	}
 	return out
 }

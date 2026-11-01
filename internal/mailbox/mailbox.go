@@ -115,7 +115,7 @@ func ViewMailbox(m queries.Mailbox) schema.Mailbox {
 // outgoing mail uses when the mailbox sets none (mailaccess.SenderDefault).
 func MailboxView(ctx context.Context, q *queries.Queries, m queries.Mailbox) (schema.MailboxView, error) {
 	fallback, err := mailaccess.SenderDefault(ctx, q, m)
-	return schema.MailboxView{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, ConfigPrefix: m.ConfigPrefix, Private: m.Private, OwnerSubject: m.OwnerSubject, Signature: m.Signature, SenderName: m.SenderName, SenderDefault: fallback, CreatedAt: m.CreatedAt}, err
+	return schema.MailboxView{ID: m.ID, WorkspaceID: m.WorkspaceID, Name: m.Name, Address: m.Address, Private: m.Private, OwnerSubject: m.OwnerSubject, Signature: m.Signature, SenderName: m.SenderName, SenderDefault: fallback, CreatedAt: m.CreatedAt}, err
 }
 
 // UpdateSettings saves the mailbox's signature and, when given, its sender
@@ -124,6 +124,13 @@ func UpdateSettings(ctx context.Context, workspaceID, mailboxID string, in schem
 	box, err := Access(ctx, workspaceID, mailboxID)
 	if err != nil {
 		return schema.MailboxView{}, err
+	}
+	// A shared mailbox speaks for the workspace: only its owners and admins
+	// change how it signs. A private mailbox is its owner's own.
+	if !box.Private {
+		if err = workspace.RequireManager(ctx, workspaceID); err != nil {
+			return schema.MailboxView{}, err
+		}
 	}
 	name := box.SenderName
 	if in.SenderName != nil {
@@ -140,12 +147,48 @@ func UpdateSettings(ctx context.Context, workspaceID, mailboxID string, in schem
 	}
 	return MailboxView(ctx, q, box)
 }
-func View(i queries.MailItem) schema.MailItem {
+
+// RelayView is the stored message with its storage and provider keys, for
+// the signed relay ingress only; people read View.
+func RelayView(i queries.MailItem) schema.MailItem {
 	formatted := ReaderHTML(i.HTMLBody)
 	if i.Folder == queries.MailFolderDrafts {
 		formatted = richtext.Clean(i.HTMLBody)
 	}
 	return schema.MailItem{ID: i.ID, MailboxID: i.MailboxID, AuthorID: i.AuthorID, Folder: schema.MailFolder(i.Folder), FromAddress: i.FromAddress, ToAddress: i.ToAddress, Cc: i.Cc, Bcc: i.Bcc, Subject: i.Subject, TextBody: i.TextBody, HTMLBody: formatted, Status: i.Status, Starred: i.Starred, Unread: i.Unread, ProviderID: i.ProviderID, DeliveryReason: i.DeliveryReason, RawKey: i.RawKey, ExternalID: i.ExternalID, ThreadID: i.ThreadID, MessageID: i.MessageID, InReplyTo: i.InReplyTo, ReferencesHeader: i.ReferencesHeader, SendAt: i.SendAt, CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt}
+}
+
+// View is the message as a member reads it: no object key, provider message
+// ID or relay delivery ID (nothing in the app reads them), and the delivery
+// reason in plain words (MemberReason).
+func View(i queries.MailItem) schema.MailItem {
+	return ReaderView(i, false)
+}
+
+// ReaderView is View for a reader who may be a workspace manager: owners
+// and admins keep the provider's delivery reason, which they can act on.
+func ReaderView(i queries.MailItem, manager bool) schema.MailItem {
+	out := RelayView(i)
+	out.ProviderID, out.RawKey, out.ExternalID = "", "", nil
+	if !manager {
+		out.DeliveryReason = MemberReason(i.Status, i.DeliveryReason)
+	}
+	return out
+}
+
+// MemberReason words a delivery outcome for a member. The stored reason is
+// the provider's text (addresses, status codes, SMTP replies): it stays for
+// managers and in the log.
+func MemberReason(status, stored string) string {
+	switch {
+	case stored == "":
+		return ""
+	case status == "delivery_uncertain":
+		return "Delivery status unknown"
+	case status == "delivery_blocked" || status == "failed":
+		return "Not delivered. Try again or contact your administrator."
+	}
+	return ""
 }
 func Attachment(a queries.MailAttachment) schema.AttachmentView {
 	return schema.AttachmentView{ID: a.ID, Name: a.Name, ContentType: a.ContentType, Size: int(a.Size), ContentID: ContentID(a.ContentID)}

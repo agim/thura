@@ -8,7 +8,7 @@ test('Meet requires a configured service and does not claim a simulated call', a
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('link', { name: 'Meet', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Meet', exact: true })).toBeVisible()
-  await expect(page.getByRole('status')).toContainText('Meet service is not configured')
+  await expect(page.getByRole('status')).toContainText('Meetings aren’t available yet. Ask your administrator.')
   await page.getByRole('button', { name: 'New meeting', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Create meeting', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: 'Close New meeting', exact: true }).click()

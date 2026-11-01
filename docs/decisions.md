@@ -606,6 +606,9 @@ Why: The user asked for Gmail labels: clicking a label showed only that label's 
 
 Touches: db/queries/mail.sql, handlers/mail.go, src/components/LiveMail.tsx, src/components/LiveDrive.tsx, src/components/LiveCalendar.tsx, src/lib/app-view.ts
 
+## 2026-10-31: Members see member wording, not operator wording
+
+Why: An audit found members reading admin forms and operator text (setting names, Postfix/Rspamd/ClamAV/SMIP, Matrix/LiveKit/Collabora errors, provider delivery replies, storage keys). Server: provider errors go through internal/platform/providererr; Meet's unavailable reason only for setup.Allow; mail views drop configPrefix, providerId, rawKey and externalId (nothing reads them; the relay ingress keeps them) and give members a plain delivery reason and recipient state while owners and admins keep the provider text and SMIP route (MailDetail.canManage); AI settings hide provider and model from non-administrators. Developer decisions enforced on the server: a shared mailbox's sender name and signature change only for workspace owners and admins (a private mailbox stays its owner's), and only owners and admins delete a workspace label while any member creates and applies one; the Real person system label stays undeletable. The UI hides what the server refuses: no AI or protection form, no Teams and domains category (setupStatus.administrator), a disabled shared-mailbox form with a note, no label delete.
 ## 2026-10-31: SMIP inbox, outbox, import and queue routes for owners and admins only
 
 Why: The developer decided the whole SMIP workspace API is operator plumbing, matching the Settings → SMIP streams screen: listing and reading the inbox, importing a file, queueing a send and listing the outbox now require owner/admin (workspace.RequireManager, or the workspace-locked role check), and members get 403. The dispatch worker still rechecks only that the originating actor is a current member before an attempt.

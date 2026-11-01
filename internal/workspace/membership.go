@@ -321,6 +321,13 @@ func Revoke(ctx context.Context, id, invitationID string) error {
 	return tx.Commit(ctx)
 }
 
+// IsManager reports whether the signed-in user is an owner or admin of the
+// workspace: for choosing what a reply shows, never for allowing a change
+// (RequireManager does that).
+func IsManager(ctx context.Context, id string) bool {
+	return RequireManager(ctx, id) == nil
+}
+
 func RequireManager(ctx context.Context, id string) error {
 	if err := RequireMember(ctx, id); err != nil {
 		return err
