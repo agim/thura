@@ -1,5 +1,4 @@
 import { expect, test, type Page } from '@playwright/test'
-import { chooseOption } from './controls'
 import { expectNoSidewaysScroll } from './layout'
 
 // SMIP streams are operator plumbing: they live in Settings → SMIP streams,
@@ -53,17 +52,10 @@ for (const width of [390, 1440]) {
     await expectNoSidewaysScroll(page)
   })
 
-  test(`an admin authorizes a stream from Settings with choices at ${width}px`, async ({ page }) => {
+  test(`an admin sees legacy streams without the free-text form at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
-    const posts: Record<string, string>[] = []
-    await page.route('**/smip/bindings', async route => {
-      if (route.request().method() === 'POST') {
-        const body = route.request().postDataJSON()
-        posts.push(body)
-        return route.fulfill({ json: { id: body.requestId, workspaceId: 'w', peer: body.peer, stream: body.stream, sender: body.sender, recipient: body.recipient, enabled: true, createdBy: 'owner', createdAt: '2026-10-08T12:00:00Z' } })
-      }
-      return route.fulfill({ json: enabled })
-    })
+    const posts: unknown[] = []
+    await page.route('**/smip/bindings', route => { if (route.request().method() === 'POST') posts.push(route.request().postDataJSON()); return route.fulfill({ json: enabled }) })
     await page.route('**/smip/inbox?**', route => route.fulfill({ json: empty }))
     await page.route('**/smip/outbox?**', route => route.fulfill({ json: empty }))
     await signIn(page, '/app/chat')
@@ -73,29 +65,17 @@ for (const width of [390, 1440]) {
     await openSmipSettings(page)
     const review = page.getByRole('region', { name: 'SMIP review' })
     await expect(review.getByRole('heading', { name: 'SMIP streams · Experimental', exact: true })).toBeVisible()
-    // Peer, recipient and import folder are choices, not free text.
-    for (const name of ['Peer domain', 'Local recipient', 'Import folder']) await expect(review.getByRole('combobox', { name, exact: true })).toBeVisible()
-    await expect(review.getByRole('textbox', { name: 'Peer domain', exact: true })).toHaveCount(0)
-    await expect(review.getByRole('textbox', { name: 'Local recipient', exact: true })).toHaveCount(0)
-    // The long caveats wait behind Details.
+    // The free-text stream authorization is gone; new conversations are per person.
+    await expect(review.getByRole('button', { name: 'Authorize SMIP stream', exact: true })).toHaveCount(0)
+    await expect(review.getByLabel('Remote stream', { exact: true })).toHaveCount(0)
+    await expect(review.getByLabel('Remote sender', { exact: true })).toHaveCount(0)
+    await expect(review.getByRole('link', { name: 'External sharing', exact: true })).toHaveAttribute('href', '/app/settings/external')
+    await expect(review.getByRole('status')).toHaveText('This workspace has no streams. New external conversations start in Chat.')
+    await expect(review.getByRole('combobox', { name: 'Import folder', exact: true })).toBeVisible()
     await expect(review.getByText('Both servers can read the content', { exact: false })).toBeHidden()
     await review.getByText('Details', { exact: true }).click()
     await expect(review.getByText('Both servers can read the content', { exact: false })).toBeVisible()
-
-    await chooseOption(review.getByRole('combobox', { name: 'Peer domain', exact: true }), 'peer.example')
-    await chooseOption(review.getByRole('combobox', { name: 'Local recipient', exact: true }), 'team@local.example')
-    await review.getByLabel('Remote stream', { exact: true }).fill('team chat!')
-    await review.getByLabel('Remote sender', { exact: true }).fill('team')
-    await review.getByRole('button', { name: 'Authorize SMIP stream', exact: true }).click()
-    await expect(review.getByRole('alert')).toContainText('Remote stream: 1 to 128 letters')
     expect(posts).toHaveLength(0)
-    await review.getByLabel('Remote stream', { exact: true }).fill('team-chat')
-    await review.getByRole('button', { name: 'Authorize SMIP stream', exact: true }).click()
-    await expect(page.locator('.app-notice').filter({ hasText: 'Authorized' })).toHaveText('Authorized team@peer.example → team@local.example on stream team-chat.')
-    expect(posts).toHaveLength(1)
-    expect(posts[0]).toMatchObject({ peer: 'peer.example', stream: 'team-chat', sender: 'team@peer.example', recipient: 'team@local.example' })
-    await expect(review.getByLabel('Remote stream', { exact: true })).toHaveValue('')
-    await expect(review.getByLabel('Remote sender', { exact: true })).toHaveValue('')
     await expectNoSidewaysScroll(page)
   })
 

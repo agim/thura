@@ -120,34 +120,24 @@ for (const width of [390, 1440]) {
     await expect(page.getByText(fixture.teamBox.name)).toHaveCount(0)
   })
 
-  test(`authorizing a SMIP stream clears the form and confirms at ${width}px`, async ({ page }) => {
+  test(`saving the external sharing policy confirms and keeps the choices at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
-    const peer = `${randomUUID()}.example`
-    let created: Record<string, string> | undefined
-    await page.route('**/smip/bindings', async route => {
-      if (route.request().method() === 'POST') {
-        const body = route.request().postDataJSON()
-        created = body
-        return route.fulfill({ status: 201, json: { id: randomUUID(), workspaceId: workspace, peer: body.peer, stream: body.stream, sender: body.sender, recipient: body.recipient, enabled: true, createdBy: 'owner', createdAt: '2026-10-08T12:00:00Z' } })
-      }
-      return route.fulfill({ json: { configured: true, domain: 'local.example', peers: [peer], recipients: [{ address: 'team@local.example', mailbox: 'Team mail' }], sendablePeers: [], items: [] } })
+    let saved: Record<string, unknown> | undefined
+    const policy = { configured: true, domain: 'local.example', chat: 'listed', files: 'listed', domains: [], blocked: [], conversations: [], updatedBy: '', updatedAt: null }
+    await page.route('**/smip/policy', route => {
+      if (route.request().method() === 'PUT') { saved = route.request().postDataJSON(); return route.fulfill({ json: { ...policy, ...saved, updatedAt: '2026-11-01T12:00:00Z' } }) }
+      return route.fulfill({ json: policy })
     })
-    await page.route('**/smip/inbox?**', route => route.fulfill({ json: { nextCursor: '', items: [] } }))
-    await page.route('**/smip/outbox?**', route => route.fulfill({ json: { nextCursor: '', items: [] } }))
-    await page.goto('/app/settings/smip')
-    await page.getByLabel('Email', { exact: true }).fill('owner-e2e@example.com')
-    await page.getByLabel('Password', { exact: true }).fill('thura fixture maple lantern 4829')
-    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-    const review = page.getByRole('region', { name: 'SMIP review' })
-    await chooseOption(review.getByRole('combobox', { name: 'Peer domain', exact: true }), peer)
-    await chooseOption(review.getByRole('combobox', { name: 'Local recipient', exact: true }), 'team@local.example')
-    const fields = { 'Remote stream': 'team-chat', 'Remote sender': 'team' }
-    for (const [label, value] of Object.entries(fields)) await review.getByLabel(label, { exact: true }).fill(value)
-    await review.getByRole('button', { name: 'Authorize SMIP stream', exact: true }).click()
-    await expect(page.locator('.app-notice').filter({ hasText: 'Authorized' })).toHaveText(`Authorized team@${peer} → team@local.example on stream team-chat.`)
-    for (const label of Object.keys(fields)) await expect(review.getByLabel(label, { exact: true })).toHaveValue('')
-    await expect(review.getByRole('combobox', { name: 'Peer domain', exact: true })).toContainText('Choose a paired server')
-    await expect(review.getByRole('combobox', { name: 'Local recipient', exact: true })).toContainText('Choose a shared mailbox')
-    expect(created).toMatchObject({ peer, stream: 'team-chat', sender: `team@${peer}`, recipient: 'team@local.example' })
+    await page.route('**/smip/conversations', route => route.fulfill({ json: { configured: true, address: '', chat: 'listed', files: 'listed', manager: true, items: [] } }))
+    await signIn(page, '/app/settings/external')
+    const form = page.getByRole('region', { name: 'External sharing policy', exact: true })
+    await chooseOption(form.getByRole('combobox', { name: 'External file sharing', exact: true }), 'off')
+    await form.getByRole('button', { name: 'Add domain', exact: true }).click()
+    await form.getByLabel('Domain 1', { exact: true }).fill('partner.example')
+    await form.getByRole('button', { name: 'Save policy', exact: true }).click()
+    await expect(page.locator('.app-notice').filter({ hasText: 'saved' })).toHaveText('External sharing policy saved.')
+    expect(saved).toEqual({ chat: 'listed', files: 'off', domains: ['partner.example'] })
+    await expect(form.getByRole('combobox', { name: 'External file sharing', exact: true })).toContainText('Off')
+    await expect(form.getByLabel('Domain 1', { exact: true })).toHaveValue('partner.example')
   })
 }
