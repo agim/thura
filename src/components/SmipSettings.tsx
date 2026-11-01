@@ -113,6 +113,6 @@ function SmipStreams({ workspaceId }: { workspaceId: string }) {
 }
 
 function reasonText(reason: string): string {
-  const explanations: Record<string, string> = { membership_revoked: 'The sender no longer belongs to the workspace', binding_disabled: 'Workspace consent was withdrawn', binding_changed: 'The paired stream configuration changed', origin_key_unavailable: 'An operator must restore signing-key trust', peer_unconfigured: 'The peer endpoint needs operator configuration', retry_budget_exhausted: 'The operator must reconcile with the peer', invalid_packet: 'The stored packet failed verification', transport_uncertain: 'The transport outcome could not be verified' }
+  const explanations: Record<string, string> = { membership_revoked: 'The sender no longer belongs to the workspace', role_revoked: 'The sender is no longer a workspace owner or admin', binding_disabled: 'Workspace consent was withdrawn', binding_changed: 'The paired stream configuration changed', origin_key_unavailable: 'An operator must restore signing-key trust', peer_unconfigured: 'The peer endpoint needs operator configuration', retry_budget_exhausted: 'The operator must reconcile with the peer', invalid_packet: 'The stored packet failed verification', transport_uncertain: 'The transport outcome could not be verified' }
   return explanations[reason] || (reason.startsWith('peer_http_') ? 'The peer refused or could not complete the attempt' : 'Operator review is required')
 }

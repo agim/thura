@@ -79,12 +79,22 @@ func Dispatch(ctx context.Context, raw json.RawMessage) error {
 	if err != nil {
 		return err
 	}
+	// Queueing is for owners and admins, so a requester demoted to member
+	// since queueing is blocked too.
+	role := ""
+	if member {
+		if role, err = queries.WorkspaceRole(ctx, q.WorkspaceRoleParams{Scope: row.WorkspaceID, Subject: row.Subject}); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+	}
 	binding, err := queries.GetSmipBinding(ctx, q.GetSmipBindingParams{WorkspaceID: row.WorkspaceID, ID: row.BindingID})
 	if err != nil {
 		return err
 	}
 	if !member {
 		reason = "membership_revoked"
+	} else if role != "owner" && role != "admin" {
+		reason = "role_revoked"
 	} else if !binding.Enabled {
 		reason = "binding_disabled"
 	} else if packetErr != nil {

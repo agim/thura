@@ -611,3 +611,9 @@ Touches: db/queries/mail.sql, handlers/mail.go, src/components/LiveMail.tsx, src
 Why: The developer decided the whole SMIP workspace API is operator plumbing, matching the Settings → SMIP streams screen: listing and reading the inbox, importing a file, queueing a send and listing the outbox now require owner/admin (workspace.RequireManager, or the workspace-locked role check), and members get 403. The dispatch worker still rechecks only that the originating actor is a current member before an attempt.
 
 Touches: internal/federation/review.go, internal/federation/send.go, tests/smip_stream_access_test.go
+
+## 2026-11-01: Block SMIP sends from a requester demoted below admin
+
+Why: Queueing is owner/admin only, so the developer decided a send queued by an admin who is later demoted to member must not go out. Before each attempt the dispatch worker rereads the requester's workspace role under the workspace lock and blocks the packet with role_revoked (after membership_revoked, before the binding checks), before any network contact; another owner or admin's resume keeps the original requester and is blocked again.
+
+Touches: internal/federation/dispatch.go, tests/smip_role_test.go
