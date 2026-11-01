@@ -78,6 +78,28 @@ func (v Attendance) Valid() bool {
 	return false
 }
 
+// SmipSharingMode is the SmipSharingMode enum.
+type SmipSharingMode string
+
+const (
+	SmipSharingModeOff    SmipSharingMode = "off"
+	SmipSharingModeListed SmipSharingMode = "listed"
+	SmipSharingModeAny    SmipSharingMode = "any"
+)
+
+// SmipSharingModeValues lists every SmipSharingMode.
+var SmipSharingModeValues = []SmipSharingMode{SmipSharingModeOff, SmipSharingModeListed, SmipSharingModeAny}
+
+// Valid reports whether v is one of the SmipSharingMode values.
+func (v SmipSharingMode) Valid() bool {
+	for _, x := range SmipSharingModeValues {
+		if v == x {
+			return true
+		}
+	}
+	return false
+}
+
 // Workspace is a row of the workspace table.
 type Workspace struct {
 	ID        string    `json:"id" db:"id"`
@@ -1509,7 +1531,8 @@ func (v SmipBinding) Validate() error {
 type SmipInbox struct {
 	ID             string     `json:"id" db:"id"`
 	WorkspaceID    string     `json:"workspaceId" db:"workspace_id"`
-	BindingID      string     `json:"bindingId" db:"binding_id"`
+	BindingID      *string    `json:"bindingId" db:"binding_id"`
+	ConversationID *string    `json:"conversationId" db:"conversation_id"`
 	Origin         string     `json:"origin" db:"origin"`
 	MessageID      string     `json:"messageId" db:"message_id"`
 	Digest         string     `json:"digest" db:"digest"`
@@ -1525,6 +1548,8 @@ type SmipInbox struct {
 	Size           int        `json:"size" db:"size"`
 	ImportedFileID *string    `json:"importedFileId" db:"imported_file_id"`
 	ImportedAt     *time.Time `json:"importedAt" db:"imported_at"`
+	DeclinedAt     *time.Time `json:"declinedAt" db:"declined_at"`
+	DecidedBy      string     `json:"decidedBy" db:"decided_by"`
 	AcceptedAt     time.Time  `json:"acceptedAt" db:"accepted_at"`
 }
 
@@ -1533,9 +1558,6 @@ func (v SmipInbox) Validate() error {
 	var errs validate.Errors
 	if v.WorkspaceID == "" {
 		errs.Add("workspaceId", "required", "required")
-	}
-	if v.BindingID == "" {
-		errs.Add("bindingId", "required", "required")
 	}
 	if v.Origin == "" {
 		errs.Add("origin", "required", "required")
@@ -1573,33 +1595,37 @@ func (v SmipInbox) Validate() error {
 	if v.Kind == "" {
 		errs.Add("kind", "required", "required")
 	}
+	if v.DecidedBy == "" {
+		errs.Add("decidedBy", "required", "required")
+	}
 	return errs.Result()
 }
 
 // SmipOutbox is a row of the smip_outbox table.
 type SmipOutbox struct {
-	ID           string    `json:"id" db:"id"`
-	Origin       string    `json:"origin" db:"origin"`
-	WorkspaceID  string    `json:"workspaceId" db:"workspace_id"`
-	BindingID    string    `json:"bindingId" db:"binding_id"`
-	Subject      string    `json:"subject" db:"subject"`
-	Packet       string    `json:"packet" db:"packet"`
-	OriginKey    string    `json:"originKey" db:"origin_key"`
-	Receipt      string    `json:"receipt" db:"receipt"`
-	ReceiptKey   string    `json:"receiptKey" db:"receipt_key"`
-	Kind         string    `json:"kind" db:"kind"`
-	Body         string    `json:"body" db:"body"`
-	Name         string    `json:"name" db:"name"`
-	Size         int       `json:"size" db:"size"`
-	SourceFileID *string   `json:"sourceFileId" db:"source_file_id"`
-	State        string    `json:"state" db:"state"`
-	Reason       string    `json:"reason" db:"reason"`
-	Attempts     int       `json:"attempts" db:"attempts"`
-	AttemptID    string    `json:"attemptId" db:"attempt_id"`
-	LastStatus   int       `json:"lastStatus" db:"last_status"`
-	NextAttempt  time.Time `json:"nextAttempt" db:"next_attempt"`
-	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
+	ID             string    `json:"id" db:"id"`
+	Origin         string    `json:"origin" db:"origin"`
+	WorkspaceID    string    `json:"workspaceId" db:"workspace_id"`
+	BindingID      *string   `json:"bindingId" db:"binding_id"`
+	ConversationID *string   `json:"conversationId" db:"conversation_id"`
+	Subject        string    `json:"subject" db:"subject"`
+	Packet         string    `json:"packet" db:"packet"`
+	OriginKey      string    `json:"originKey" db:"origin_key"`
+	Receipt        string    `json:"receipt" db:"receipt"`
+	ReceiptKey     string    `json:"receiptKey" db:"receipt_key"`
+	Kind           string    `json:"kind" db:"kind"`
+	Body           string    `json:"body" db:"body"`
+	Name           string    `json:"name" db:"name"`
+	Size           int       `json:"size" db:"size"`
+	SourceFileID   *string   `json:"sourceFileId" db:"source_file_id"`
+	State          string    `json:"state" db:"state"`
+	Reason         string    `json:"reason" db:"reason"`
+	Attempts       int       `json:"attempts" db:"attempts"`
+	AttemptID      string    `json:"attemptId" db:"attempt_id"`
+	LastStatus     int       `json:"lastStatus" db:"last_status"`
+	NextAttempt    time.Time `json:"nextAttempt" db:"next_attempt"`
+	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
 }
 
 // Validate applies the rules of SmipOutbox from schema.lidza.
@@ -1610,9 +1636,6 @@ func (v SmipOutbox) Validate() error {
 	}
 	if v.WorkspaceID == "" {
 		errs.Add("workspaceId", "required", "required")
-	}
-	if v.BindingID == "" {
-		errs.Add("bindingId", "required", "required")
 	}
 	if v.Subject == "" {
 		errs.Add("subject", "required", "required")
@@ -1646,6 +1669,130 @@ func (v SmipOutbox) Validate() error {
 	}
 	if v.AttemptID == "" {
 		errs.Add("attemptId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipPolicy is a row of the smip_policy table.
+type SmipPolicy struct {
+	WorkspaceID string          `json:"workspaceId" db:"workspace_id"`
+	Chat        SmipSharingMode `json:"chat" db:"chat"`
+	Files       SmipSharingMode `json:"files" db:"files"`
+	UpdatedBy   string          `json:"updatedBy" db:"updated_by"`
+	UpdatedAt   time.Time       `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of SmipPolicy from schema.lidza.
+func (v SmipPolicy) Validate() error {
+	var errs validate.Errors
+	if v.Chat == "" {
+		errs.Add("chat", "required", "required")
+	}
+	if v.Chat != "" && !v.Chat.Valid() {
+		errs.Add("chat", "enum", "unknown SmipSharingMode value")
+	}
+	if v.Files == "" {
+		errs.Add("files", "required", "required")
+	}
+	if v.Files != "" && !v.Files.Valid() {
+		errs.Add("files", "enum", "unknown SmipSharingMode value")
+	}
+	if v.UpdatedBy == "" {
+		errs.Add("updatedBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipPolicyDomain is a row of the smip_policy_domain table.
+type SmipPolicyDomain struct {
+	ID          string `json:"id" db:"id"`
+	WorkspaceID string `json:"workspaceId" db:"workspace_id"`
+	Domain      string `json:"domain" db:"domain"`
+}
+
+// Validate applies the rules of SmipPolicyDomain from schema.lidza.
+func (v SmipPolicyDomain) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipBlockedDomain is a row of the smip_blocked_domain table.
+type SmipBlockedDomain struct {
+	ID          string    `json:"id" db:"id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	Domain      string    `json:"domain" db:"domain"`
+	BlockedBy   string    `json:"blockedBy" db:"blocked_by"`
+	BlockedAt   time.Time `json:"blockedAt" db:"blocked_at"`
+}
+
+// Validate applies the rules of SmipBlockedDomain from schema.lidza.
+func (v SmipBlockedDomain) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	if v.BlockedBy == "" {
+		errs.Add("blockedBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipConversation is a row of the smip_conversation table.
+type SmipConversation struct {
+	ID            string     `json:"id" db:"id"`
+	WorkspaceID   string     `json:"workspaceId" db:"workspace_id"`
+	MailboxID     string     `json:"mailboxId" db:"mailbox_id"`
+	OwnerSubject  *string    `json:"ownerSubject" db:"owner_subject"`
+	LocalAddress  string     `json:"localAddress" db:"local_address"`
+	RemoteAddress string     `json:"remoteAddress" db:"remote_address"`
+	RemoteDomain  string     `json:"remoteDomain" db:"remote_domain"`
+	Stream        string     `json:"stream" db:"stream"`
+	State         string     `json:"state" db:"state"`
+	StartedBy     string     `json:"startedBy" db:"started_by"`
+	DecidedBy     string     `json:"decidedBy" db:"decided_by"`
+	DecidedAt     *time.Time `json:"decidedAt" db:"decided_at"`
+	CreatedAt     time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt     time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of SmipConversation from schema.lidza.
+func (v SmipConversation) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.MailboxID == "" {
+		errs.Add("mailboxId", "required", "required")
+	}
+	if v.LocalAddress == "" {
+		errs.Add("localAddress", "required", "required")
+	}
+	if v.RemoteAddress == "" {
+		errs.Add("remoteAddress", "required", "required")
+	}
+	if v.RemoteDomain == "" {
+		errs.Add("remoteDomain", "required", "required")
+	}
+	if v.Stream == "" {
+		errs.Add("stream", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.StartedBy == "" {
+		errs.Add("startedBy", "required", "required")
+	}
+	if v.DecidedBy == "" {
+		errs.Add("decidedBy", "required", "required")
 	}
 	return errs.Result()
 }
@@ -2061,6 +2208,7 @@ func (v SmipCaBundle) Validate() error {
 type SmipMailDomain struct {
 	ID           string    `json:"id" db:"id"`
 	Origin       string    `json:"origin" db:"origin"`
+	Profile      string    `json:"profile" db:"profile"`
 	Domain       string    `json:"domain" db:"domain"`
 	State        string    `json:"state" db:"state"`
 	EverVerified bool      `json:"everVerified" db:"ever_verified"`
@@ -2076,6 +2224,9 @@ func (v SmipMailDomain) Validate() error {
 	var errs validate.Errors
 	if v.Origin == "" {
 		errs.Add("origin", "required", "required")
+	}
+	if v.Profile == "" {
+		errs.Add("profile", "required", "required")
 	}
 	if v.Domain == "" {
 		errs.Add("domain", "required", "required")
@@ -5073,6 +5224,339 @@ func (v SmipDispatchJob) Validate() error {
 	var errs validate.Errors
 	if v.ID == "" {
 		errs.Add("id", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipPolicyInput is an API type.
+type SmipPolicyInput struct {
+	Chat    SmipSharingMode `json:"chat"`
+	Files   SmipSharingMode `json:"files"`
+	Domains []string        `json:"domains"`
+}
+
+// Validate applies the rules of SmipPolicyInput from schema.lidza.
+func (v SmipPolicyInput) Validate() error {
+	var errs validate.Errors
+	if v.Chat == "" {
+		errs.Add("chat", "required", "required")
+	}
+	if v.Chat != "" && !v.Chat.Valid() {
+		errs.Add("chat", "enum", "unknown SmipSharingMode value")
+	}
+	if v.Files == "" {
+		errs.Add("files", "required", "required")
+	}
+	if v.Files != "" && !v.Files.Valid() {
+		errs.Add("files", "enum", "unknown SmipSharingMode value")
+	}
+	return errs.Result()
+}
+
+// SmipBlockedDomainView is an API type.
+type SmipBlockedDomainView struct {
+	Domain    string    `json:"domain"`
+	BlockedAt time.Time `json:"blockedAt"`
+}
+
+// Validate applies the rules of SmipBlockedDomainView from schema.lidza.
+func (v SmipBlockedDomainView) Validate() error {
+	var errs validate.Errors
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipConversationOverview is an API type.
+type SmipConversationOverview struct {
+	ID            string    `json:"id"`
+	LocalAddress  string    `json:"localAddress"`
+	RemoteAddress string    `json:"remoteAddress"`
+	RemoteDomain  string    `json:"remoteDomain"`
+	State         string    `json:"state"`
+	Messages      int       `json:"messages"`
+	LastActivity  time.Time `json:"lastActivity"`
+}
+
+// Validate applies the rules of SmipConversationOverview from schema.lidza.
+func (v SmipConversationOverview) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.LocalAddress == "" {
+		errs.Add("localAddress", "required", "required")
+	}
+	if v.RemoteAddress == "" {
+		errs.Add("remoteAddress", "required", "required")
+	}
+	if v.RemoteDomain == "" {
+		errs.Add("remoteDomain", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipPolicyView is an API type.
+type SmipPolicyView struct {
+	Configured    bool                       `json:"configured"`
+	Domain        string                     `json:"domain"`
+	Chat          SmipSharingMode            `json:"chat"`
+	Files         SmipSharingMode            `json:"files"`
+	Domains       []string                   `json:"domains"`
+	Blocked       []SmipBlockedDomainView    `json:"blocked"`
+	Conversations []SmipConversationOverview `json:"conversations"`
+	UpdatedBy     string                     `json:"updatedBy"`
+	UpdatedAt     *time.Time                 `json:"updatedAt"`
+}
+
+// Validate applies the rules of SmipPolicyView from schema.lidza.
+func (v SmipPolicyView) Validate() error {
+	var errs validate.Errors
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	if v.Chat == "" {
+		errs.Add("chat", "required", "required")
+	}
+	if v.Chat != "" && !v.Chat.Valid() {
+		errs.Add("chat", "enum", "unknown SmipSharingMode value")
+	}
+	if v.Files == "" {
+		errs.Add("files", "required", "required")
+	}
+	if v.Files != "" && !v.Files.Valid() {
+		errs.Add("files", "enum", "unknown SmipSharingMode value")
+	}
+	for _, x := range v.Blocked {
+		if err := x.Validate(); err != nil {
+			errs.Add("blocked", "nested", err.Error())
+			break
+		}
+	}
+	for _, x := range v.Conversations {
+		if err := x.Validate(); err != nil {
+			errs.Add("conversations", "nested", err.Error())
+			break
+		}
+	}
+	if v.UpdatedBy == "" {
+		errs.Add("updatedBy", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipDomainInput is an API type.
+type SmipDomainInput struct {
+	Domain string `json:"domain"`
+}
+
+// Validate applies the rules of SmipDomainInput from schema.lidza.
+func (v SmipDomainInput) Validate() error {
+	var errs validate.Errors
+	if v.Domain == "" {
+		errs.Add("domain", "required", "required")
+	}
+	if len(v.Domain) < 1 {
+		errs.Add("domain", "min", "at least 1 character(s)")
+	}
+	if len(v.Domain) > 253 {
+		errs.Add("domain", "max", "at most 253 character(s)")
+	}
+	return errs.Result()
+}
+
+// SmipConversationView is an API type.
+type SmipConversationView struct {
+	ID            string    `json:"id"`
+	LocalAddress  string    `json:"localAddress"`
+	RemoteAddress string    `json:"remoteAddress"`
+	RemoteDomain  string    `json:"remoteDomain"`
+	State         string    `json:"state"`
+	Verified      string    `json:"verified"`
+	Shared        bool      `json:"shared"`
+	Started       bool      `json:"started"`
+	Preview       string    `json:"preview"`
+	PreviewKind   string    `json:"previewKind"`
+	Waiting       int       `json:"waiting"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+}
+
+// Validate applies the rules of SmipConversationView from schema.lidza.
+func (v SmipConversationView) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.LocalAddress == "" {
+		errs.Add("localAddress", "required", "required")
+	}
+	if v.RemoteAddress == "" {
+		errs.Add("remoteAddress", "required", "required")
+	}
+	if v.RemoteDomain == "" {
+		errs.Add("remoteDomain", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.Verified == "" {
+		errs.Add("verified", "required", "required")
+	}
+	if v.Preview == "" {
+		errs.Add("preview", "required", "required")
+	}
+	if v.PreviewKind == "" {
+		errs.Add("previewKind", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipConversationList is an API type.
+type SmipConversationList struct {
+	Configured bool                   `json:"configured"`
+	Address    string                 `json:"address"`
+	Chat       SmipSharingMode        `json:"chat"`
+	Files      SmipSharingMode        `json:"files"`
+	Manager    bool                   `json:"manager"`
+	Items      []SmipConversationView `json:"items"`
+}
+
+// Validate applies the rules of SmipConversationList from schema.lidza.
+func (v SmipConversationList) Validate() error {
+	var errs validate.Errors
+	if v.Address == "" {
+		errs.Add("address", "required", "required")
+	}
+	if v.Chat == "" {
+		errs.Add("chat", "required", "required")
+	}
+	if v.Chat != "" && !v.Chat.Valid() {
+		errs.Add("chat", "enum", "unknown SmipSharingMode value")
+	}
+	if v.Files == "" {
+		errs.Add("files", "required", "required")
+	}
+	if v.Files != "" && !v.Files.Valid() {
+		errs.Add("files", "enum", "unknown SmipSharingMode value")
+	}
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// SmipConversationInput is an API type.
+type SmipConversationInput struct {
+	RequestID string `json:"requestId"`
+	Address   string `json:"address"`
+}
+
+// Validate applies the rules of SmipConversationInput from schema.lidza.
+func (v SmipConversationInput) Validate() error {
+	var errs validate.Errors
+	if v.RequestID == "" {
+		errs.Add("requestId", "required", "required")
+	}
+	if v.Address == "" {
+		errs.Add("address", "required", "required")
+	}
+	if len(v.Address) < 3 {
+		errs.Add("address", "min", "at least 3 character(s)")
+	}
+	if len(v.Address) > 382 {
+		errs.Add("address", "max", "at most 382 character(s)")
+	}
+	return errs.Result()
+}
+
+// SmipConversationItem is an API type.
+type SmipConversationItem struct {
+	ID        string    `json:"id"`
+	Direction string    `json:"direction"`
+	Kind      string    `json:"kind"`
+	Body      string    `json:"body"`
+	Name      string    `json:"name"`
+	Size      int       `json:"size"`
+	State     string    `json:"state"`
+	Reason    string    `json:"reason"`
+	FileID    *string   `json:"fileId"`
+	At        time.Time `json:"at"`
+}
+
+// Validate applies the rules of SmipConversationItem from schema.lidza.
+func (v SmipConversationItem) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.Direction == "" {
+		errs.Add("direction", "required", "required")
+	}
+	if v.Kind == "" {
+		errs.Add("kind", "required", "required")
+	}
+	if v.Body == "" {
+		errs.Add("body", "required", "required")
+	}
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if v.State == "" {
+		errs.Add("state", "required", "required")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
+	}
+	return errs.Result()
+}
+
+// SmipConversationDetail is an API type.
+type SmipConversationDetail struct {
+	Conversation SmipConversationView   `json:"conversation"`
+	Items        []SmipConversationItem `json:"items"`
+}
+
+// Validate applies the rules of SmipConversationDetail from schema.lidza.
+func (v SmipConversationDetail) Validate() error {
+	var errs validate.Errors
+	if err := v.Conversation.Validate(); err != nil {
+		errs.Add("conversation", "nested", err.Error())
+	}
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// SmipConversationMessageInput is an API type.
+type SmipConversationMessageInput struct {
+	TransactionID string  `json:"transactionId"`
+	Body          *string `json:"body"`
+	FileID        *string `json:"fileId"`
+}
+
+// Validate applies the rules of SmipConversationMessageInput from schema.lidza.
+func (v SmipConversationMessageInput) Validate() error {
+	var errs validate.Errors
+	if v.TransactionID == "" {
+		errs.Add("transactionId", "required", "required")
+	}
+	if v.Body != nil {
+		x := *v.Body
+		if len(x) > 65536 {
+			errs.Add("body", "max", "at most 65536 character(s)")
+		}
 	}
 	return errs.Result()
 }

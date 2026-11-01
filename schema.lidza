@@ -1015,7 +1015,10 @@ model SmipBinding {
 model SmipInbox {
   id uuid @id @default(uuid())
   workspaceId uuid @ref(Workspace) @index
-  bindingId uuid @ref(SmipBinding)
+  // A legacy stream binding or an external conversation (SmipConversation):
+  // exactly one is set.
+  bindingId uuid? @ref(SmipBinding)
+  conversationId uuid? @ref(SmipConversation) @index
   origin string
   messageId string
   digest string
@@ -1031,6 +1034,9 @@ model SmipInbox {
   size int
   importedFileId uuid?
   importedAt time?
+  // An incoming file share its recipient declined; the signed record stays.
+  declinedAt time?
+  decidedBy string @default("")
   acceptedAt time
   @@unique(origin, messageId)
 }
@@ -1085,7 +1091,9 @@ model SmipOutbox {
  id uuid @id
  origin string @default("")
  workspaceId uuid @ref(Workspace) @index
- bindingId uuid @ref(SmipBinding)
+ // A legacy stream binding or an external conversation: exactly one is set.
+ bindingId uuid? @ref(SmipBinding)
+ conversationId uuid? @ref(SmipConversation) @index
  subject string
  packet text
  originKey text
@@ -1133,6 +1141,140 @@ type SmipOutboxList {
 }
 type SmipDispatchJob {
  id uuid
+}
+
+// External SMIP/0.1 chat and file sharing. Discovery (SmipMailDomain, profile
+// smip/0.1) answers only "is this really partner.example"; the workspace's
+// policy and each recipient's acceptance decide whether anything reaches a
+// person.
+enum SmipSharingMode { off listed any }
+// One row per workspace once an owner or admin saved the policy. No row means
+// "Only listed domains" with an empty list: nothing external is accepted.
+model SmipPolicy {
+  workspaceId uuid @id @ref(Workspace)
+  chat SmipSharingMode @default(listed)
+  files SmipSharingMode @default(listed)
+  updatedBy string @default("")
+  updatedAt time @default(now())
+}
+model SmipPolicyDomain {
+  id uuid @id @default(uuid())
+  workspaceId uuid @ref(Workspace) @index
+  domain string
+  @@unique(workspaceId, domain)
+}
+// Domains an owner or admin blocked from a chat request; they win over the
+// list and over "Any verified domain".
+model SmipBlockedDomain {
+  id uuid @id @default(uuid())
+  workspaceId uuid @ref(Workspace) @index
+  domain string
+  blockedBy string
+  blockedAt time @default(now())
+  @@unique(workspaceId, domain)
+}
+// One external correspondent of one local address. Inbound, it starts as a
+// pending chat request that only its recipient sees: the private mailbox's
+// owner, or every member for a shared address (as in Mail). state is pending,
+// accepted, declined or spam; declined and spam refuse the sender.
+model SmipConversation {
+  id uuid @id @default(uuid())
+  workspaceId uuid @ref(Workspace) @index
+  mailboxId uuid @ref(Mailbox)
+  ownerSubject string?
+  localAddress string
+  remoteAddress string
+  remoteDomain string
+  stream string
+  state string @default("pending")
+  startedBy string @default("")
+  decidedBy string @default("")
+  decidedAt time?
+  createdAt time @default(now())
+  updatedAt time @default(now())
+  @@unique(workspaceId, localAddress, remoteAddress)
+}
+type SmipPolicyInput {
+  chat SmipSharingMode
+  files SmipSharingMode
+  domains string[]
+}
+type SmipBlockedDomainView {
+  domain string
+  blockedAt time
+}
+type SmipConversationOverview {
+  id uuid
+  localAddress string
+  remoteAddress string
+  remoteDomain string
+  state string
+  messages int
+  lastActivity time
+}
+type SmipPolicyView {
+  configured bool
+  domain string
+  chat SmipSharingMode
+  files SmipSharingMode
+  domains string[]
+  blocked SmipBlockedDomainView[]
+  conversations SmipConversationOverview[]
+  updatedBy string
+  updatedAt time?
+}
+type SmipDomainInput {
+  domain string @min(1) @max(253)
+}
+type SmipConversationView {
+  id uuid
+  localAddress string
+  remoteAddress string
+  remoteDomain string
+  state string
+  // "discovery" (verified through _smip DNS and the signed identity) or
+  // "pinned" (a pinned partner on the SMIP peers admin page).
+  verified string
+  shared bool
+  started bool
+  preview string
+  previewKind string
+  waiting int
+  createdAt time
+  updatedAt time
+}
+type SmipConversationList {
+  configured bool
+  address string
+  chat SmipSharingMode
+  files SmipSharingMode
+  manager bool
+  items SmipConversationView[]
+}
+type SmipConversationInput {
+  requestId uuid
+  address string @min(3) @max(382)
+}
+type SmipConversationItem {
+  id uuid
+  direction string
+  kind string
+  body string
+  name string
+  size int
+  state string
+  reason string
+  fileId uuid?
+  at time
+}
+type SmipConversationDetail {
+  conversation SmipConversationView
+  items SmipConversationItem[]
+}
+type SmipConversationMessageInput {
+  transactionId uuid
+  body string? @max(65536)
+  fileId uuid?
 }
 
 model ServerSetup {
@@ -1402,9 +1544,12 @@ model SmipCaBundle {
   updatedAt time @default(now())
 }
 // Domain capabilities are local-origin scoped, sticky after first verification.
+// The registry is shared by SMIP/0.2 mail (profile smip/0.2) and SMIP/0.1
+// chat/files (profile smip/0.1): one discovery engine, one admin view.
 model SmipMailDomain {
  id uuid @id @default(uuid())
  origin string
+ profile string @default("smip/0.2")
  domain string
  state string @default("unknown")
  everVerified bool @default(false)
@@ -1413,7 +1558,7 @@ model SmipMailDomain {
  reason string @default("")
  checkedAt time
  expiresAt time
- @@unique(origin, domain)
+ @@unique(origin, profile, domain)
 }
 model MailTransmission {
  id uuid @id @default(uuid())

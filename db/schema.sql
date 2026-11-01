@@ -7,6 +7,8 @@ CREATE TYPE mail_folder AS ENUM ('inbox', 'drafts', 'sent', 'archive', 'trash', 
 
 CREATE TYPE attendance AS ENUM ('needsaction', 'accepted', 'tentative', 'declined');
 
+CREATE TYPE smip_sharing_mode AS ENUM ('off', 'listed', 'any');
+
 CREATE TABLE workspace (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name varchar(120) NOT NULL,
@@ -582,10 +584,30 @@ CREATE TABLE smip_binding (
 CREATE INDEX smip_binding_workspace_id_idx ON smip_binding (workspace_id);
 CREATE UNIQUE INDEX smip_binding_peer_stream_recipient_key ON smip_binding (peer, stream, recipient);
 
+CREATE TABLE smip_conversation (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  mailbox_id uuid NOT NULL REFERENCES mailbox(id),
+  owner_subject text,
+  local_address text NOT NULL,
+  remote_address text NOT NULL,
+  remote_domain text NOT NULL,
+  stream text NOT NULL,
+  state text NOT NULL DEFAULT 'pending',
+  started_by text NOT NULL DEFAULT '',
+  decided_by text NOT NULL DEFAULT '',
+  decided_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX smip_conversation_workspace_id_idx ON smip_conversation (workspace_id);
+CREATE UNIQUE INDEX smip_conversation_workspace_id_local_address_remote_address_key ON smip_conversation (workspace_id, local_address, remote_address);
+
 CREATE TABLE smip_inbox (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspace(id),
-  binding_id uuid NOT NULL REFERENCES smip_binding(id),
+  binding_id uuid REFERENCES smip_binding(id),
+  conversation_id uuid REFERENCES smip_conversation(id),
   origin text NOT NULL,
   message_id text NOT NULL,
   digest text NOT NULL,
@@ -601,16 +623,20 @@ CREATE TABLE smip_inbox (
   size integer NOT NULL,
   imported_file_id uuid,
   imported_at timestamptz,
+  declined_at timestamptz,
+  decided_by text NOT NULL DEFAULT '',
   accepted_at timestamptz NOT NULL
 );
 CREATE INDEX smip_inbox_workspace_id_idx ON smip_inbox (workspace_id);
+CREATE INDEX smip_inbox_conversation_id_idx ON smip_inbox (conversation_id);
 CREATE UNIQUE INDEX smip_inbox_origin_message_id_key ON smip_inbox (origin, message_id);
 
 CREATE TABLE smip_outbox (
   id uuid PRIMARY KEY,
   origin text NOT NULL DEFAULT '',
   workspace_id uuid NOT NULL REFERENCES workspace(id),
-  binding_id uuid NOT NULL REFERENCES smip_binding(id),
+  binding_id uuid REFERENCES smip_binding(id),
+  conversation_id uuid REFERENCES smip_conversation(id),
   subject text NOT NULL,
   packet text NOT NULL,
   origin_key text NOT NULL,
@@ -631,6 +657,33 @@ CREATE TABLE smip_outbox (
   updated_at timestamptz NOT NULL
 );
 CREATE INDEX smip_outbox_workspace_id_idx ON smip_outbox (workspace_id);
+CREATE INDEX smip_outbox_conversation_id_idx ON smip_outbox (conversation_id);
+
+CREATE TABLE smip_policy (
+  workspace_id uuid PRIMARY KEY REFERENCES workspace(id),
+  chat smip_sharing_mode NOT NULL DEFAULT 'listed',
+  files smip_sharing_mode NOT NULL DEFAULT 'listed',
+  updated_by text NOT NULL DEFAULT '',
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE smip_policy_domain (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  domain text NOT NULL
+);
+CREATE INDEX smip_policy_domain_workspace_id_idx ON smip_policy_domain (workspace_id);
+CREATE UNIQUE INDEX smip_policy_domain_workspace_id_domain_key ON smip_policy_domain (workspace_id, domain);
+
+CREATE TABLE smip_blocked_domain (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id),
+  domain text NOT NULL,
+  blocked_by text NOT NULL,
+  blocked_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX smip_blocked_domain_workspace_id_idx ON smip_blocked_domain (workspace_id);
+CREATE UNIQUE INDEX smip_blocked_domain_workspace_id_domain_key ON smip_blocked_domain (workspace_id, domain);
 
 CREATE TABLE server_setup (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -802,6 +855,7 @@ CREATE TABLE smip_ca_bundle (
 CREATE TABLE smip_mail_domain (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   origin text NOT NULL,
+  profile text NOT NULL DEFAULT 'smip/0.2',
   domain text NOT NULL,
   state text NOT NULL DEFAULT 'unknown',
   ever_verified boolean NOT NULL DEFAULT false,
@@ -811,7 +865,7 @@ CREATE TABLE smip_mail_domain (
   checked_at timestamptz NOT NULL,
   expires_at timestamptz NOT NULL
 );
-CREATE UNIQUE INDEX smip_mail_domain_origin_domain_key ON smip_mail_domain (origin, domain);
+CREATE UNIQUE INDEX smip_mail_domain_origin_profile_domain_key ON smip_mail_domain (origin, profile, domain);
 
 CREATE TABLE mail_transmission (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

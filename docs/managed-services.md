@@ -80,10 +80,10 @@ Discovery/API checks do not replace document-save or device-media acceptance.
 
 Deployment generates a local SMIP chat/file signing identity without inventing
 trusted peers. Cross-server exchange still requires explicit pairing (on
-Administration → SMIP peers: fetch the peer's signed identity, confirm its
-fingerprint with the other operator; see
-[the SMIP guide](protocols/smip-thura.md#pairing-on-the-admin-page)), consent
-and workspace bindings. Existing identities are retained. The separate SMIP
+discovery through `_smip.<domain>` and `https://smip.<domain>`, optional
+pinned partners on Administration → SMIP peers; see
+[the SMIP guide](protocols/smip-thura.md#server-trust-by-discovery)), sharing
+policies, chat requests and legacy workspace bindings. Existing identities are retained. The separate SMIP
 mail identity is retained with its domain provider configuration.
 
 The manifest opts into the released framework v0.1.125 / Lidza-deploy

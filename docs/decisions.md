@@ -620,3 +620,27 @@ Touches: internal/federation/review.go, internal/federation/send.go, tests/smip_
 Why: Queueing is owner/admin only, so the developer decided a send queued by an admin who is later demoted to member must not go out. Before each attempt the dispatch worker rereads the requester's workspace role under the workspace lock and blocks the packet with role_revoked (after membership_revoked, before the binding checks), before any network contact; another owner or admin's resume keeps the original requester and is blocked again.
 
 Touches: internal/federation/dispatch.go, tests/smip_role_test.go
+
+## 2026-11-01: SMIP chat and files trust partner servers by discovery, like SMIP email
+
+Why: The developer decided manual operator fingerprint pairing is not good practice: a chat/file partner is trusted once its domain verifies through _smip.<domain> TXT and its signed smip-pairing/1 identity fetched from https://smip.<domain> over verified TLS 1.3, through the same code as mail (smipmail.Registry, extracted from Gateway.Resolve: SSRF-safe client, pinned origins, CA bundle, sticky everVerified, capacity). The v0.1 and v0.2 documents stay separate signed documents on one origin (different version, profile and endpoint fields, and separate SMIP_CONFIG/SMIP_MAIL_CONFIG keys), so neither wire format nor key changes; one registry table gains a profile column and one admin view, SMIP domains. Key continuity is the mail rule: trust is the current verified document, so a rotated key is accepted only once a fetched valid document publishes it. A pinned partner (smip_peer or JSON peers) replaces discovery for its domain, including revocation, and existing pairings keep working unchanged.
+
+Touches: internal/smipmail/registry.go, internal/federation/discovery.go, internal/federation/gateway.go, internal/federation/dispatch.go, smip_mail_domain, app/admin/smip-mail.html, app/admin/smip-peers.html
+
+## 2026-11-01: External sharing policy defaults to Only listed domains with an empty list
+
+Why: Trusting a server only proves the domain; owners and admins choose in Settings > External sharing whether external chat and file sharing are Off, Only listed domains or Any verified domain, with a validated domain list and per-request domain blocks that win in every mode. SMIP email accepts any verified sender, but chat and files reach people directly, so the safest choice is the default: nothing external is accepted or sent until an owner or admin saves a policy. The server enforces it under the workspace lock before storing a packet (refusals are the protocol's 403) and before every send attempt (policy_refused); changes are audited.
+
+Touches: internal/federation/policy.go, smip_policy, smip_policy_domain, smip_blocked_domain, src/components/ExternalSharingSettings.tsx
+
+## 2026-11-01: SMIP chat requests are accepted by their recipient, receiver-side only
+
+Why: Workspace stream bindings no longer gate content reaching people: a packet to a local mailbox address opens a pending chat request (smip_conversation) that only the private mailbox's owner, or every member for a shared address (the Mail rule), sees and can accept, decline, mark as spam or, as an owner or admin, block the domain; declined senders are refused until accepted again in Settings. To avoid a wire change the receiving server stores the pending packet and acknowledges storage with its normal signed receipt; a pending request holds at most 20 packets and a workspace 1000 conversations. Members start chats by address and share Drive files subject to the policy and discovery; incoming files are saved to a chosen Drive folder or declined. Legacy stream bindings keep working as explicit allow-rules that only Off or a block stops, and the free-text stream authorization form is removed.
+
+Touches: internal/federation/conversation.go, internal/federation/inbox.go, src/components/ExternalChat.tsx, src/components/LiveChat.tsx, src/components/SmipSettings.tsx, smip_conversation, smip_inbox, smip_outbox
+
+## 2026-11-01: Admin page SMIP domains
+
+Why: The SMIP email domains page became SMIP domains when chat/file discovery joined the registry: server administrators see, read-only, every smip_mail_domain row across local identities and both profiles (email smip/0.2, chat and files smip/0.1): partner domain, state, endpoint, timestamps, reason and sticky verification. No keys, documents' secrets, message content or provider credentials; it cannot clear trust or trigger a downgrade.
+
+Touches: internal/smipmail/admin.go, app/admin/smip-mail.html, smip_mail_domain

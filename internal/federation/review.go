@@ -29,6 +29,7 @@ import (
 func bindingView(r q.SmipBinding) schema.SmipBinding {
 	return schema.SmipBinding{ID: r.ID, WorkspaceID: r.WorkspaceID, Peer: r.Peer, Stream: r.Stream, Sender: r.Sender, Recipient: r.Recipient, Enabled: r.Enabled, CreatedBy: r.CreatedBy, CreatedAt: r.CreatedAt}
 }
+
 // ListBindings is the operator view of a workspace's streams: owners and
 // admins only, like creating and disabling them. It also lists the choices
 // the authorization form offers: paired peers with an unrevoked key and the
@@ -195,7 +196,7 @@ func DisableBinding(ctx context.Context, w, id string) error {
 	return tx.Commit(ctx)
 }
 func item(row q.ListSmipInboxRow) schema.SmipInboxItem {
-	return schema.SmipInboxItem{ID: row.ID, BindingID: row.BindingID, Origin: row.Origin, MessageID: row.MessageID, Sender: row.Sender, Recipient: row.Recipient, Stream: row.Stream, Kind: row.Kind, Body: row.Body, Name: row.Name, Size: int(row.Size), Digest: row.Digest, AcceptedAt: row.AcceptedAt, ImportedFileID: row.ImportedFileID, ImportedAt: row.ImportedAt}
+	return schema.SmipInboxItem{ID: row.ID, BindingID: deref(row.BindingID), Origin: row.Origin, MessageID: row.MessageID, Sender: row.Sender, Recipient: row.Recipient, Stream: row.Stream, Kind: row.Kind, Body: row.Body, Name: row.Name, Size: int(row.Size), Digest: row.Digest, AcceptedAt: row.AcceptedAt, ImportedFileID: row.ImportedFileID, ImportedAt: row.ImportedAt}
 }
 func ListInbox(ctx context.Context, w, cursor string) (schema.SmipInboxList, error) {
 	out := schema.SmipInboxList{Items: []schema.SmipInboxItem{}}
@@ -228,12 +229,32 @@ func ImportFile(ctx context.Context, w, id string, in schema.SmipImportInput) (s
 		return schema.DriveFile{}, router.Errorf(404, "transfer not found")
 	}
 	row, err := queries.LockSmipInbox(ctx, q.LockSmipInboxParams{WorkspaceID: w, ID: id})
-	if errors.Is(err, pgx.ErrNoRows) {
+	// A conversation's files belong to its recipient, never to the stream review.
+	if errors.Is(err, pgx.ErrNoRows) || err == nil && row.BindingID == nil {
 		return schema.DriveFile{}, router.Errorf(404, "transfer not found")
 	}
 	if err != nil {
 		return schema.DriveFile{}, err
 	}
+	file, err := importRecord(ctx, tx, queries, w, row, in.FolderID, "smip.file.import")
+	if err != nil || row.ImportedFileID != nil {
+		return file, err
+	}
+	// A commit error may be ambiguous. Never delete an object immediately here:
+	// ordinary reference-aware Drive sweeping reclaims only proven old orphans.
+	if err = tx.Commit(ctx); err != nil {
+		return schema.DriveFile{}, err
+	}
+	return file, nil
+}
+
+// importRecord writes an accepted file packet into Drive inside the caller's
+// workspace-locked transaction: integrity, Drive name policy, folder access,
+// quota and the file-count limit are rechecked, the immutable bytes go
+// through the storage pack, and the version, transfer marker and audit event
+// join the transaction. An already imported record returns its file (410
+// once that file was removed, refusing a duplicate import).
+func importRecord(ctx context.Context, tx pgx.Tx, queries *q.Queries, w string, row q.SmipInbox, folderID *string, action string) (schema.DriveFile, error) {
 	if row.ImportedFileID != nil {
 		file, err := queries.GetDriveFile(ctx, q.GetDriveFileParams{WorkspaceID: w, ID: *row.ImportedFileID})
 		if errors.Is(err, pgx.ErrNoRows) || err == nil && file.Trashed {
@@ -260,7 +281,7 @@ func ImportFile(ctx context.Context, w, id string, in schema.SmipImportInput) (s
 	if err != nil || name != string(nameBytes) || len(data) > drive.MaxSize {
 		return schema.DriveFile{}, router.Errorf(422, "file exceeds Drive policy")
 	}
-	if err = drive.CheckFolder(ctx, queries, w, in.FolderID); err != nil {
+	if err = drive.CheckFolder(ctx, queries, w, folderID); err != nil {
 		return schema.DriveFile{}, err
 	}
 	if err = drive.CheckQuota(ctx, queries, w, int64(len(data)), nil); err != nil {
@@ -277,7 +298,7 @@ func ImportFile(ctx context.Context, w, id string, in schema.SmipImportInput) (s
 	if count+pending >= 500 {
 		return schema.DriveFile{}, router.Errorf(409, "workspace file limit reached")
 	}
-	file, err := queries.CreateDriveFile(ctx, q.CreateDriveFileParams{WorkspaceID: w, FolderID: in.FolderID, Name: name, ContentType: "application/octet-stream", Size: int32(len(data))})
+	file, err := queries.CreateDriveFile(ctx, q.CreateDriveFileParams{WorkspaceID: w, FolderID: folderID, Name: name, ContentType: "application/octet-stream", Size: int32(len(data))})
 	if err != nil {
 		return schema.DriveFile{}, err
 	}
@@ -288,15 +309,10 @@ func ImportFile(ctx context.Context, w, id string, in schema.SmipImportInput) (s
 	if _, err = queries.AddFileVersion(ctx, q.AddFileVersionParams{FileID: file.ID, Number: file.CurrentVersion, ObjectKey: key, Checksum: drive.Hash(data), Size: file.Size, CreatedBy: auth.CurrentUser(ctx).ID}); err != nil {
 		return schema.DriveFile{}, err
 	}
-	if err = queries.ImportSmipFile(ctx, q.ImportSmipFileParams{WorkspaceID: w, ID: id, ImportedFileID: &file.ID, ImportedAt: timePointer(lidza.Now(ctx))}); err != nil {
+	if err = queries.ImportSmipFile(ctx, q.ImportSmipFileParams{WorkspaceID: w, ID: row.ID, ImportedFileID: &file.ID, ImportedAt: timePointer(lidza.Now(ctx))}); err != nil {
 		return schema.DriveFile{}, err
 	}
-	if err = audit.From(ctx).RecordTx(ctx, tx, audit.Event{Action: "smip.file.import", Scope: w, Resource: "drive-file/" + file.ID}); err != nil {
-		return schema.DriveFile{}, err
-	}
-	// A commit error may be ambiguous. Never delete an object immediately here:
-	// ordinary reference-aware Drive sweeping reclaims only proven old orphans.
-	if err = tx.Commit(ctx); err != nil {
+	if err = audit.From(ctx).RecordTx(ctx, tx, audit.Event{Action: action, Scope: w, Resource: "drive-file/" + file.ID}); err != nil {
 		return schema.DriveFile{}, err
 	}
 	return drive.File(file), nil

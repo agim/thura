@@ -23,7 +23,7 @@ import (
 )
 
 func outboundView(row q.SmipOutbox) schema.SmipOutbound {
-	return schema.SmipOutbound{ID: row.ID, BindingID: row.BindingID, Kind: row.Kind, Body: row.Body, Name: row.Name, Size: int(row.Size), SourceFileID: row.SourceFileID, State: row.State, Reason: row.Reason, Attempts: int(row.Attempts), LastStatus: int(row.LastStatus), NextAttempt: row.NextAttempt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
+	return schema.SmipOutbound{ID: row.ID, BindingID: deref(row.BindingID), Kind: row.Kind, Body: row.Body, Name: row.Name, Size: int(row.Size), SourceFileID: row.SourceFileID, State: row.State, Reason: row.Reason, Attempts: int(row.Attempts), LastStatus: int(row.LastStatus), NextAttempt: row.NextAttempt, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt}
 }
 func sameFile(a, b *string) bool { return a == nil && b == nil || a != nil && b != nil && *a == *b }
 func Queue(ctx context.Context, w string, in schema.SmipSendInput) (schema.SmipOutbound, error) {
@@ -44,7 +44,7 @@ func Queue(ctx context.Context, w string, in schema.SmipSendInput) (schema.SmipO
 	}
 	old, err := queries.GetSmipOutbound(ctx, q.GetSmipOutboundParams{WorkspaceID: w, ID: in.TransactionID})
 	if err == nil {
-		if old.Subject != auth.CurrentUser(ctx).ID || old.BindingID != in.BindingID || old.Body != body || !sameFile(old.SourceFileID, in.FileID) {
+		if old.Subject != auth.CurrentUser(ctx).ID || deref(old.BindingID) != in.BindingID || old.Body != body || !sameFile(old.SourceFileID, in.FileID) {
 			return schema.SmipOutbound{}, router.Errorf(409, "transaction ID already used")
 		}
 		return outboundView(old), nil
@@ -122,7 +122,7 @@ func Queue(ctx context.Context, w string, in schema.SmipSendInput) (schema.SmipO
 	if err != nil {
 		return schema.SmipOutbound{}, err
 	}
-	row, err := queries.AddSmipOutbound(ctx, q.AddSmipOutboundParams{ID: in.TransactionID, WorkspaceID: w, BindingID: binding.ID, Subject: auth.CurrentUser(ctx).ID, Packet: string(raw), OriginKey: string(keyJSON), Kind: kind, Body: body, Name: name, Size: int32(len(data)), SourceFileID: in.FileID, Origin: g.domain, NextAttempt: now})
+	row, err := queries.AddSmipOutbound(ctx, q.AddSmipOutboundParams{ID: in.TransactionID, WorkspaceID: w, BindingID: &binding.ID, Subject: auth.CurrentUser(ctx).ID, Packet: string(raw), OriginKey: string(keyJSON), Kind: kind, Body: body, Name: name, Size: int32(len(data)), SourceFileID: in.FileID, Origin: g.domain, NextAttempt: now})
 	if err != nil {
 		var conflict *pgconn.PgError
 		if errors.As(err, &conflict) && conflict.Code == "23505" {
@@ -158,10 +158,19 @@ func ListOutbox(ctx context.Context, w, cursor string) (schema.SmipOutboxList, e
 		rows = rows[:50]
 	}
 	for _, r := range rows {
-		out.Items = append(out.Items, schema.SmipOutbound{ID: r.ID, BindingID: r.BindingID, Kind: r.Kind, Body: r.Body, Name: r.Name, Size: int(r.Size), SourceFileID: r.SourceFileID, State: r.State, Reason: r.Reason, Attempts: int(r.Attempts), LastStatus: int(r.LastStatus), NextAttempt: r.NextAttempt, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt})
+		out.Items = append(out.Items, schema.SmipOutbound{ID: r.ID, BindingID: deref(r.BindingID), Kind: r.Kind, Body: r.Body, Name: r.Name, Size: int(r.Size), SourceFileID: r.SourceFileID, State: r.State, Reason: r.Reason, Attempts: int(r.Attempts), LastStatus: int(r.LastStatus), NextAttempt: r.NextAttempt, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt})
 	}
 	return out, nil
 }
+
+// deref reads an optional ID, "" when absent.
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func decodeOutbound(row q.SmipOutbox) (smip.Packet, error) {
 	var p smip.Packet
 	var key smip.Key

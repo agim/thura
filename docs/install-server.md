@@ -29,7 +29,7 @@ Configure client authentication, private listeners and TLS for remote clients be
 
 Choose storage before publishing the wizard. Local storage needs persistent disk shared by every node that accesses the same objects; separate local disks on multiple app nodes are insufficient. S3 needs a pre-created private bucket, region/HTTPS endpoint and credentials limited to the app's bucket/prefix. Enable the provider's public-access blocking and choose backup/versioning policies. Thura's storage check does not prove bucket privacy or durability.
 
-Core services have separate installation guides: [Collabora](collabora.md), [Matrix](chat.md), [LiveKit/TURN](meet.md) and [paired-server SMIP](protocols/smip-thura.md). Complete these services and AI provider/model configuration in the wizard before publishing. The SMIP protocol still has the interoperability and deployment boundaries documented in its guide. Incomplete drafts can be saved and resumed.
+Core services have separate installation guides: [Collabora](collabora.md), [Matrix](chat.md), [LiveKit/TURN](meet.md) and [SMIP chat and files](protocols/smip-thura.md). Complete these services and AI provider/model configuration in the wizard before publishing. The SMIP protocol still has the interoperability and deployment boundaries documented in its guide. Incomplete drafts can be saved and resumed.
 
 ## 2. Build and install Thura
 

@@ -21,6 +21,7 @@ import (
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/pkg/env"
 	"thura/internal/smip"
+	"thura/internal/smipmail"
 )
 
 type Config struct {
@@ -50,6 +51,8 @@ type Gateway struct {
 	caFile   string
 	caPEM    []byte
 	resolver *net.Resolver
+	// discovery bounds concurrent partner discovery fetches in this process.
+	discovery chan struct{}
 }
 
 type settings struct {
@@ -88,7 +91,7 @@ func NewGateway(cfg Config) (*Gateway, error) {
 	if err != nil || len(seed) != ed25519.SeedSize || base64.RawURLEncoding.EncodeToString(seed) != cfg.Seed || len(cfg.Peers) > MaxPeers {
 		return nil, errors.New("invalid SMIP operator configuration")
 	}
-	g := &Gateway{domain: cfg.Domain, signer: smip.SigningKey{Private: ed25519.NewKeyFromSeed(seed), NotBefore: cfg.NotBefore, NotAfter: cfg.NotAfter}, peers: map[string]map[string]smip.Key{}, slots: make(chan struct{}, 2), resolver: net.DefaultResolver}
+	g := &Gateway{domain: cfg.Domain, signer: smip.SigningKey{Private: ed25519.NewKeyFromSeed(seed), NotBefore: cfg.NotBefore, NotAfter: cfg.NotAfter}, peers: map[string]map[string]smip.Key{}, slots: make(chan struct{}, 2), resolver: net.DefaultResolver, discovery: make(chan struct{}, 2)}
 	for domain, keys := range cfg.Peers {
 		if domain == cfg.Domain || len(keys) == 0 || len(keys) > MaxPeerKeys {
 			return nil, errors.New("invalid SMIP peer configuration")
@@ -180,6 +183,23 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "SMIP trust unavailable", http.StatusServiceUnavailable)
 		return
 	}
+	// A sender that is not a pinned partner is trusted only through
+	// discovery, exactly as SMIP/0.2 mail trusts its senders: a domain
+	// without a record stays unknown (401 below), and one that cannot be
+	// verified right now, or verified before and lost its record or
+	// signature, is held with 503 instead of accepted.
+	if origin := packetOrigin(body); origin != "" && origin != g.domain {
+		if _, pinned := trust.Peers[origin]; !pinned {
+			p, err := g.Discover(req.Context(), origin, false)
+			if err == nil {
+				trust.Peers[origin] = p.Keys
+			} else if !errors.Is(err, smipmail.ErrUnsupported) {
+				w.Header().Set("Retry-After", "60")
+				http.Error(w, "SMIP sender domain cannot be verified", http.StatusServiceUnavailable)
+				return
+			}
+		}
+	}
 	inbox := &DatabaseInbox{ctx: req.Context(), gateway: g, peers: trust.Peers}
 	receiver, err := smip.NewReceiver(g.domain, inbox, g.signer, trust.Peers, func(e smip.Envelope) bool { return e.Kind == "chat" || e.Kind == "file" }, func() time.Time { return lidza.Now(req.Context()) })
 	if err != nil {
@@ -187,6 +207,21 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	receiver.ServeHTTP(w, req)
+}
+
+// packetOrigin is the claimed sending domain of a raw packet, read only to
+// choose which domain to verify; the receiver then parses the packet
+// strictly and checks its signature against the verified keys.
+func packetOrigin(body []byte) string {
+	var p struct {
+		Envelope struct {
+			From string `json:"from"`
+		} `json:"envelope"`
+	}
+	if json.Unmarshal(body, &p) != nil || !smip.ValidDomain(p.Envelope.From) {
+		return ""
+	}
+	return p.Envelope.From
 }
 
 func (g *Gateway) newClient(origin, peer string, keys map[string]smip.Key, roots *x509.CertPool) (*smip.Client, error) {

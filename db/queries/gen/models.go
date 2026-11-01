@@ -100,6 +100,49 @@ func (ns NullMailFolder) Value() (driver.Value, error) {
 	return string(ns.MailFolder), nil
 }
 
+type SmipSharingMode string
+
+const (
+	SmipSharingModeOff    SmipSharingMode = "off"
+	SmipSharingModeListed SmipSharingMode = "listed"
+	SmipSharingModeAny    SmipSharingMode = "any"
+)
+
+func (e *SmipSharingMode) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SmipSharingMode(s)
+	case string:
+		*e = SmipSharingMode(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SmipSharingMode: %T", src)
+	}
+	return nil
+}
+
+type NullSmipSharingMode struct {
+	SmipSharingMode SmipSharingMode `json:"smip_sharing_mode"`
+	Valid           bool            `json:"valid"` // Valid is true if SmipSharingMode is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSmipSharingMode) Scan(value interface{}) error {
+	if value == nil {
+		ns.SmipSharingMode, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SmipSharingMode.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSmipSharingMode) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SmipSharingMode), nil
+}
+
 type WorkspaceRole string
 
 const (
@@ -849,6 +892,14 @@ type SmipBinding struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type SmipBlockedDomain struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	Domain      string    `json:"domain"`
+	BlockedBy   string    `json:"blocked_by"`
+	BlockedAt   time.Time `json:"blocked_at"`
+}
+
 type SmipCaBundle struct {
 	ID        string    `json:"id"`
 	Pem       string    `json:"pem"`
@@ -856,10 +907,28 @@ type SmipCaBundle struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type SmipConversation struct {
+	ID            string     `json:"id"`
+	WorkspaceID   string     `json:"workspace_id"`
+	MailboxID     string     `json:"mailbox_id"`
+	OwnerSubject  *string    `json:"owner_subject"`
+	LocalAddress  string     `json:"local_address"`
+	RemoteAddress string     `json:"remote_address"`
+	RemoteDomain  string     `json:"remote_domain"`
+	Stream        string     `json:"stream"`
+	State         string     `json:"state"`
+	StartedBy     string     `json:"started_by"`
+	DecidedBy     string     `json:"decided_by"`
+	DecidedAt     *time.Time `json:"decided_at"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
 type SmipInbox struct {
 	ID             string     `json:"id"`
 	WorkspaceID    string     `json:"workspace_id"`
-	BindingID      string     `json:"binding_id"`
+	BindingID      *string    `json:"binding_id"`
+	ConversationID *string    `json:"conversation_id"`
 	Origin         string     `json:"origin"`
 	MessageID      string     `json:"message_id"`
 	Digest         string     `json:"digest"`
@@ -875,12 +944,15 @@ type SmipInbox struct {
 	Size           int32      `json:"size"`
 	ImportedFileID *string    `json:"imported_file_id"`
 	ImportedAt     *time.Time `json:"imported_at"`
+	DeclinedAt     *time.Time `json:"declined_at"`
+	DecidedBy      string     `json:"decided_by"`
 	AcceptedAt     time.Time  `json:"accepted_at"`
 }
 
 type SmipMailDomain struct {
 	ID           string    `json:"id"`
 	Origin       string    `json:"origin"`
+	Profile      string    `json:"profile"`
 	Domain       string    `json:"domain"`
 	State        string    `json:"state"`
 	EverVerified bool      `json:"ever_verified"`
@@ -904,28 +976,29 @@ type SmipMailReceipt struct {
 }
 
 type SmipOutbox struct {
-	ID           string    `json:"id"`
-	Origin       string    `json:"origin"`
-	WorkspaceID  string    `json:"workspace_id"`
-	BindingID    string    `json:"binding_id"`
-	Subject      string    `json:"subject"`
-	Packet       string    `json:"packet"`
-	OriginKey    string    `json:"origin_key"`
-	Receipt      string    `json:"receipt"`
-	ReceiptKey   string    `json:"receipt_key"`
-	Kind         string    `json:"kind"`
-	Body         string    `json:"body"`
-	Name         string    `json:"name"`
-	Size         int32     `json:"size"`
-	SourceFileID *string   `json:"source_file_id"`
-	State        string    `json:"state"`
-	Reason       string    `json:"reason"`
-	Attempts     int32     `json:"attempts"`
-	AttemptID    string    `json:"attempt_id"`
-	LastStatus   int32     `json:"last_status"`
-	NextAttempt  time.Time `json:"next_attempt"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID             string    `json:"id"`
+	Origin         string    `json:"origin"`
+	WorkspaceID    string    `json:"workspace_id"`
+	BindingID      *string   `json:"binding_id"`
+	ConversationID *string   `json:"conversation_id"`
+	Subject        string    `json:"subject"`
+	Packet         string    `json:"packet"`
+	OriginKey      string    `json:"origin_key"`
+	Receipt        string    `json:"receipt"`
+	ReceiptKey     string    `json:"receipt_key"`
+	Kind           string    `json:"kind"`
+	Body           string    `json:"body"`
+	Name           string    `json:"name"`
+	Size           int32     `json:"size"`
+	SourceFileID   *string   `json:"source_file_id"`
+	State          string    `json:"state"`
+	Reason         string    `json:"reason"`
+	Attempts       int32     `json:"attempts"`
+	AttemptID      string    `json:"attempt_id"`
+	LastStatus     int32     `json:"last_status"`
+	NextAttempt    time.Time `json:"next_attempt"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type SmipPeer struct {
@@ -952,6 +1025,20 @@ type SmipPinnedOrigin struct {
 	Origin  string    `json:"origin"`
 	AddedBy string    `json:"added_by"`
 	AddedAt time.Time `json:"added_at"`
+}
+
+type SmipPolicy struct {
+	WorkspaceID string          `json:"workspace_id"`
+	Chat        SmipSharingMode `json:"chat"`
+	Files       SmipSharingMode `json:"files"`
+	UpdatedBy   string          `json:"updated_by"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+}
+
+type SmipPolicyDomain struct {
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id"`
+	Domain      string `json:"domain"`
 }
 
 type TeamDomain struct {

@@ -50,14 +50,14 @@ UPDATE team_domain SET status='verified',verification='administrator',verified_a
 -- name: ListManagedTeams :many
 SELECT * FROM workspace ORDER BY name,id;
 -- name: EnsureTeamProviderPolicy :exec
-INSERT INTO smip_mail_domain(origin,domain,state,ever_verified,endpoint,document,reason,checked_at,expires_at) VALUES($1,$2,'error',false,'','','administrator_provider_only',now(),now()) ON CONFLICT(origin,domain) DO NOTHING;
+INSERT INTO smip_mail_domain(origin,domain,state,ever_verified,endpoint,document,reason,checked_at,expires_at) VALUES($1,$2,'error',false,'','','administrator_provider_only',now(),now()) ON CONFLICT(origin,profile,domain) DO NOTHING;
 
 -- name: CalendarWorkspaceForGrant :one
 SELECT workspace_id FROM calendar WHERE id=$1;
 -- name: EnsureTeamSetup :exec
 INSERT INTO team_setup(workspace_id) VALUES($1) ON CONFLICT(workspace_id) DO NOTHING;
 -- name: ListAllSmipMailDomains :many
-SELECT * FROM smip_mail_domain ORDER BY origin,domain LIMIT 1000;
+SELECT * FROM smip_mail_domain ORDER BY origin,profile,domain LIMIT 1000;
 
 -- name: ReadyTeamWorkspaces :many
 SELECT workspace_id FROM team_setup WHERE status='ready' ORDER BY workspace_id;

@@ -5,13 +5,10 @@ import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@lidza/client'
 import { userError } from '../lib/errors'
-import { AppNotice, useNotice } from './AppNotice'
 
-// One SMIP/0.1 stream or sender name: the wire validator's token alphabet.
-const token = /^[A-Za-z0-9._-]{1,128}$/
 
 /**
- * Settings → SMIP streams, for workspace owners and admins only (the
+ * Settings → SMIP streams (legacy), for workspace owners and admins only (the
  * bindings routes refuse members). The paired transport inbox is separate
  * from Matrix's conversations: React renders chat bodies as text and an
  * accepted file needs an explicit import into Drive.
@@ -23,18 +20,11 @@ export function SmipSettings({ workspaceId, manager }: { workspaceId: string; ma
 
 function SmipStreams({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()
-  const { notice, show: setNotice, clear: closeNotice } = useNotice()
   const key = ['smip-inbox', workspaceId]
   const bindings = useQuery({ queryKey: ['smip-bindings', workspaceId], refetchInterval: 5000, retry: false, queryFn: ({ signal }) => api.listSmipBindings({ workspaceId }, { signal }) })
   const ready = bindings.data?.configured === true && !bindings.isError
   const inbox = useInfiniteQuery({ queryKey: key, initialPageParam: '', enabled: ready, retry: false, queryFn: ({ pageParam, signal }) => api.listSmipInbox({ workspaceId }, { query: { cursor: pageParam }, signal }), getNextPageParam: page => page.nextCursor || undefined })
   const drive = useQuery({ queryKey: ['drive', workspaceId], enabled: ready, queryFn: () => api.listDrive({ workspaceId }) })
-  const [peer, setPeer] = useState('')
-  const [stream, setStream] = useState('')
-  const [sender, setSender] = useState('')
-  const [recipient, setRecipient] = useState('')
-  const [requestId, setRequestId] = useState('')
-  const [invalid, setInvalid] = useState('')
   const [folderId, setFolderId] = useState('')
   const [sendBinding, setSendBinding] = useState('')
   const [sendBody, setSendBody] = useState('')
@@ -44,46 +34,22 @@ function SmipStreams({ workspaceId }: { workspaceId: string }) {
   const send = useMutation({ mutationFn: (id: string) => api.queueSmipMessage({ workspaceId }, { transactionId: id, bindingId: sendBinding, body: sendFile ? '' : sendBody, fileId: sendFile || undefined }), onSuccess: async () => { setSendBody(''); setSendFile(''); setTransactionId(''); await client.invalidateQueries({ queryKey: ['smip-outbox', workspaceId] }) } })
   const cancel = useMutation({ mutationFn: (id: string) => api.cancelSmipMessage({ workspaceId, id }), onSuccess: () => client.invalidateQueries({ queryKey: ['smip-outbox', workspaceId] }) })
   const resume = useMutation({ mutationFn: (id: string) => api.resumeSmipMessage({ workspaceId, id }), onSuccess: () => client.invalidateQueries({ queryKey: ['smip-outbox', workspaceId] }) })
-  const consent = useMutation({ mutationFn: (id: string) => api.createSmipBinding({ workspaceId }, { requestId: id, peer, stream, sender: `${sender}@${peer}`, recipient }), onSuccess: async binding => { setRequestId(''); setPeer(''); setStream(''); setSender(''); setRecipient(''); setNotice({ text: `Authorized ${binding.sender} → ${binding.recipient} on stream ${binding.stream}.` }); await client.invalidateQueries({ queryKey: ['smip-bindings', workspaceId] }) } })
   const disable = useMutation({ mutationFn: (id: string) => api.disableSmipBinding({ workspaceId, id }), onSuccess: () => client.invalidateQueries({ queryKey: ['smip-bindings', workspaceId] }) })
   const importFile = useMutation({ mutationFn: (id: string) => api.importSmipFile({ workspaceId, id }, { folderId: folderId || undefined }), onSuccess: async () => { await client.invalidateQueries({ queryKey: key }); await client.invalidateQueries({ queryKey: ['drive', workspaceId] }) } })
   if (bindings.isPending) return <section className="settings-form" aria-label="SMIP review"><h3>SMIP streams</h3><p role="status">Loading SMIP streams…</p></section>
   if (bindings.isError) return <section className="settings-form" aria-label="SMIP review"><h3>SMIP streams</h3><p role="alert">SMIP status unavailable: {userError(bindings.error)}</p></section>
   if (!ready) return <section className="settings-form" aria-label="SMIP review"><h3>SMIP streams</h3><p role="status">SMIP is not enabled on this server. A server administrator can turn it on in <a href="/admin/setup">Server setup</a>.</p></section>
   const list = bindings.data
-  const peers = list.peers ?? []
-  const recipients = list.recipients ?? []
   const items = [...new Map(inbox.data?.pages.flatMap(page => page.items).map(item => [item.id, item]) || []).values()]
-  const error = consent.error || disable.error || importFile.error || drive.error || send.error || resume.error || cancel.error
+  const error = disable.error || importFile.error || drive.error || send.error || resume.error || cancel.error
   const sendable = list.items.filter(binding => binding.enabled && list.sendablePeers?.includes(binding.peer))
-  const authorize = () => {
-    if (!peer || !recipient) return setInvalid('Choose a paired server and a local recipient.')
-    if (!token.test(stream)) return setInvalid('Remote stream: 1 to 128 letters, digits, dots, hyphens or underscores.')
-    if (!token.test(sender)) return setInvalid('Remote sender: 1 to 128 letters, digits, dots, hyphens or underscores, before the @.')
-    setInvalid('')
-    const id = requestId || crypto.randomUUID()
-    setRequestId(id)
-    consent.mutate(id)
-  }
   return <section className="settings-form smip-settings" aria-label="SMIP review">
     <h3>SMIP streams · Experimental</h3>
-    <p>Authorizing a stream lets one sender on a paired server deliver chat and files into this workspace.</p>
+    <p>Streams are the earlier workspace-level way to receive from a pinned partner; existing ones keep working here. External chat and file sharing is now per person: set what is allowed in <a href="/app/settings/external">External sharing</a>, and people accept their own chat requests in Chat.</p>
     <details><summary>Details</summary>
-      <p>Pairing authenticates servers; a stream authorizes one exact sender, stream and recipient for the whole workspace and never grants membership. Acceptance confirms storage, not reading or Drive import. Both servers can read the content. Queued sends keep their original bytes for retry; imported or received copies cannot be recalled. See docs/protocols/smip-thura.md.</p>
+      <p>A stream authorizes one exact sender, stream and recipient for the whole workspace and never grants membership; turning external chat or file sharing Off in External sharing also stops it. Acceptance confirms storage, not reading or Drive import. Both servers can read the content. Queued sends keep their original bytes for retry; imported or received copies cannot be recalled. See docs/protocols/smip-thura.md.</p>
     </details>
-    {peers.length === 0 ? <p role="status">No paired servers yet. A server administrator pairs them on the <a href="/admin/smip-peers">SMIP peers</a> admin page.</p> : <form noValidate onSubmit={event => { event.preventDefault(); authorize() }}>
-      <h4>Authorize a stream</h4>
-      <label>Peer domain<SelectControl required value={peer} disabled={consent.isPending} onChange={event => { setPeer(event.target.value); setRequestId('') }}><option value="">Choose a paired server</option>{peers.map(domain => <option key={domain} value={domain}>{domain}</option>)}</SelectControl></label>
-      <label>Remote stream<input aria-describedby="smip-stream-help" required maxLength={128} pattern="[A-Za-z0-9._\-]{1,128}" value={stream} onChange={event => { setStream(event.target.value); setRequestId('') }} /></label>
-      <p className="field-help" id="smip-stream-help">The stream name the peer's operator gave you, for example team-chat.</p>
-      <label>Remote sender<span className="smip-address"><input aria-label="Remote sender" aria-describedby="smip-sender-help" required maxLength={128} pattern="[A-Za-z0-9._\-]{1,128}" value={sender} onChange={event => { setSender(event.target.value); setRequestId('') }} /><span>@{peer || 'peer'}</span></span></label>
-      <p className="field-help" id="smip-sender-help">The sender's name on that server, for example team for team@{peer || 'peer.example'}.</p>
-      <label>Local recipient<SelectControl required value={recipient} disabled={consent.isPending || recipients.length === 0} onChange={event => { setRecipient(event.target.value); setRequestId('') }}><option value="">Choose a shared mailbox</option>{recipients.map(option => <option key={option.address} value={option.address}>{option.address} · {option.mailbox}</option>)}</SelectControl></label>
-      {recipients.length === 0 && <p className="field-help">This workspace has no shared mailbox to receive at {list.domain}. Add one in Teams and domains.</p>}
-      {invalid && <p role="alert">{invalid}</p>}
-      <ActionButton disabled={consent.isPending}>Authorize SMIP stream</ActionButton>
-    </form>}
-    <AppNotice notice={notice} clear={closeNotice} />
+    {list.items.length === 0 && <p role="status">This workspace has no streams. New external conversations start in Chat.</p>}
     <ul>{list.items.map(binding => <li key={binding.id}>{binding.sender} → {binding.recipient} · {binding.stream} · {binding.enabled ? 'Authorized' : 'Disabled'} {binding.enabled && <ActionButton disabled={disable.isPending} onClick={() => disable.mutate(binding.id)}>Disable {binding.stream}</ActionButton>}</li>)}</ul>
     {sendable.length > 0 && <form onSubmit={event => { event.preventDefault(); const id = transactionId || crypto.randomUUID(); setTransactionId(id); send.mutate(id) }}>
       <h4>Send through SMIP</h4>

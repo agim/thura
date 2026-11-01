@@ -1389,3 +1389,21 @@ button.app-action svg { width:18px; height:18px; flex-shrink:0; }
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .mail-folder-chip { display: inline-block; margin-inline-end: 6px; padding: 0 6px; border-radius: 4px; background: var(--tealsoft); color: var(--teal); font-weight: 600; line-height: 1.6; }
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .mail-label-scope { margin: 8px 16px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
 #orbit-workspace.zero-workspace #orbit-mail-vibrant .mail-label-scope .link-button { min-height: 0; padding: 0; border: 0; background: none; color: var(--teal); font: inherit; text-decoration: underline; cursor: pointer; }
+/* External chat (ExternalChat.tsx) and External sharing settings. */
+#orbit-workspace.zero-workspace .external-chat-list { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 8px; min-width: 0; }
+#orbit-workspace.zero-workspace .external-chat-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#orbit-workspace.zero-workspace .external-chat-heading h4, #orbit-workspace.zero-workspace .external-chat-list h5 { margin: 4px 0; }
+#orbit-workspace.zero-workspace .external-chat-list strong, #orbit-workspace.zero-workspace .external-conversation h3, #orbit-workspace.zero-workspace .external-request p { overflow-wrap: anywhere; }
+#orbit-workspace.zero-workspace .external-verified { display: inline-flex; align-items: center; gap: 4px; }
+#orbit-workspace.zero-workspace .external-verified.ok { color: var(--teal); }
+#orbit-workspace.zero-workspace .external-request { margin: 12px 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+#orbit-workspace.zero-workspace .external-preview { list-style: none; padding: 0; margin: 8px 0; }
+#orbit-workspace.zero-workspace .external-preview li { margin: 6px 0; }
+#orbit-workspace.zero-workspace .external-request-actions, #orbit-workspace.zero-workspace .external-file-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#orbit-workspace.zero-workspace .external-share { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+#orbit-workspace.zero-workspace .external-domains { border: 0; padding: 0; margin: 12px 0; min-width: 0; }
+#orbit-workspace.zero-workspace .external-domains ul { list-style: none; padding: 0; margin: 0 0 8px; }
+#orbit-workspace.zero-workspace .external-domain-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+#orbit-workspace.zero-workspace .external-domain-row label { flex: 1; min-width: 0; margin: 0; }
+#orbit-workspace.zero-workspace .external-domain-row input { width: 100%; box-sizing: border-box; }
+#orbit-workspace.zero-workspace .external-overview span { overflow-wrap: anywhere; }

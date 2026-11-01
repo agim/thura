@@ -251,6 +251,23 @@ func NewClient(endpoint, destination string, keys map[string]Key, tlsConfig *tls
 func NewApplicationClient(endpoint, destination string, keys map[string]Key, tlsConfig *tls.Config) (*Client, error) {
 	return newClient(endpoint, destination, keys, tlsConfig, ApplicationMessagePath)
 }
+
+// NewApplicationClientHTTP selects the API-hosted endpoint through a caller
+// supplied HTTP client: a discovered peer uses the SSRF-safe discovery
+// client (TLS 1.3 only, no redirects, addresses resolved once and checked).
+// The client must verify certificates and refuse redirects itself.
+func NewApplicationClientHTTP(endpoint, destination string, keys map[string]Key, client *http.Client) (*Client, error) {
+	c, err := newClient(endpoint, destination, keys, nil, ApplicationMessagePath)
+	if err != nil {
+		return nil, err
+	}
+	if client == nil || client.CheckRedirect == nil {
+		return nil, errors.New("a redirect-refusing HTTP client is required")
+	}
+	c.http.CloseIdleConnections()
+	c.http = client
+	return c, nil
+}
 func newClient(endpoint, destination string, keys map[string]Key, tlsConfig *tls.Config, messagePath string) (*Client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") || !validDomain(destination) {

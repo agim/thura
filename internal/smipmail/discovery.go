@@ -14,14 +14,10 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/agim/lidza"
-	"github.com/agim/lidza/packs/db"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	q "thura/db/queries/gen"
 	"thura/internal/platform/ingress"
 	"thura/internal/smip"
 	"thura/internal/smiptrust"
@@ -190,174 +186,66 @@ func DiscoveryClient(ctx context.Context, resolver *net.Resolver, roots *x509.Ce
 	return &http.Client{Transport: transport, Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, nil
 }
 
-// fetch reads the pinned origins for this request and fetches the document.
-func (g *Gateway) fetch(ctx context.Context, domain string) (Peer, error) {
-	origins, err := g.pinnedOrigins(ctx)
-	if err != nil {
-		return Peer{}, ErrDiscovery
-	}
-	return g.fetchFrom(ctx, domain, origins)
+// registry is this identity's SMIP/0.2 view of the shared discovery engine.
+func (g *Gateway) registry() Registry {
+	return Registry{Local: g.domain, Profile: smip.MailVersion, Path: smip.DiscoveryPath, Resolver: g.resolver, Roots: g.roots, Origins: g.origins, Required: g.required, Denied: g.denied, Slots: g.slots, Verify: verifyDocument}
 }
 
-// fetchFrom fetches through the pinned origins Resolve already read, so the
-// expected endpoint and the fetched one come from the same read.
-func (g *Gateway) fetchFrom(ctx context.Context, domain string, origins map[string]string) (Peer, error) {
-	if g.denied[domain] {
-		return Peer{}, ErrDiscovery
+// verifyDocument is the SMIP/0.2 profile check: one canonical, signed,
+// unexpired capability document for domain.
+func verifyDocument(raw []byte, domain string, now time.Time) (int64, error) {
+	document, err := decodeDocument(raw)
+	if err != nil || document.Verify(domain, now) != nil {
+		return 0, ErrDiscovery
 	}
-	origin, pinned := origins[domain]
-	if !pinned {
-		records, err := g.resolver.LookupTXT(ctx, "_smip."+domain)
-		if err != nil {
-			var dns *net.DNSError
-			if errors.As(err, &dns) && dns.IsNotFound {
-				return Peer{}, ErrUnsupported
-			}
-			return Peer{}, ErrDiscovery
-		}
-		count := 0
-		for _, record := range records {
-			if record == "v=SMIP1" {
-				count++
-			} else if strings.HasPrefix(strings.ToUpper(strings.TrimSpace(record)), "V=SMIP") {
-				return Peer{}, ErrDiscovery
-			}
-		}
-		if count == 0 {
-			return Peer{}, ErrUnsupported
-		}
-		if count != 1 {
-			return Peer{}, ErrDiscovery
-		}
-		origin = "https://smip." + domain
-	}
-	client, err := g.client(ctx, origin, pinned)
-	if err != nil {
-		return Peer{}, err
-	}
-	defer client.CloseIdleConnections()
-	request, err := http.NewRequestWithContext(ctx, "GET", origin+smip.DiscoveryPath, nil)
-	if err != nil {
-		return Peer{}, err
-	}
-	request.Header.Set("X-Thura-SMIP-Domain", domain)
-	response, err := client.Do(request)
-	if err != nil {
-		return Peer{}, ErrDiscovery
-	}
-	defer response.Body.Close()
-	// An advertised endpoint failing, redirecting or removing mail support never
-	// becomes a negative capability result that would silently select a provider.
-	if response.StatusCode != http.StatusOK || response.Header.Get("Content-Type") != "application/json" {
-		return Peer{}, ErrDiscovery
-	}
-	raw, err := io.ReadAll(io.LimitReader(response.Body, (64<<10)+1))
-	if err != nil || len(raw) > 64<<10 {
-		return Peer{}, ErrDiscovery
-	}
+	return document.Expires, nil
+}
+func decodeDocument(raw []byte) (Document, error) {
 	var document Document
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
-	if decoder.Decode(&document) != nil || decoder.Decode(new(any)) != io.EOF || document.Verify(domain, lidza.Now(ctx)) != nil {
-		return Peer{}, ErrDiscovery
+	if decoder.Decode(&document) != nil || decoder.Decode(new(any)) != io.EOF {
+		return Document{}, ErrDiscovery
 	}
 	canonical, err := json.Marshal(document)
 	if err != nil || !bytes.Equal(bytes.TrimSpace(raw), canonical) {
+		return Document{}, ErrDiscovery
+	}
+	return document, nil
+}
+func peerOf(d Discovered) (Peer, error) {
+	document, err := decodeDocument(d.Document)
+	if err != nil {
 		return Peer{}, ErrDiscovery
 	}
-	return Peer{Domain: domain, Origin: origin, Document: document}, nil
+	return Peer{Domain: d.Domain, Origin: d.Origin, Document: document}, nil
 }
+
+// fetch reads the pinned origins for this request and fetches the document.
+func (g *Gateway) fetch(ctx context.Context, domain string) (Peer, error) {
+	registry := g.registry()
+	origins, err := registry.PinnedOrigins(ctx)
+	if err != nil {
+		return Peer{}, ErrDiscovery
+	}
+	found, err := registry.Fetch(ctx, domain, origins)
+	if err != nil {
+		return Peer{}, err
+	}
+	return peerOf(found)
+}
+
+// Resolve returns the verified capability document of domain through the
+// shared registry (see Registry.Resolve for the downgrade rules).
 func (g *Gateway) Resolve(ctx context.Context, domain string, force bool) (Peer, error) {
 	if !g.Enabled() || !smip.ValidDomain(domain) || g.denied[domain] {
 		return Peer{}, ErrDiscovery
 	}
-	select {
-	case g.slots <- struct{}{}:
-		defer func() { <-g.slots }()
-	case <-ctx.Done():
-		return Peer{}, ctx.Err()
-	}
-	tx, err := db.From(ctx).Begin(ctx)
+	found, err := g.registry().Resolve(ctx, domain, force)
 	if err != nil {
 		return Peer{}, err
 	}
-	defer tx.Rollback(ctx)
-	queries := q.New(tx)
-	// Coalesce refreshes across nodes; the bounded client prevents an unbounded
-	// transaction, and the process semaphore limits discovery connection pressure.
-	if _, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", "smip-domain:"+g.domain+":"+domain); err != nil {
-		return Peer{}, err
-	}
-	old, err := queries.GetSmipMailDomain(ctx, q.GetSmipMailDomainParams{Origin: g.domain, Domain: domain})
-	found := err == nil
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return Peer{}, err
-	}
-	now := lidza.Now(ctx)
-	origins, err := g.pinnedOrigins(ctx)
-	if err != nil {
-		return Peer{}, ErrDiscovery
-	}
-	expected := "https://smip." + domain
-	pinnedOrigin, pinned := origins[domain]
-	if pinned {
-		expected = pinnedOrigin
-	}
-	if found && !force && now.Before(old.ExpiresAt) && (old.State != "verified" || old.Endpoint == expected) && (old.State != "absent" || !pinned) {
-		if old.State == "verified" {
-			var d Document
-			if json.Unmarshal([]byte(old.Document), &d) != nil || d.Verify(domain, now) != nil {
-				return Peer{}, ErrDiscovery
-			}
-			return Peer{Domain: domain, Origin: old.Endpoint, Document: d}, nil
-		}
-		if old.State == "absent" && !old.EverVerified && !g.required[domain] {
-			return Peer{}, ErrUnsupported
-		}
-		return Peer{}, ErrDiscovery
-	}
-	if !found {
-		// Only sticky verifications and unexpired checks occupy capacity: an
-		// unauthenticated sender naming random domains, or every provider
-		// recipient ever mailed, must not lock legitimate new peers out.
-		count, err := queries.CountSmipMailDomains(ctx, q.CountSmipMailDomainsParams{Origin: g.domain, ExpiresAt: now})
-		if err != nil {
-			return Peer{}, err
-		}
-		if count.Live >= RegistryCapacity {
-			return Peer{}, ErrRegistryFull
-		}
-		if count.Total >= RegistryCapacity {
-			// The table stays bounded: expired, never-verified rows make room, oldest first.
-			if _, err = queries.EvictSmipMailDomains(ctx, q.EvictSmipMailDomainsParams{Origin: g.domain, ExpiresAt: now, Limit: 100}); err != nil {
-				return Peer{}, err
-			}
-		}
-	}
-	peer, fetchErr := g.fetchFrom(ctx, domain, origins)
-	state, reason, endpoint, document, verified, expires := "error", "verification_failed", "", "", false, now.Add(15*time.Second)
-	if fetchErr == nil {
-		raw, err := json.Marshal(peer.Document)
-		if err != nil {
-			return Peer{}, err
-		}
-		state, reason, endpoint, document, verified, expires = "verified", "", peer.Origin, string(raw), true, time.Unix(peer.Document.Expires, 0)
-	} else if errors.Is(fetchErr, ErrUnsupported) && !old.EverVerified && !g.required[domain] {
-		state, reason, expires = "absent", "no_smip_record", now.Add(CacheLifetime)
-	}
-	if err = queries.WriteSmipMailDomain(ctx, q.WriteSmipMailDomainParams{Origin: g.domain, Domain: domain, State: state, EverVerified: verified, Endpoint: endpoint, Document: document, Reason: reason, CheckedAt: now, ExpiresAt: expires}); err != nil {
-		return Peer{}, err
-	}
-	if err = tx.Commit(ctx); err != nil {
-		return Peer{}, err
-	}
-	if state == "verified" {
-		return peer, nil
-	}
-	if state == "absent" {
-		return Peer{}, ErrUnsupported
-	}
-	return Peer{}, ErrDiscovery
+	return peerOf(found)
 }
 
 // Keep protocol IDs unpredictable and independent of MIME Message-ID values.

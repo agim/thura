@@ -272,7 +272,7 @@ func (q *Queries) DueTeamDomains(ctx context.Context, checkedAt *time.Time) ([]T
 }
 
 const ensureTeamProviderPolicy = `-- name: EnsureTeamProviderPolicy :exec
-INSERT INTO smip_mail_domain(origin,domain,state,ever_verified,endpoint,document,reason,checked_at,expires_at) VALUES($1,$2,'error',false,'','','administrator_provider_only',now(),now()) ON CONFLICT(origin,domain) DO NOTHING
+INSERT INTO smip_mail_domain(origin,domain,state,ever_verified,endpoint,document,reason,checked_at,expires_at) VALUES($1,$2,'error',false,'','','administrator_provider_only',now(),now()) ON CONFLICT(origin,profile,domain) DO NOTHING
 `
 
 type EnsureTeamProviderPolicyParams struct {
@@ -365,7 +365,7 @@ func (q *Queries) GetTeamSetup(ctx context.Context, workspaceID string) (TeamSet
 }
 
 const listAllSmipMailDomains = `-- name: ListAllSmipMailDomains :many
-SELECT id, origin, domain, state, ever_verified, endpoint, document, reason, checked_at, expires_at FROM smip_mail_domain ORDER BY origin,domain LIMIT 1000
+SELECT id, origin, profile, domain, state, ever_verified, endpoint, document, reason, checked_at, expires_at FROM smip_mail_domain ORDER BY origin,profile,domain LIMIT 1000
 `
 
 func (q *Queries) ListAllSmipMailDomains(ctx context.Context) ([]SmipMailDomain, error) {
@@ -380,6 +380,7 @@ func (q *Queries) ListAllSmipMailDomains(ctx context.Context) ([]SmipMailDomain,
 		if err := rows.Scan(
 			&i.ID,
 			&i.Origin,
+			&i.Profile,
 			&i.Domain,
 			&i.State,
 			&i.EverVerified,

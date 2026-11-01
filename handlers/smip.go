@@ -36,3 +36,45 @@ func ResumeSmipMessage(ctx context.Context, r *router.Request[router.None]) (sch
 func CancelSmipMessage(ctx context.Context, r *router.Request[router.None]) (schema.SmipOutbound, error) {
 	return federation.Cancel(ctx, r.Param("workspaceId"), r.Param("id"))
 }
+
+// External SMIP chat and files: a workspace's sharing policy (owners and
+// admins) and each member's own requests and conversations.
+func GetSmipPolicy(ctx context.Context, r *router.Request[router.None]) (schema.SmipPolicyView, error) {
+	return federation.GetPolicy(ctx, r.Param("workspaceId"))
+}
+func SaveSmipPolicy(ctx context.Context, r *router.Request[schema.SmipPolicyInput]) (schema.SmipPolicyView, error) {
+	return federation.SavePolicy(ctx, r.Param("workspaceId"), r.Body)
+}
+func UnblockSmipDomain(ctx context.Context, r *router.Request[schema.SmipDomainInput]) (schema.SmipPolicyView, error) {
+	return federation.UnblockDomain(ctx, r.Param("workspaceId"), r.Body)
+}
+func ListSmipConversations(ctx context.Context, r *router.Request[router.None]) (schema.SmipConversationList, error) {
+	return federation.ListConversations(ctx, r.Param("workspaceId"))
+}
+func StartSmipConversation(ctx context.Context, r *router.Request[schema.SmipConversationInput]) (schema.SmipConversationDetail, error) {
+	return federation.StartConversation(ctx, r.Param("workspaceId"), r.Body)
+}
+func GetSmipConversation(ctx context.Context, r *router.Request[router.None]) (schema.SmipConversationDetail, error) {
+	return federation.GetConversation(ctx, r.Param("workspaceId"), r.Param("id"))
+}
+func AcceptSmipConversation(ctx context.Context, r *router.Request[router.None]) (schema.SmipConversationDetail, error) {
+	return federation.Decide(ctx, r.Param("workspaceId"), r.Param("id"), federation.DecisionAccept)
+}
+func DeclineSmipConversation(ctx context.Context, r *router.Request[router.None]) (schema.SmipConversationDetail, error) {
+	return federation.Decide(ctx, r.Param("workspaceId"), r.Param("id"), federation.DecisionDecline)
+}
+func MarkSmipConversationSpam(ctx context.Context, r *router.Request[router.None]) (schema.SmipConversationDetail, error) {
+	return federation.Decide(ctx, r.Param("workspaceId"), r.Param("id"), federation.DecisionSpam)
+}
+func BlockSmipConversationDomain(ctx context.Context, r *router.Request[router.None]) (schema.SmipConversationDetail, error) {
+	return federation.Decide(ctx, r.Param("workspaceId"), r.Param("id"), federation.DecisionBlock)
+}
+func SendSmipConversationMessage(ctx context.Context, r *router.Request[schema.SmipConversationMessageInput]) (schema.SmipConversationItem, error) {
+	return federation.SendConversationMessage(ctx, r.Param("workspaceId"), r.Param("id"), r.Body)
+}
+func SaveSmipConversationFile(ctx context.Context, r *router.Request[schema.SmipImportInput]) (schema.DriveFile, error) {
+	return federation.SaveIncomingFile(ctx, r.Param("workspaceId"), r.Param("id"), r.Param("itemId"), r.Body)
+}
+func DeclineSmipConversationFile(ctx context.Context, r *router.Request[router.None]) (schema.SmipConversationDetail, error) {
+	return federation.DeclineIncomingFile(ctx, r.Param("workspaceId"), r.Param("id"), r.Param("itemId"))
+}

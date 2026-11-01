@@ -19,6 +19,7 @@ import { downloadContent } from '../lib/download'
 import { userError } from '../lib/errors'
 import { useAppView } from '../lib/app-view'
 import { AppNotice, useNotice, type Notice } from './AppNotice'
+import { ExternalChatList, ExternalConversation, useExternalConversations } from './ExternalChat'
 // A 4xx (not 429) answer for a room is final: it is gone or no longer shared, so retrying cannot help.
 const clientError = (error: unknown) => error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429
 
@@ -46,7 +47,12 @@ export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string
   const roomLost = clientError(detail.error)
   const lostRoom = useRef('')
   useEffect(() => { if (roomLost && lostRoom.current !== selected) { lostRoom.current = selected; setNotice({ text: 'That conversation is no longer available. Showing your conversations.' }); set({ room: undefined, q: undefined }, { replace: true }) } }, [roomLost, selected, set, setNotice])
-  const openRoom = (id: string) => set({ room: id, q: id === selected ? view.q : undefined })
+  const openRoom = (id: string) => set({ room: id, q: id === selected ? view.q : undefined, external: undefined })
+  // ?external= is an external conversation or chat request (ExternalChat.tsx).
+  const externalId = view.external ?? ''
+  const external = useExternalConversations(workspaceId)
+  const openExternal = (id: string) => set({ external: id, room: undefined, q: undefined })
+  const manager = members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false
   const setSearch = useCallback((q: string) => set({ q: q || undefined }, { replace: true }), [set])
   const [name, setName] = useState(contact?.name || '')
   const [contactNotice, setContactNotice] = useState('')
@@ -60,21 +66,23 @@ export function LiveChat({ workspaceId, contact, onMeet }: { workspaceId: string
     setContactNotice(member ? `Prepare a private conversation with ${contact.name}.` : 'This contact is not another workspace member. Choose a member for a private conversation; external users require an administrator-managed channel invitation.')
   }, [contact, members.data, session.data])
   const create = useMutation({ mutationFn: (id: string) => { const member = members.data?.items.find(m => m.email.toLowerCase() === recipient.trim().toLowerCase() && m.subject !== session.data?.user?.subject); if (recipient.trim() && !member) throw new Error('Choose another workspace member for a private chat.'); return api.createChatRoom({ workspaceId }, { name, participant: member?.subject, requestId: id }) }, onSuccess: async r => { setCreating(false); client.setQueryData(['chat-room', workspaceId, r.id], r); openRoom(r.id); setName(''); setRequestId(''); await client.invalidateQueries({ queryKey: ['chat-rooms', workspaceId] }) } })
-  const room = selected ? (detail.isError ? undefined : detail.data) : rooms.data?.items[0]
+  const room = externalId ? undefined : selected ? (detail.isError ? undefined : detail.data) : rooms.data?.items[0]
   return <section className="ws-page live-chat"><AppPageHeader title="Chat" action={<><NewAction label="New chat" aria-haspopup="dialog" onClick={() => setCreating(true)} />{creating && <WorkspaceDialog title="New chat" onClose={() => setCreating(false)}><form className="row" noValidate onSubmit={e => { e.preventDefault(); if (!name.trim() || create.isPending || !rooms.data?.configured) return; const id = requestId || crypto.randomUUID(); setRequestId(id); create.mutate(id) }}><label>Room name<input required maxLength={200} value={name} onChange={e => { setName(e.target.value); setRequestId('') }} /></label><RecipientInput workspaceId={workspaceId} label="Conversation recipient" multiple={false} value={recipient} onChange={email => { setRecipient(email); setRequestId('') }} /><p className="field-help">Leave blank for a workspace channel. Private chats require a workspace member.</p><ActionButton className="primary-action" disabled={!name.trim() || create.isPending || !rooms.data?.configured}>Create room</ActionButton>{create.error && <p role="alert">{userError(create.error)}</p>}</form></WorkspaceDialog>}</>} />
 
     {selected && detail.isPending && <p role="status">Loading conversation…</p>}
     {contactNotice && <p role="status">{contactNotice}</p>}
-    <AppSidebar title="Conversations" className="chat-sidebar" label="Chat navigation" noun="conversation" current={room?.name}>
+    <AppSidebar title="Conversations" className="chat-sidebar" label="Chat navigation" noun="conversation" current={room?.name ?? external.data?.items.find(c => c.id === externalId)?.remoteAddress}>
     <label className="conversation-filter"><span className="sr-only">Find a conversation</span><input aria-label="Find a conversation" placeholder="Find a conversation" value={roomFilter} onChange={e => setRoomFilter(e.target.value)} /></label>
     <PinnedLabels workspaceId={workspaceId} app="chat" value={labelId} onChange={value => set({ label: value }, { replace: false })} />
     <ul aria-label="Chat room">{[...(room && !labelId && !rooms.data?.items.some(r => r.id === room.id) ? [room] : []), ...(listed || [])].filter(r => r.name.toLowerCase().includes(roomFilter.toLowerCase())).map(r => <li key={r.id}><button aria-pressed={room?.id === r.id} onClick={() => openRoom(r.id)}><span className="conversation-avatar">{r.direct ? <MessageCircle size={18} /> : <Hash size={18} />}</span><span className="conversation-copy"><strong>{r.name}</strong><small>{r.direct ? 'Private conversation' : 'Workspace channel'}</small></span></button></li>)}</ul>
     {labelId ? labeled.data && !labeled.data.items.length && <p className="sidebar-empty">No conversations with this label.</p> : rooms.data && !rooms.data.items.length && <p className="sidebar-empty">Your conversations will appear here.</p>}
     {labeled.error && <p role="alert">{userError(labeled.error)}</p>}
+    {!labelId && external.data?.configured && <ExternalChatList workspaceId={workspaceId} list={external.data} selected={externalId} filter={roomFilter} onOpen={openExternal} />}
     </AppSidebar>{rooms.data && !rooms.data.configured && <p role="status">Chat isn’t available yet. Ask your administrator.</p>}
     {((roomLost ? null : detail.error) || rooms.error || members.error || create.error) && <p role="alert">{userError((roomLost ? null : detail.error) || rooms.error || members.error || create.error)}</p>}
-    {room && rooms.data?.configured && <ChatConversation search={view.q ?? ''} onSearch={setSearch} setNotice={setNotice} onMeet={onMeet} key={room.id} room={room} manager={members.data?.items.some(m => m.subject === session.data?.user?.subject && (m.role === 'owner' || m.role === 'admin')) || false} />}
-    {(!room || !rooms.data?.configured) && !rooms.isPending && <div className="communication-empty"><MessageCircle size={32} /><h3>Your conversations, together</h3><p>Choose a conversation or start a new chat with your workspace.</p></div>}
+    {externalId && <ExternalConversation key={externalId} workspaceId={workspaceId} id={externalId} manager={manager} onClosed={() => set({ external: undefined }, { replace: true })} />}
+    {room && rooms.data?.configured && <ChatConversation search={view.q ?? ''} onSearch={setSearch} setNotice={setNotice} onMeet={onMeet} key={room.id} room={room} manager={manager} />}
+    {!externalId && (!room || !rooms.data?.configured) && !rooms.isPending && <div className="communication-empty"><MessageCircle size={32} /><h3>Your conversations, together</h3><p>Choose a conversation or start a new chat with your workspace.</p></div>}
     <p className="app-service-note chat-service-note"><LockKeyhole size={12} /> Rooms are server-readable; this version does not enable end-to-end encryption.</p>
     <AppNotice notice={notice} clear={closeNotice} />
   </section>

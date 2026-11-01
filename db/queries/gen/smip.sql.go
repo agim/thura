@@ -11,26 +11,27 @@ import (
 )
 
 const acceptSmipPacket = `-- name: AcceptSmipPacket :one
-INSERT INTO smip_inbox(workspace_id,binding_id,origin,message_id,digest,record,origin_key,receipt_key,kind,size,accepted_at,sender,recipient,stream,body,name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id, workspace_id, binding_id, origin, message_id, digest, record, origin_key, receipt_key, sender, recipient, stream, body, name, kind, size, imported_file_id, imported_at, accepted_at
+INSERT INTO smip_inbox(workspace_id,binding_id,origin,message_id,digest,record,origin_key,receipt_key,kind,size,accepted_at,sender,recipient,stream,body,name,conversation_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id, workspace_id, binding_id, conversation_id, origin, message_id, digest, record, origin_key, receipt_key, sender, recipient, stream, body, name, kind, size, imported_file_id, imported_at, declined_at, decided_by, accepted_at
 `
 
 type AcceptSmipPacketParams struct {
-	WorkspaceID string    `json:"workspace_id"`
-	BindingID   string    `json:"binding_id"`
-	Origin      string    `json:"origin"`
-	MessageID   string    `json:"message_id"`
-	Digest      string    `json:"digest"`
-	Record      string    `json:"record"`
-	OriginKey   string    `json:"origin_key"`
-	ReceiptKey  string    `json:"receipt_key"`
-	Kind        string    `json:"kind"`
-	Size        int32     `json:"size"`
-	AcceptedAt  time.Time `json:"accepted_at"`
-	Sender      string    `json:"sender"`
-	Recipient   string    `json:"recipient"`
-	Stream      string    `json:"stream"`
-	Body        string    `json:"body"`
-	Name        string    `json:"name"`
+	WorkspaceID    string    `json:"workspace_id"`
+	BindingID      *string   `json:"binding_id"`
+	Origin         string    `json:"origin"`
+	MessageID      string    `json:"message_id"`
+	Digest         string    `json:"digest"`
+	Record         string    `json:"record"`
+	OriginKey      string    `json:"origin_key"`
+	ReceiptKey     string    `json:"receipt_key"`
+	Kind           string    `json:"kind"`
+	Size           int32     `json:"size"`
+	AcceptedAt     time.Time `json:"accepted_at"`
+	Sender         string    `json:"sender"`
+	Recipient      string    `json:"recipient"`
+	Stream         string    `json:"stream"`
+	Body           string    `json:"body"`
+	Name           string    `json:"name"`
+	ConversationID *string   `json:"conversation_id"`
 }
 
 func (q *Queries) AcceptSmipPacket(ctx context.Context, arg AcceptSmipPacketParams) (SmipInbox, error) {
@@ -51,12 +52,14 @@ func (q *Queries) AcceptSmipPacket(ctx context.Context, arg AcceptSmipPacketPara
 		arg.Stream,
 		arg.Body,
 		arg.Name,
+		arg.ConversationID,
 	)
 	var i SmipInbox
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
 		&i.BindingID,
+		&i.ConversationID,
 		&i.Origin,
 		&i.MessageID,
 		&i.Digest,
@@ -72,6 +75,8 @@ func (q *Queries) AcceptSmipPacket(ctx context.Context, arg AcceptSmipPacketPara
 		&i.Size,
 		&i.ImportedFileID,
 		&i.ImportedAt,
+		&i.DeclinedAt,
+		&i.DecidedBy,
 		&i.AcceptedAt,
 	)
 	return i, err
@@ -117,23 +122,24 @@ func (q *Queries) AddSmipBinding(ctx context.Context, arg AddSmipBindingParams) 
 }
 
 const addSmipOutbound = `-- name: AddSmipOutbound :one
-INSERT INTO smip_outbox(id,workspace_id,binding_id,subject,packet,origin_key,kind,body,name,size,source_file_id,next_attempt,created_at,updated_at,origin) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12,$12,$13) RETURNING id, origin, workspace_id, binding_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at
+INSERT INTO smip_outbox(id,workspace_id,binding_id,subject,packet,origin_key,kind,body,name,size,source_file_id,next_attempt,created_at,updated_at,origin,conversation_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12,$12,$13,$14) RETURNING id, origin, workspace_id, binding_id, conversation_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at
 `
 
 type AddSmipOutboundParams struct {
-	ID           string    `json:"id"`
-	WorkspaceID  string    `json:"workspace_id"`
-	BindingID    string    `json:"binding_id"`
-	Subject      string    `json:"subject"`
-	Packet       string    `json:"packet"`
-	OriginKey    string    `json:"origin_key"`
-	Kind         string    `json:"kind"`
-	Body         string    `json:"body"`
-	Name         string    `json:"name"`
-	Size         int32     `json:"size"`
-	SourceFileID *string   `json:"source_file_id"`
-	NextAttempt  time.Time `json:"next_attempt"`
-	Origin       string    `json:"origin"`
+	ID             string    `json:"id"`
+	WorkspaceID    string    `json:"workspace_id"`
+	BindingID      *string   `json:"binding_id"`
+	Subject        string    `json:"subject"`
+	Packet         string    `json:"packet"`
+	OriginKey      string    `json:"origin_key"`
+	Kind           string    `json:"kind"`
+	Body           string    `json:"body"`
+	Name           string    `json:"name"`
+	Size           int32     `json:"size"`
+	SourceFileID   *string   `json:"source_file_id"`
+	NextAttempt    time.Time `json:"next_attempt"`
+	Origin         string    `json:"origin"`
+	ConversationID *string   `json:"conversation_id"`
 }
 
 func (q *Queries) AddSmipOutbound(ctx context.Context, arg AddSmipOutboundParams) (SmipOutbox, error) {
@@ -151,6 +157,7 @@ func (q *Queries) AddSmipOutbound(ctx context.Context, arg AddSmipOutboundParams
 		arg.SourceFileID,
 		arg.NextAttempt,
 		arg.Origin,
+		arg.ConversationID,
 	)
 	var i SmipOutbox
 	err := row.Scan(
@@ -158,6 +165,7 @@ func (q *Queries) AddSmipOutbound(ctx context.Context, arg AddSmipOutboundParams
 		&i.Origin,
 		&i.WorkspaceID,
 		&i.BindingID,
+		&i.ConversationID,
 		&i.Subject,
 		&i.Packet,
 		&i.OriginKey,
@@ -262,7 +270,7 @@ func (q *Queries) FindSmipBinding(ctx context.Context, arg FindSmipBindingParams
 }
 
 const findSmipOutbound = `-- name: FindSmipOutbound :one
-SELECT id, origin, workspace_id, binding_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at FROM smip_outbox WHERE id=$1
+SELECT id, origin, workspace_id, binding_id, conversation_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at FROM smip_outbox WHERE id=$1
 `
 
 func (q *Queries) FindSmipOutbound(ctx context.Context, id string) (SmipOutbox, error) {
@@ -273,6 +281,7 @@ func (q *Queries) FindSmipOutbound(ctx context.Context, id string) (SmipOutbox, 
 		&i.Origin,
 		&i.WorkspaceID,
 		&i.BindingID,
+		&i.ConversationID,
 		&i.Subject,
 		&i.Packet,
 		&i.OriginKey,
@@ -296,7 +305,7 @@ func (q *Queries) FindSmipOutbound(ctx context.Context, id string) (SmipOutbox, 
 }
 
 const findSmipReceipt = `-- name: FindSmipReceipt :one
-SELECT id, workspace_id, binding_id, origin, message_id, digest, record, origin_key, receipt_key, sender, recipient, stream, body, name, kind, size, imported_file_id, imported_at, accepted_at FROM smip_inbox WHERE origin=$1 AND message_id=$2
+SELECT id, workspace_id, binding_id, conversation_id, origin, message_id, digest, record, origin_key, receipt_key, sender, recipient, stream, body, name, kind, size, imported_file_id, imported_at, declined_at, decided_by, accepted_at FROM smip_inbox WHERE origin=$1 AND message_id=$2
 `
 
 type FindSmipReceiptParams struct {
@@ -311,6 +320,7 @@ func (q *Queries) FindSmipReceipt(ctx context.Context, arg FindSmipReceiptParams
 		&i.ID,
 		&i.WorkspaceID,
 		&i.BindingID,
+		&i.ConversationID,
 		&i.Origin,
 		&i.MessageID,
 		&i.Digest,
@@ -326,6 +336,8 @@ func (q *Queries) FindSmipReceipt(ctx context.Context, arg FindSmipReceiptParams
 		&i.Size,
 		&i.ImportedFileID,
 		&i.ImportedAt,
+		&i.DeclinedAt,
+		&i.DecidedBy,
 		&i.AcceptedAt,
 	)
 	return i, err
@@ -358,7 +370,7 @@ func (q *Queries) GetSmipBinding(ctx context.Context, arg GetSmipBindingParams) 
 }
 
 const getSmipOutbound = `-- name: GetSmipOutbound :one
-SELECT id, origin, workspace_id, binding_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at FROM smip_outbox WHERE workspace_id=$1 AND id=$2
+SELECT id, origin, workspace_id, binding_id, conversation_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at FROM smip_outbox WHERE workspace_id=$1 AND id=$2
 `
 
 type GetSmipOutboundParams struct {
@@ -374,6 +386,7 @@ func (q *Queries) GetSmipOutbound(ctx context.Context, arg GetSmipOutboundParams
 		&i.Origin,
 		&i.WorkspaceID,
 		&i.BindingID,
+		&i.ConversationID,
 		&i.Subject,
 		&i.Packet,
 		&i.OriginKey,
@@ -452,7 +465,7 @@ func (q *Queries) ListSmipBindings(ctx context.Context, workspaceID string) ([]S
 }
 
 const listSmipInbox = `-- name: ListSmipInbox :many
-SELECT id,binding_id,origin,message_id,sender,recipient,stream,kind,body,name,size,digest,accepted_at,imported_file_id,imported_at FROM smip_inbox WHERE workspace_id=$1 AND id::text > $2 ORDER BY id LIMIT 51
+SELECT id,binding_id,origin,message_id,sender,recipient,stream,kind,body,name,size,digest,accepted_at,imported_file_id,imported_at FROM smip_inbox WHERE workspace_id=$1 AND binding_id IS NOT NULL AND id::text > $2 ORDER BY id LIMIT 51
 `
 
 type ListSmipInboxParams struct {
@@ -462,7 +475,7 @@ type ListSmipInboxParams struct {
 
 type ListSmipInboxRow struct {
 	ID             string     `json:"id"`
-	BindingID      string     `json:"binding_id"`
+	BindingID      *string    `json:"binding_id"`
 	Origin         string     `json:"origin"`
 	MessageID      string     `json:"message_id"`
 	Sender         string     `json:"sender"`
@@ -515,7 +528,7 @@ func (q *Queries) ListSmipInbox(ctx context.Context, arg ListSmipInboxParams) ([
 }
 
 const listSmipOutbox = `-- name: ListSmipOutbox :many
-SELECT id,binding_id,kind,body,name,size,source_file_id,state,reason,attempts,last_status,next_attempt,created_at,updated_at FROM smip_outbox WHERE workspace_id=$1 AND id::text > $2 ORDER BY id LIMIT 51
+SELECT id,binding_id,kind,body,name,size,source_file_id,state,reason,attempts,last_status,next_attempt,created_at,updated_at FROM smip_outbox WHERE workspace_id=$1 AND binding_id IS NOT NULL AND id::text > $2 ORDER BY id LIMIT 51
 `
 
 type ListSmipOutboxParams struct {
@@ -525,7 +538,7 @@ type ListSmipOutboxParams struct {
 
 type ListSmipOutboxRow struct {
 	ID           string    `json:"id"`
-	BindingID    string    `json:"binding_id"`
+	BindingID    *string   `json:"binding_id"`
 	Kind         string    `json:"kind"`
 	Body         string    `json:"body"`
 	Name         string    `json:"name"`
@@ -576,7 +589,7 @@ func (q *Queries) ListSmipOutbox(ctx context.Context, arg ListSmipOutboxParams) 
 }
 
 const lockSmipInbox = `-- name: LockSmipInbox :one
-SELECT id, workspace_id, binding_id, origin, message_id, digest, record, origin_key, receipt_key, sender, recipient, stream, body, name, kind, size, imported_file_id, imported_at, accepted_at FROM smip_inbox WHERE workspace_id=$1 AND id=$2 FOR UPDATE
+SELECT id, workspace_id, binding_id, conversation_id, origin, message_id, digest, record, origin_key, receipt_key, sender, recipient, stream, body, name, kind, size, imported_file_id, imported_at, declined_at, decided_by, accepted_at FROM smip_inbox WHERE workspace_id=$1 AND id=$2 FOR UPDATE
 `
 
 type LockSmipInboxParams struct {
@@ -591,6 +604,7 @@ func (q *Queries) LockSmipInbox(ctx context.Context, arg LockSmipInboxParams) (S
 		&i.ID,
 		&i.WorkspaceID,
 		&i.BindingID,
+		&i.ConversationID,
 		&i.Origin,
 		&i.MessageID,
 		&i.Digest,
@@ -606,13 +620,15 @@ func (q *Queries) LockSmipInbox(ctx context.Context, arg LockSmipInboxParams) (S
 		&i.Size,
 		&i.ImportedFileID,
 		&i.ImportedAt,
+		&i.DeclinedAt,
+		&i.DecidedBy,
 		&i.AcceptedAt,
 	)
 	return i, err
 }
 
 const lockSmipOutbound = `-- name: LockSmipOutbound :one
-SELECT id, origin, workspace_id, binding_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at FROM smip_outbox WHERE workspace_id=$1 AND id=$2 FOR UPDATE
+SELECT id, origin, workspace_id, binding_id, conversation_id, subject, packet, origin_key, receipt, receipt_key, kind, body, name, size, source_file_id, state, reason, attempts, attempt_id, last_status, next_attempt, created_at, updated_at FROM smip_outbox WHERE workspace_id=$1 AND id=$2 FOR UPDATE
 `
 
 type LockSmipOutboundParams struct {
@@ -628,6 +644,7 @@ func (q *Queries) LockSmipOutbound(ctx context.Context, arg LockSmipOutboundPara
 		&i.Origin,
 		&i.WorkspaceID,
 		&i.BindingID,
+		&i.ConversationID,
 		&i.Subject,
 		&i.Packet,
 		&i.OriginKey,

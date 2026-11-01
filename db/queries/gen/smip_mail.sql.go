@@ -113,7 +113,7 @@ func (q *Queries) AddSmipMailReceipt(ctx context.Context, arg AddSmipMailReceipt
 }
 
 const countSmipMailDomains = `-- name: CountSmipMailDomains :one
-SELECT COUNT(*) AS total,COUNT(*) FILTER (WHERE ever_verified OR expires_at>$2) AS live FROM smip_mail_domain WHERE origin=$1
+SELECT COUNT(*) AS total,COUNT(*) FILTER (WHERE ever_verified OR expires_at>$2) AS live FROM smip_mail_domain WHERE origin=$1 AND profile='smip/0.2'
 `
 
 type CountSmipMailDomainsParams struct {
@@ -134,7 +134,7 @@ func (q *Queries) CountSmipMailDomains(ctx context.Context, arg CountSmipMailDom
 }
 
 const evictSmipMailDomains = `-- name: EvictSmipMailDomains :execrows
-DELETE FROM smip_mail_domain WHERE id IN (SELECT d.id FROM smip_mail_domain d WHERE d.origin=$1 AND NOT d.ever_verified AND d.expires_at<=$2 ORDER BY d.expires_at,d.id LIMIT $3)
+DELETE FROM smip_mail_domain WHERE id IN (SELECT d.id FROM smip_mail_domain d WHERE d.origin=$1 AND d.profile='smip/0.2' AND NOT d.ever_verified AND d.expires_at<=$2 ORDER BY d.expires_at,d.id LIMIT $3)
 `
 
 type EvictSmipMailDomainsParams struct {
@@ -246,7 +246,7 @@ func (q *Queries) GetMailTransmission(ctx context.Context, itemID string) (MailT
 }
 
 const getSmipMailDomain = `-- name: GetSmipMailDomain :one
-SELECT id, origin, domain, state, ever_verified, endpoint, document, reason, checked_at, expires_at FROM smip_mail_domain WHERE origin=$1 AND domain=$2
+SELECT id, origin, profile, domain, state, ever_verified, endpoint, document, reason, checked_at, expires_at FROM smip_mail_domain WHERE origin=$1 AND profile='smip/0.2' AND domain=$2
 `
 
 type GetSmipMailDomainParams struct {
@@ -260,6 +260,7 @@ func (q *Queries) GetSmipMailDomain(ctx context.Context, arg GetSmipMailDomainPa
 	err := row.Scan(
 		&i.ID,
 		&i.Origin,
+		&i.Profile,
 		&i.Domain,
 		&i.State,
 		&i.EverVerified,
@@ -383,7 +384,7 @@ func (q *Queries) LockMailTransmission(ctx context.Context, id string) (MailTran
 }
 
 const lockSmipMailDomain = `-- name: LockSmipMailDomain :one
-SELECT id, origin, domain, state, ever_verified, endpoint, document, reason, checked_at, expires_at FROM smip_mail_domain WHERE origin=$1 AND domain=$2 FOR UPDATE
+SELECT id, origin, profile, domain, state, ever_verified, endpoint, document, reason, checked_at, expires_at FROM smip_mail_domain WHERE origin=$1 AND profile='smip/0.2' AND domain=$2 FOR UPDATE
 `
 
 type LockSmipMailDomainParams struct {
@@ -397,6 +398,7 @@ func (q *Queries) LockSmipMailDomain(ctx context.Context, arg LockSmipMailDomain
 	err := row.Scan(
 		&i.ID,
 		&i.Origin,
+		&i.Profile,
 		&i.Domain,
 		&i.State,
 		&i.EverVerified,
@@ -502,7 +504,7 @@ func (q *Queries) SetMailMessageIdentity(ctx context.Context, arg SetMailMessage
 const writeSmipMailDomain = `-- name: WriteSmipMailDomain :exec
 INSERT INTO smip_mail_domain(origin,domain,state,ever_verified,endpoint,document,reason,checked_at,expires_at)
 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
-ON CONFLICT(origin,domain) DO UPDATE SET state=EXCLUDED.state,ever_verified=smip_mail_domain.ever_verified OR EXCLUDED.ever_verified,
+ON CONFLICT(origin,profile,domain) DO UPDATE SET state=EXCLUDED.state,ever_verified=smip_mail_domain.ever_verified OR EXCLUDED.ever_verified,
 endpoint=CASE WHEN EXCLUDED.ever_verified THEN EXCLUDED.endpoint ELSE smip_mail_domain.endpoint END,
 document=CASE WHEN EXCLUDED.ever_verified THEN EXCLUDED.document ELSE smip_mail_domain.document END,
 reason=EXCLUDED.reason,checked_at=EXCLUDED.checked_at,expires_at=EXCLUDED.expires_at

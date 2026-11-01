@@ -1,13 +1,13 @@
 -- name: GetSmipMailDomain :one
-SELECT * FROM smip_mail_domain WHERE origin=$1 AND domain=$2;
+SELECT * FROM smip_mail_domain WHERE origin=$1 AND profile='smip/0.2' AND domain=$2;
 -- name: CountSmipMailDomains :one
-SELECT COUNT(*) AS total,COUNT(*) FILTER (WHERE ever_verified OR expires_at>$2) AS live FROM smip_mail_domain WHERE origin=$1;
+SELECT COUNT(*) AS total,COUNT(*) FILTER (WHERE ever_verified OR expires_at>$2) AS live FROM smip_mail_domain WHERE origin=$1 AND profile='smip/0.2';
 -- name: EvictSmipMailDomains :execrows
-DELETE FROM smip_mail_domain WHERE id IN (SELECT d.id FROM smip_mail_domain d WHERE d.origin=$1 AND NOT d.ever_verified AND d.expires_at<=$2 ORDER BY d.expires_at,d.id LIMIT $3);
+DELETE FROM smip_mail_domain WHERE id IN (SELECT d.id FROM smip_mail_domain d WHERE d.origin=$1 AND d.profile='smip/0.2' AND NOT d.ever_verified AND d.expires_at<=$2 ORDER BY d.expires_at,d.id LIMIT $3);
 -- name: WriteSmipMailDomain :exec
 INSERT INTO smip_mail_domain(origin,domain,state,ever_verified,endpoint,document,reason,checked_at,expires_at)
 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
-ON CONFLICT(origin,domain) DO UPDATE SET state=EXCLUDED.state,ever_verified=smip_mail_domain.ever_verified OR EXCLUDED.ever_verified,
+ON CONFLICT(origin,profile,domain) DO UPDATE SET state=EXCLUDED.state,ever_verified=smip_mail_domain.ever_verified OR EXCLUDED.ever_verified,
 endpoint=CASE WHEN EXCLUDED.ever_verified THEN EXCLUDED.endpoint ELSE smip_mail_domain.endpoint END,
 document=CASE WHEN EXCLUDED.ever_verified THEN EXCLUDED.document ELSE smip_mail_domain.document END,
 reason=EXCLUDED.reason,checked_at=EXCLUDED.checked_at,expires_at=EXCLUDED.expires_at;
@@ -43,4 +43,4 @@ OR EXISTS(SELECT 1 FROM mailbox_alias a WHERE a.mailbox_id=b.id AND lower(a.addr
 -- name: SetMailMessageIdentity :exec
 UPDATE mail_item SET message_id=$2,thread_id=CASE WHEN thread_id='' THEN $2 ELSE thread_id END WHERE id=$1;
 -- name: LockSmipMailDomain :one
-SELECT * FROM smip_mail_domain WHERE origin=$1 AND domain=$2 FOR UPDATE;
+SELECT * FROM smip_mail_domain WHERE origin=$1 AND profile='smip/0.2' AND domain=$2 FOR UPDATE;
