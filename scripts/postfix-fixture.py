@@ -12,10 +12,12 @@ import http.server
 import importlib.util
 import json
 import os
+import secrets
 from pathlib import Path
 import smtplib
 import socketserver
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -174,6 +176,9 @@ def main():
         command = ['docker', 'run', '-d', '--name', 'thura-postfix-test', '--network', 'host',
                    '-e', 'MAIL_HOSTNAME=mail.tenant.example', '-e', 'POSTFIX_RELAYHOST=[127.0.0.1]:2526',
                    '-e', 'SMTP_LISTEN=127.0.0.1:2527',
+                   # The image's entrypoint (supervise.py) runs Rspamd beside
+                   # Postfix and refuses to start without a controller password.
+                   '-e', 'MAIL_RSPAMD_PASSWORD=' + secrets.token_hex(32),
                    '-v', f'{config}:/run/secrets/thura-relay.json:ro',
                    '-v', f'{runroot / "queue"}:/var/spool/postfix', 'thura-postfix:test']
         subprocess.run(command, check=True, capture_output=True)
@@ -255,6 +260,11 @@ def main():
         assert reply_message['To'].addresses[0].addr_spec == 'sender@example.net'
         version = subprocess.check_output(['docker', 'exec', 'thura-postfix-test', 'postconf', '-h', 'mail_version'], text=True).strip()
         print(json.dumps({'status': 'ok', 'postfixVersion': version, 'inbound': True, 'deduplicated': True, 'rejectUnknown': True, 'rejectImplicitPlusAddress': True, 'rejectOpenRelay': True, 'deferredRecovery': True, 'mtaRestartRecovery': True, 'officialPackOutbound': True, 'tenMiBAttachment': True, 'separateWireLimits': True, 'replyHeaders': True}))
+    except BaseException:
+        # Without the container's own output a readiness timeout is opaque.
+        logs = subprocess.run(['docker', 'logs', '--tail', '200', 'thura-postfix-test'], capture_output=True, text=True)
+        print('--- thura-postfix-test logs ---\n' + logs.stdout + logs.stderr, file=sys.stderr)
+        raise
     finally:
         if app:
             stop_app(app)
