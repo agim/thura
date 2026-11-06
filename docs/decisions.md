@@ -644,3 +644,9 @@ Touches: internal/federation/conversation.go, internal/federation/inbox.go, src/
 Why: The SMIP email domains page became SMIP domains when chat/file discovery joined the registry: server administrators see, read-only, every smip_mail_domain row across local identities and both profiles (email smip/0.2, chat and files smip/0.1): partner domain, state, endpoint, timestamps, reason and sticky verification. No keys, documents' secrets, message content or provider credentials; it cannot clear trust or trigger a downgrade.
 
 Touches: internal/smipmail/admin.go, app/admin/smip-mail.html, smip_mail_domain
+
+## 2026-11-06: Hold FullCalendar at 6.1 and TypeScript at 6.0
+
+Why: Dependabot's major group (#24) offered FullCalendar 7 and TypeScript 7. FullCalendar 7 is a rewrite: the separate daygrid, timegrid, interaction, list and luxon3 plugins become entry points of @fullcalendar/react on temporal-polyfill, @fullcalendar/luxon3 has no stable 7 release (it stops at 7.0.0-rc.0), and every fc-* class the calendar's CSS and the calendar e2e tests select (fc-toolbar-title, fc-next-button, fc-icon-chevron-left, fc-dayGridMonth-view) is gone, so moving needs a calendar rewrite and approved test changes; it stays on 6.1.22, the patch the minor group (#25) brings. TypeScript 7 (the native port) is outside typescript-eslint 8.72's supported range (typescript >=4.8.4 <6.1.0), which lidza check's eslint step needs; it stays on 6.0 until typescript-eslint supports 7.
+
+Touches: package.json, src/components/LiveCalendar.tsx, e2e/calendar-toolbar.spec.ts, e2e/calendar-navigation.spec.ts
