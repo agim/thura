@@ -443,7 +443,8 @@
 #orbit-workspace.zero-workspace .settings-sidebar a[aria-current=page] { background: var(--tealsoft); color: var(--teal); font-weight: 600; }
 #orbit-workspace.zero-workspace .settings-content { width: 100%; max-width: 999px; min-width: 0; }
 #orbit-workspace.zero-workspace .settings-content h3 { font-size: 16px; font-weight: 600; margin: 0 0 16px; }
-#orbit-workspace.zero-workspace .settings-form { display: grid; gap: 12px; padding-block: 20px; border-bottom: 1px solid var(--line); }
+/* minmax(0,1fr): an implicit auto track grows to its widest unbreakable row (an address plus its action button) and scrolls a phone sideways. */
+#orbit-workspace.zero-workspace .settings-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding-block: 20px; border-bottom: 1px solid var(--line); }
 #orbit-workspace.zero-workspace .settings-form form { display: grid; gap: 12px; }
 #orbit-workspace.zero-workspace .settings-form > h3 { margin: 0; }
 #orbit-workspace.zero-workspace .settings-form :is(input,select,textarea):not([type=checkbox]) { width: 100%; }
@@ -457,6 +458,7 @@
 #orbit-workspace.zero-workspace .settings-form p, #orbit-workspace.zero-workspace .settings-list-row small { color: var(--quiet); font-size: 12px; margin: 0; }
 #orbit-workspace.zero-workspace .settings-form button { justify-self: start; display: inline-flex; align-items: center; gap: 8px; min-height: var(--app-control-height); border-radius: var(--app-radius-control); }
 #orbit-workspace.zero-workspace .settings-list-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+#orbit-workspace.zero-workspace .settings-list-row > span { min-width: 0; overflow-wrap: anywhere; }
 #orbit-workspace.zero-workspace .mail-label-filter { display: flex; flex-direction: column; gap: 7px; margin: 16px 0; }
 @media(max-width:999px) {
  #orbit-workspace.zero-workspace .settings-layout { grid-template-columns: minmax(0,1fr); gap: 16px; }
