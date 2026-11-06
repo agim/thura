@@ -71,6 +71,10 @@ func startSmipApp(t *testing.T, config federation.Config, private ed25519.Privat
 	}
 	t.Setenv("SMIP_ENABLED", "true")
 	t.Setenv("SMIP_CONFIG", string(raw))
+	// Two-server scenarios sign owners and members in and out of each app
+	// many times from 127.0.0.1; the default sign-in burst of 5 answers 429.
+	t.Setenv("AUTH_LOGIN_BURST", "100")
+	t.Setenv("AUTH_SIGNIN_BURST", "100")
 	server := startConfigured(t, app.New(nil))
 	ctx := server.Context()
 	password := "smip river meadow lantern 87334"
