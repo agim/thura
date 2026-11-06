@@ -86,7 +86,7 @@ media cannot establish physical-device or public-network readiness.
 
 Frontend pins: `livekit-client` 2.22.3, `@livekit/components-react` 2.9.24,
 `@livekit/components-styles` 1.1.6 (Apache-2.0). The Go token/webhook dependency is
-`github.com/livekit/protocol` v1.49.0. The room-service protocol client is isolated
+`github.com/livekit/protocol` v1.53.2. The room-service protocol client is isolated
 in `internal/providers/livekit`, uses the framework HTTP client, refuses redirects,
 bounds responses and applies deadlines. The local SFU compatibility pin is
 LiveKit server v1.13.9, image digest
