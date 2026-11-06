@@ -146,9 +146,13 @@ func liveHeaders(load func() (livekit.Config, error), interval time.Duration) mi
 // readerStyleHashes are the SHA-256 hashes of htmlStyle and markdownStyle in
 // src/components/MailReader.tsx. Update them with the strings;
 // e2e/mail-markdown.spec.ts fails when the reader's stylesheet is blocked.
-var readerStyleHashes = []string{
-	"'sha256-/x4nHdW7FHYkGp+z6wuAlwCvSBuTvUb4HTk9kYJiI80='",
-	"'sha256-gLs+gvFSQCGCwwUgQPLt43lJEGzX92GKSDW4bj+iHGo='",
+// A function, not a package-level slice: callers get a fresh copy and no
+// node-local state can grow or be mutated.
+func readerStyleHashes() []string {
+	return []string{
+		"'sha256-/x4nHdW7FHYkGp+z6wuAlwCvSBuTvUb4HTk9kYJiI80='",
+		"'sha256-gLs+gvFSQCGCwwUgQPLt43lJEGzX92GKSDW4bj+iHGo='",
+	}
 }
 
 func appHeaders(cfg livekit.Config, meet bool) []middleware.Middleware {
@@ -158,7 +162,7 @@ func appHeaders(cfg livekit.Config, meet bool) []middleware.Middleware {
 	policy := middleware.AddCSP(middleware.DefaultCSP, "style-src", "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='")
 	// The mail reader's sandboxed srcdoc frame inherits this policy, so its two
 	// fixed stylesheets (src/components/MailReader.tsx) are admitted by hash.
-	policy = middleware.AddCSP(policy, "style-src", readerStyleHashes...)
+	policy = middleware.AddCSP(policy, "style-src", readerStyleHashes()...)
 	policy = middleware.AddCSP(policy, "frame-src", "'self'")
 	// FullCalendar ships its arrow icon font inline as a data: URL; without it
 	// the toolbar's previous/next buttons render empty boxes. Fonts cannot run

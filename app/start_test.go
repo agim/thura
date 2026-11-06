@@ -40,7 +40,7 @@ func TestSecurityHeadersFollowLiveKitSettings(t *testing.T) {
 	if !strings.Contains(csp, "wss://meet.example.com") || !strings.Contains(csp, "https://meet.example.com") || !strings.Contains(permissions, "camera=(self)") {
 		t.Fatalf("saved LiveKit settings did not reach the policy: %s | %s", csp, permissions)
 	}
-	for _, rule := range append([]string{"'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='", "data:"}, readerStyleHashes...) {
+	for _, rule := range append([]string{"'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='", "data:"}, readerStyleHashes()...) {
 		if !strings.Contains(csp, rule) {
 			t.Fatalf("policy lost %s: %s", rule, csp)
 		}
