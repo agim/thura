@@ -241,8 +241,10 @@ def main():
         item = eventually(sent, 'official-pack SMTP acceptance', 90)
         assert item['status'] == 'sent'
         message = eventually(lambda: next((BytesParser(policy=policy.default).parsebytes(body) for body in received if outgoing.encode() in body), None), 'Postfix outbound transport')
-        assert message['From'] == ADDRESS
-        assert message['To'] == 'sink@outside.example'
+        # The From header carries the sender's display name since sender names
+        # landed; the envelope identity is the mailbox address.
+        assert message['From'].addresses[0].addr_spec == ADDRESS, message['From']
+        assert message['To'].addresses[0].addr_spec == 'sink@outside.example', message['To']
         assert 'Actual official pack SMTP bytes' in message.get_body(preferencelist=('plain',)).get_content()
         parts = list(message.iter_attachments())
         assert len(parts) == 1 and parts[0].get_filename() == 'boundary.bin'
