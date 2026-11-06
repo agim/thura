@@ -1904,3 +1904,10 @@ type TenantContext {
 type NewTeamInput {
   name string @min(1) @max(120)
 }
+
+// Account-owned non-sensitive choices; never session claims or credentials.
+model AuthPreference @table("auth_preference") {
+  subject   string @id
+  values    json
+  updatedAt time @default(now())
+}

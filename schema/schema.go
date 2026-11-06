@@ -2762,6 +2762,19 @@ func (v TeamMailConfig) Validate() error {
 	return errs.Result()
 }
 
+// AuthPreference is a row of the auth_preference table.
+type AuthPreference struct {
+	Subject   string          `json:"subject" db:"subject"`
+	Values    json.RawMessage `json:"values" db:"values"`
+	UpdatedAt time.Time       `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of AuthPreference from schema.lidza.
+func (v AuthPreference) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`

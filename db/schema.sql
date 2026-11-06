@@ -1062,3 +1062,9 @@ CREATE TABLE team_mail_config (
 );
 CREATE INDEX team_mail_config_workspace_id_idx ON team_mail_config (workspace_id);
 
+CREATE TABLE auth_preference (
+  subject text PRIMARY KEY,
+  values jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+

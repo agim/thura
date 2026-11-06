@@ -14402,6 +14402,72 @@
       "Indexes": null,
       "Line": 1816,
       "Persisted": true
+    },
+    {
+      "Name": "AuthPreference",
+      "Table": "auth_preference",
+      "Fields": [
+        {
+          "Name": "subject",
+          "Type": "string",
+          "Optional": false,
+          "Array": false,
+          "ID": true,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1910
+        },
+        {
+          "Name": "values",
+          "Type": "json",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1911
+        },
+        {
+          "Name": "updatedAt",
+          "Type": "time",
+          "Optional": false,
+          "Array": false,
+          "ID": false,
+          "Unique": false,
+          "Index": false,
+          "Default": "now()",
+          "Ref": "",
+          "OnDelete": "",
+          "Min": null,
+          "Max": null,
+          "Email": false,
+          "URL": false,
+          "Timezone": false,
+          "Pattern": "",
+          "Line": 1912
+        }
+      ],
+      "Indexes": null,
+      "Line": 1909,
+      "Persisted": true
     }
   ],
   "Types": null

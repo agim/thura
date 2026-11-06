@@ -33,7 +33,7 @@ Core services have separate installation guides: [Collabora](collabora.md), [Mat
 
 ## 2. Build and install Thura
 
-Use the `agim/thura` application repository, not a checkout of the Līdza framework. The current application requires published Līdza v0.1.90 and Go 1.27.2 or a later patched release in the supported series. A build host also needs Node/npm; the ordinary production binary embeds its frontend and needs no Node runtime.
+Use the `agim/thura` application repository, not a checkout of the Līdza framework. The current application requires published Līdza v0.1.134 and Go 1.27.3 or a later patched release in the supported series. A build host also needs Node/npm; the ordinary production binary embeds its frontend and needs no Node runtime.
 
 On a build host:
 
