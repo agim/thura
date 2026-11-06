@@ -45,9 +45,22 @@ func packet(t *testing.T, id, from, to, kind string, key SigningKey) Packet {
 	}
 	return p
 }
+
+// privateDir returns an existing 0700 directory. t.TempDir's per-test
+// subdirectory follows the umask (0755 under 022), which OpenInbox and
+// OpenOutbox rightly reject as not private.
+func privateDir(t *testing.T) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "private")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
 func inbox(t *testing.T) *FileInbox {
 	t.Helper()
-	s, err := OpenInbox(t.TempDir())
+	s, err := OpenInbox(privateDir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +146,7 @@ func TestTwoServersChatAndFiles(t *testing.T) {
 }
 func TestLostReceiptOfflineSenderAndReceiverRestart(t *testing.T) {
 	a, b := signing(1), signing(2)
-	root := t.TempDir()
+	root := privateDir(t)
 	store, err := OpenInbox(root)
 	if err != nil {
 		t.Fatal(err)
@@ -379,7 +392,7 @@ func TestUnavailableStorageNeverAcknowledged(t *testing.T) {
 	}
 }
 func TestInboxExclusiveLockAtomicConcurrencyAndCorruption(t *testing.T) {
-	root := t.TempDir()
+	root := privateDir(t)
 	s, err := OpenInbox(root)
 	if err != nil {
 		t.Fatal(err)
@@ -445,7 +458,7 @@ func TestInboxSurvivesProcessExit(t *testing.T) {
 		}
 		os.Exit(0) // No Close: kernel releases the lock after process death.
 	}
-	root := t.TempDir()
+	root := privateDir(t)
 	cmd := exec.Command(os.Args[0], "-test.run=^TestInboxSurvivesProcessExit$")
 	cmd.Env = append(os.Environ(), "SMIP_CRASH_FIXTURE_ROOT="+root)
 	if output, err := cmd.CombinedOutput(); err != nil {

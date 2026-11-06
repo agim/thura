@@ -29,7 +29,7 @@ func outbox(t *testing.T, root string) *FileOutbox {
 	return s
 }
 func TestOutboxPersistsPacketBeforeNetworkAndAcceptedReceipt(t *testing.T) {
-	root := t.TempDir()
+	root := privateDir(t)
 	o := outbox(t, root)
 	p := packet(t, "persist-first", "a.example", "b.example", "file", signing(1))
 	queued, err := o.Enqueue(p, time.Unix(epoch+1, 0))
@@ -81,7 +81,7 @@ func TestOutboxPersistsPacketBeforeNetworkAndAcceptedReceipt(t *testing.T) {
 	}
 }
 func TestOutboxLostAcknowledgementRestartAndExpiredReconciliation(t *testing.T) {
-	root := t.TempDir()
+	root := privateDir(t)
 	o := outbox(t, root)
 	remote := inbox(t)
 	r := receiver(t, "b.example", remote, signing(2), map[string]map[string]Key{"a.example": trusted(signing(1))}, func() time.Time { return time.Unix(epoch+2, 0) })
@@ -169,7 +169,7 @@ func TestOutboxLocalReceiptCommitFailureRecovers(t *testing.T) {
 	}
 }
 func TestOutboxPermanentErrorRemainsBlockedAndExplicitResumePreservesPacket(t *testing.T) {
-	o := outbox(t, t.TempDir())
+	o := outbox(t, privateDir(t))
 	remote := inbox(t)
 	r := receiver(t, "b.example", remote, signing(2), map[string]map[string]Key{"a.example": trusted(signing(1))}, func() time.Time { return time.Unix(epoch+2, 0) })
 	var denied atomic.Bool
@@ -204,7 +204,7 @@ func TestOutboxPermanentErrorRemainsBlockedAndExplicitResumePreservesPacket(t *t
 	}
 }
 func TestOutboxUnsentExpiryCancellationAndDestinationChecks(t *testing.T) {
-	o := outbox(t, t.TempDir())
+	o := outbox(t, privateDir(t))
 	p := packet(t, "unsent-expiry", "a.example", "b.example", "chat", signing(1))
 	if _, err := o.Enqueue(p, time.Unix(epoch+1, 0)); err != nil {
 		t.Fatal(err)
@@ -236,7 +236,7 @@ func TestOutboxUnsentExpiryCancellationAndDestinationChecks(t *testing.T) {
 	}
 }
 func TestOutboxIntegrityQueuePagesAndKeyRevocation(t *testing.T) {
-	o := outbox(t, t.TempDir())
+	o := outbox(t, privateDir(t))
 	p := packet(t, "queue-a", "a.example", "b.example", "chat", signing(1))
 	if _, err := o.Enqueue(p, time.Unix(epoch+1, 0)); err != nil {
 		t.Fatal(err)
@@ -308,7 +308,7 @@ func TestOutboxConcurrentEnqueueAndProcessExit(t *testing.T) {
 		}
 		os.Exit(0)
 	}
-	root = t.TempDir()
+	root = privateDir(t)
 	cmd := exec.Command(os.Args[0], "-test.run=^TestOutboxConcurrentEnqueueAndProcessExit$")
 	cmd.Env = append(os.Environ(), "SMIP_OUTBOX_EXIT_ROOT="+root)
 	if raw, err := cmd.CombinedOutput(); err != nil {
@@ -348,7 +348,7 @@ func TestOutboxConcurrentEnqueueAndProcessExit(t *testing.T) {
 }
 
 func TestOutboxRetryableErrorAndForgedReceiptStayUncertain(t *testing.T) {
-	o := outbox(t, t.TempDir())
+	o := outbox(t, privateDir(t))
 	p := packet(t, "retryable", "a.example", "b.example", "chat", signing(1))
 	if _, err := o.Enqueue(p, time.Unix(epoch+1, 0)); err != nil {
 		t.Fatal(err)
