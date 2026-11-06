@@ -47,6 +47,7 @@ def main():
         raise ValueError('THURA_POSTFIX_TOKEN must have at least 32 characters')
     process = None
     previous = None
+    served_tls = None
     stopping = False
 
     def stop(_signum, _frame):
@@ -69,7 +70,7 @@ def main():
                             process = None
                     else:
                         config = dict(payload['config'], managed=True)
-                        configure.configure(config, payload['hostname'], payload['listen'], managed=True)
+                        served_tls = configure.configure(config, payload['hostname'], payload['listen'], managed=True)
                         if process is None:
                             process = subprocess.Popen(['postfix', 'start-fg'])
                         else:
@@ -80,6 +81,20 @@ def main():
                 # Never log response bytes, signing keys, bearer credentials or URLs.
                 # A read failure preserves the last running configuration and queue.
                 print('Postfix configuration unavailable; retaining queue and last configuration', flush=True)
+            try:
+                # Certificate renewal swaps the mounted `current` link; reload so
+                # every smtpd reopens the new pair. Appearance after first
+                # issuance turns STARTTLS on, removal turns it off.
+                if process is not None:
+                    files = configure.tls_files()
+                    state = configure.tls_state(files)
+                    if state != served_tls:
+                        configure.apply_tls(files)
+                        subprocess.run(['postfix', 'reload'], check=True)
+                        served_tls = state
+                        print('Postfix STARTTLS ' + ('certificate reloaded' if files else 'disabled: no certificate'), flush=True)
+            except (OSError, ValueError, subprocess.SubprocessError):
+                print('Postfix certificate check failed; retaining current TLS configuration', flush=True)
             for _ in range(20):
                 if stopping:
                     break

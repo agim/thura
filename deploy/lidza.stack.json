@@ -109,6 +109,10 @@
         "dockerfile": "deploy/compact/mail.Dockerfile"
       },
       "share_app_network": true,
+      "public_tls": {
+        "hostname": "primary",
+        "uid": 0
+      },
       "environment": {
         "THURA_POSTFIX_MANAGED": "true",
         "THURA_POSTFIX_TOKEN": "${THURA_POSTFIX_TOKEN}",

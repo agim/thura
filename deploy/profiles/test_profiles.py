@@ -59,6 +59,9 @@ class ProfileTests(unittest.TestCase):
         self.assertNotIn('DATABASE_URL',app['environment'])
         self.assertEqual({(p['port'],p['protocol']) for p in app['public_ports']},{(25,'tcp'),(7881,'tcp'),(7882,'udp')})
         self.assertTrue(services['mail']['share_app_network'])
+        # Postfix in the mail service terminates inbound SMTP; it reads the key as root.
+        self.assertEqual(services['mail']['public_tls'],{'hostname':'primary','uid':0})
+        self.assertNotIn('public_tls',app)
         self.assertEqual({v['name'] for v in services['mail']['volumes']},{'postfix-queue','rspamd-state','clamav-signatures','mail-filter-learning'})
         for service in services.values():
             self.assertNotIn('host_network',service)

@@ -73,10 +73,79 @@ def pipe_service():
             '--client-address=${client_address} --client-helo=${client_helo} --sender=${sender}\n')
 
 
+# The deploy platform mounts the primary hostname's certificate read-only and
+# replaces its `current` link on renewal. Standalone installs mount /run/secrets.
+ETC = pathlib.Path('/etc')
+LEGACY_CERT = pathlib.Path('/run/secrets/smtp-cert.pem')
+LEGACY_KEY = pathlib.Path('/run/secrets/smtp-key.pem')
+NOTICE_SINK = 'postmaster@notices.thura.invalid'
+
+
+def tls_files(environ=None, legacy=None):
+    """Return the readable (certificate, key) pair Postfix should serve, or None."""
+    environ = os.environ if environ is None else environ
+    legacy = (LEGACY_CERT, LEGACY_KEY) if legacy is None else legacy
+    cert, key = environ.get('DEPLOY_PUBLIC_TLS_CERT_FILE', ''), environ.get('DEPLOY_PUBLIC_TLS_KEY_FILE', '')
+    if cert and key:
+        files = (pathlib.Path(cert), pathlib.Path(key))
+        # Before first issuance the mount is empty: never offer STARTTLS then.
+        if all(f.is_file() and os.access(f, os.R_OK) for f in files):
+            return files
+        return None
+    if legacy[0].exists() != legacy[1].exists():
+        raise ValueError('Mount both the SMTP TLS certificate and key')
+    if legacy[0].exists():
+        return legacy
+    return None
+
+
+def tls_state(files):
+    """Identify the served certificate generation; renewals change the link target."""
+    if files is None:
+        return None
+    state = []
+    for path in files:
+        try:
+            info = path.stat()
+        except OSError:
+            return None
+        state.append((os.path.realpath(path), info.st_mtime_ns, info.st_size))
+    return tuple(state)
+
+
+def tls_options(files):
+    """Offer STARTTLS only with a certificate; a bare `may` drops TLS senders."""
+    if files is None:
+        return {'smtpd_tls_security_level': 'none', 'smtpd_tls_cert_file': '', 'smtpd_tls_key_file': ''}
+    cert, key = files
+    protocols = '!SSLv2, !SSLv3, !TLSv1, !TLSv1.1'
+    return {
+        'smtpd_tls_security_level': 'may',
+        'smtpd_tls_cert_file': str(cert), 'smtpd_tls_key_file': str(key),
+        'smtpd_tls_protocols': protocols, 'smtpd_tls_mandatory_protocols': protocols,
+        'smtpd_tls_loglevel': '1',
+    }
+
+
+def apply_tls(files):
+    for name, value in tls_options(files).items():
+        subprocess.run(['postconf', '-e', f'{name} = {value}'], check=True)
+
+
+def notice_recipient(hostname, mailboxes):
+    """Postmaster notices stay on this host: a mapped postmaster mailbox, else
+    a discarded sink. Unqualified `postmaster` would resolve to the public MX,
+    i.e. this host's own public address, which the stack network cannot reach."""
+    for address in [f'postmaster@{hostname}'] + sorted(mailboxes):
+        if address.startswith('postmaster@') and address in mailboxes:
+            return address
+    return NOTICE_SINK
+
+
 def configure(config, hostname, listen, managed=False):
     domains = settings(config, hostname, listen, allow_empty=managed)
     transport_addresses = recipient_history(config, pathlib.Path('/var/spool/postfix/.thura-recipient-history.json')) if managed else config['mailboxes']
-    private = pathlib.Path('/etc/thura-postfix/private')
+    private = ETC / 'thura-postfix' / 'private'
     relay_group = pwd.getpwnam('thura-mail').pw_gid
     private.parent.mkdir(mode=0o755, exist_ok=True)
     private.parent.chmod(0o755)
@@ -92,10 +161,10 @@ def configure(config, hostname, listen, managed=False):
     os.chown(staged, 0, relay_group)
     staged.chmod(0o640)
     staged.replace(target)
-    maps = pathlib.Path('/etc/postfix')
+    maps = ETC / 'postfix'
     contents = {
         # Publish local transports before newly accepted recipients.
-        'thura_transport': ''.join(f'{address} thura:\n' for address in transport_addresses),
+        'thura_transport': ''.join(f'{address} thura:\n' for address in transport_addresses) + f'{NOTICE_SINK} discard:\n',
         'relay_recipients': ''.join(f'{address} OK\n' for address in config['mailboxes']),
     }
     for name, content in contents.items():
@@ -116,21 +185,20 @@ def configure(config, hostname, listen, managed=False):
         # Public inbound SMTP overrides this to the existing 12 MiB boundary.
         'message_size_limit': str(16 * 1024 * 1024),
         'thura_destination_recipient_limit': '1',
-        'smtp_tls_security_level': 'may', 'smtpd_tls_security_level': 'may',
+        'smtp_tls_security_level': 'may',
         'maillog_file': '/dev/stdout',
     }
+    notices = notice_recipient(hostname, config['mailboxes'])
+    for name in ('bounce_notice_recipient', '2bounce_notice_recipient', 'delay_notice_recipient', 'error_notice_recipient'):
+        options[name] = notices
     # Optional test/private upstream relay; public delivery uses DNS/MX by default.
     relayhost = os.environ.get('POSTFIX_RELAYHOST', '')
     if relayhost:
         if not re.fullmatch(r'\[(?:[a-z0-9.-]+)\]:[0-9]{1,5}', relayhost):
             raise ValueError('POSTFIX_RELAYHOST must be [hostname]:port')
         options['relayhost'] = relayhost
-    cert = pathlib.Path('/run/secrets/smtp-cert.pem')
-    key = pathlib.Path('/run/secrets/smtp-key.pem')
-    if cert.exists() != key.exists():
-        raise ValueError('Mount both the SMTP TLS certificate and key')
-    if cert.exists():
-        options.update(smtpd_tls_cert_file=str(cert), smtpd_tls_key_file=str(key))
+    files = tls_files()
+    options.update(tls_options(files))
     for name, value in options.items():
         subprocess.run(['postconf', '-e', f'{name} = {value}'], check=True)
     # Retain Debian's queue/proxymap/TLS/log services. Replacing the entire
@@ -152,6 +220,7 @@ def configure(config, hostname, listen, managed=False):
         smtp += f'{listen} inet n - n - - smtpd\n  -o message_size_limit=12582912\n  -o smtpd_relay_restrictions=reject_unauth_destination\n'
     (maps / 'master.cf').write_text(''.join(lines) + '\n' + smtp + pipe_service())
     subprocess.run(['postfix', 'check'], check=True)
+    return tls_state(files)
 
 
 def main():
