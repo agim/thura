@@ -85,7 +85,18 @@ Set your inbox domain's MX to the mail server hostname and its A record to this
 server; allow inbound TCP 25. Set `SMTP_TLS_DIR` in `.env` to a private directory
 containing `smtp-cert.pem` and `smtp-key.pem` for that hostname (default
 `deploy/private/smtp`). Restart Postfix after certificate rotation. Without
-these files the service does not advertise STARTTLS. Configure SPF, DKIM
+these files the service does not advertise STARTTLS.
+
+In the Līdza Deploy stack (`deploy/lidza.stack.json`) the `mail` service
+declares `public_tls` for the primary hostname (reader uid 0: Postfix opens the
+key as root before dropping privileges). The platform mounts the renewed
+certificate at `DEPLOY_PUBLIC_TLS_CERT_FILE`/`DEPLOY_PUBLIC_TLS_KEY_FILE`; Postfix
+then offers STARTTLS (TLS 1.2+, `smtpd_tls_loglevel = 1`) and the managed
+sidecar reloads Postfix when the `current` certificate link changes. Until a
+certificate is readable, `smtpd_tls_security_level = none`, so STARTTLS is never
+advertised without a certificate. Postmaster, bounce and double-bounce notices
+go to the mapped `postmaster@` mailbox (the hostname's first, else an operator
+domain's), or are discarded locally, never relayed to this host's public MX. Configure SPF, DKIM
 signing and DMARC/PTR for direct Postfix sending; this stack does not install a
 DKIM signer, spam filter or malware scanner. With a hosted outgoing provider,
 use that provider's sending-domain records while retaining your Postfix MX.

@@ -48,7 +48,10 @@ func fromHeader(raw string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	parsed, _ := mail.ParseAddress(raw)
+	parsed, err := mail.ParseAddress(raw)
+	if err != nil {
+		return "", err
+	}
 	name := strings.TrimSpace(parsed.Name)
 	if name == "" {
 		return sender, nil

@@ -8,6 +8,7 @@ import (
 	"github.com/agim/lidza/packs/llm"
 	"github.com/agim/lidza/pkg/credentials"
 	"github.com/agim/lidza/pkg/env"
+	"os"
 	"strings"
 	"testing"
 	"thura/app"
@@ -129,6 +130,13 @@ func TestAssistantStartsDisabledAndBoundsInput(t *testing.T) {
 
 func TestAssistantOperatorSettingsPersistEncryptedAndNeverReturnKeys(t *testing.T) {
 	t.Setenv("LIDZA_MASTER_KEY", strings.Repeat("b7", 32))
+	// Process-level deployment variables pin a setting and make the save a
+	// 409 by design (CI exports LLM_PROVIDER=fake). This test covers the
+	// stored-settings path, so run it without them; t.Setenv restores them.
+	for _, name := range []string{"THURA_AI_ENABLED", "LLM_PROVIDER", "LLM_MODEL", "LLM_BASE_URL", "LLM_API_KEY", "LLM_MAX_TOKENS"} {
+		t.Setenv(name, "")
+		os.Unsetenv(name)
+	}
 	old := credentials.Overrides()
 	t.Cleanup(func() { credentials.SetOverrides(old) })
 	srv := startConfigured(t, app.New(nil))

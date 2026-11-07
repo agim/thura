@@ -80,7 +80,8 @@ class ManagedTests(unittest.TestCase):
              mock.patch.object(managed, 'fetch', side_effect=fetch), \
              mock.patch.object(managed.signal, 'signal', side_effect=lambda sig, fn: signal_handlers.update({sig: fn})), \
              mock.patch.object(managed.time, 'sleep'), \
-             mock.patch.object(managed.configure, 'configure') as apply, \
+             mock.patch.object(managed.configure, 'configure', return_value=None) as apply, \
+             mock.patch.object(managed.configure, 'tls_files', return_value=None), \
              mock.patch.object(managed.subprocess, 'Popen', return_value=process) as start, \
              mock.patch.object(managed.subprocess, 'run') as run:
             managed.main()

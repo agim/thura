@@ -62,7 +62,11 @@ func (r Result) Authentication(fromDomain string, envelope Envelope) Authenticat
 			return nil, false
 		}
 		var s symbol
-		_ = json.Unmarshal(raw, &s)
+		if err := json.Unmarshal(raw, &s); err != nil {
+			// The symbol fired; only its options are unreadable. Presence
+			// alone still decides SPF/DMARC, and no options are trusted.
+			return nil, true
+		}
 		return s.Options, true
 	}
 	has := func(name string) bool { _, ok := options(name); return ok }
