@@ -1,13 +1,13 @@
 module thura
 
-go 1.27.3
+go 1.27.4
 
 require (
-	github.com/agim/lidza v0.1.134
+	github.com/agim/lidza v0.1.139
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.12.0
-	github.com/livekit/protocol v1.53.2
+	github.com/jackc/pgx/v5 v5.13.0
+	github.com/livekit/protocol v1.54.0
 	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/net v0.62.0
 )

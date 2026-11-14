@@ -95,7 +95,7 @@ import package `main`. Preserve its tests and behavior during the move:
 | `lidza context` | writes `.lidza/context.json`: routes, handler signatures, Rust exports. |
 | `lidza mcp` | MCP server on stdio; see "Agent interface". |
 | `lidza gen resource <Model> [--public \| --shared]` | queries, `Create/Update/<Model>List` types, `handlers/<table>.go` with list, get, create, patch, delete under `/api/v1/<plural>` (the list with search, filters, a date range, sorting and pages through `list.Read`: recipe "Add a paginated, filterable list"), registered in `app/routes.go` (in `appDir` when set) behind `auth.Require()`. An owned model (`ownerId`, or a field with `@ref(User)`) is scoped to the signed-in user. `--public` marks the model `@public`: open routes, no owner. `--shared` marks it `@shared`: behind sign-in, rows not scoped. Needs the `db` and `auth` packs (`auth` not with `--public`). |
-| `lidza update [--migrate]` | brings the app's branch and the framework up to date together: a branch behind its upstream is pulled first when that is a clean fast-forward (nothing uncommitted, no local commits the upstream lacks), otherwise the update stops and says what to run (`--no-pull` stops instead of pulling); then the CLI and this app's framework module move to the newest release (never back to an older one; `--to <commit>` takes a release not tagged yet), it regenerates, refreshes the deployment files, then runs `lidza install`. It stops when the files it rewrites have uncommitted changes (`git stash push` sets them aside); `--commit` commits the update when done. In a team, one person makes the update and merges it; the others `git pull`, then `lidza update --cli-only` (`--to <go.mod's version>` when the app is behind the newest). While the CLI and `go.mod` differ, gen, dev and install leave the agent files alone and say so, and `lidza verify` fails. |
+| `lidza update [--migrate]` | brings the app's branch and the framework up to date together: a branch behind its upstream is pulled first when that is a clean fast-forward (nothing uncommitted, no local commits the upstream lacks), otherwise the update stops and says what to run (`--no-pull` stops instead of pulling); then the CLI and this app's framework module move to the newest release (never back to an older one; `--to <commit>` takes a release not tagged yet), it regenerates, refreshes the deployment files, then runs `lidza install`. It stops when the files it rewrites have uncommitted changes (`git stash push` sets them aside); `--commit` commits the update when done. In a team, one person makes the update and merges it; the others `git pull`, then `lidza update --cli-only` (`--to <go.mod's version>` when the app is behind the newest). While the CLI and `go.mod` differ, gen, dev and install leave the agent files alone and say so, and `lidza verify` fails.. The `go` line of `go.mod` is raised to the Go version the CLI was built with when it is older (`go 1.27` to `go 1.27.3`), so every app states the same toolchain; never lowered |
 | `lidza gen deploy [--force]` | the `Dockerfile`, `.dockerignore` and `deploy/thura.service` from the current templates; a file the app changed is kept and named unless `--force`. |
 | `lidza pack add <name>` | enables an official pack: `db`, `auth`, `jobs`, `mail`, `llm`, `storage`, `cache`, `i18n`, `realtime`, `analytics`, `audit`, `hooks`, `billing`, `geo`, `media`. |
 | `lidza settings set NAME=value` | saves app settings (keys, providers, addresses) in the app's database, sealed with the master key: `list` (where each comes from, names only), `get NAME`, `unset NAME`, `import` (the app settings in `.env`, `deploy/production.env`, the credentials file and the environment, into the database); `--production` for production's database. Infrastructure settings are refused: they are the environment's. |
@@ -241,7 +241,8 @@ What each frontend template ships; the API contract, `lidza check`,
 | Time zone cookie | `src/timezone.ts` | same | same | inline in `views/layout.html` |
 | Translated pages | `src/i18n.ts`, a page per locale at build | same | none | Go handlers (`i18n.From(ctx).T`) |
 | Analytics reporter | `VITE_ANALYTICS=1` | `VITE_ANALYTICS=1` | `PUBLIC_ANALYTICS=1` | `ANALYTICS_FRONTEND=1`, `static/analytics.js` |
-| Styling | Tailwind v4 | `app.css` | `<style is:global>` in the layout | `static/app.css` |
+| Styling | Tailwind v4 tokens, components in `src/ui.tsx` | `app.css` | `<style is:global>` in the layout | `static/app.css` |
+| Navigation | TanStack Router, `src/navigation.tsx` (`BackLink`, `useTitle`, search parameters) | `src/router.svelte.ts`, `src/BackLink.svelte` | a page per address, `BackLink.astro` | Go routes, `data-back` links, `hx-push-url` / `hx-replace-url` |
 
 This app uses the **react** template.
 
@@ -256,21 +257,162 @@ Where state lives, from the server out; nothing else holds it.
   with TanStack Query in the react template). A write invalidates the
   queries it changes; the realtime pack's `useLive` invalidates them on
   every open page (recipe "Publish live updates").
-- A list's page, search, filters, range and sort: the address
-  (`useListState` in `src/list.tsx`), so the view can be linked, reloaded
-  and gone back to.
+- Which view is open (a record, a tab, a wizard's step) and how a list
+  is shown (its page, search, filters, range, sort, the selected row):
+  the address, so the view can be linked, reloaded and gone back to
+  ("Navigation" below; `useListState` in `src/list.tsx` for a list in
+  the react template).
 - An account's display choices (a list's order, a view, a collapsed
   panel): the auth pack's preferences, `usePreferences` in
   `src/preferences.ts` in the react template (recipe "Remember a display
   preference"); they follow the account to every browser and device. A
   choice in the address wins over a stored one.
-- An open menu, a draft, a wizard's step: the component, or the address
-  when a reload should keep it.
+- An open menu, a hover, a draft being typed: the component.
 
 There is no global store: the query cache and the address hold what
 outlives a component, preferences what outlives a browser. A client-only
 domain (an editor's document, offline drafts) is the app's own store
 under `src/`, kept apart from what the server knows.
+
+## Navigation
+
+Every view a user can reach has an address, and the browser's Back,
+Forward, reload, bookmarks and shared links work on it as on any
+website. `lidza check` L025 flags hash routing, `history.back()` by hand
+and a "Back" link fixed to one page; recipe "Keep a view in the address"
+has the steps.
+
+1. A screen or a record has a path with readable slugs:
+   `/projects/acme-site/settings/members`, `/posts/hello-world`. A
+   record is found by its slug (or its id when it has no unique name) in
+   a path segment, never by a hash or `?id=`. Slugs are lowercase
+   letters, digits and hyphens: a last segment that ends like a file
+   (`node.js`, `report.pdf`) is answered as a missing file, 404, not as a
+   route.
+2. What picks the view is in the address, never only in component
+   state. A view of its own (a tab, a wizard's step, a record opened over
+   a list) is a path segment: `/posts/hello-world/comments`,
+   `/checkout/shipping`. How a view is shown (a filter, a search, a sort,
+   a page, the selected row, a minor tab) is a search parameter:
+   `/posts?status=draft&sort=title`. A default value is left out of the
+   address.
+3. Push or replace. Going to another view, record or step pushes a
+   history entry: it is a link. Changing a filter, typing in a search,
+   sorting, paging and a redirect to a default replace the current entry,
+   so Back leaves the list instead of undoing each keystroke. A panel or
+   dialog with an address pushes, so Back closes it.
+4. No hash routing: no `location.hash = ...`, no `#/path` links, no
+   `hashchange` router or hash history. The fragment is for an anchor in
+   the page (`/docs/setup#install`) and for a secret the server must not
+   log (an invitation or share token, `/invite#token=...`): read it once,
+   send it in a request body, then drop it with `history.replaceState`.
+5. Links are links: navigation renders `<a href>`, so middle-click, open
+   in a new tab and copy link work; a button is for an action, never for
+   going somewhere, and never a click handler on a `div` that navigates.
+6. Back links go back. A "back" link in the page uses `BackLink`: it
+   goes back through history when the previous entry is this app's, so
+   it lands where the browser's Back would (the list with its filters and
+   scroll), and to the parent path it names when there is none (the page
+   was opened from a link elsewhere or in a new tab). It renders `<a
+   href="parent">`. Name the parent ("All posts"), not "Back". Never a
+   link fixed to one page labelled "Back", never `history.back()` by hand.
+7. Breadcrumbs are links. A trail shows where a view sits: every crumb
+   but the last is a link to that ancestor's address (the project, then
+   its settings), the last is the view itself, marked the current page;
+   never plain text for an ancestor, never a button. The trail is the
+   app's structure and does not replace the back link, which is the
+   visitor's history.
+8. The document title follows the view: "Members · Acme site · app".
+   The server's head is for the first load and for crawlers (recipe "Set
+   the head of a page").
+9. Scroll: a new view starts at the top (or at its `#anchor`); Back and
+   Forward return to where it was scrolled.
+10. A deep link and a reload land on the same view: the page reads the
+   whole view from the address on its first render and loads what it
+   needs; an unknown slug shows a not-found view with a link to the
+   parent. The binary serves the frontend for every path outside `/api`,
+   so any path the router knows opens directly; `/api/...` is always the
+   API, an unknown one its 404.
+11. Test it in the browser suite: open a deep link, reload, follow a
+   link, go back (`page.goBack()` and the back link), and check the
+   filter, the tab and the scroll held.
+
+In this app (react, TanStack Router; `src/navigation.tsx`, the items
+pages show each rule):
+
+- Routes in `src/router.tsx`: a record `/items/$slug`, its tabs child
+  routes (`/items/$slug/specs`), each a `Link`.
+- Search parameters typed on the route: `validateSearch: (s: { status?:
+  string } & SearchSchemaInput) => ({ status: searchChoice(s.status,
+  statuses, 'all') })` (`searchText`, `searchChoice`, `searchNumber` in
+  `src/navigation.tsx`), defaults left out with `search: { middlewares:
+  [stripSearchParams(defaults)] }`. Read with
+  `getRouteApi('/posts').useSearch()`, change with `navigate({ search:
+  (prev) => ({ ...prev, status }), replace: true })`. A route with
+  `validateSearch` is not prerendered (its HTML would show every address
+  the view without its parameters); a page reading the address another
+  way (`useListState`) sets `staticData: { prerender: false }`.
+- `<BackLink to="/posts">All posts</BackLink>` takes `Link`'s props.
+- `<Breadcrumbs><Link to="/posts">Posts</Link><span>{post.title}</span></Breadcrumbs>`
+  above the heading: `Link`s to the ancestors, the view last.
+- `useTitle(post.title)` in the page a route renders (the leaf; a layout
+  route around others never sets it, or it overrides them).
+- `scrollRestoration: true` in `createAppRouter`.
+
+## Pages and components
+
+Every page is built from the app's components, so the app reads as one
+thing and a change to the look is made once. `lidza check` L026 flags the
+browser's own controls in a page; recipe "Build a page from the app's
+components" has the steps.
+
+1. One layout. Every page has the same shape: the title and its lede,
+   the page's actions beside them, a trail or back link above, the
+   content below with the same space between every block. No page draws
+   its own header, card or column widths.
+2. One type scale. Heading sizes, body and muted text come from the
+   components and the tokens (`src/index.css`); a page never sets a font
+   size, a weight or a colour by hand, and never a raw colour.
+3. Room between things. Blocks are spaced by the layout components, so
+   nothing butts against its neighbour and no page types margins of its
+   own.
+4. Components, not hand-rolled markup. A button, a labelled field, a
+   dropdown, a message, an empty state, a modal and a side panel are each
+   one component, so the same control looks and behaves the same on every
+   page. The second copy of a pattern becomes a component; a paste never
+   does.
+5. Never the browser's own. No `<select>`, no `<dialog>` by hand, no
+   `confirm()`, `alert()` or `prompt()`: they take the browser's look, not
+   the app's. The app's dropdown, dialog and drawer keep the keyboard and
+   screen-reader behaviour.
+6. State is decided first (the "State" section): before a page is
+   written, each piece of its state has its place, the address, the
+   query cache, a preference or the component; a global store is never
+   added for convenience.
+7. Dry. One query per data shape, one formatter per kind of value
+   (`src/datetime.ts`), one list toolbar (`src/list.tsx`); a helper two
+   pages need moves under `src/`.
+8. Accessible by construction. The components carry the roles, labels
+   and keyboard handling; a page adds the words (a field's label, a
+   dropdown's label, a button's name). `lidza check` runs the
+   accessibility rules.
+
+In this app (react; `src/ui.tsx` holds the components, the pages show
+them):
+
+- `Page` (title, lede, actions, `above` for `Breadcrumbs` or `BackLink`),
+  `Section` (a card), `Stack` and `Row` (spacing), `Notice` (a message
+  with a tone), `Empty` (an empty list with what to do).
+- `Button` (`tone`: primary, secondary, quiet, danger; `to` makes it a
+  link), `Field` (label, hint, error) around `TextInput`, `TextArea` or
+  `Select`, `SearchInput` for a toolbar, `inputClass` for a bare input.
+- `Select` (a combobox over a listbox: arrows, Home, End, Enter, Escape,
+  type-ahead; `prefix` shows "Label: value" in a toolbar), `Dialog` (a
+  confirmation with its actions), `Drawer` (a side panel).
+- The look lives in `src/index.css` (the tokens) and `src/ui.tsx`; a page
+  never restyles them. An app created before `src/ui.tsx` takes it with
+  `lidza snippet ui > src/ui.tsx`; L026 then lists the native controls
+  left to move.
 
 ## Parallel work
 

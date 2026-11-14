@@ -8,7 +8,7 @@
 
 # Node comes from the pinned official image, not a downloaded installer script.
 FROM node:22-bookworm@sha256:63538dfe497cc29dfafdda25ada09b46db68a3f4cc205abf1f5d6bf0913f3384 AS node
-FROM golang:1.27.3-bookworm AS build
+FROM golang:1.27.4-bookworm AS build
 ENV CGO_ENABLED=0
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
@@ -16,7 +16,7 @@ COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
  && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
-RUN go install github.com/agim/lidza/cmd/lidza@v0.1.134
+RUN go install github.com/agim/lidza/cmd/lidza@v0.1.139
 # lidza build regenerates SQL-backed queries; sqlc requires CGO while building.
 RUN CGO_ENABLED=1 go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 WORKDIR /src

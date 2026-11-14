@@ -79,7 +79,7 @@
 <details><summary>Saved credential names</summary><ul>{{range .Secrets}}<li>{{.}}</li>{{else}}<li>None</li>{{end}}</ul></details>
 </details></div>
 {{end}}
-</section><div class="setup-secondary"><button type="button" class="btn btn-secondary" data-setup-open="setup-restart">Restart draft…</button><a class="btn btn-secondary" href="/app">Back to Thura</a></div>
+</section><div class="setup-secondary"><button type="button" class="btn btn-secondary" data-setup-open="setup-restart">Restart draft…</button><a class="btn btn-secondary" href="/app">Open Thura</a></div>
 <dialog id="setup-restart" class="setup-dialog" aria-labelledby="restart-title"><header><h2 id="restart-title">Restart the wizard</h2><button type="button" class="btn btn-icon" data-setup-close aria-label="Close restart draft">×</button></header><p>Resets the draft, including its saved credentials. The published revision and administrator account are preserved.</p>
 <form method="post" action="setup/restart"><input type="hidden" name="revision" value="{{.Revision}}"><input type="hidden" name="step" value="server"><input type="hidden" name="back" value="?step=server"><label for="confirm-restart">Type restart to confirm</label><input class="form-control" id="confirm-restart" name="confirm" required pattern="restart"><button class="btn btn-secondary">Restart draft</button></form>
 </dialog></div><script src="setup/controls.js" defer></script>

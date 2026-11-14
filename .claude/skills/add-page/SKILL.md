@@ -10,6 +10,12 @@ Add a client-side route rendered by React, prerendered at build time.
 
 1. Create `src/pages/Things.tsx` exporting a component.
 2. In `src/router.tsx`, declare `createRoute({ getParentRoute: () => rootRoute, path: '/things', component: Things })` and add it to the route tree.
+   One record is `/things/$slug` (by its slug), a tab a child route, a
+   filter a search parameter (`validateSearch`); link with `<Link>`, link
+   back from a record with `<BackLink to="/things">All things</BackLink>`,
+   and set the title with `useTitle(thing.name)` (`src/navigation.tsx`;
+   recipe "Keep a view in the address"). Never a hash route, never a view
+   chosen by component state alone.
 3. Fetch data with `useQuery({ queryKey: ['things'], queryFn: () => api.listThings() })`
    from `@lidza/client`; never `fetch` by hand.
 4. Routes without parameters are prerendered by `npm run build`; keep
@@ -27,7 +33,11 @@ Add a client-side route rendered by React, prerendered at build time.
    field errors the server would, before the request.
 7. Every element must be accessible: `lidza check` fails on `jsx-a11y`
    errors (missing `alt`, click handlers on non-interactive elements, ...).
-8. Style with Tailwind utilities; colors and fonts come from the `@theme`
+8. Build it from the app's components (`src/ui.tsx`, recipe "Build a
+   page from the components"): `Page` for the layout, `Section`,
+   `Field` with `TextInput` or `Select`, `Button`, `Notice`, `Empty`,
+   `Dialog`; never a `<select>`, `confirm()` or a hand-styled heading or
+   button (`lidza check` L026). Colors and fonts come from the `@theme`
    tokens in `src/index.css` (`bg-brand`, `text-ink`, `border-line`,
    `text-muted`, `text-danger`). Change the tokens, not the classes, to
    rebrand. No other CSS framework.
