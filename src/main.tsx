@@ -9,6 +9,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { announceTimezone } from './timezone'
 import { enableAnalytics } from './analytics'
 import { startI18n } from './i18n'
+import { registerServiceWorker } from './pwa'
 import './index.css'
 // Shared shell styles arrive before hydration; page code loads on demand.
 import './workspace/styles.css'
@@ -40,6 +41,10 @@ const app = (
     </ErrorBoundary>
   </StrictMode>
 )
+
+// The installable app: service worker, update and install prompts. A
+// tapped notification opens its view in this tab through the router.
+registerServiceWorker(url => router.history.push(url))
 
 if (hydrating) {
   hydrateRoot(root, app)

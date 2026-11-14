@@ -63,6 +63,17 @@ func Gate(next http.Handler) http.Handler {
 	})
 }
 
+// pwaResource is a public file of the installable app (public/): its
+// manifest, icons, service worker and offline page. None is per-user, and an
+// installed app must reach them before setup finishes to update itself.
+func pwaResource(path string) bool {
+	switch path {
+	case "/manifest.webmanifest", "/sw.js", "/offline.html", "/offline.css", "/offline.js":
+		return true
+	}
+	return strings.HasPrefix(path, "/icons/")
+}
+
 func setupResource(r *http.Request) bool {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		return false
@@ -72,7 +83,7 @@ func setupResource(r *http.Request) bool {
 		return false
 	}
 	path := requestPath
-	if path == "/healthz" || path == "/api/v1/health" || path == "/admin/theme.css" || path == "/favicon.ico" || path == "/favicon.svg" || strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/admin/assets/") {
+	if path == "/healthz" || path == "/api/v1/health" || path == "/admin/theme.css" || path == "/favicon.ico" || path == "/favicon.svg" || pwaResource(path) || strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/admin/assets/") {
 		return true
 	}
 	if os.Getenv("LIDZA_MODE") == "dev" {

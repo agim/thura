@@ -459,6 +459,17 @@
 #orbit-workspace.zero-workspace .settings-form button { justify-self: start; display: inline-flex; align-items: center; gap: 8px; min-height: var(--app-control-height); border-radius: var(--app-radius-control); }
 #orbit-workspace.zero-workspace .settings-list-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
 #orbit-workspace.zero-workspace .settings-list-row > span { min-width: 0; overflow-wrap: anywhere; }
+/* Install Thura in the account menu (src/components/InstallEntry.tsx). */
+.install-entry { display: grid; gap: 8px; margin: 12px 0; }
+.install-entry-row { display: flex; align-items: center; gap: 8px; }
+.install-entry p { margin: 0; font-size: 13px; color: var(--quiet); }
+/* Settings → Notifications (src/components/NotificationSettings.tsx). */
+#orbit-workspace.zero-workspace .notification-event { display: grid; gap: 4px; }
+#orbit-workspace.zero-workspace .notification-event > small, #orbit-workspace.zero-workspace .notification-sub small { color: var(--quiet); font-size: 12px; padding-left: 26px; }
+#orbit-workspace.zero-workspace .settings-form label.notification-sub { flex-wrap: wrap; margin-left: 26px; }
+#orbit-workspace.zero-workspace .notification-sub small { flex-basis: 100%; padding-left: 26px; }
+#orbit-workspace.zero-workspace .notification-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#orbit-workspace.zero-workspace .settings-form p.notification-state { color: var(--ink); font-size: 14px; font-weight: 600; }
 #orbit-workspace.zero-workspace .mail-label-filter { display: flex; flex-direction: column; gap: 7px; margin: 16px 0; }
 @media(max-width:999px) {
  #orbit-workspace.zero-workspace .settings-layout { grid-template-columns: minmax(0,1fr); gap: 16px; }

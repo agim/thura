@@ -170,6 +170,11 @@ func appHeaders(cfg livekit.Config, meet bool) []middleware.Middleware {
 	// the toolbar's previous/next buttons render empty boxes. Fonts cannot run
 	// script and style-src stays restricted, so data: fonts add no script path.
 	policy = middleware.AddCSP(policy, "font-src", "data:")
+	// The installable app: its service worker (/sw.js) and manifest are the
+	// binary's own files. default-src already allows them; naming them keeps
+	// them same-origin if default-src ever changes.
+	policy = middleware.AddCSP(policy, "worker-src", "'self'")
+	policy = middleware.AddCSP(policy, "manifest-src", "'self'")
 	permissions := middleware.DefaultPermissionsPolicy
 	if meet {
 		policy = middleware.AddCSP(policy, "connect-src", cfg.PublicOrigins()...)

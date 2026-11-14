@@ -9,6 +9,7 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import { RouteError } from './ErrorBoundary'
+import { UpdatePrompt } from './components/UpdatePrompt'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@lidza/client'
@@ -42,9 +43,9 @@ function RootLayout() {
     if (unfinished && path !== target) window.location.replace(target)
   }, [unfinished, path, target])
   const workspace = useRouterState({ select: (state) => state.location.pathname === '/workspace' || state.location.pathname === '/members' || state.location.pathname === '/contacts' || (state.location.pathname === '/app' || state.location.pathname.startsWith('/app/')) })
-  if (unfinished) return <><PageHead /><PublicLayout setup>{path === target ? <Outlet /> : <p role="status">Opening server setup…</p>}</PublicLayout></>
-  if (workspace) return <><PageHead /><main className="workspace-frame"><Outlet /></main></>
-  return <><PageHead /><PublicLayout setup={path === '/setup'}><Outlet /></PublicLayout></>
+  if (unfinished) return <><PageHead /><PublicLayout setup>{path === target ? <Outlet /> : <p role="status">Opening server setup…</p>}</PublicLayout><UpdatePrompt /></>
+  if (workspace) return <><PageHead /><main className="workspace-frame"><Outlet /></main><UpdatePrompt /></>
+  return <><PageHead /><PublicLayout setup={path === '/setup'}><Outlet /></PublicLayout><UpdatePrompt /></>
 }
 
 // Code-based routes. Add a page: create it under src/pages, declare a route
@@ -89,8 +90,9 @@ const labelSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, pa
 const calendarSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/calendar', component: () => null })
 const smipSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/smip', component: () => null })
 const externalSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/external', component: () => null })
+const notificationSettingsRoute = createRoute({ getParentRoute: () => settingsRoute, path: '/notifications', component: () => null })
 const setupRoute = createRoute({ getParentRoute: () => rootRoute, path: "/setup", component: lazyRouteComponent(() => import("./pages/Setup"), "Setup"), staticData: { module: "src/pages/Setup.tsx" } })
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute.addChildren([loopRoute, mailRoute, driveRoute, calendarRoute, chatRoute, meetRoute, appContactsRoute, settingsRoute.addChildren([teamSettingsRoute, aiSettingsRoute, mailSettingsRoute, calendarSettingsRoute, memberSettingsRoute, labelSettingsRoute, smipSettingsRoute, externalSettingsRoute])]), shareRoute, rsvpRoute, guestMeetRoute, setupRoute])
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, workspaceRoute, contactsRoute, membersRoute, inviteRoute, forgotRoute, resetRoute, verifyRoute, appRoute.addChildren([loopRoute, mailRoute, driveRoute, calendarRoute, chatRoute, meetRoute, appContactsRoute, settingsRoute.addChildren([teamSettingsRoute, aiSettingsRoute, mailSettingsRoute, calendarSettingsRoute, memberSettingsRoute, labelSettingsRoute, smipSettingsRoute, externalSettingsRoute, notificationSettingsRoute])]), shareRoute, rsvpRoute, guestMeetRoute, setupRoute])
 
 // createAppRouter builds a router for the browser (no history given) or for
 // server rendering (a memory history at one path).

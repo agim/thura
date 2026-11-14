@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && vite build --ssr src/entry-server.tsx --outDir dist/.server && node scripts/prerender.mjs",
+    "build": "tsc --noEmit && vite build && vite build --ssr src/entry-server.tsx --outDir dist/.server && node scripts/prerender.mjs && node scripts/service-worker.mjs",
     "check": "tsc --noEmit && eslint src",
     "lint": "eslint src",
     "preview": "vite preview",

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Offline · Thura</title>
+    <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="stylesheet" href="/offline.css" />
+  </head>
+  <body>
+    <main class="offline" aria-labelledby="offline-title">
+      <span class="offline-logo" aria-hidden="true">t</span>
+      <h1 id="offline-title">You are offline</h1>
+      <p>Thura needs a connection to show your mail, files, calendars and chat. Nothing is stored on this device while offline.</p>
+      <p>Reconnect to continue where you left off; mail drafts are kept on the server.</p>
+      <button type="button" id="offline-retry">Try again</button>
+      <p class="offline-status" role="status" aria-live="polite" id="offline-status"></p>
+    </main>
+    <script src="/offline.js"></script>
+  </body>
+</html>
