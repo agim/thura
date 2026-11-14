@@ -10,6 +10,7 @@ import (
 	"github.com/agim/lidza/pkg/router"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/push"
 	"thura/internal/rspamd"
 	"thura/schema"
 )
@@ -150,6 +151,13 @@ func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q
 	if state != "clean" {
 		item.Folder = q.MailFolderSpam
 		if err = queries.MoveScreenedMail(ctx, q.MoveScreenedMailParams{ID: item.ID, Folder: item.Folder}); err != nil {
+			return item, err
+		}
+	}
+	// Clean mail reached the Inbox now: notify its readers in the same
+	// transaction. Held mail notifies when the worker releases it there.
+	if state == "clean" && item.Folder == q.MailFolderInbox {
+		if err = push.MailArrived(ctx, tx, item.ID, person.State == "person"); err != nil {
 			return item, err
 		}
 	}

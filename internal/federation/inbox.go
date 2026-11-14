@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	q "thura/db/queries/gen"
 	"thura/internal/drive"
+	"thura/internal/push"
 	"thura/internal/smip"
 )
 
@@ -183,6 +184,7 @@ func (s *DatabaseInbox) putConversation(record smip.Record, key, receiptKey smip
 		owner = box.OwnerSubject
 	}
 	conversation, err := queries.FindSmipConversation(ctx, q.FindSmipConversationParams{WorkspaceID: box.WorkspaceID, LocalAddress: local, RemoteAddress: remote})
+	created := errors.Is(err, pgx.ErrNoRows)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		count, err := queries.CountSmipConversations(ctx, box.WorkspaceID)
@@ -214,6 +216,13 @@ func (s *DatabaseInbox) putConversation(record smip.Record, key, receiptKey smip
 	}
 	if err = queries.TouchSmipConversation(ctx, q.TouchSmipConversationParams{WorkspaceID: box.WorkspaceID, ID: conversation.ID, UpdatedAt: time.Unix(record.Receipt.Accepted, 0)}); err != nil {
 		return smip.Record{}, false, err
+	}
+	// A new request notifies once; later items of a pending request wait for
+	// the recipient's decision, and an accepted conversation notifies each.
+	if created || conversation.State == ConversationAccepted {
+		if err = push.ExternalChat(ctx, tx, box.WorkspaceID, conversation.ID, owner, remote, created); err != nil {
+			return smip.Record{}, false, err
+		}
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return smip.Record{}, false, err

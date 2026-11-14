@@ -22,6 +22,7 @@ import (
 	"thura/internal/platform/objectgc"
 	"thura/internal/platform/objectstore"
 	livekit "thura/internal/providers/livekit"
+	"thura/internal/push"
 	"thura/internal/setup"
 	"thura/internal/smipmail"
 	"thura/internal/tenancy"
@@ -69,6 +70,7 @@ func onStart(ctx context.Context, s *lidza.Services) error {
 		return err
 	}
 	jobs.FromServices(s).Handle(mailbox.DeliveryJob, mailbox.Deliver)
+	jobs.FromServices(s).Handle(push.SendJob, push.Send, jobs.Concurrency(4))
 	jobs.FromServices(s).Handle(calendar.ReminderJob, calendar.Remind, jobs.Concurrency(1))
 	if err := jobs.FromServices(s).Schedule(calendar.ReminderJob, jobs.Every(time.Minute), nil); err != nil {
 		return err

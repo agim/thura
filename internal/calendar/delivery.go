@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/mail"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	q "thura/db/queries/gen"
 	"thura/internal/meet"
+	"thura/internal/push"
 	"thura/internal/teammail"
 	"thura/internal/tenancy"
 	"thura/schema"
@@ -136,10 +138,33 @@ func inviteTx(ctx context.Context, tx pgx.Tx, queries *q.Queries, w string, e q.
 		}
 		out.Queued++
 	}
+	if err = notifyMeetingNow(ctx, tx, w, e, attendees, exceptions); err != nil {
+		return out, err
+	}
 	if err = queries.CreateCalendarDispatch(ctx, q.CreateCalendarDispatchParams{EventID: id, Sequence: e.Sequence}); err != nil {
 		return out, err
 	}
 	return out, nil
+}
+
+// notifyMeetingNow pushes "Meeting starting" to invited members when the
+// invitation goes out for an event with a Thura Meet room that is under way
+// or starts within 15 minutes. Attendees are matched to workspace accounts
+// by address; the organizer sending it is never notified.
+func notifyMeetingNow(ctx context.Context, tx pgx.Tx, w string, e q.CalendarEvent, attendees []q.EventAttendee, exceptions []q.EventException) error {
+	if e.MeetingID == nil || e.Cancelled || e.AllDay {
+		return nil
+	}
+	now := lidza.Now(ctx)
+	items, err := Instances(e, "", exceptions, now, now.Add(15*time.Minute))
+	if err != nil || len(items) == 0 {
+		return err
+	}
+	emails := make([]string, 0, len(attendees))
+	for _, a := range attendees {
+		emails = append(emails, a.Email)
+	}
+	return push.MeetingStarting(ctx, tx, w, auth.CurrentUser(ctx).ID, *e.MeetingID, e.Title, emails)
 }
 
 func replyGrant(ctx context.Context, queries *q.Queries, token string) (q.GetCalendarReplyGrantRow, q.CalendarEvent, error) {

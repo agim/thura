@@ -1068,3 +1068,40 @@ CREATE TABLE auth_preference (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE push_subscription (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+  subject varchar(255) NOT NULL,
+  endpoint text NOT NULL,
+  endpoint_hash varchar(64) NOT NULL,
+  p256dh varchar(200) NOT NULL,
+  auth varchar(100) NOT NULL,
+  label varchar(120) NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  last_used_at timestamptz
+);
+CREATE UNIQUE INDEX push_subscription_workspace_id_endpoint_hash_key ON push_subscription (workspace_id, endpoint_hash);
+CREATE INDEX push_subscription_workspace_id_subject_idx ON push_subscription (workspace_id, subject);
+
+CREATE TABLE notification_preference (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+  subject varchar(255) NOT NULL,
+  mail boolean NOT NULL DEFAULT true,
+  mail_people_only boolean NOT NULL DEFAULT true,
+  chat boolean NOT NULL DEFAULT true,
+  chat_requests boolean NOT NULL DEFAULT true,
+  calendar boolean NOT NULL DEFAULT true,
+  meet boolean NOT NULL DEFAULT true,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX notification_preference_workspace_id_subject_key ON notification_preference (workspace_id, subject);
+
+CREATE TABLE push_vapid_key (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name varchar(40) NOT NULL UNIQUE,
+  public_key varchar(200) NOT NULL,
+  private_key text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+

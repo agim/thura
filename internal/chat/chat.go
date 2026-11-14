@@ -12,6 +12,7 @@ import (
 	"strings"
 	q "thura/db/queries/gen"
 	provider "thura/internal/providers/matrix"
+	"thura/internal/push"
 	"thura/internal/workspace"
 	"thura/schema"
 )
@@ -269,6 +270,11 @@ func Send(ctx context.Context, w, id string, in schema.ChatSendInput) (schema.Ch
 		ID string `json:"event_id"`
 	}
 	err = cfg.Call(ctx, user, "PUT", "/_matrix/client/v3/rooms/"+url.PathEscape(r.MatrixRoomID)+"/send/m.room.message/"+url.PathEscape(in.TransactionID), content, &response)
+	if err == nil && response.ID != "" {
+		// The other members in the room; a retried transaction notifies again
+		// only if Matrix accepted it again.
+		push.ChatMessage(ctx, w, r.ID, r.Name, r.Direct, auth.CurrentUser(ctx).ID, in.Body)
+	}
 	return schema.ChatEventResult{EventID: response.ID}, err
 }
 func Remote(ctx context.Context, w, id string, in schema.ChatRemoteInput, kick bool) error {

@@ -2775,6 +2775,121 @@ func (v AuthPreference) Validate() error {
 	return errs.Result()
 }
 
+// PushSubscription is a row of the push_subscription table.
+type PushSubscription struct {
+	ID           string     `json:"id" db:"id"`
+	WorkspaceID  string     `json:"workspaceId" db:"workspace_id"`
+	Subject      string     `json:"subject" db:"subject"`
+	Endpoint     string     `json:"endpoint" db:"endpoint"`
+	EndpointHash string     `json:"endpointHash" db:"endpoint_hash"`
+	P256dh       string     `json:"p256dh" db:"p256dh"`
+	Auth         string     `json:"auth" db:"auth"`
+	Label        string     `json:"label" db:"label"`
+	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
+	LastUsedAt   *time.Time `json:"lastUsedAt" db:"last_used_at"`
+}
+
+// Validate applies the rules of PushSubscription from schema.lidza.
+func (v PushSubscription) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if len(v.Subject) > 255 {
+		errs.Add("subject", "max", "at most 255 character(s)")
+	}
+	if v.Endpoint == "" {
+		errs.Add("endpoint", "required", "required")
+	}
+	if v.EndpointHash == "" {
+		errs.Add("endpointHash", "required", "required")
+	}
+	if len(v.EndpointHash) > 64 {
+		errs.Add("endpointHash", "max", "at most 64 character(s)")
+	}
+	if v.P256dh == "" {
+		errs.Add("p256dh", "required", "required")
+	}
+	if len(v.P256dh) > 200 {
+		errs.Add("p256dh", "max", "at most 200 character(s)")
+	}
+	if v.Auth == "" {
+		errs.Add("auth", "required", "required")
+	}
+	if len(v.Auth) > 100 {
+		errs.Add("auth", "max", "at most 100 character(s)")
+	}
+	if v.Label == "" {
+		errs.Add("label", "required", "required")
+	}
+	if len(v.Label) > 120 {
+		errs.Add("label", "max", "at most 120 character(s)")
+	}
+	return errs.Result()
+}
+
+// NotificationPreference is a row of the notification_preference table.
+type NotificationPreference struct {
+	ID             string    `json:"id" db:"id"`
+	WorkspaceID    string    `json:"workspaceId" db:"workspace_id"`
+	Subject        string    `json:"subject" db:"subject"`
+	Mail           bool      `json:"mail" db:"mail"`
+	MailPeopleOnly bool      `json:"mailPeopleOnly" db:"mail_people_only"`
+	Chat           bool      `json:"chat" db:"chat"`
+	ChatRequests   bool      `json:"chatRequests" db:"chat_requests"`
+	Calendar       bool      `json:"calendar" db:"calendar"`
+	Meet           bool      `json:"meet" db:"meet"`
+	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of NotificationPreference from schema.lidza.
+func (v NotificationPreference) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if len(v.Subject) > 255 {
+		errs.Add("subject", "max", "at most 255 character(s)")
+	}
+	return errs.Result()
+}
+
+// PushVapidKey is a row of the push_vapid_key table.
+type PushVapidKey struct {
+	ID         string    `json:"id" db:"id"`
+	Name       string    `json:"name" db:"name"`
+	PublicKey  string    `json:"publicKey" db:"public_key"`
+	PrivateKey string    `json:"privateKey" db:"private_key"`
+	CreatedAt  time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of PushVapidKey from schema.lidza.
+func (v PushVapidKey) Validate() error {
+	var errs validate.Errors
+	if v.Name == "" {
+		errs.Add("name", "required", "required")
+	}
+	if len(v.Name) > 40 {
+		errs.Add("name", "max", "at most 40 character(s)")
+	}
+	if v.PublicKey == "" {
+		errs.Add("publicKey", "required", "required")
+	}
+	if len(v.PublicKey) > 200 {
+		errs.Add("publicKey", "max", "at most 200 character(s)")
+	}
+	if v.PrivateKey == "" {
+		errs.Add("privateKey", "required", "required")
+	}
+	return errs.Result()
+}
+
 // Greeting is an API type.
 type Greeting struct {
 	Name    string `json:"name"`
@@ -6530,6 +6645,156 @@ func (v NewTeamInput) Validate() error {
 	}
 	if len(v.Name) > 120 {
 		errs.Add("name", "max", "at most 120 character(s)")
+	}
+	return errs.Result()
+}
+
+// NotificationPreferences is an API type.
+type NotificationPreferences struct {
+	Mail           bool `json:"mail"`
+	MailPeopleOnly bool `json:"mailPeopleOnly"`
+	Chat           bool `json:"chat"`
+	ChatRequests   bool `json:"chatRequests"`
+	Calendar       bool `json:"calendar"`
+	Meet           bool `json:"meet"`
+}
+
+// Validate applies the rules of NotificationPreferences from schema.lidza.
+func (v NotificationPreferences) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
+// PushDevice is an API type.
+type PushDevice struct {
+	ID           string     `json:"id"`
+	Label        string     `json:"label"`
+	EndpointHash string     `json:"endpointHash"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	LastUsedAt   *time.Time `json:"lastUsedAt"`
+}
+
+// Validate applies the rules of PushDevice from schema.lidza.
+func (v PushDevice) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.Label == "" {
+		errs.Add("label", "required", "required")
+	}
+	if v.EndpointHash == "" {
+		errs.Add("endpointHash", "required", "required")
+	}
+	return errs.Result()
+}
+
+// NotificationSettings is an API type.
+type NotificationSettings struct {
+	Preferences NotificationPreferences `json:"preferences"`
+	Devices     []PushDevice            `json:"devices"`
+	PublicKey   string                  `json:"publicKey"`
+}
+
+// Validate applies the rules of NotificationSettings from schema.lidza.
+func (v NotificationSettings) Validate() error {
+	var errs validate.Errors
+	if err := v.Preferences.Validate(); err != nil {
+		errs.Add("preferences", "nested", err.Error())
+	}
+	for _, x := range v.Devices {
+		if err := x.Validate(); err != nil {
+			errs.Add("devices", "nested", err.Error())
+			break
+		}
+	}
+	if v.PublicKey == "" {
+		errs.Add("publicKey", "required", "required")
+	}
+	return errs.Result()
+}
+
+// PushSubscribeInput is an API type.
+type PushSubscribeInput struct {
+	Endpoint string `json:"endpoint"`
+	P256dh   string `json:"p256dh"`
+	Auth     string `json:"auth"`
+	Label    string `json:"label"`
+}
+
+// Validate applies the rules of PushSubscribeInput from schema.lidza.
+func (v PushSubscribeInput) Validate() error {
+	var errs validate.Errors
+	if v.Endpoint == "" {
+		errs.Add("endpoint", "required", "required")
+	}
+	if len(v.Endpoint) < 1 {
+		errs.Add("endpoint", "min", "at least 1 character(s)")
+	}
+	if len(v.Endpoint) > 2048 {
+		errs.Add("endpoint", "max", "at most 2048 character(s)")
+	}
+	if v.P256dh == "" {
+		errs.Add("p256dh", "required", "required")
+	}
+	if len(v.P256dh) < 1 {
+		errs.Add("p256dh", "min", "at least 1 character(s)")
+	}
+	if len(v.P256dh) > 200 {
+		errs.Add("p256dh", "max", "at most 200 character(s)")
+	}
+	if v.Auth == "" {
+		errs.Add("auth", "required", "required")
+	}
+	if len(v.Auth) < 1 {
+		errs.Add("auth", "min", "at least 1 character(s)")
+	}
+	if len(v.Auth) > 100 {
+		errs.Add("auth", "max", "at most 100 character(s)")
+	}
+	if v.Label == "" {
+		errs.Add("label", "required", "required")
+	}
+	if len(v.Label) > 120 {
+		errs.Add("label", "max", "at most 120 character(s)")
+	}
+	return errs.Result()
+}
+
+// PushTestResult is an API type.
+type PushTestResult struct {
+	Queued int `json:"queued"`
+}
+
+// Validate applies the rules of PushTestResult from schema.lidza.
+func (v PushTestResult) Validate() error {
+	var errs validate.Errors
+	return errs.Result()
+}
+
+// PushJob is an API type.
+type PushJob struct {
+	SubscriptionID string `json:"subscriptionId"`
+	Kind           string `json:"kind"`
+	Payload        string `json:"payload"`
+	Ttl            int    `json:"ttl"`
+	Urgency        string `json:"urgency"`
+}
+
+// Validate applies the rules of PushJob from schema.lidza.
+func (v PushJob) Validate() error {
+	var errs validate.Errors
+	if v.SubscriptionID == "" {
+		errs.Add("subscriptionId", "required", "required")
+	}
+	if v.Kind == "" {
+		errs.Add("kind", "required", "required")
+	}
+	if v.Payload == "" {
+		errs.Add("payload", "required", "required")
+	}
+	if v.Urgency == "" {
+		errs.Add("urgency", "required", "required")
 	}
 	return errs.Result()
 }

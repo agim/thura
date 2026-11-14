@@ -1911,3 +1911,81 @@ model AuthPreference @table("auth_preference") {
   values    json
   updatedAt time @default(now())
 }
+
+// Web Push: one row per browser (endpoint) a member turned notifications on
+// in, per workspace. Keys are the browser's public encryption keys, not
+// secrets of this server; the endpoint is a capability URL and never leaves
+// the server (the device list shows its hash).
+model PushSubscription {
+  id uuid @id @default(uuid())
+  workspaceId uuid @ref(Workspace, cascade)
+  subject string @max(255)
+  endpoint text
+  endpointHash string @max(64)
+  p256dh string @max(200)
+  auth string @max(100)
+  label string @max(120) @default("")
+  createdAt time @default(now())
+  lastUsedAt time?
+  @@unique(workspaceId, endpointHash)
+  @@index(workspaceId, subject)
+}
+// Which events notify a member in a workspace. No row means the defaults.
+model NotificationPreference {
+  id uuid @id @default(uuid())
+  workspaceId uuid @ref(Workspace, cascade)
+  subject string @max(255)
+  mail bool @default(true)
+  mailPeopleOnly bool @default(true)
+  chat bool @default(true)
+  chatRequests bool @default(true)
+  calendar bool @default(true)
+  meet bool @default(true)
+  updatedAt time @default(now())
+  @@unique(workspaceId, subject)
+}
+// The server's VAPID key pair, generated on first use. The private key is
+// sealed with the master key; the public key is what browsers subscribe with.
+model PushVapidKey {
+  id uuid @id @default(uuid())
+  name string @max(40) @unique
+  publicKey string @max(200)
+  privateKey text
+  createdAt time @default(now())
+}
+type NotificationPreferences {
+  mail bool
+  mailPeopleOnly bool
+  chat bool
+  chatRequests bool
+  calendar bool
+  meet bool
+}
+type PushDevice {
+  id uuid
+  label string
+  endpointHash string
+  createdAt time
+  lastUsedAt time?
+}
+type NotificationSettings {
+  preferences NotificationPreferences
+  devices PushDevice[]
+  publicKey string
+}
+type PushSubscribeInput {
+  endpoint string @min(1) @max(2048)
+  p256dh string @min(1) @max(200)
+  auth string @min(1) @max(100)
+  label string @max(120)
+}
+type PushTestResult {
+  queued int
+}
+type PushJob {
+  subscriptionId uuid
+  kind string
+  payload string
+  ttl int
+  urgency string
+}

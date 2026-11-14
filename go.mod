@@ -3,6 +3,7 @@ module thura
 go 1.27.4
 
 require (
+	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/agim/lidza v0.1.139
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0

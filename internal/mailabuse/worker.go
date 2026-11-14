@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/push"
 	"thura/internal/assistant"
 	"thura/internal/rspamd"
 	"thura/schema"
@@ -404,6 +405,7 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	}
 	// Real person: header decisions stand; mail from before the feature ("")
 	// is never classified; otherwise decide once the screening has settled.
+	personState := latest.PersonState
 	if latest.PersonState != "" && latest.PersonSource != "header" && (latest.State == "clean" || latest.State == "quarantined") {
 		decision, err := decidePerson(ctx, queries, s.WorkspaceID, s.Sender, aiKind)
 		if err != nil {
@@ -412,10 +414,15 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 		if err = settlePerson(ctx, queries, latest, decision); err != nil {
 			return err
 		}
+		personState = decision.State
 	}
 	// A concurrent user move/report cannot be overwritten by background release.
 	if latest.State == "clean" && currentItem.Folder == q.MailFolderSpam {
 		if err = queries.MoveScreenedMail(ctx, q.MoveScreenedMailParams{ID: item.ID, Folder: q.MailFolderInbox}); err != nil {
+			return err
+		}
+		// Screening released it to the Inbox: this is when it arrives.
+		if err = push.MailArrived(ctx, finish, item.ID, personState == "person"); err != nil {
 			return err
 		}
 	}

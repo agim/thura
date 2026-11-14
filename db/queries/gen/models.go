@@ -826,6 +826,19 @@ type MeetingWebhook struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type NotificationPreference struct {
+	ID             string    `json:"id"`
+	WorkspaceID    string    `json:"workspace_id"`
+	Subject        string    `json:"subject"`
+	Mail           bool      `json:"mail"`
+	MailPeopleOnly bool      `json:"mail_people_only"`
+	Chat           bool      `json:"chat"`
+	ChatRequests   bool      `json:"chat_requests"`
+	Calendar       bool      `json:"calendar"`
+	Meet           bool      `json:"meet"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
 type OfficeSession struct {
 	ID            string    `json:"id"`
 	FileID        string    `json:"file_id"`
@@ -834,6 +847,27 @@ type OfficeSession struct {
 	DocumentKey   string    `json:"document_key"`
 	ExpiresAt     time.Time `json:"expires_at"`
 	CreatedAt     time.Time `json:"created_at"`
+}
+
+type PushSubscription struct {
+	ID           string     `json:"id"`
+	WorkspaceID  string     `json:"workspace_id"`
+	Subject      string     `json:"subject"`
+	Endpoint     string     `json:"endpoint"`
+	EndpointHash string     `json:"endpoint_hash"`
+	P256dh       string     `json:"p256dh"`
+	Auth         string     `json:"auth"`
+	Label        string     `json:"label"`
+	CreatedAt    time.Time  `json:"created_at"`
+	LastUsedAt   *time.Time `json:"last_used_at"`
+}
+
+type PushVapidKey struct {
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	PublicKey  string    `json:"public_key"`
+	PrivateKey string    `json:"private_key"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type ReminderNotice struct {

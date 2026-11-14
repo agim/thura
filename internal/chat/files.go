@@ -3,11 +3,13 @@ package chat
 import (
 	"context"
 	"encoding/base64"
+	"github.com/agim/lidza/packs/auth"
 	"github.com/agim/lidza/pkg/router"
 	"github.com/google/uuid"
 	"net/url"
 	"strings"
 	"thura/internal/drive"
+	"thura/internal/push"
 	"thura/schema"
 )
 
@@ -41,6 +43,9 @@ func SendFile(ctx context.Context, w, id string, in schema.ChatFileInput) (schem
 		ID string `json:"event_id"`
 	}
 	err = cfg.Call(ctx, user, "PUT", "/_matrix/client/v3/rooms/"+url.PathEscape(r.MatrixRoomID)+"/send/m.room.message/"+url.PathEscape(in.TransactionID), map[string]any{"msgtype": "m.file", "body": content.Name, "url": media, "info": map[string]any{"size": len(data), "mimetype": "application/octet-stream"}}, &response)
+	if err == nil && response.ID != "" {
+		push.ChatMessage(ctx, w, r.ID, r.Name, r.Direct, auth.CurrentUser(ctx).ID, "Shared a file: "+content.Name)
+	}
 	return schema.ChatEventResult{EventID: response.ID}, err
 }
 
