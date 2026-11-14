@@ -1,6 +1,6 @@
 import { ActionButton } from './ActionButton'
 import { AppNotice, useNotice } from './AppNotice'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type NotificationPreferences, type NotificationSettings as Settings } from '@lidza/client'
 import { BellOff, BellRing, Send, Trash2 } from 'lucide-react'
@@ -69,21 +69,35 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
   })
   const remove = useMutation({ mutationFn: (id: string) => api.unsubscribePushDevice({ workspaceId, id }), onSuccess: saved => { store(saved); show({ text: 'Device removed.' }) } })
   const test = useMutation({ mutationFn: () => api.testPushNotification({ workspaceId }), onSuccess: result => show({ text: `Test notification sent to ${result.queued === 1 ? '1 device' : `${result.queued} devices`}.` }) })
+  // A click shows at once (component state, so the checkbox follows the
+  // click in the same render); saves run one at a time in order (scope), and
+  // only the newest answer replaces what is on screen, so an earlier save
+  // finishing late never undoes a later click. A refused save shows the last
+  // saved choices again.
+  const [pending, setPending] = useState<NotificationPreferences | null>(null)
+  const latest = useRef(0)
   const save = useMutation({
-    mutationFn: (preferences: NotificationPreferences) => api.saveNotificationPreferences({ workspaceId }, preferences),
-    onMutate: preferences => {
-      const previous = client.getQueryData<Settings>(key)
-      if (previous) store({ ...previous, preferences })
-      return { previous }
+    scope: { id: `notification-preferences-${workspaceId}` },
+    mutationFn: ({ preferences }: { preferences: NotificationPreferences; seq: number }) => api.saveNotificationPreferences({ workspaceId }, preferences),
+    onError: (_error, { seq }) => { if (seq === latest.current) setPending(null) },
+    onSuccess: (next, { seq }) => {
+      if (seq !== latest.current) return
+      store(next)
+      setPending(null)
     },
-    onError: (_error, _preferences, context) => { if (context?.previous) store(context.previous) },
-    onSuccess: saved => store(saved),
   })
+  const change = (patch: Partial<NotificationPreferences>) => {
+    const base = pending ?? settings.data?.preferences
+    if (!base) return
+    const preferences = { ...base, ...patch }
+    setPending(preferences)
+    save.mutate({ preferences, seq: ++latest.current })
+  }
 
   // Only the first read shows a loading or error state; a failed refresh
   // keeps the settings on screen and says so beside them.
   if (!settings.data) return <><h3>Notifications</h3>{settings.isError ? <p role="alert">{userError(settings.error)}</p> : <p role="status">Loading notification settings…</p>}</>
-  const prefs = settings.data.preferences
+  const prefs = pending ?? settings.data.preferences
   const available = settings.data.publicKey !== ''
   const on = !!thisDevice && permission === 'granted'
   const state = !available ? 'server' : support === 'install-first' ? 'install-first' : support === 'unsupported' || permission === 'unsupported' ? 'unsupported' : permission === 'denied' ? 'blocked' : on ? 'on' : 'off'
@@ -115,9 +129,9 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
       <h3 id="notification-events-title">Notify me about</h3>
       <p>These apply to every device you turn notifications on for in this workspace. You are never notified about your own actions, or about a conversation you have open.</p>
       {events.map(event => <div key={event.key} className="notification-event">
-        <label className="checkbox"><input type="checkbox" checked={prefs[event.key]} onChange={e => save.mutate({ ...prefs, [event.key]: e.target.checked })} />{event.label}</label>
+        <label className="checkbox"><input type="checkbox" checked={prefs[event.key]} onChange={e => change({ [event.key]: e.target.checked })} />{event.label}</label>
         {event.hint && <small>{event.hint}</small>}
-        {event.key === 'mail' && <label className="checkbox notification-sub"><input type="checkbox" checked={prefs.mailPeopleOnly} disabled={!prefs.mail} onChange={e => save.mutate({ ...prefs, mailPeopleOnly: e.target.checked })} />Only from real people<small>Mail with the Real person label.</small></label>}
+        {event.key === 'mail' && <label className="checkbox notification-sub"><input type="checkbox" checked={prefs.mailPeopleOnly} disabled={!prefs.mail} onChange={e => change({ mailPeopleOnly: e.target.checked })} />Only from real people<small>Mail with the Real person label.</small></label>}
       </div>)}
       {save.error && <p role="alert">{userError(save.error)}</p>}
     </section>
