@@ -10,6 +10,60 @@ import (
 	"time"
 )
 
+const addNotificationLog = `-- name: AddNotificationLog :one
+INSERT INTO notification_log(workspace_id,subject,kind,link,status,reason,devices) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id
+`
+
+type AddNotificationLogParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+	Kind        string `json:"kind"`
+	Link        string `json:"link"`
+	Status      string `json:"status"`
+	Reason      string `json:"reason"`
+	Devices     int32  `json:"devices"`
+}
+
+func (q *Queries) AddNotificationLog(ctx context.Context, arg AddNotificationLogParams) (string, error) {
+	row := q.db.QueryRow(ctx, addNotificationLog,
+		arg.WorkspaceID,
+		arg.Subject,
+		arg.Kind,
+		arg.Link,
+		arg.Status,
+		arg.Reason,
+		arg.Devices,
+	)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
+const addPushRemovedDevice = `-- name: AddPushRemovedDevice :exec
+INSERT INTO push_removed_device(workspace_id,subject,endpoint_hash,label,error_kind,error) VALUES($1,$2,$3,$4,$5,$6)
+`
+
+type AddPushRemovedDeviceParams struct {
+	WorkspaceID  string `json:"workspace_id"`
+	Subject      string `json:"subject"`
+	EndpointHash string `json:"endpoint_hash"`
+	Label        string `json:"label"`
+	ErrorKind    string `json:"error_kind"`
+	Error        string `json:"error"`
+}
+
+func (q *Queries) AddPushRemovedDevice(ctx context.Context, arg AddPushRemovedDeviceParams) error {
+	_, err := q.db.Exec(ctx, addPushRemovedDevice,
+		arg.WorkspaceID,
+		arg.Subject,
+		arg.EndpointHash,
+		arg.Label,
+		arg.ErrorKind,
+		arg.Error,
+	)
+	return err
+}
+
 const addPushVapidKey = `-- name: AddPushVapidKey :exec
 INSERT INTO push_vapid_key(name,public_key,private_key) VALUES($1,$2,$3) ON CONFLICT(name) DO NOTHING
 `
@@ -22,6 +76,21 @@ type AddPushVapidKeyParams struct {
 
 func (q *Queries) AddPushVapidKey(ctx context.Context, arg AddPushVapidKeyParams) error {
 	_, err := q.db.Exec(ctx, addPushVapidKey, arg.Name, arg.PublicKey, arg.PrivateKey)
+	return err
+}
+
+const clearPushRemovedDevice = `-- name: ClearPushRemovedDevice :exec
+DELETE FROM push_removed_device WHERE workspace_id=$1 AND subject=$2 AND endpoint_hash=$3
+`
+
+type ClearPushRemovedDeviceParams struct {
+	WorkspaceID  string `json:"workspace_id"`
+	Subject      string `json:"subject"`
+	EndpointHash string `json:"endpoint_hash"`
+}
+
+func (q *Queries) ClearPushRemovedDevice(ctx context.Context, arg ClearPushRemovedDeviceParams) error {
+	_, err := q.db.Exec(ctx, clearPushRemovedDevice, arg.WorkspaceID, arg.Subject, arg.EndpointHash)
 	return err
 }
 
@@ -96,7 +165,7 @@ func (q *Queries) GetNotificationPreference(ctx context.Context, arg GetNotifica
 }
 
 const getPushSubscription = `-- name: GetPushSubscription :one
-SELECT id, workspace_id, subject, endpoint, endpoint_hash, p256dh, auth, label, created_at, last_used_at FROM push_subscription WHERE id=$1
+SELECT id, workspace_id, subject, endpoint, endpoint_hash, p256dh, auth, label, created_at, last_used_at, last_attempt_at, last_kind, last_error_at, last_error_kind, last_error, delivered_count, failed_count FROM push_subscription WHERE id=$1
 `
 
 func (q *Queries) GetPushSubscription(ctx context.Context, id string) (PushSubscription, error) {
@@ -113,6 +182,13 @@ func (q *Queries) GetPushSubscription(ctx context.Context, id string) (PushSubsc
 		&i.Label,
 		&i.CreatedAt,
 		&i.LastUsedAt,
+		&i.LastAttemptAt,
+		&i.LastKind,
+		&i.LastErrorAt,
+		&i.LastErrorKind,
+		&i.LastError,
+		&i.DeliveredCount,
+		&i.FailedCount,
 	)
 	return i, err
 }
@@ -132,6 +208,50 @@ func (q *Queries) GetPushVapidKey(ctx context.Context, name string) (PushVapidKe
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listNotificationLog = `-- name: ListNotificationLog :many
+SELECT id, workspace_id, subject, kind, link, status, reason, error, devices, delivered, failed, created_at, updated_at FROM notification_log WHERE workspace_id=$1 AND subject=$2 ORDER BY created_at DESC, id DESC LIMIT $3
+`
+
+type ListNotificationLogParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+	Limit       int32  `json:"limit"`
+}
+
+func (q *Queries) ListNotificationLog(ctx context.Context, arg ListNotificationLogParams) ([]NotificationLog, error) {
+	rows, err := q.db.Query(ctx, listNotificationLog, arg.WorkspaceID, arg.Subject, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NotificationLog
+	for rows.Next() {
+		var i NotificationLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Subject,
+			&i.Kind,
+			&i.Link,
+			&i.Status,
+			&i.Reason,
+			&i.Error,
+			&i.Devices,
+			&i.Delivered,
+			&i.Failed,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listNotificationPreferences = `-- name: ListNotificationPreferences :many
@@ -204,7 +324,7 @@ func (q *Queries) ListPushChatParticipants(ctx context.Context, arg ListPushChat
 }
 
 const listPushDevices = `-- name: ListPushDevices :many
-SELECT id, workspace_id, subject, endpoint, endpoint_hash, p256dh, auth, label, created_at, last_used_at FROM push_subscription WHERE workspace_id=$1 AND subject=$2 ORDER BY created_at, id
+SELECT id, workspace_id, subject, endpoint, endpoint_hash, p256dh, auth, label, created_at, last_used_at, last_attempt_at, last_kind, last_error_at, last_error_kind, last_error, delivered_count, failed_count FROM push_subscription WHERE workspace_id=$1 AND subject=$2 ORDER BY created_at, id
 `
 
 type ListPushDevicesParams struct {
@@ -232,6 +352,13 @@ func (q *Queries) ListPushDevices(ctx context.Context, arg ListPushDevicesParams
 			&i.Label,
 			&i.CreatedAt,
 			&i.LastUsedAt,
+			&i.LastAttemptAt,
+			&i.LastKind,
+			&i.LastErrorAt,
+			&i.LastErrorKind,
+			&i.LastError,
+			&i.DeliveredCount,
+			&i.FailedCount,
 		); err != nil {
 			return nil, err
 		}
@@ -244,7 +371,7 @@ func (q *Queries) ListPushDevices(ctx context.Context, arg ListPushDevicesParams
 }
 
 const listPushRecipients = `-- name: ListPushRecipients :many
-SELECT s.id, s.workspace_id, s.subject, s.endpoint, s.endpoint_hash, s.p256dh, s.auth, s.label, s.created_at, s.last_used_at FROM push_subscription s
+SELECT s.id, s.workspace_id, s.subject, s.endpoint, s.endpoint_hash, s.p256dh, s.auth, s.label, s.created_at, s.last_used_at, s.last_attempt_at, s.last_kind, s.last_error_at, s.last_error_kind, s.last_error, s.delivered_count, s.failed_count FROM push_subscription s
 WHERE s.workspace_id=$1 AND s.subject = ANY($2::text[])
   AND EXISTS(SELECT 1 FROM auth_member m WHERE m.scope=s.workspace_id::text AND m.subject=s.subject AND m.role IN ('owner','admin','member'))
 ORDER BY s.subject, s.created_at, s.id
@@ -276,6 +403,51 @@ func (q *Queries) ListPushRecipients(ctx context.Context, arg ListPushRecipients
 			&i.Label,
 			&i.CreatedAt,
 			&i.LastUsedAt,
+			&i.LastAttemptAt,
+			&i.LastKind,
+			&i.LastErrorAt,
+			&i.LastErrorKind,
+			&i.LastError,
+			&i.DeliveredCount,
+			&i.FailedCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPushRemovedDevices = `-- name: ListPushRemovedDevices :many
+SELECT id, workspace_id, subject, endpoint_hash, label, error_kind, error, removed_at FROM push_removed_device WHERE workspace_id=$1 AND subject=$2 ORDER BY removed_at DESC, id DESC LIMIT 10
+`
+
+type ListPushRemovedDevicesParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+}
+
+func (q *Queries) ListPushRemovedDevices(ctx context.Context, arg ListPushRemovedDevicesParams) ([]PushRemovedDevice, error) {
+	rows, err := q.db.Query(ctx, listPushRemovedDevices, arg.WorkspaceID, arg.Subject)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PushRemovedDevice
+	for rows.Next() {
+		var i PushRemovedDevice
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Subject,
+			&i.EndpointHash,
+			&i.Label,
+			&i.ErrorKind,
+			&i.Error,
+			&i.RemovedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -309,6 +481,82 @@ func (q *Queries) ListPushWorkspaceMembers(ctx context.Context, scope string) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const notificationLogDelivered = `-- name: NotificationLogDelivered :exec
+UPDATE notification_log SET delivered=delivered+1, status='delivered', updated_at=now() WHERE id=$1
+`
+
+// A device accepted it: the event is delivered, whatever another device did.
+func (q *Queries) NotificationLogDelivered(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, notificationLogDelivered, id)
+	return err
+}
+
+const notificationLogFailed = `-- name: NotificationLogFailed :exec
+UPDATE notification_log SET failed=failed+1, error=$1::text,
+  status=CASE WHEN status='delivered' THEN status ELSE 'failed' END, updated_at=now() WHERE id=$2
+`
+
+type NotificationLogFailedParams struct {
+	Error string `json:"error"`
+	ID    string `json:"id"`
+}
+
+// A device failed for good: the event is failed unless another device took it.
+func (q *Queries) NotificationLogFailed(ctx context.Context, arg NotificationLogFailedParams) error {
+	_, err := q.db.Exec(ctx, notificationLogFailed, arg.Error, arg.ID)
+	return err
+}
+
+const notificationLogOpen = `-- name: NotificationLogOpen :execrows
+UPDATE notification_log SET reason='open', updated_at=now() WHERE workspace_id=$1 AND subject=$2 AND id=$3
+`
+
+type NotificationLogOpenParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+	ID          string `json:"id"`
+}
+
+// The service worker showed nothing because a focused tab showed the view.
+func (q *Queries) NotificationLogOpen(ctx context.Context, arg NotificationLogOpenParams) (int64, error) {
+	result, err := q.db.Exec(ctx, notificationLogOpen, arg.WorkspaceID, arg.Subject, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const pruneNotificationLog = `-- name: PruneNotificationLog :exec
+DELETE FROM notification_log l WHERE l.workspace_id=$1 AND l.subject=$2 AND l.id NOT IN (
+  SELECT k.id FROM notification_log k WHERE k.workspace_id=$1 AND k.subject=$2 ORDER BY k.created_at DESC, k.id DESC LIMIT 50)
+`
+
+type PruneNotificationLogParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+}
+
+// The ring buffer: the newest 50 rows of a member in a workspace.
+func (q *Queries) PruneNotificationLog(ctx context.Context, arg PruneNotificationLogParams) error {
+	_, err := q.db.Exec(ctx, pruneNotificationLog, arg.WorkspaceID, arg.Subject)
+	return err
+}
+
+const prunePushRemovedDevices = `-- name: PrunePushRemovedDevices :exec
+DELETE FROM push_removed_device d WHERE d.workspace_id=$1 AND d.subject=$2 AND d.id NOT IN (
+  SELECT k.id FROM push_removed_device k WHERE k.workspace_id=$1 AND k.subject=$2 ORDER BY k.removed_at DESC, k.id DESC LIMIT 10)
+`
+
+type PrunePushRemovedDevicesParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Subject     string `json:"subject"`
+}
+
+func (q *Queries) PrunePushRemovedDevices(ctx context.Context, arg PrunePushRemovedDevicesParams) error {
+	_, err := q.db.Exec(ctx, prunePushRemovedDevices, arg.WorkspaceID, arg.Subject)
+	return err
 }
 
 const pushAccountName = `-- name: PushAccountName :one
@@ -352,6 +600,25 @@ func (q *Queries) PushAccountsByEmail(ctx context.Context, arg PushAccountsByEma
 	return items, nil
 }
 
+const pushJobFinalAttempt = `-- name: PushJobFinalAttempt :one
+SELECT coalesce(bool_or(attempts >= max_attempts), false)::bool FROM job
+WHERE kind=$1 AND state='running' AND payload->>'delivery' = $2::text
+`
+
+type PushJobFinalAttemptParams struct {
+	Kind     string `json:"kind"`
+	Delivery string `json:"delivery"`
+}
+
+// Whether the running delivery job is on its last attempt (the queue
+// counts an attempt when it claims the job).
+func (q *Queries) PushJobFinalAttempt(ctx context.Context, arg PushJobFinalAttemptParams) (bool, error) {
+	row := q.db.QueryRow(ctx, pushJobFinalAttempt, arg.Kind, arg.Delivery)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const pushMailArrival = `-- name: PushMailArrival :one
 SELECT i.id, i.mailbox_id, i.folder, i.from_address, i.subject, b.workspace_id, b.private, b.owner_subject
 FROM mail_item i JOIN mailbox b ON b.id=i.mailbox_id WHERE i.id=$1
@@ -382,6 +649,43 @@ func (q *Queries) PushMailArrival(ctx context.Context, id string) (PushMailArriv
 		&i.OwnerSubject,
 	)
 	return i, err
+}
+
+const recordPushAttempt = `-- name: RecordPushAttempt :exec
+UPDATE push_subscription SET last_attempt_at=$1, last_kind=$2,
+  last_used_at=CASE WHEN $3::bool THEN $1 ELSE last_used_at END,
+  delivered_count=delivered_count + CASE WHEN $3::bool THEN 1 ELSE 0 END,
+  last_error_at=CASE WHEN $3::bool THEN last_error_at ELSE $1 END,
+  last_error_kind=CASE WHEN $3::bool THEN last_error_kind ELSE $4::text END,
+  last_error=CASE WHEN $3::bool THEN last_error ELSE $5::text END,
+  failed_count=failed_count + CASE WHEN $6::bool THEN 1 ELSE 0 END
+WHERE id=$7
+`
+
+type RecordPushAttemptParams struct {
+	At           *time.Time `json:"at"`
+	Kind         string     `json:"kind"`
+	Delivered    bool       `json:"delivered"`
+	ErrorKind    string     `json:"error_kind"`
+	Error        string     `json:"error"`
+	FinalFailure bool       `json:"final_failure"`
+	ID           string     `json:"id"`
+}
+
+// One delivery attempt: when, for which kind, and its outcome. A delivery
+// that landed counts once; a failure counts once when it is final (a
+// retried attempt records its error without counting).
+func (q *Queries) RecordPushAttempt(ctx context.Context, arg RecordPushAttemptParams) error {
+	_, err := q.db.Exec(ctx, recordPushAttempt,
+		arg.At,
+		arg.Kind,
+		arg.Delivered,
+		arg.ErrorKind,
+		arg.Error,
+		arg.FinalFailure,
+		arg.ID,
+	)
+	return err
 }
 
 const saveNotificationPreference = `-- name: SaveNotificationPreference :one
@@ -435,8 +739,9 @@ INSERT INTO push_subscription(workspace_id,subject,endpoint,endpoint_hash,p256dh
 VALUES($1,$2,$3,$4,$5,$6,$7)
 ON CONFLICT(workspace_id,endpoint_hash) DO UPDATE SET subject=EXCLUDED.subject, endpoint=EXCLUDED.endpoint,
   p256dh=EXCLUDED.p256dh, auth=EXCLUDED.auth, label=EXCLUDED.label,
+  last_error_at=NULL, last_error_kind='', last_error='',
   created_at=CASE WHEN push_subscription.subject=EXCLUDED.subject THEN push_subscription.created_at ELSE now() END
-RETURNING id, workspace_id, subject, endpoint, endpoint_hash, p256dh, auth, label, created_at, last_used_at
+RETURNING id, workspace_id, subject, endpoint, endpoint_hash, p256dh, auth, label, created_at, last_used_at, last_attempt_at, last_kind, last_error_at, last_error_kind, last_error, delivered_count, failed_count
 `
 
 type SavePushSubscriptionParams struct {
@@ -473,20 +778,13 @@ func (q *Queries) SavePushSubscription(ctx context.Context, arg SavePushSubscrip
 		&i.Label,
 		&i.CreatedAt,
 		&i.LastUsedAt,
+		&i.LastAttemptAt,
+		&i.LastKind,
+		&i.LastErrorAt,
+		&i.LastErrorKind,
+		&i.LastError,
+		&i.DeliveredCount,
+		&i.FailedCount,
 	)
 	return i, err
-}
-
-const touchPushSubscription = `-- name: TouchPushSubscription :exec
-UPDATE push_subscription SET last_used_at=$2 WHERE id=$1
-`
-
-type TouchPushSubscriptionParams struct {
-	ID         string     `json:"id"`
-	LastUsedAt *time.Time `json:"last_used_at"`
-}
-
-func (q *Queries) TouchPushSubscription(ctx context.Context, arg TouchPushSubscriptionParams) error {
-	_, err := q.db.Exec(ctx, touchPushSubscription, arg.ID, arg.LastUsedAt)
-	return err
 }

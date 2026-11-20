@@ -161,6 +161,12 @@ func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q
 			return item, err
 		}
 	}
+	// Mail held as spam at intake is recorded as a skipped notification.
+	if state == "quarantined" {
+		if err = push.MailHeld(ctx, tx, item.ID); err != nil {
+			return item, err
+		}
+	}
 	if state == "pending" {
 		_, err = jobs.From(ctx).EnqueueTx(ctx, tx, ScreenJob, schema.MailScreenJob{ID: item.ID}, jobs.Unique(item.ID))
 	}

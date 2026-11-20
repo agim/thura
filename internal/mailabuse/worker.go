@@ -281,6 +281,7 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 	if latest.AttemptID != s.AttemptID || latest.Released {
 		return nil
 	}
+	wasPending := latest.State == "pending"
 	if authChecked && !s.Authenticated {
 		if err = queries.SaveMailScreeningAuth(ctx, q.SaveMailScreeningAuthParams{ItemID: s.ItemID, Spf: auth.SPF, Dkim: auth.DKIM, DkimDomain: auth.DKIMDomain, DkimAligned: auth.DKIMAligned, Dmarc: auth.DMARC}); err != nil {
 			return err
@@ -423,6 +424,12 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 		}
 		// Screening released it to the Inbox: this is when it arrives.
 		if err = push.MailArrived(ctx, finish, item.ID, personState == "person"); err != nil {
+			return err
+		}
+	}
+	// The first verdict held it: its readers' notification logs say so.
+	if wasPending && !aiRetry && (latest.State == "quarantined" || latest.State == "error") && currentItem.Folder == q.MailFolderSpam {
+		if err = push.MailHeld(ctx, finish, item.ID); err != nil {
 			return err
 		}
 	}

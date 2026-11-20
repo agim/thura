@@ -36,9 +36,13 @@ and no third-party service besides the browser's own push service.
     are named explicitly; scripts stay `'self'`, styles stay hashed.
 - **Install prompt**: the account menu shows **Install Thura** where the
   browser offers installation (`beforeinstallprompt`: Chrome, Edge, Samsung
-  Internet on Android and desktop), and in Safari on iPhone and iPad short
-  steps (Share → Add to Home Screen). It is dismissible (remembered on that
-  device) and hidden once installed.
+  Internet on Android and desktop), where it opens the browser's own dialog.
+  On a phone it is always there, even before (or without) that event, with
+  the browser's own steps: Chrome on Android ⋮ → Install app (or Add to Home
+  screen → Install), Samsung Internet ☰ → Add page to → Home screen, Safari on
+  iPhone and iPad Share → Add to Home Screen. It is dismissible (remembered on
+  that device) and hidden in the installed app (`display-mode: standalone` or
+  Safari's `navigator.standalone`).
 
 ## Notifications
 
@@ -49,7 +53,7 @@ workspace (table `notification_preference`; no row means the defaults, all on):
 
 | Event | Who | Default | Notes |
 | --- | --- | --- | --- |
-| New mail in Inbox | Owner of a personal mailbox; every member for a shared one | On, **only from real people** | Only mail that reaches the Inbox: clean at intake, or released to the Inbox by screening. Never Spam, quarantined or held mail. "Only from real people" uses the Real person decision (header rules, model, replied-to or saved contact). |
+| New mail in Inbox | Owner of a personal mailbox; every member for a shared one | **Only mail from real people** | A choice of three: All new Inbox mail, Only mail from real people, No mail (stored as `mail` + `mailPeopleOnly`). Only mail that reaches the Inbox: clean at intake, or released to the Inbox by screening. Never Spam, quarantined or held mail. "Only mail from real people" uses the Real person decision (header rules, model, replied-to or saved contact). |
 | New chat messages | Members who joined the room, except the sender | On | Messages and files sent through Thura. Messages that arrive from another Matrix server are not seen by Thura's server and do not notify. Messages in accepted external (SMIP) conversations notify without a preview. |
 | External chat requests | Owner of the external address; every member for a shared one | On | Once per new request; no preview of the unreviewed remote text. |
 | Calendar reminders | The member who set the reminder | On | The existing reminder job sends the push alongside the email, deduplicated by the same notice ledger. If the member has no personal mailbox, the push still goes out. |
@@ -95,6 +99,41 @@ shows the state: on, off, blocked by the browser (with how to allow it again in
 the site settings), unsupported, or, on iPhone and iPad outside the Home Screen
 app, that Thura must be added to the Home Screen first.
 
+### Diagnostics
+
+Settings → Notifications answers "why didn't I get one":
+
+- **Devices**: each row shows "This device" or its label, "Last notification:
+  3 min ago (New mail)" or "Never sent", how many were delivered and failed,
+  and the last error in plain words when it is newer than the last delivery
+  (the push service's status and reason, a network, VAPID or encryption
+  failure, an endpoint the policy refuses, or a delivery job that gave up).
+  **Send test** sends to that device in the request and answers in place:
+  "Sent · delivered by Google's push service" (the service accepted it: if
+  nothing shows, the phone or Android held it back) or the exact error. A
+  device the server removed (404/410, policy, a member who left) stays listed
+  under the devices with why, until the browser subscribes again (at most 10,
+  `push_removed_device`).
+- **Not getting notifications?**: the phone's notification settings for Thura
+  or Chrome, battery optimisation, the current mail choice, Send test.
+- **Recent notifications**: the last 10 decisions for the member: the kind,
+  the time, and delivered, failed (with the error), waiting, or skipped with
+  the reason: not from a real person (Only from real people is on), you had it
+  open (the service worker reports a notification it did not show because a
+  focused tab showed the view), spam/held, your own action, or turned off.
+  Table `notification_log`, a ring buffer of 50 rows per member and
+  workspace, pruned on every insert; it keeps the kind and the item link,
+  never the title or preview. Only members with a device get rows.
+- Each subscription keeps `last_attempt_at`, `last_used_at` (last delivered),
+  `last_kind`, `last_error_at`, `last_error_kind`, `last_error`,
+  `delivered_count` and `failed_count`; a retried attempt records its error,
+  and the failure counts once, on the queue's last attempt. Failures are
+  logged (`push notification failed`, warn while retried, error when final)
+  with the error kind, status, event kind and subscription ID, never the
+  endpoint or keys.
+- The page refreshes every 30 seconds while visible; a slow or failed refresh
+  keeps what is on screen and says so beside it.
+
 ### Delivery
 
 - Server: `internal/push`. Events call `push.Notify` (inside the transaction of
@@ -102,8 +141,9 @@ app, that Thura must be added to the Home Screen first.
   queues one `thura.push.send` job per device (jobs pack, 5 attempts).
 - The job signs a VAPID JWT and encrypts the payload with
   [`github.com/SherClockHolmes/webpush-go`](https://github.com/SherClockHolmes/webpush-go)
-  (MIT). 2xx records the last use; 404 and 410 delete the subscription; 429 and
-  5xx are retried by the queue; other refusals are logged and dropped.
+  (MIT). 2xx records the delivery; 404 and 410 delete the subscription (the
+  reason stays for Settings); 429, 5xx and network errors are retried by the
+  queue; other refusals are recorded, logged and dropped.
 - Endpoints must be `https` URLs of a known browser push service
   (`fcm.googleapis.com`, `push.services.mozilla.com`, `push.apple.com`,
   `notify.windows.com`), and the dialer refuses private addresses, so a

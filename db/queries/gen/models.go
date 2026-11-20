@@ -826,6 +826,22 @@ type MeetingWebhook struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type NotificationLog struct {
+	ID          string    `json:"id"`
+	WorkspaceID string    `json:"workspace_id"`
+	Subject     string    `json:"subject"`
+	Kind        string    `json:"kind"`
+	Link        string    `json:"link"`
+	Status      string    `json:"status"`
+	Reason      string    `json:"reason"`
+	Error       string    `json:"error"`
+	Devices     int32     `json:"devices"`
+	Delivered   int32     `json:"delivered"`
+	Failed      int32     `json:"failed"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type NotificationPreference struct {
 	ID             string    `json:"id"`
 	WorkspaceID    string    `json:"workspace_id"`
@@ -849,17 +865,35 @@ type OfficeSession struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+type PushRemovedDevice struct {
+	ID           string    `json:"id"`
+	WorkspaceID  string    `json:"workspace_id"`
+	Subject      string    `json:"subject"`
+	EndpointHash string    `json:"endpoint_hash"`
+	Label        string    `json:"label"`
+	ErrorKind    string    `json:"error_kind"`
+	Error        string    `json:"error"`
+	RemovedAt    time.Time `json:"removed_at"`
+}
+
 type PushSubscription struct {
-	ID           string     `json:"id"`
-	WorkspaceID  string     `json:"workspace_id"`
-	Subject      string     `json:"subject"`
-	Endpoint     string     `json:"endpoint"`
-	EndpointHash string     `json:"endpoint_hash"`
-	P256dh       string     `json:"p256dh"`
-	Auth         string     `json:"auth"`
-	Label        string     `json:"label"`
-	CreatedAt    time.Time  `json:"created_at"`
-	LastUsedAt   *time.Time `json:"last_used_at"`
+	ID             string     `json:"id"`
+	WorkspaceID    string     `json:"workspace_id"`
+	Subject        string     `json:"subject"`
+	Endpoint       string     `json:"endpoint"`
+	EndpointHash   string     `json:"endpoint_hash"`
+	P256dh         string     `json:"p256dh"`
+	Auth           string     `json:"auth"`
+	Label          string     `json:"label"`
+	CreatedAt      time.Time  `json:"created_at"`
+	LastUsedAt     *time.Time `json:"last_used_at"`
+	LastAttemptAt  *time.Time `json:"last_attempt_at"`
+	LastKind       string     `json:"last_kind"`
+	LastErrorAt    *time.Time `json:"last_error_at"`
+	LastErrorKind  string     `json:"last_error_kind"`
+	LastError      string     `json:"last_error"`
+	DeliveredCount int32      `json:"delivered_count"`
+	FailedCount    int32      `json:"failed_count"`
 }
 
 type PushVapidKey struct {

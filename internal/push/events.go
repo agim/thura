@@ -38,16 +38,25 @@ func senderName(from string) string {
 // MailArrived notifies the readers of a mailbox that a message reached its
 // Inbox: the owner of a personal mailbox, every member for a shared one
 // (the mailaccess.Owns rule). Mail in Spam, held for review or anywhere but
-// the Inbox never notifies. The preview is the sender's name and the
-// subject; the body never leaves the server.
+// the Inbox never notifies; its readers' logs say it was skipped. The
+// preview is the sender's name and the subject; the body never leaves the
+// server.
 func MailArrived(ctx context.Context, tx pgx.Tx, itemID string, person bool) error {
+	return mailEvent(ctx, tx, itemID, person, false)
+}
+
+// MailHeld records, for the readers of a mailbox, that a message was held
+// (Spam, quarantine) instead of reaching the Inbox, so "Recent
+// notifications" can say why it did not notify. Nothing is sent.
+func MailHeld(ctx context.Context, tx pgx.Tx, itemID string) error {
+	return mailEvent(ctx, tx, itemID, false, true)
+}
+
+func mailEvent(ctx context.Context, tx pgx.Tx, itemID string, person, held bool) error {
 	queries := q.New(tx)
 	m, err := queries.PushMailArrival(ctx, itemID)
 	if err != nil {
 		return err
-	}
-	if m.Folder != q.MailFolderInbox {
-		return nil
 	}
 	var recipients []string
 	if m.Private {
@@ -62,12 +71,17 @@ func MailArrived(ctx context.Context, tx pgx.Tx, itemID string, person bool) err
 	if strings.TrimSpace(subject) == "" {
 		subject = "(no subject)"
 	}
-	_, err = Notify(ctx, tx, m.WorkspaceID, recipients, Event{
+	e := Event{
 		Kind: KindMail, Title: senderName(m.FromAddress), Body: subject, Person: person,
 		URL:  link("/app/mail", "workspace", m.WorkspaceID, "mailbox", m.MailboxID, "folder", "inbox", "message", m.ID),
 		Tag:  "mail-" + m.ID,
 		View: &View{Path: "/app/mail", Params: map[string]string{"folder": "inbox"}, Defaults: map[string]string{"folder": "inbox"}, Loose: map[string]string{"workspace": m.WorkspaceID, "mailbox": m.MailboxID}},
-	})
+	}
+	if held || m.Folder != q.MailFolderInbox {
+		e.URL = link("/app/mail", "workspace", m.WorkspaceID, "mailbox", m.MailboxID, "folder", string(m.Folder), "message", m.ID)
+		return Skip(ctx, tx, m.WorkspaceID, recipients, e, SkipSpam)
+	}
+	_, err = Notify(ctx, tx, m.WorkspaceID, recipients, e)
 	return err
 }
 

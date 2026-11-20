@@ -447,7 +447,7 @@
 #orbit-workspace.zero-workspace .settings-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding-block: 20px; border-bottom: 1px solid var(--line); }
 #orbit-workspace.zero-workspace .settings-form form { display: grid; gap: 12px; }
 #orbit-workspace.zero-workspace .settings-form > h3 { margin: 0; }
-#orbit-workspace.zero-workspace .settings-form :is(input,select,textarea):not([type=checkbox]) { width: 100%; }
+#orbit-workspace.zero-workspace .settings-form :is(input,select,textarea):not([type=checkbox],[type=radio]) { width: 100%; }
 #orbit-workspace.zero-workspace .settings-form textarea { min-height: 120px; }
 #orbit-workspace.zero-workspace .smip-settings .smip-address { display:flex; align-items:center; gap:4px; min-width:0; }
 #orbit-workspace.zero-workspace .smip-settings .smip-address > span { color:var(--quiet); overflow-wrap:anywhere; }
@@ -470,6 +470,27 @@
 #orbit-workspace.zero-workspace .notification-sub small { flex-basis: 100%; padding-left: 26px; }
 #orbit-workspace.zero-workspace .notification-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #orbit-workspace.zero-workspace .settings-form p.notification-state { color: var(--ink); font-size: 14px; font-weight: 600; }
+#orbit-workspace.zero-workspace .notification-mail { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+#orbit-workspace.zero-workspace .notification-mail legend { font-size: 14px; font-weight: 600; color: var(--ink); padding: 0; margin-bottom: 2px; }
+#orbit-workspace.zero-workspace .notification-mail > small { color: var(--quiet); font-size: 12px; }
+#orbit-workspace.zero-workspace .settings-form label.notification-choice { flex-direction: row; align-items: flex-start; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--app-radius-control); font-size: 14px; }
+#orbit-workspace.zero-workspace .settings-form label.notification-choice[data-selected] { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--ink); font-weight: 600; }
+#orbit-workspace.zero-workspace .settings-form label.notification-choice input[type=radio] { width: 18px; height: 18px; margin: 1px 0 0; flex: none; }
+#orbit-workspace.zero-workspace .notification-choice > span { display: grid; gap: 2px; min-width: 0; }
+#orbit-workspace.zero-workspace .notification-choice small { color: var(--quiet); font-size: 12px; font-weight: 400; }
+#orbit-workspace.zero-workspace .notification-device-row > span:first-child { display: grid; gap: 2px; }
+#orbit-workspace.zero-workspace .notification-device-row strong, #orbit-workspace.zero-workspace .notification-removed-row strong, #orbit-workspace.zero-workspace .notification-recent-row strong { font-weight: 600; color: var(--ink); }
+#orbit-workspace.zero-workspace .notification-row-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+#orbit-workspace.zero-workspace .notification-error { color: var(--color-danger); font-size: 12px; overflow-wrap: anywhere; }
+#orbit-workspace.zero-workspace .settings-form p.notification-error { color: var(--color-danger); }
+#orbit-workspace.zero-workspace .notification-test-result { font-size: 12px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+#orbit-workspace.zero-workspace .notification-test-result.notification-error { color: var(--color-danger); }
+#orbit-workspace.zero-workspace :is(.notification-removed-row,.notification-recent-row) { display: grid; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
+#orbit-workspace.zero-workspace :is(.notification-removed-row,.notification-recent-row) small { color: var(--quiet); font-size: 12px; }
+#orbit-workspace.zero-workspace .notification-recent { margin: 0; padding: 0; list-style: none; }
+#orbit-workspace.zero-workspace .notification-recent-status { font-size: 12px; color: var(--ink); }
+#orbit-workspace.zero-workspace .notification-recent-row[data-status=failed] .notification-recent-status { color: var(--color-danger); }
+#orbit-workspace.zero-workspace .notification-help ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; color: var(--ink); }
 #orbit-workspace.zero-workspace .mail-label-filter { display: flex; flex-direction: column; gap: 7px; margin: 16px 0; }
 @media(max-width:999px) {
  #orbit-workspace.zero-workspace .settings-layout { grid-template-columns: minmax(0,1fr); gap: 16px; }

@@ -89,7 +89,12 @@ self.addEventListener('push', event => {
   try { data = event.data ? event.data.json() : {} } catch { data = {} }
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-    if (windows.some(client => client.focused && client.visibilityState === 'visible' && sameView(client.url, data.view))) return
+    const showing = windows.find(client => client.focused && client.visibilityState === 'visible' && sameView(client.url, data.view))
+    if (showing) {
+      // The tab records it in Recent notifications ("Skipped: you had it open").
+      if (typeof data.workspace === 'string' && typeof data.log === 'string') showing.postMessage({ type: 'thura:shown-in-tab', workspace: data.workspace, log: data.log })
+      return
+    }
     const title = String(data.title || 'Thura').slice(0, 120)
     await self.registration.showNotification(title, {
       body: String(data.body || '').slice(0, 200),

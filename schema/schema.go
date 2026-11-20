@@ -2777,16 +2777,23 @@ func (v AuthPreference) Validate() error {
 
 // PushSubscription is a row of the push_subscription table.
 type PushSubscription struct {
-	ID           string     `json:"id" db:"id"`
-	WorkspaceID  string     `json:"workspaceId" db:"workspace_id"`
-	Subject      string     `json:"subject" db:"subject"`
-	Endpoint     string     `json:"endpoint" db:"endpoint"`
-	EndpointHash string     `json:"endpointHash" db:"endpoint_hash"`
-	P256dh       string     `json:"p256dh" db:"p256dh"`
-	Auth         string     `json:"auth" db:"auth"`
-	Label        string     `json:"label" db:"label"`
-	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
-	LastUsedAt   *time.Time `json:"lastUsedAt" db:"last_used_at"`
+	ID             string     `json:"id" db:"id"`
+	WorkspaceID    string     `json:"workspaceId" db:"workspace_id"`
+	Subject        string     `json:"subject" db:"subject"`
+	Endpoint       string     `json:"endpoint" db:"endpoint"`
+	EndpointHash   string     `json:"endpointHash" db:"endpoint_hash"`
+	P256dh         string     `json:"p256dh" db:"p256dh"`
+	Auth           string     `json:"auth" db:"auth"`
+	Label          string     `json:"label" db:"label"`
+	CreatedAt      time.Time  `json:"createdAt" db:"created_at"`
+	LastUsedAt     *time.Time `json:"lastUsedAt" db:"last_used_at"`
+	LastAttemptAt  *time.Time `json:"lastAttemptAt" db:"last_attempt_at"`
+	LastKind       string     `json:"lastKind" db:"last_kind"`
+	LastErrorAt    *time.Time `json:"lastErrorAt" db:"last_error_at"`
+	LastErrorKind  string     `json:"lastErrorKind" db:"last_error_kind"`
+	LastError      string     `json:"lastError" db:"last_error"`
+	DeliveredCount int        `json:"deliveredCount" db:"delivered_count"`
+	FailedCount    int        `json:"failedCount" db:"failed_count"`
 }
 
 // Validate applies the rules of PushSubscription from schema.lidza.
@@ -2827,6 +2834,137 @@ func (v PushSubscription) Validate() error {
 	}
 	if len(v.Label) > 120 {
 		errs.Add("label", "max", "at most 120 character(s)")
+	}
+	if v.LastKind == "" {
+		errs.Add("lastKind", "required", "required")
+	}
+	if len(v.LastKind) > 40 {
+		errs.Add("lastKind", "max", "at most 40 character(s)")
+	}
+	if v.LastErrorKind == "" {
+		errs.Add("lastErrorKind", "required", "required")
+	}
+	if len(v.LastErrorKind) > 20 {
+		errs.Add("lastErrorKind", "max", "at most 20 character(s)")
+	}
+	if v.LastError == "" {
+		errs.Add("lastError", "required", "required")
+	}
+	if len(v.LastError) > 300 {
+		errs.Add("lastError", "max", "at most 300 character(s)")
+	}
+	return errs.Result()
+}
+
+// PushRemovedDevice is a row of the push_removed_device table.
+type PushRemovedDevice struct {
+	ID           string    `json:"id" db:"id"`
+	WorkspaceID  string    `json:"workspaceId" db:"workspace_id"`
+	Subject      string    `json:"subject" db:"subject"`
+	EndpointHash string    `json:"endpointHash" db:"endpoint_hash"`
+	Label        string    `json:"label" db:"label"`
+	ErrorKind    string    `json:"errorKind" db:"error_kind"`
+	Error        string    `json:"error" db:"error"`
+	RemovedAt    time.Time `json:"removedAt" db:"removed_at"`
+}
+
+// Validate applies the rules of PushRemovedDevice from schema.lidza.
+func (v PushRemovedDevice) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if len(v.Subject) > 255 {
+		errs.Add("subject", "max", "at most 255 character(s)")
+	}
+	if v.EndpointHash == "" {
+		errs.Add("endpointHash", "required", "required")
+	}
+	if len(v.EndpointHash) > 64 {
+		errs.Add("endpointHash", "max", "at most 64 character(s)")
+	}
+	if v.Label == "" {
+		errs.Add("label", "required", "required")
+	}
+	if len(v.Label) > 120 {
+		errs.Add("label", "max", "at most 120 character(s)")
+	}
+	if v.ErrorKind == "" {
+		errs.Add("errorKind", "required", "required")
+	}
+	if len(v.ErrorKind) > 20 {
+		errs.Add("errorKind", "max", "at most 20 character(s)")
+	}
+	if v.Error == "" {
+		errs.Add("error", "required", "required")
+	}
+	if len(v.Error) > 300 {
+		errs.Add("error", "max", "at most 300 character(s)")
+	}
+	return errs.Result()
+}
+
+// NotificationLog is a row of the notification_log table.
+type NotificationLog struct {
+	ID          string    `json:"id" db:"id"`
+	WorkspaceID string    `json:"workspaceId" db:"workspace_id"`
+	Subject     string    `json:"subject" db:"subject"`
+	Kind        string    `json:"kind" db:"kind"`
+	Link        string    `json:"link" db:"link"`
+	Status      string    `json:"status" db:"status"`
+	Reason      string    `json:"reason" db:"reason"`
+	Error       string    `json:"error" db:"error"`
+	Devices     int       `json:"devices" db:"devices"`
+	Delivered   int       `json:"delivered" db:"delivered"`
+	Failed      int       `json:"failed" db:"failed"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// Validate applies the rules of NotificationLog from schema.lidza.
+func (v NotificationLog) Validate() error {
+	var errs validate.Errors
+	if v.WorkspaceID == "" {
+		errs.Add("workspaceId", "required", "required")
+	}
+	if v.Subject == "" {
+		errs.Add("subject", "required", "required")
+	}
+	if len(v.Subject) > 255 {
+		errs.Add("subject", "max", "at most 255 character(s)")
+	}
+	if v.Kind == "" {
+		errs.Add("kind", "required", "required")
+	}
+	if len(v.Kind) > 40 {
+		errs.Add("kind", "max", "at most 40 character(s)")
+	}
+	if v.Link == "" {
+		errs.Add("link", "required", "required")
+	}
+	if len(v.Link) > 512 {
+		errs.Add("link", "max", "at most 512 character(s)")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	if len(v.Status) > 20 {
+		errs.Add("status", "max", "at most 20 character(s)")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
+	}
+	if len(v.Reason) > 40 {
+		errs.Add("reason", "max", "at most 40 character(s)")
+	}
+	if v.Error == "" {
+		errs.Add("error", "required", "required")
+	}
+	if len(v.Error) > 300 {
+		errs.Add("error", "max", "at most 300 character(s)")
 	}
 	return errs.Result()
 }
@@ -6667,11 +6805,18 @@ func (v NotificationPreferences) Validate() error {
 
 // PushDevice is an API type.
 type PushDevice struct {
-	ID           string     `json:"id"`
-	Label        string     `json:"label"`
-	EndpointHash string     `json:"endpointHash"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	LastUsedAt   *time.Time `json:"lastUsedAt"`
+	ID             string     `json:"id"`
+	Label          string     `json:"label"`
+	EndpointHash   string     `json:"endpointHash"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	LastUsedAt     *time.Time `json:"lastUsedAt"`
+	LastAttemptAt  *time.Time `json:"lastAttemptAt"`
+	LastKind       string     `json:"lastKind"`
+	LastErrorAt    *time.Time `json:"lastErrorAt"`
+	LastErrorKind  string     `json:"lastErrorKind"`
+	LastError      string     `json:"lastError"`
+	DeliveredCount int        `json:"deliveredCount"`
+	FailedCount    int        `json:"failedCount"`
 }
 
 // Validate applies the rules of PushDevice from schema.lidza.
@@ -6686,6 +6831,77 @@ func (v PushDevice) Validate() error {
 	if v.EndpointHash == "" {
 		errs.Add("endpointHash", "required", "required")
 	}
+	if v.LastKind == "" {
+		errs.Add("lastKind", "required", "required")
+	}
+	if v.LastErrorKind == "" {
+		errs.Add("lastErrorKind", "required", "required")
+	}
+	if v.LastError == "" {
+		errs.Add("lastError", "required", "required")
+	}
+	return errs.Result()
+}
+
+// PushRemoval is an API type.
+type PushRemoval struct {
+	Label        string    `json:"label"`
+	EndpointHash string    `json:"endpointHash"`
+	ErrorKind    string    `json:"errorKind"`
+	Error        string    `json:"error"`
+	RemovedAt    time.Time `json:"removedAt"`
+}
+
+// Validate applies the rules of PushRemoval from schema.lidza.
+func (v PushRemoval) Validate() error {
+	var errs validate.Errors
+	if v.Label == "" {
+		errs.Add("label", "required", "required")
+	}
+	if v.EndpointHash == "" {
+		errs.Add("endpointHash", "required", "required")
+	}
+	if v.ErrorKind == "" {
+		errs.Add("errorKind", "required", "required")
+	}
+	if v.Error == "" {
+		errs.Add("error", "required", "required")
+	}
+	return errs.Result()
+}
+
+// NotificationLogEntry is an API type.
+type NotificationLogEntry struct {
+	ID        string    `json:"id"`
+	Kind      string    `json:"kind"`
+	Link      string    `json:"link"`
+	Status    string    `json:"status"`
+	Reason    string    `json:"reason"`
+	Error     string    `json:"error"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// Validate applies the rules of NotificationLogEntry from schema.lidza.
+func (v NotificationLogEntry) Validate() error {
+	var errs validate.Errors
+	if v.ID == "" {
+		errs.Add("id", "required", "required")
+	}
+	if v.Kind == "" {
+		errs.Add("kind", "required", "required")
+	}
+	if v.Link == "" {
+		errs.Add("link", "required", "required")
+	}
+	if v.Status == "" {
+		errs.Add("status", "required", "required")
+	}
+	if v.Reason == "" {
+		errs.Add("reason", "required", "required")
+	}
+	if v.Error == "" {
+		errs.Add("error", "required", "required")
+	}
 	return errs.Result()
 }
 
@@ -6693,6 +6909,8 @@ func (v PushDevice) Validate() error {
 type NotificationSettings struct {
 	Preferences NotificationPreferences `json:"preferences"`
 	Devices     []PushDevice            `json:"devices"`
+	Removed     []PushRemoval           `json:"removed"`
+	Recent      []NotificationLogEntry  `json:"recent"`
 	PublicKey   string                  `json:"publicKey"`
 }
 
@@ -6708,8 +6926,48 @@ func (v NotificationSettings) Validate() error {
 			break
 		}
 	}
+	for _, x := range v.Removed {
+		if err := x.Validate(); err != nil {
+			errs.Add("removed", "nested", err.Error())
+			break
+		}
+	}
+	for _, x := range v.Recent {
+		if err := x.Validate(); err != nil {
+			errs.Add("recent", "nested", err.Error())
+			break
+		}
+	}
 	if v.PublicKey == "" {
 		errs.Add("publicKey", "required", "required")
+	}
+	return errs.Result()
+}
+
+// PushDeviceTestResult is an API type.
+type PushDeviceTestResult struct {
+	Delivered bool                 `json:"delivered"`
+	Service   string               `json:"service"`
+	Status    int                  `json:"status"`
+	ErrorKind string               `json:"errorKind"`
+	Error     string               `json:"error"`
+	Settings  NotificationSettings `json:"settings"`
+}
+
+// Validate applies the rules of PushDeviceTestResult from schema.lidza.
+func (v PushDeviceTestResult) Validate() error {
+	var errs validate.Errors
+	if v.Service == "" {
+		errs.Add("service", "required", "required")
+	}
+	if v.ErrorKind == "" {
+		errs.Add("errorKind", "required", "required")
+	}
+	if v.Error == "" {
+		errs.Add("error", "required", "required")
+	}
+	if err := v.Settings.Validate(); err != nil {
+		errs.Add("settings", "nested", err.Error())
 	}
 	return errs.Result()
 }
@@ -6779,6 +7037,8 @@ type PushJob struct {
 	Payload        string `json:"payload"`
 	Ttl            int    `json:"ttl"`
 	Urgency        string `json:"urgency"`
+	Delivery       string `json:"delivery"`
+	Log            string `json:"log"`
 }
 
 // Validate applies the rules of PushJob from schema.lidza.
@@ -6795,6 +7055,12 @@ func (v PushJob) Validate() error {
 	}
 	if v.Urgency == "" {
 		errs.Add("urgency", "required", "required")
+	}
+	if v.Delivery == "" {
+		errs.Add("delivery", "required", "required")
+	}
+	if v.Log == "" {
+		errs.Add("log", "required", "required")
 	}
 	return errs.Result()
 }

@@ -2,9 +2,11 @@ package push
 
 import (
 	"context"
+	"crypto/ecdh"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,6 +20,7 @@ import (
 	"github.com/agim/lidza"
 	"github.com/agim/lidza/packs/db"
 	"github.com/agim/lidza/packs/jobs"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
 	"thura/schema"
@@ -80,6 +83,10 @@ type payload struct {
 	URL   string `json:"url"`
 	Tag   string `json:"tag,omitempty"`
 	View  *View  `json:"view,omitempty"`
+	// Workspace and Log name the member's log entry, so a tab that showed
+	// the view instead can report it ("Skipped: you had it open").
+	Workspace string `json:"workspace,omitempty"`
+	Log       string `json:"log,omitempty"`
 }
 
 func clip(s string, n int) string {
@@ -93,15 +100,15 @@ func clip(s string, n int) string {
 
 // Encode is the bounded payload sent for an event.
 func Encode(e Event) ([]byte, error) {
-	link := e.URL
-	if !strings.HasPrefix(link, "/app/") || len(link) > maxURL || strings.ContainsAny(link, "\r\n\\") {
-		link = "/app/mail"
-	}
+	return encode(e, "", "")
+}
+
+func encode(e Event, workspaceID, logID string) ([]byte, error) {
 	title := clip(e.Title, maxTitle)
 	if title == "" {
 		title = "Thura"
 	}
-	return json.Marshal(payload{Kind: e.Kind, Title: title, Body: clip(e.Body, maxBody), URL: link, Tag: clip(e.Tag, 64), View: e.View})
+	return json.Marshal(payload{Kind: e.Kind, Title: title, Body: clip(e.Body, maxBody), URL: safeLink(e.URL), Tag: clip(e.Tag, 64), View: e.View, Workspace: workspaceID, Log: logID})
 }
 
 func defaults() q.NotificationPreference {
@@ -110,33 +117,59 @@ func defaults() q.NotificationPreference {
 
 // Wants reports whether a member's preferences let an event notify them.
 func Wants(p q.NotificationPreference, e Event) bool {
+	return declined(p, e) == ""
+}
+
+// declined is why a member's preferences decline an event ("" when they
+// want it): mail not from a real person while "Only mail from real people"
+// is chosen, or a kind turned off.
+func declined(p q.NotificationPreference, e Event) string {
+	on := false
 	switch e.Kind {
 	case KindMail:
-		return p.Mail && (!p.MailPeopleOnly || e.Person)
+		if p.Mail && p.MailPeopleOnly && !e.Person {
+			return SkipPeopleOnly
+		}
+		on = p.Mail
 	case KindChat:
-		return p.Chat
+		on = p.Chat
 	case KindChatRequest:
-		return p.ChatRequests
+		on = p.ChatRequests
 	case KindCalendar:
-		return p.Calendar
+		on = p.Calendar
 	case KindMeet:
-		return p.Meet
+		on = p.Meet
 	case KindTest:
-		return true
+		on = true
 	}
-	return false
+	if !on {
+		return SkipOff
+	}
+	return ""
 }
 
 // Notify queues the event for each recipient's devices, within tx when one
 // is given (so it commits with the change that caused it). It skips the
 // actor, members who left, members whose preferences decline the event and
 // members without a device; it never fails because nobody is subscribed.
-// It returns the number of deliveries queued.
+// Each member with a device gets a log entry: queued, or skipped with the
+// reason. It returns the number of deliveries queued.
 func Notify(ctx context.Context, tx pgx.Tx, workspaceID string, recipients []string, e Event) (int, error) {
+	return notify(ctx, tx, workspaceID, recipients, e, "")
+}
+
+// Skip records, for each recipient with a device, that the event did not
+// notify them and why (mail held as spam), without queueing anything.
+func Skip(ctx context.Context, tx pgx.Tx, workspaceID string, recipients []string, e Event, reason string) error {
+	_, err := notify(ctx, tx, workspaceID, recipients, e, reason)
+	return err
+}
+
+func notify(ctx context.Context, tx pgx.Tx, workspaceID string, recipients []string, e Event, skip string) (int, error) {
 	seen := map[string]bool{}
 	subjects := []string{}
 	for _, s := range recipients {
-		if s == "" || s == e.Actor || seen[s] {
+		if s == "" || seen[s] {
 			continue
 		}
 		seen[s] = true
@@ -163,9 +196,13 @@ func Notify(ctx context.Context, tx pgx.Tx, workspaceID string, recipients []str
 	for _, p := range rows {
 		prefs[p.Subject] = p
 	}
-	body, err := Encode(e)
-	if err != nil {
-		return 0, err
+	devices := map[string][]q.PushSubscription{}
+	order := []string{}
+	for _, s := range subs {
+		if devices[s.Subject] == nil {
+			order = append(order, s.Subject)
+		}
+		devices[s.Subject] = append(devices[s.Subject], s)
 	}
 	ttl := e.TTL
 	if ttl <= 0 {
@@ -176,24 +213,39 @@ func Notify(ctx context.Context, tx pgx.Tx, workspaceID string, recipients []str
 		urgency = string(webpush.UrgencyHigh)
 	}
 	queued := 0
-	for _, s := range subs {
-		p, ok := prefs[s.Subject]
+	for _, subject := range order {
+		p, ok := prefs[subject]
 		if !ok {
 			p = defaults()
 		}
-		if !Wants(p, e) {
+		reason := declined(p, e)
+		switch {
+		case subject == e.Actor:
+			reason = SkipOwn
+		case skip != "" && reason != SkipOff:
+			reason = skip
+		}
+		if reason != "" {
+			logEntry(ctx, queries, workspaceID, subject, e, StatusSkipped, reason, 0)
 			continue
 		}
-		job := schema.PushJob{SubscriptionID: s.ID, Kind: e.Kind, Payload: string(body), Ttl: int(ttl / time.Second), Urgency: urgency}
-		if tx != nil {
-			_, err = jobs.From(ctx).EnqueueTx(ctx, tx, SendJob, job, jobs.MaxAttempts(5))
-		} else {
-			_, err = jobs.From(ctx).Enqueue(ctx, SendJob, job, jobs.MaxAttempts(5))
-		}
+		logID := logEntry(ctx, queries, workspaceID, subject, e, StatusQueued, "", len(devices[subject]))
+		body, err := encode(e, workspaceID, logID)
 		if err != nil {
 			return queued, err
 		}
-		queued++
+		for _, s := range devices[subject] {
+			job := schema.PushJob{SubscriptionID: s.ID, Kind: e.Kind, Payload: string(body), Ttl: int(ttl / time.Second), Urgency: urgency, Delivery: uuid.NewString(), Log: logID}
+			if tx != nil {
+				_, err = jobs.From(ctx).EnqueueTx(ctx, tx, SendJob, job, jobs.MaxAttempts(5))
+			} else {
+				_, err = jobs.From(ctx).Enqueue(ctx, SendJob, job, jobs.MaxAttempts(5))
+			}
+			if err != nil {
+				return queued, err
+			}
+			queued++
+		}
 	}
 	return queued, nil
 }
@@ -274,32 +326,81 @@ var client = &http.Client{
 // Send is the SendJob handler. A subscription the push service no longer
 // knows (404, 410) is deleted; a rejected request (other 4xx) is dropped;
 // a busy or failing service (429, 5xx, network) is retried by the queue.
+// Every attempt is recorded on the subscription and, once final, in the
+// member's notification log.
 func Send(ctx context.Context, raw json.RawMessage) error {
 	var job schema.PushJob
 	if err := json.Unmarshal(raw, &job); err != nil {
+		lidza.Log(ctx).Error("push notification failed", "error_kind", ErrJob, "error", "malformed job")
 		return nil // a malformed job cannot succeed on retry
 	}
 	queries := q.New(db.From(ctx))
 	sub, err := queries.GetPushSubscription(ctx, job.SubscriptionID)
 	if errors.Is(err, pgx.ErrNoRows) {
+		if job.Log != "" {
+			if err = queries.NotificationLogFailed(ctx, q.NotificationLogFailedParams{ID: job.Log, Error: "The device was removed before it could be sent."}); err != nil {
+				lidza.Log(ctx).Warn("notification log not updated", "error", err, "kind", job.Kind)
+			}
+		}
 		return nil
 	}
 	if err != nil {
+		return gaveUp(ctx, queries, nil, job, err)
+	}
+	o, err := deliver(ctx, queries, sub, job)
+	if err != nil {
+		return gaveUp(ctx, queries, &sub, job, err)
+	}
+	final := o.retry == nil || finalAttempt(ctx, queries, job.Delivery)
+	if o.retry != nil && final {
+		o.message = "Gave up after 5 attempts. " + strings.Replace(o.message, "; Thura tries again.", ".", 1)
+		o.message = strings.Replace(o.message, "; it tries again.", ".", 1)
+	}
+	record(ctx, queries, sub, jobInfo{kind: job.Kind, log: job.Log}, o, final)
+	return o.retry
+}
+
+// gaveUp handles an error outside the push service's answer (the database,
+// the server's keys): the queue retries it, and its last attempt is
+// recorded as a job failure.
+func gaveUp(ctx context.Context, queries *q.Queries, sub *q.PushSubscription, job schema.PushJob, err error) error {
+	if !finalAttempt(ctx, queries, job.Delivery) {
+		lidza.Log(ctx).Warn("push notification failed", "error_kind", ErrJob, "error", err, "kind", job.Kind, "subscription", job.SubscriptionID)
 		return err
 	}
+	o := outcome{kind: ErrJob, message: "Delivery failed after 5 attempts: the server could not prepare it."}
+	if sub != nil {
+		record(ctx, queries, *sub, jobInfo{kind: job.Kind, log: job.Log}, o, true)
+	} else {
+		lidza.Log(ctx).Error("push notification failed", "error_kind", ErrJob, "error", err, "kind", job.Kind, "subscription", job.SubscriptionID)
+		if job.Log != "" {
+			if logErr := queries.NotificationLogFailed(ctx, q.NotificationLogFailedParams{ID: job.Log, Error: o.message}); logErr != nil {
+				lidza.Log(ctx).Warn("notification log not updated", "error", logErr, "kind", job.Kind)
+			}
+		}
+	}
+	return err
+}
+
+// deliver makes one attempt. Its error is one the server caused (reading
+// membership, the keys); the outcome describes everything else.
+func deliver(ctx context.Context, queries *q.Queries, sub q.PushSubscription, job schema.PushJob) (outcome, error) {
 	member, err := queries.IsWorkspaceMember(ctx, q.IsWorkspaceMemberParams{Scope: sub.WorkspaceID, Subject: sub.Subject})
 	if err != nil {
-		return err
+		return outcome{}, err
 	}
 	if !member {
-		return queries.DeletePushSubscription(ctx, sub.ID)
+		return outcome{kind: ErrMember, message: "The device's member is no longer in this workspace, so it was removed.", remove: true}, nil
 	}
 	if CheckEndpoint(sub.Endpoint) != nil {
-		return queries.DeletePushSubscription(ctx, sub.ID)
+		return outcome{kind: ErrPolicy, message: "The device's push address is not a known browser push service, so Thura removed it. Turn notifications on again here.", remove: true}, nil
+	}
+	if !validKeys(sub.P256dh, sub.Auth) {
+		return outcome{kind: ErrEncryption, message: "Thura could not encrypt the notification for this device: its subscription keys are invalid. Turn notifications off and on again on this device."}, nil
 	}
 	public, private, err := Keys(ctx)
 	if err != nil {
-		return err
+		return outcome{}, err
 	}
 	ttl := job.Ttl
 	if ttl <= 0 {
@@ -310,20 +411,26 @@ func Send(ctx context.Context, raw json.RawMessage) error {
 		VAPIDPublicKey: public, VAPIDPrivateKey: private,
 	})
 	if err != nil {
-		return err
+		return sendError(err), nil
 	}
 	defer response.Body.Close()
-	switch {
-	case response.StatusCode >= 200 && response.StatusCode < 300:
-		return queries.TouchPushSubscription(ctx, q.TouchPushSubscriptionParams{ID: sub.ID, LastUsedAt: ptr(lidza.Now(ctx))})
-	case response.StatusCode == http.StatusNotFound || response.StatusCode == http.StatusGone:
-		return queries.DeletePushSubscription(ctx, sub.ID)
-	case response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500:
-		return fmt.Errorf("push service answered %d", response.StatusCode)
-	default:
-		lidza.Log(ctx).Warn("push notification refused", "status", response.StatusCode, "kind", job.Kind, "subscription", sub.ID)
-		return nil
+	detail := ""
+	if response.StatusCode >= 300 {
+		raw, _ := io.ReadAll(io.LimitReader(response.Body, 512))
+		detail = string(raw)
 	}
+	return statusOutcome(response.StatusCode, detail), nil
 }
 
-func ptr[T any](v T) *T { return &v }
+// validKeys reports whether a subscription's keys can encrypt a payload: a
+// P-256 point and a 16-byte secret.
+func validKeys(p256dh, secret string) bool {
+	raw, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(p256dh, "="))
+	if err != nil {
+		return false
+	}
+	if _, err = ecdh.P256().NewPublicKey(raw); err != nil {
+		return false
+	}
+	return keyLength(secret, 16)
+}

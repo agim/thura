@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { api } from '@lidza/client'
 
 // The installable app in the browser: the service worker (/sw.js, written
 // from scripts/sw.js at build time), the "Update available" state and the
@@ -42,6 +43,23 @@ export function appleMobile() {
   if (typeof navigator === 'undefined') return false
   return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
+
+/** A phone or tablet browser, where the account menu always offers installing. */
+export function mobileBrowser() {
+  if (typeof navigator === 'undefined') return false
+  return appleMobile() || /Android|Mobi/.test(navigator.userAgent)
+}
+
+export type InstallPlatform = 'ios' | 'samsung' | 'android'
+
+/** Which browser's own install steps to show when it has not offered its install dialog. */
+export function installPlatform(): InstallPlatform {
+  if (appleMobile()) return 'ios'
+  if (typeof navigator !== 'undefined' && /SamsungBrowser/.test(navigator.userAgent)) return 'samsung'
+  return 'android'
+}
+
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** applyUpdate lets the waiting worker take over; the page reloads once it does. */
 export function applyUpdate() {
@@ -97,6 +115,12 @@ export function registerServiceWorker(open: (url: string) => void) {
   navigator.serviceWorker.addEventListener('message', event => {
     const data = event.data as { type?: string; url?: string } | null
     if (data?.type === 'thura:open' && typeof data.url === 'string' && data.url.startsWith('/app/')) open(data.url)
+    // The worker showed nothing because this tab shows the view: record it
+    // in Recent notifications ("Skipped: you had it open"). Best effort.
+    const shown = event.data as { type?: string; workspace?: unknown; log?: unknown } | null
+    if (shown?.type === 'thura:shown-in-tab' && typeof shown.workspace === 'string' && typeof shown.log === 'string' && uuid.test(shown.workspace) && uuid.test(shown.log)) {
+      api.markNotificationOpen({ workspaceId: shown.workspace, id: shown.log }).catch(() => { /* diagnostics only */ })
+    }
   })
   const start = async () => {
     let registration: ServiceWorkerRegistration

@@ -25,3 +25,9 @@ func UnsubscribePushDevice(ctx context.Context, r *router.Request[router.None]) 
 func TestPushNotification(ctx context.Context, r *router.Request[router.None]) (schema.PushTestResult, error) {
 	return push.Test(ctx, r.Param("workspaceId"))
 }
+func TestPushDevice(ctx context.Context, r *router.Request[router.None]) (schema.PushDeviceTestResult, error) {
+	return push.TestDevice(ctx, r.Param("workspaceId"), r.Param("id"))
+}
+func MarkNotificationOpen(ctx context.Context, r *router.Request[router.None]) (schema.NotificationSettings, error) {
+	return push.MarkOpen(ctx, r.Param("workspaceId"), r.Param("id"))
+}

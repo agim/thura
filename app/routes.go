@@ -200,6 +200,8 @@ func routes(r *router.Router) {
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/notifications/devices", handlers.SubscribePushDevice, middleware.RateLimit(middleware.RateLimitOptions{RPS: 0.2, Burst: 10, Key: userKey}))
 	router.Route(g, "DELETE /api/v1/workspaces/{workspaceId}/notifications/devices/{id}", handlers.UnsubscribePushDevice)
 	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/notifications/test", handlers.TestPushNotification, middleware.RateLimit(middleware.RateLimitOptions{RPS: 0.1, Burst: 5, Key: userKey}))
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/notifications/devices/{id}/test", handlers.TestPushDevice, middleware.RateLimit(middleware.RateLimitOptions{RPS: 0.1, Burst: 10, Key: userKey}))
+	router.Route(g, "POST /api/v1/workspaces/{workspaceId}/notifications/recent/{id}/open", handlers.MarkNotificationOpen, middleware.RateLimit(middleware.RateLimitOptions{RPS: 1, Burst: 30, Key: userKey}))
 }
 
 // hello greets by name. Greeting is defined in schema.lidza.

@@ -2,14 +2,36 @@ import { ActionButton } from './ActionButton'
 import { AppNotice, useNotice } from './AppNotice'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, type NotificationPreferences, type NotificationSettings as Settings } from '@lidza/client'
+import { api, type NotificationPreferences, type NotificationSettings as Settings, type PushDevice, type PushDeviceTestResult } from '@lidza/client'
 import { BellOff, BellRing, Send, Trash2 } from 'lucide-react'
 import { userError } from '../lib/errors'
 import { displayDate } from '../lib/display-date'
+import { ago, currentError, kindLabel, lastNotification, logStatus } from '../lib/notification-diagnostics'
 import { currentSubscription, deviceLabel, endpointHash, pushPermission, pushSupport, subscribe, subscriptionKeys, type PushPermission } from '../lib/push'
 
+// New mail is a choice of three, stored as mail + mailPeopleOnly.
+type MailChoice = 'all' | 'people' | 'none'
+const mailChoices: { value: MailChoice; label: string; hint: string }[] = [
+  { value: 'all', label: 'All new Inbox mail', hint: 'Every message that reaches your Inbox, newsletters and automated mail too.' },
+  { value: 'people', label: 'Only mail from real people', hint: 'Mail with the Real person label: people you know or have written to.' },
+  { value: 'none', label: 'No mail', hint: 'New mail never notifies.' },
+]
+function mailChoice(p: NotificationPreferences): MailChoice {
+  return !p.mail ? 'none' : p.mailPeopleOnly ? 'people' : 'all'
+}
+function mailPatch(choice: MailChoice): Partial<NotificationPreferences> {
+  return choice === 'none' ? { mail: false } : { mail: true, mailPeopleOnly: choice === 'people' }
+}
+
+type TestOutcome = { ok: boolean; text: string }
+function testOutcome(result: PushDeviceTestResult): TestOutcome {
+  return result.delivered ? { ok: true, text: `Sent · delivered by ${result.service}` } : { ok: false, text: `Not delivered: ${result.error}` }
+}
+
+/** Refresh the settings while the page is visible, so the device and recent lists follow deliveries. */
+const refreshEvery = 30000
+
 const events: { key: keyof NotificationPreferences; label: string; hint?: string }[] = [
-  { key: 'mail', label: 'New mail in your Inbox', hint: 'Never for Spam or mail held for review.' },
   { key: 'chat', label: 'New chat messages', hint: 'In rooms and conversations you are in.' },
   { key: 'chatRequests', label: 'External chat requests' },
   { key: 'calendar', label: 'Calendar reminders', hint: 'Alongside the reminder email, for events with a reminder.' },
@@ -25,7 +47,7 @@ const events: { key: keyof NotificationPreferences; label: string; hint?: string
 export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
   const client = useQueryClient()
   const key = ['notifications', workspaceId]
-  const settings = useQuery({ queryKey: key, queryFn: () => api.getNotificationSettings({ workspaceId }) })
+  const settings = useQuery({ queryKey: key, queryFn: () => api.getNotificationSettings({ workspaceId }), refetchInterval: refreshEvery })
   const { notice, show, clear } = useNotice()
   const [support] = useState(pushSupport)
   const [permission, setPermission] = useState<PushPermission>(pushPermission)
@@ -69,6 +91,15 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
   })
   const remove = useMutation({ mutationFn: (id: string) => api.unsubscribePushDevice({ workspaceId, id }), onSuccess: saved => { store(saved); show({ text: 'Device removed.' }) } })
   const test = useMutation({ mutationFn: () => api.testPushNotification({ workspaceId }), onSuccess: result => show({ text: `Test notification sent to ${result.queued === 1 ? '1 device' : `${result.queued} devices`}.` }) })
+  // A device's own test answers in the request, with what the push service
+  // said; the answer stays beside the device (by its endpoint hash, so it
+  // stays when the push service had the device removed).
+  const [tested, setTested] = useState<Record<string, TestOutcome>>({})
+  const testDevice = useMutation({
+    mutationFn: (device: PushDevice) => api.testPushDevice({ workspaceId, id: device.id }),
+    onSuccess: (result, device) => { store(result.settings); setTested(current => ({ ...current, [device.endpointHash]: testOutcome(result) })) },
+    onError: (error, device) => setTested(current => ({ ...current, [device.endpointHash]: { ok: false, text: `Not sent: ${userError(error)}` } })),
+  })
   // A click shows at once (component state, so the checkbox follows the
   // click in the same render); saves run one at a time in order (scope), and
   // only the newest answer replaces what is on screen, so an earlier save
@@ -102,6 +133,27 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
   const on = !!thisDevice && permission === 'granted'
   const state = !available ? 'server' : support === 'install-first' ? 'install-first' : support === 'unsupported' || permission === 'unsupported' ? 'unsupported' : permission === 'denied' ? 'blocked' : on ? 'on' : 'off'
   const busy = turnOn.isPending || turnOff.isPending
+  const choice = mailChoice(prefs)
+  const removedHere = hash ? settings.data.removed.find(device => device.endpointHash === hash) : undefined
+  const now = Date.now()
+  const deviceRow = (device: PushDevice, here: boolean) => {
+    const error = currentError(device)
+    const result = tested[device.endpointHash]
+    const name = here ? 'This device' : device.label
+    return <li className="settings-list-row notification-device-row" key={device.id} data-device={device.id}>
+      <span>
+        <strong>{name}</strong>{here && <small> · {device.label}</small>}
+        <small className="notification-last"> · {lastNotification(device, now)}</small>
+        {(device.deliveredCount > 0 || device.failedCount > 0) && <small> · {device.deliveredCount} delivered, {device.failedCount} failed</small>}
+        {error && <span className="notification-error">{error}</span>}
+        {result && <span className={result.ok ? 'notification-test-result' : 'notification-test-result notification-error'} role="status">{result.text}</span>}
+      </span>
+      <span className="notification-row-actions">
+        <ActionButton disabled={testDevice.isPending} aria-label={here ? 'Send test to this device' : `Send test to ${device.label}`} onClick={() => testDevice.mutate(device)}><Send size={16} aria-hidden="true" />Send test</ActionButton>
+        {!here && <ActionButton disabled={remove.isPending} aria-label={`Remove ${device.label}`} onClick={() => remove.mutate(device.id)}><Trash2 size={16} aria-hidden="true" />Remove</ActionButton>}
+      </span>
+    </li>
+  }
 
   return <>
     <h3>Notifications</h3>
@@ -117,6 +169,7 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
           : state === 'server' ? 'Notifications are not available on this server.'
           : 'This browser cannot show notifications from Thura.'
       }</p>
+      {state === 'off' && removedHere && <p className="notification-error">{removedHere.error}</p>}
       {state === 'off' && <ActionButton className="primary-action" disabled={busy || hash === undefined} onClick={() => turnOn.mutate()}><BellRing size={16} aria-hidden="true" />Turn on notifications on this device</ActionButton>}
       {state === 'on' && <div className="notification-actions"><ActionButton disabled={busy || test.isPending} onClick={() => test.mutate()}><Send size={16} aria-hidden="true" />Send a test notification</ActionButton><ActionButton disabled={busy} onClick={() => turnOff.mutate()}><BellOff size={16} aria-hidden="true" />Turn off on this device</ActionButton></div>}
       {state === 'blocked' && <p>To allow them, open the site settings next to the address bar (on a phone, the browser’s settings for this site), set Notifications to Allow, then reload this page.</p>}
@@ -128,20 +181,52 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
     <section className="settings-form" aria-labelledby="notification-events-title">
       <h3 id="notification-events-title">Notify me about</h3>
       <p>These apply to every device you turn notifications on for in this workspace. You are never notified about your own actions, or about a conversation you have open.</p>
+      <fieldset className="notification-mail" aria-describedby="notification-mail-hint">
+        <legend>New mail in your Inbox</legend>
+        <small id="notification-mail-hint">Never for Spam or mail held for review.</small>
+        {mailChoices.map(option => <label key={option.value} className="radio notification-choice" data-selected={choice === option.value || undefined}>
+          <input type="radio" name={`notification-mail-${workspaceId}`} value={option.value} checked={choice === option.value} onChange={() => change(mailPatch(option.value))} />
+          <span>{option.label}<small>{option.hint}</small></span>
+        </label>)}
+      </fieldset>
       {events.map(event => <div key={event.key} className="notification-event">
         <label className="checkbox"><input type="checkbox" checked={prefs[event.key]} onChange={e => change({ [event.key]: e.target.checked })} />{event.label}</label>
         {event.hint && <small>{event.hint}</small>}
-        {event.key === 'mail' && <label className="checkbox notification-sub"><input type="checkbox" checked={prefs.mailPeopleOnly} disabled={!prefs.mail} onChange={e => change({ mailPeopleOnly: e.target.checked })} />Only from real people<small>Mail with the Real person label.</small></label>}
       </div>)}
       {save.error && <p role="alert">{userError(save.error)}</p>}
     </section>
     <section className="settings-form" aria-labelledby="notification-devices-title">
       <h3 id="notification-devices-title">Devices</h3>
       {settings.data.devices.length === 0 ? <p>No devices have notifications turned on.</p> : <ul className="settings-list">
-        {thisDevice && <li className="settings-list-row"><span>{thisDevice.label}<small> · This device · since {displayDate(thisDevice.createdAt)}</small></span></li>}
-        {others.map(device => <li className="settings-list-row" key={device.id}><span>{device.label}<small> · Other device · {device.lastUsedAt ? `last notified ${displayDate(device.lastUsedAt)}` : `since ${displayDate(device.createdAt)}`}</small></span><ActionButton disabled={remove.isPending} aria-label={`Remove ${device.label}`} onClick={() => remove.mutate(device.id)}><Trash2 size={16} aria-hidden="true" />Remove</ActionButton></li>)}
+        {thisDevice && deviceRow(thisDevice, true)}
+        {others.map(device => deviceRow(device, false))}
+      </ul>}
+      {settings.data.removed.length > 0 && <ul className="settings-list notification-removed" aria-label="Removed devices">
+        {settings.data.removed.map(device => <li className="notification-removed-row" key={device.endpointHash + device.removedAt}>
+          <span><strong>{device.label}</strong>{device.endpointHash === hash && <small> · This device</small>}<small> · removed {ago(device.removedAt, now)}</small></span>
+          <span className="notification-error">{device.error}</span>
+          {tested[device.endpointHash] && <span className="notification-test-result notification-error" role="status">{tested[device.endpointHash].text}</span>}
+        </li>)}
       </ul>}
       {remove.error && <p role="alert">{userError(remove.error)}</p>}
+    </section>
+    <section className="settings-form notification-help" aria-labelledby="notification-help-title">
+      <h3 id="notification-help-title">Not getting notifications?</h3>
+      <ul>
+        <li>Check the phone’s notification settings for Thura (or for Chrome, if you use Thura in the browser): notifications allowed and not silenced.</li>
+        <li>Turn off battery optimisation for Thura or Chrome, so Android delivers notifications while the phone is idle.</li>
+        <li>{choice === 'people' ? <>“Only mail from real people” is on: newsletters and automated mail do not notify. Choose “All new Inbox mail” above to be notified about every message.</> : choice === 'none' ? <>“No mail” is chosen above: new mail does not notify.</> : <>“All new Inbox mail” is on: every message that reaches your Inbox notifies.</>}</li>
+        <li>Use Send test on a device: if it says delivered but nothing appears, the phone or Android is holding it back; if it fails, the error says what the push service answered.</li>
+      </ul>
+    </section>
+    <section className="settings-form" aria-labelledby="notification-recent-title">
+      <h3 id="notification-recent-title">Recent notifications</h3>
+      {settings.data.recent.length === 0 ? <p>No notifications for you yet on any device.</p> : <ol className="settings-list notification-recent">
+        {settings.data.recent.map(entry => <li className="notification-recent-row" key={entry.id} data-status={entry.reason ? 'skipped' : entry.status}>
+          <span><strong>{kindLabel(entry.kind)}</strong><small> · <time dateTime={entry.createdAt} title={displayDate(entry.createdAt)}>{ago(entry.createdAt, now)}</time></small></span>
+          <span className="notification-recent-status">{logStatus(entry)}</span>
+        </li>)}
+      </ol>}
     </section>
   </>
 }

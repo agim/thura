@@ -1078,10 +1078,46 @@ CREATE TABLE push_subscription (
   auth varchar(100) NOT NULL,
   label varchar(120) NOT NULL DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now(),
-  last_used_at timestamptz
+  last_used_at timestamptz,
+  last_attempt_at timestamptz,
+  last_kind varchar(40) NOT NULL DEFAULT '',
+  last_error_at timestamptz,
+  last_error_kind varchar(20) NOT NULL DEFAULT '',
+  last_error varchar(300) NOT NULL DEFAULT '',
+  delivered_count integer NOT NULL DEFAULT 0,
+  failed_count integer NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX push_subscription_workspace_id_endpoint_hash_key ON push_subscription (workspace_id, endpoint_hash);
 CREATE INDEX push_subscription_workspace_id_subject_idx ON push_subscription (workspace_id, subject);
+
+CREATE TABLE push_removed_device (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+  subject varchar(255) NOT NULL,
+  endpoint_hash varchar(64) NOT NULL,
+  label varchar(120) NOT NULL DEFAULT '',
+  error_kind varchar(20) NOT NULL DEFAULT '',
+  error varchar(300) NOT NULL DEFAULT '',
+  removed_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX push_removed_device_workspace_id_subject_removed_at_idx ON push_removed_device (workspace_id, subject, removed_at);
+
+CREATE TABLE notification_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
+  subject varchar(255) NOT NULL,
+  kind varchar(40) NOT NULL,
+  link varchar(512) NOT NULL DEFAULT '',
+  status varchar(20) NOT NULL,
+  reason varchar(40) NOT NULL DEFAULT '',
+  error varchar(300) NOT NULL DEFAULT '',
+  devices integer NOT NULL DEFAULT 0,
+  delivered integer NOT NULL DEFAULT 0,
+  failed integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX notification_log_workspace_id_subject_created_at_idx ON notification_log (workspace_id, subject, created_at);
 
 CREATE TABLE notification_preference (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
