@@ -166,17 +166,18 @@ for (const width of [390, 1440]) {
     expect(sent.size).toBeGreaterThan(0)
     expect(sent.size).toBeLessThanOrEqual(4096)
 
-    // Event checkboxes save at once and hold across a reload.
+    // Event choices save at once and hold across a reload. New mail is a
+    // choice of three; "No mail" turns it off.
     const chat = page.getByRole('checkbox', { name: 'New chat messages', exact: true })
-    const mail = page.getByRole('checkbox', { name: 'New mail in your Inbox', exact: true })
-    const people = page.getByRole('checkbox', { name: /Only from real people/ })
+    const mail = page.getByRole('radio', { name: /^No mail/ })
+    const people = page.getByRole('radio', { name: /^Only mail from real people/ })
     await expect(people).toBeChecked()
     await chat.uncheck()
-    await mail.uncheck()
-    await expect(people).toBeDisabled()
+    await mail.check()
+    await expect(people).not.toBeChecked()
     await page.reload()
     await expect(chat).not.toBeChecked()
-    await expect(mail).not.toBeChecked()
+    await expect(mail).toBeChecked()
     await expect(state).toHaveText('Notifications are on for this device.')
 
     // A failed or slow refresh keeps what is on screen: no loading text, the same controls, focus kept.
@@ -201,13 +202,13 @@ for (const width of [390, 1440]) {
     await expect(page.getByText('Loading notification settings…')).toHaveCount(0)
     await expect(mail).toBeFocused()
     expect(await mail.evaluate((node, old) => node === old, before)).toBe(true)
-    await expect(mail).not.toBeChecked()
+    await expect(mail).toBeChecked()
     await expect(state).toHaveText('Notifications are on for this device.')
     await page.unroute('**/notifications')
 
     await chat.check()
-    await mail.check()
-    await expect(people).toBeEnabled()
+    await people.check()
+    await expect(people).toBeChecked()
     if (width === 390) await expectNoSidewaysScroll(page)
     await page.getByRole('button', { name: 'Turn off on this device', exact: true }).click()
     await expect(state).toHaveText('Notifications are off for this device.')
