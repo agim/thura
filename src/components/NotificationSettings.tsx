@@ -7,7 +7,8 @@ import { BellOff, BellRing, Send, Trash2 } from 'lucide-react'
 import { userError } from '../lib/errors'
 import { displayDate } from '../lib/display-date'
 import { ago, currentError, kindLabel, lastNotification, logStatus } from '../lib/notification-diagnostics'
-import { currentSubscription, deviceLabel, endpointHash, pushPermission, pushSupport, subscribe, subscriptionKeys, type PushPermission } from '../lib/push'
+import { onPushChanged } from '../pwa'
+import { askPermission, rememberPush, currentSubscription, deviceLabel, endpointHash, pushPermission, pushSupport, subscribe, subscriptionKeys, type PushPermission } from '../lib/push'
 
 // New mail is a choice of three, stored as mail + mailPeopleOnly.
 type MailChoice = 'all' | 'people' | 'none'
@@ -67,18 +68,27 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
     return () => status?.removeEventListener('change', update)
   }, [support])
   const store = (next: Settings) => client.setQueryData(key, next)
+  // The workspace registered this browser again (a replaced subscription): follow it.
+  useEffect(() => onPushChanged(() => {
+    currentSubscription().then(sub => sub ? endpointHash(sub.endpoint) : null).then(setHash, () => {})
+    void client.invalidateQueries({ queryKey: ['notifications', workspaceId] })
+  }), [client, workspaceId])
   const thisDevice = settings.data?.devices.find(device => device.endpointHash === hash)
+  const removedHere = hash ? settings.data?.removed.find(device => device.endpointHash === hash) : undefined
   const others = settings.data?.devices.filter(device => device.endpointHash !== hash) ?? []
 
   const turnOn = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (asked: Promise<NotificationPermission>) => {
       const publicKey = settings.data?.publicKey
       if (!publicKey) throw new Error('Notifications are not available on this server.')
-      const result = await subscribe(publicKey)
+      // A device the push service reported gone needs a new address.
+      const result = await subscribe(publicKey, asked, !!removedHere)
       setPermission(result.permission)
       if (!result.subscription) return null
       const saved = await api.subscribePushDevice({ workspaceId }, { ...subscriptionKeys(result.subscription), label: deviceLabel() })
-      setHash(await endpointHash(result.subscription.endpoint))
+      const next = await endpointHash(result.subscription.endpoint)
+      rememberPush(workspaceId, next)
+      setHash(next)
       return saved
     },
     onSuccess: saved => { if (saved) { store(saved); show({ text: 'Notifications are on for this device.' }) } },
@@ -86,7 +96,7 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
   // The browser keeps its subscription: another workspace may use it on
   // this device. This workspace stops sending to it.
   const turnOff = useMutation({
-    mutationFn: async () => thisDevice ? api.unsubscribePushDevice({ workspaceId, id: thisDevice.id }) : undefined,
+    mutationFn: async () => { rememberPush(workspaceId, 'off'); return thisDevice ? api.unsubscribePushDevice({ workspaceId, id: thisDevice.id }) : undefined },
     onSuccess: saved => { if (saved) store(saved); show({ text: 'Notifications are off for this device.' }) },
   })
   const remove = useMutation({ mutationFn: (id: string) => api.unsubscribePushDevice({ workspaceId, id }), onSuccess: saved => { store(saved); show({ text: 'Device removed.' }) } })
@@ -134,7 +144,6 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
   const state = !available ? 'server' : support === 'install-first' ? 'install-first' : support === 'unsupported' || permission === 'unsupported' ? 'unsupported' : permission === 'denied' ? 'blocked' : on ? 'on' : 'off'
   const busy = turnOn.isPending || turnOff.isPending
   const choice = mailChoice(prefs)
-  const removedHere = hash ? settings.data.removed.find(device => device.endpointHash === hash) : undefined
   const now = Date.now()
   const deviceRow = (device: PushDevice, here: boolean) => {
     const error = currentError(device)
@@ -170,7 +179,7 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
           : 'This browser cannot show notifications from Thura.'
       }</p>
       {state === 'off' && removedHere && <p className="notification-error">{removedHere.error}</p>}
-      {state === 'off' && <ActionButton className="primary-action" disabled={busy || hash === undefined} onClick={() => turnOn.mutate()}><BellRing size={16} aria-hidden="true" />Turn on notifications on this device</ActionButton>}
+      {state === 'off' && <ActionButton className="primary-action" disabled={busy || hash === undefined} onClick={() => turnOn.mutate(askPermission())}><BellRing size={16} aria-hidden="true" />Turn on notifications on this device</ActionButton>}
       {state === 'on' && <div className="notification-actions"><ActionButton disabled={busy || test.isPending} onClick={() => test.mutate()}><Send size={16} aria-hidden="true" />Send a test notification</ActionButton><ActionButton disabled={busy} onClick={() => turnOff.mutate()}><BellOff size={16} aria-hidden="true" />Turn off on this device</ActionButton></div>}
       {state === 'blocked' && <p>To allow them, open the site settings next to the address bar (on a phone, the browser’s settings for this site), set Notifications to Allow, then reload this page.</p>}
       {state === 'install-first' && <p>Tap Share, then Add to Home Screen, and open Thura from your Home Screen. Then come back here and turn notifications on.</p>}

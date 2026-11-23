@@ -55,11 +55,26 @@ export async function endpointHash(endpoint: string) {
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
-/** subscribe asks for permission (call from a click) and subscribes this browser with the server's key. */
-export async function subscribe(publicKey: string) {
-  const permission = await Notification.requestPermission()
+/**
+ * askPermission asks the browser. Call it in the click handler itself, before
+ * anything is awaited: Safari on iPhone and iPad only asks during the tap.
+ */
+export function askPermission(): Promise<NotificationPermission> {
+  if (typeof Notification === 'undefined') return Promise.resolve('denied')
+  try {
+    // Older Safari answers through a callback and returns nothing: read the state then.
+    return Promise.resolve(Notification.requestPermission()).then(answer => answer ?? Notification.permission)
+  } catch {
+    return Promise.resolve(Notification.permission)
+  }
+}
+
+/** subscribe subscribes this browser with the server's key once the member allowed notifications (askPermission). */
+export async function subscribe(publicKey: string, asked: Promise<NotificationPermission> = askPermission(), fresh = false) {
+  const permission = await asked
   if (permission !== 'granted') return { permission, subscription: null }
   const reg = await registration()
+  if (fresh) await (await reg.pushManager.getSubscription())?.unsubscribe()
   let subscription = await reg.pushManager.getSubscription()
   const key = applicationKey(publicKey)
   // A subscription made with another server key (a restored backup, a
@@ -83,4 +98,58 @@ export function deviceLabel() {
   const browser = /Edg\//.test(agent) ? 'Edge' : /OPR\//.test(agent) ? 'Opera' : /SamsungBrowser/.test(agent) ? 'Samsung Internet' : /Firefox\//.test(agent) ? 'Firefox' : /Chrome\//.test(agent) ? 'Chrome' : /Safari\//.test(agent) ? 'Safari' : 'Browser'
   const system = /Android/.test(agent) ? 'Android' : appleMobile() ? (/iPad/.test(agent) || navigator.maxTouchPoints > 1 && /Macintosh/.test(agent) ? 'iPadOS' : 'iOS') : /Windows/.test(agent) ? 'Windows' : /Mac OS X|Macintosh/.test(agent) ? 'macOS' : /CrOS/.test(agent) ? 'ChromeOS' : /Linux/.test(agent) ? 'Linux' : ''
   return system ? `${browser} on ${system}` : browser
+}
+
+// Which workspaces this browser has notifications on for, so a subscription
+// the browser or the push service replaced is registered again without the
+// member noticing days later that notifications stopped.
+const remembered = (workspaceId: string) => `thura:push:${workspaceId}`
+function recall(workspaceId: string) {
+  try { return window.localStorage.getItem(remembered(workspaceId)) } catch { return null }
+}
+
+/** rememberPush records that this browser has notifications on (its endpoint hash) or turned off ('off') in a workspace. */
+export function rememberPush(workspaceId: string, value: string) {
+  try { window.localStorage.setItem(remembered(workspaceId), value) } catch { /* private mode: nothing to remember */ }
+}
+
+type DeviceList = { publicKey: string; devices: { endpointHash: string }[]; removed: { endpointHash: string; errorKind: string }[] }
+type SyncApi<T extends DeviceList> = {
+  read: () => Promise<T>
+  save: (keys: ReturnType<typeof subscriptionKeys> & { label: string }) => Promise<T>
+}
+
+/**
+ * syncPushDevice keeps this browser registered where the member turned
+ * notifications on: it never asks for permission and does nothing after
+ * "Turn off on this device". It registers again when the browser has a new
+ * subscription (or none any more), and replaces one the push service
+ * reported gone. It answers the settings it saved, or null when nothing
+ * changed.
+ */
+export async function syncPushDevice<T extends DeviceList>(workspaceId: string, server: SyncApi<T>): Promise<T | null> {
+  if (pushSupport() !== 'supported' || pushPermission() !== 'granted') return null
+  const known = recall(workspaceId)
+  if (known === 'off') return null
+  let subscription = await currentSubscription()
+  const hash = subscription ? await endpointHash(subscription.endpoint) : ''
+  const settings = await server.read()
+  if (!settings.publicKey) return null
+  const registered = hash !== '' && settings.devices.some(device => device.endpointHash === hash)
+  if (registered) {
+    if (known !== hash) rememberPush(workspaceId, hash)
+    return null
+  }
+  // Gone at the push service (404, 410) or refused for its key: this
+  // address is dead, a new one is needed. A member who left is not healed.
+  const removal = settings.removed.find(device => device.endpointHash === hash)
+  if (removal && removal.errorKind === 'member') return null
+  // Only a browser known to have had notifications on here is healed.
+  if (!known && !removal) return null
+  const result = await subscribe(settings.publicKey, Promise.resolve('granted'), !!removal)
+  subscription = result.subscription
+  if (!subscription) return null
+  const saved = await server.save({ ...subscriptionKeys(subscription), label: deviceLabel() })
+  rememberPush(workspaceId, await endpointHash(subscription.endpoint))
+  return saved
 }

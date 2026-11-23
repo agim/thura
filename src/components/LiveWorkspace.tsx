@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { WorkspaceLoading } from './WorkspaceLoading'
 import { AppNotice, useNotice } from './AppNotice'
 import { usePreference } from '../lib/use-preference'
+import { usePushSync } from '../lib/use-push-sync'
 import { mailFolders, parseSearch, useAppView, useOpenApp, useViewText, type AppName } from '../lib/app-view'
 import { api, type Contact, type MailFolder, type CalendarEvent } from '@lidza/client'
 import { Mail, ContactRound, Users, LogOut, Settings, MessagesSquare, Folder, CalendarDays, Video, History, CircleUserRound, Search, X } from 'lucide-react'
@@ -84,6 +85,7 @@ export function LiveWorkspace() {
   const openMeet = (meeting: string | undefined, name: string, event: CalendarEvent | null) => { setMeetingName(name); setMeetingEvent(event); openApp('meet', { meeting }) }
   useEffect(() => { const previous = document.documentElement.style.colorScheme; document.documentElement.style.colorScheme = dark ? 'dark' : 'light'; const themes = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')].map(tag => [tag, tag.media] as const); for (const [tag] of themes) { tag.media = ''; tag.content = dark ? '#191d1b' : '#f6f3eb' } return () => { document.documentElement.style.colorScheme = previous; for (const [tag, media] of themes) { tag.media = media; tag.content = media.includes('dark') ? '#191d1b' : '#f6f3eb' } } }, [dark])
   const space = spaces.data?.items.find(w => w.id === selected) ?? spaces.data?.items[0]
+  usePushSync(space?.id)
   // A stale or foreign ?workspace= falls back to the default workspace with a notice; a valid one becomes the stored default.
   useEffect(() => {
     if (!workspaceParam || !spaces.data) return

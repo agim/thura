@@ -59,6 +59,19 @@ export function installPlatform(): InstallPlatform {
   return 'android'
 }
 
+const pushChanged = new Set<() => void>()
+
+/** onPushChanged runs when the browser replaced this device's push subscription. */
+export function onPushChanged(listener: () => void) {
+  pushChanged.add(listener)
+  return () => { pushChanged.delete(listener) }
+}
+
+/** announcePushChange tells every listener this device's subscription was registered anew. */
+export function announcePushChange() {
+  for (const listener of pushChanged) listener()
+}
+
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** applyUpdate lets the waiting worker take over; the page reloads once it does. */
@@ -114,6 +127,10 @@ export function registerServiceWorker(open: (url: string) => void) {
   })
   navigator.serviceWorker.addEventListener('message', event => {
     const data = event.data as { type?: string; url?: string } | null
+    // The worker asks before it skips a notification for this tab: answer
+    // only while the member can really see it.
+    if (data?.type === 'thura:showing') { event.ports[0]?.postMessage(document.visibilityState === 'visible' && document.hasFocus()); return }
+    if (data?.type === 'thura:push-changed') { for (const listener of pushChanged) listener(); return }
     if (data?.type === 'thura:open' && typeof data.url === 'string' && data.url.startsWith('/app/')) open(data.url)
     // The worker showed nothing because this tab shows the view: record it
     // in Recent notifications ("Skipped: you had it open"). Best effort.

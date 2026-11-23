@@ -208,10 +208,10 @@ func notify(ctx context.Context, tx pgx.Tx, workspaceID string, recipients []str
 	if ttl <= 0 {
 		ttl = 24 * time.Hour
 	}
-	urgency := string(webpush.UrgencyNormal)
-	if e.Kind == KindChat || e.Kind == KindMeet || e.Kind == KindCalendar {
-		urgency = string(webpush.UrgencyHigh)
-	}
+	// Every kind is something the member chose to hear about now. Below
+	// "high", Android holds a push for an idle phone until its next
+	// maintenance window, so new mail would show minutes or hours late.
+	urgency := string(webpush.UrgencyHigh)
 	queued := 0
 	for _, subject := range order {
 		p, ok := prefs[subject]

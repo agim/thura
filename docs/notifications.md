@@ -59,10 +59,16 @@ workspace (table `notification_preference`; no row means the defaults, all on):
 | Calendar reminders | The member who set the reminder | On | The existing reminder job sends the push alongside the email, deduplicated by the same notice ledger. If the member has no personal mailbox, the push still goes out. |
 | Meetings starting now | Attendees whose address is a workspace account, except the organizer | On | When invitations are sent for an event with a Thura Meet room that is under way or starts within 15 minutes. |
 
-A member is never notified about their own action (the actor is dropped), and
-the service worker shows nothing while a focused, visible tab already shows that
-view (the same chat room, the Inbox of that mailbox, the same meeting).
-Reminders always show.
+A member is never notified about their own action (the actor is dropped). The
+service worker shows nothing only while a tab already shows that view (the same
+chat room, the Inbox of that mailbox, the same meeting) **and confirms it**: the
+worker asks the tab, and the tab answers yes only while it is visible and has
+focus. A tab that does not answer within 0.8 s (an installed app left in the
+background, a frozen tab the browser still lists as focused) never swallows a
+notification. Safari and every browser on iPhone and iPad always show it: Apple
+ends a subscription after a few pushes that showed nothing. Reminders always
+show. Mail that one of the mailbox's filters takes out of the Inbox as it
+arrives (`docs/mail-filters.md`) does not notify.
 
 ### Privacy
 
@@ -94,10 +100,29 @@ window opens. Links outside `/app/` are replaced by `/app/mail`.
 ### Permission
 
 Thura never asks on page load. **Turn on notifications on this device** in
-Settings → Notifications asks the browser (a click is required). The section
+Settings → Notifications asks the browser, in the click handler itself (Safari
+on iPhone and iPad only asks during the tap). The section
 shows the state: on, off, blocked by the browser (with how to allow it again in
 the site settings), unsupported, or, on iPhone and iPad outside the Home Screen
 app, that Thura must be added to the Home Screen first.
+
+### Keeping a device registered
+
+A browser or its push service may replace or drop a subscription (a rotated
+push address, a restored phone, a 404/410 after a long idle period). The
+member should not find out days later:
+
+- Each time a workspace opens (and when the tab returns after an hour),
+  `syncPushDevice` (`src/lib/push.ts`, run by `usePushSync`) compares this
+  browser's subscription with the member's devices. A browser that had
+  notifications on here (remembered on the device as `thura:push:<workspace>`)
+  and is no longer registered is registered again: with its current
+  subscription, or with a new one when it has none or the server recorded that
+  the push service dropped it. It never asks for permission, does nothing
+  without it, and does nothing after **Turn off on this device**. A member who
+  left the workspace is not registered again.
+- The service worker handles `pushsubscriptionchange`: it subscribes again
+  with the same server key and tells open tabs, which register the new address.
 
 ### Diagnostics
 
@@ -120,7 +145,8 @@ Settings → Notifications answers "why didn't I get one":
   the time, and delivered, failed (with the error), waiting, or skipped with
   the reason: not from a real person (Only from real people is on), you had it
   open (the service worker reports a notification it did not show because a
-  focused tab showed the view), spam/held, your own action, or turned off.
+  focused tab confirmed it showed the view), spam/held, a mail filter moved it
+  out of your Inbox, your own action, or turned off.
   Table `notification_log`, a ring buffer of 50 rows per member and
   workspace, pruned on every insert; it keeps the kind and the item link,
   never the title or preview. Only members with a device get rows.
@@ -138,7 +164,10 @@ Settings → Notifications answers "why didn't I get one":
 
 - Server: `internal/push`. Events call `push.Notify` (inside the transaction of
   the change when there is one), which filters recipients by preference and
-  queues one `thura.push.send` job per device (jobs pack, 5 attempts).
+  queues one `thura.push.send` job per device (jobs pack, 5 attempts). Every
+  kind is sent with `Urgency: high`: below it, Android holds a push for an idle
+  phone until its next maintenance window, so new mail showed minutes or hours
+  late.
 - The job signs a VAPID JWT and encrypts the payload with
   [`github.com/SherClockHolmes/webpush-go`](https://github.com/SherClockHolmes/webpush-go)
   (MIT). 2xx records the delivery; 404 and 410 delete the subscription (the
@@ -178,12 +207,18 @@ host.
 - **Desktop** (Chrome, Edge, Firefox, Safari 16+): works in the browser; the
   operating system's notification settings must allow the browser.
 - A browser may replace an expired subscription; the server learns of it by a
-  404/410 and removes the old one. The member turns notifications on again in
-  Settings.
+  404/410 and removes the old one. The next visit registers the browser again
+  ("Keeping a device registered"); Settings shows the state either way.
+- A new version of the service worker (this file's push handlers included)
+  takes over after **Update available · Reload**, or once every tab and the
+  installed app are closed.
 
 ## Not verified without real devices
 
 The browser suite delivers to a local push service and checks encryption
-headers, the VAPID signature header and size; delivery through FCM, Mozilla
+headers, the VAPID signature header and size, and that a device the push
+service dropped registers itself again; `e2e/push-worker.spec.ts` runs the
+worker's push, tap and subscription-change handlers with stand-in globals
+(headless browsers refuse to show notifications); delivery through FCM, Mozilla
 autopush, Apple and WNS, the system notification itself, the notification tap,
 and iOS Home Screen behaviour need a real device and a public deployment.

@@ -8,7 +8,8 @@
  *   loads on demand are cached as they are fetched (cache first).
  * - A new deploy installs a new worker that waits; the page offers
  *   "Update available · Reload", which tells it to take over.
- * - Shows push notifications, unless a focused tab already shows that view.
+ * - Shows push notifications, unless a focused tab confirms it shows that view
+ *   (never skipped on Safari and iOS, where a silent push ends the subscription).
  */
 const VERSION = '__VERSION__'
 const PRECACHE = __PRECACHE__
@@ -84,26 +85,59 @@ function target(raw) {
   return '/app/mail'
 }
 
+// Apple's push service ends a subscription after a few pushes that showed
+// nothing, so Safari and every iOS browser always show the notification.
+const mustShow = /iPhone|iPad|iPod/.test(self.navigator.userAgent) || (/Safari\//.test(self.navigator.userAgent) && !/Chrom(e|ium)\/|Android/.test(self.navigator.userAgent))
+
+// confirms asks a tab whether it is really on screen and focused right now.
+// A browser's record of a tab can be stale (an installed app left in the
+// background, a frozen tab): only a tab that answers in time counts, so a
+// notification is never dropped for a tab nobody is looking at.
+function confirms(client) {
+  return new Promise(resolve => {
+    const channel = new MessageChannel()
+    const timer = setTimeout(() => resolve(false), 800)
+    channel.port1.onmessage = event => { clearTimeout(timer); resolve(event.data === true) }
+    try { client.postMessage({ type: 'thura:showing' }, [channel.port2]) } catch { clearTimeout(timer); resolve(false) }
+  })
+}
+
+async function showingTab(view) {
+  if (mustShow || !view) return null
+  const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+  for (const client of windows) {
+    if (client.focused && client.visibilityState === 'visible' && sameView(client.url, view) && await confirms(client)) return client
+  }
+  return null
+}
+
 self.addEventListener('push', event => {
   let data = {}
   try { data = event.data ? event.data.json() : {} } catch { data = {} }
+  if (!data || typeof data !== 'object') data = {}
   event.waitUntil((async () => {
-    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-    const showing = windows.find(client => client.focused && client.visibilityState === 'visible' && sameView(client.url, data.view))
+    let showing = null
+    try { showing = await showingTab(data.view) } catch { showing = null }
     if (showing) {
       // The tab records it in Recent notifications ("Skipped: you had it open").
       if (typeof data.workspace === 'string' && typeof data.log === 'string') showing.postMessage({ type: 'thura:shown-in-tab', workspace: data.workspace, log: data.log })
       return
     }
     const title = String(data.title || 'Thura').slice(0, 120)
-    await self.registration.showNotification(title, {
+    const options = {
       body: String(data.body || '').slice(0, 200),
-      tag: data.tag ? String(data.tag).slice(0, 64) : undefined,
       data: { url: target(data.url) },
       icon: '/icons/icon-192.png',
       badge: '/icons/badge-96.png',
       lang: 'en',
-    })
+    }
+    if (data.tag) { options.tag = String(data.tag).slice(0, 64); options.renotify = true }
+    try {
+      await self.registration.showNotification(title, options)
+    } catch {
+      // A browser that refuses an option still shows the plain notification.
+      await self.registration.showNotification(title, { body: options.body, data: options.data })
+    }
   })())
 })
 
@@ -116,10 +150,28 @@ self.addEventListener('notificationclick', event => {
     const windows = await self.clients.matchAll({ type: 'window' })
     const open = windows.find(client => client.focused) || windows[0]
     if (open) {
-      open.postMessage({ type: 'thura:open', url })
-      await open.focus()
-      return
+      try {
+        open.postMessage({ type: 'thura:open', url })
+        await open.focus()
+        return
+      } catch { /* the tab cannot take focus: open the address instead */ }
     }
     await self.clients.openWindow(url)
+  })())
+})
+
+// The browser replaced or dropped this device's subscription (a rotated
+// push address, a restored phone). Subscribe again with the same server key
+// and let an open tab register the new address; otherwise the next visit
+// does (src/lib/push.ts, syncPushDevice).
+self.addEventListener('pushsubscriptionchange', event => {
+  event.waitUntil((async () => {
+    try {
+      const current = await self.registration.pushManager.getSubscription()
+      const key = event.oldSubscription && event.oldSubscription.options && event.oldSubscription.options.applicationServerKey
+      if (!current && key) await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
+    } catch { /* the next visit subscribes again */ }
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    for (const client of windows) client.postMessage({ type: 'thura:push-changed' })
   })())
 })

@@ -115,6 +115,36 @@ for (const width of [390, 1440]) {
     if (width === 390) await expectNoSidewaysScroll(page)
   })
 
+  test(`a device the push service dropped registers itself again on the next visit at ${width}px`, async ({ page, context }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await context.grantPermissions(['notifications'])
+    await fakePush(page, `${origin}/gone/${randomUUID()}`)
+    await signIn(page, '/app/settings/notifications', 'Settings')
+    const state = page.locator('.notification-state')
+    await turnOn(page)
+    const row = page.locator('.notification-device-row').filter({ hasText: 'This device' })
+    await row.getByRole('button', { name: 'Send test to this device', exact: true }).click()
+    await expect(state).toHaveText('Notifications are off for this device.')
+    await expect(page.getByRole('list', { name: 'Removed devices' }).getByRole('listitem').first()).toContainText('This device')
+
+    // The next visit subscribes this browser again by itself: no click, no
+    // prompt, and the removal no longer applies.
+    await page.reload()
+    await expect(state).toHaveText('Notifications are on for this device.', { timeout: 20000 })
+    await expect(row).toBeVisible()
+    await expect(page.getByRole('list', { name: 'Removed devices' }).getByRole('listitem').filter({ hasText: /· This device/ })).toHaveCount(0)
+
+    // "Turn off on this device" is the member's choice: it stays off.
+    await page.getByRole('button', { name: 'Turn off on this device', exact: true }).click()
+    await expect(state).toHaveText('Notifications are off for this device.')
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'Devices', exact: true })).toBeVisible()
+    await expect(state).toHaveText('Notifications are off for this device.')
+    await page.waitForTimeout(1500)
+    await expect(state).toHaveText('Notifications are off for this device.')
+    await expect(row).toHaveCount(0)
+  })
+
   test(`a device test reports delivery and recent notifications say why one was skipped at ${width}px`, async ({ page, context }) => {
     await page.setViewportSize({ width, height: 900 })
     await context.grantPermissions(['notifications'])
