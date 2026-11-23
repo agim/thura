@@ -28,6 +28,7 @@ export const appViews = {
   loop: { path: '/app/loop', params: { contact: uuid, q: text, people: text, scope: oneOf('organization'), source: oneOf(...loopSources) } },
   meet: { path: '/app/meet', params: { meeting: id, filter: oneOf('ended') } },
   team: { path: '/app/settings/team', params: { team: uuid, step: oneOf(...teamSteps) } },
+  filters: { path: '/app/settings/filters', params: { mailbox: uuid, filter: (value: string) => value === 'new' || uuid(value), from: text, subject: text } },
 } as const
 export type AppName = keyof typeof appViews
 export type AppView<A extends AppName> = Partial<Record<keyof typeof appViews[A]['params'] | 'workspace', string>>

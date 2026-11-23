@@ -87,6 +87,21 @@ func Create(ctx context.Context, w, name string) (schema.MailLabel, error) {
 	}
 	return View(l), tx.Commit(ctx)
 }
+
+// Ensure answers the workspace label of that name, creating it when the
+// workspace has none (names compare without case).
+func Ensure(ctx context.Context, w, name string) (schema.MailLabel, error) {
+	tx, queries, err := locked(ctx, w)
+	if err != nil {
+		return schema.MailLabel{}, err
+	}
+	defer tx.Rollback(ctx)
+	l, err := create(ctx, queries, w, name, true)
+	if err != nil {
+		return schema.MailLabel{}, err
+	}
+	return View(l), tx.Commit(ctx)
+}
 func assign(ctx context.Context, queries *q.Queries, source, id, labelID string, applied bool) error {
 	if source == "mail" {
 		if _, err := queries.LockMailItem(ctx, id); err != nil {

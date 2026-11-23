@@ -20,8 +20,8 @@ import { RecipientInput } from './RecipientInput'
 import { DraftAutosave } from '../lib/draft-autosave'
 import { displayDate } from '../lib/display-date'
 import { userError } from '../lib/errors'
-import { mailFolders, useAppView, type AppView } from '../lib/app-view'
-import { Reply, ReplyAll, Forward, Undo2, X, Inbox, FilePenLine, Send, Archive, ShieldAlert, Trash2, Paperclip, Star, Clock } from 'lucide-react'
+import { mailFolders, useAppView, useOpenApp, type AppView } from '../lib/app-view'
+import { Reply, ReplyAll, Forward, Undo2, X, Inbox, FilePenLine, Send, Archive, ShieldAlert, Trash2, Paperclip, Star, Clock, Filter } from 'lucide-react'
 const folderIcons = { inbox: Inbox, drafts: FilePenLine, sent: Send, archive: Archive, spam: ShieldAlert, trash: Trash2 }
 import { MailReader } from './MailReader'
 import { MailLabelFilter, MailConversation } from './MailTools'
@@ -29,6 +29,8 @@ import { PinnedLabels, useLabelGuard, useLabelName } from './PinnedLabels'
 
 // A 4xx (not 429) answer for a message is final: it is gone or no longer shared, so retrying cannot help.
 const clientError = (error: unknown) => error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429
+// The address of a From header ("Ada <ada@example.org>"), else the header as written.
+const senderAddress = (from: string) => (/<([^<>\s]+@[^<>\s]+)>/.exec(from)?.[1] ?? from).trim().slice(0, 500)
 const folderName = (folder: MailFolder) => folder[0].toUpperCase() + folder.slice(1)
 // A recipient's delivery for a member: the route and SMIP reason codes are the managers'.
 function recipientState(state: string) { return ['accepted', 'captured', 'sent'].includes(state) ? 'Delivered' : ['blocked', 'failed'].includes(state) ? 'Failed' : 'Waiting' }
@@ -66,6 +68,7 @@ type MailViewProps = { workspaceId: string; mailboxId: string; view: AppView<'ma
 function MailView({ workspaceId, mailboxId, view, set, setNotice }: MailViewProps) {
   const client = useQueryClient()
   const contextMenu = useResourceContextMenu()
+  const openApp = useOpenApp()
   // A label is a view, not a filter (as in Gmail): ?label= lists the label's
   // messages in every folder but Spam and Trash (?all=1 adds them), and a
   // folder click leaves it. Folder and label never share the URL.
@@ -128,10 +131,13 @@ function MailView({ workspaceId, mailboxId, view, set, setNotice }: MailViewProp
   async function download(id: string) { try { downloadContent(await api.downloadMailAttachment({ workspaceId, mailboxId, id: selected, attachmentId: id })) } catch(e) { setReaderError(String(e)) } }
   const read = (item: MailItem) => { if (item.unread) flags.mutate({ id: item.id, values: { unread: false } }) }
   const restoreFolder = (item: MailItem): MailFolder => item.status === 'draft' ? 'drafts' : item.status === 'received' ? 'inbox' : 'sent'
+  // Settings → Mail filters opens a new filter for this sender.
+  const filterLike = (item: MailItem) => openApp('filters', { mailbox: mailboxId, filter: 'new', from: senderAddress(item.fromAddress) })
   function messageCommands(item:MailItem):ContextCommand[] { return [
     {label:'Open message',icon:<Inbox size={16}/>,run:()=>{open(item);read(item)}},
     {label:item.unread?'Mark as read':'Mark as unread',icon:<Inbox size={16}/>,run:()=>flags.mutate({id:item.id,values:{unread:!item.unread}})},
     {label:item.starred?'Unstar':'Star',icon:<Star size={16}/>,run:()=>flags.mutate({id:item.id,values:{starred:!item.starred}})},
+    ...(item.status==='received' ? [{label:'Filter messages like this',icon:<Filter size={16}/>,run:()=>filterLike(item)}] : []),
     {label:'Archive',icon:<Archive size={16}/>,disabled:move.isPending || item.status==='queued' || item.folder==='archive',run:()=>move.mutate({item,to:'archive'})},
     {label:'Trash',icon:<Trash2 size={16}/>,danger:true,disabled:move.isPending || item.status==='queued' || item.folder==='trash',run:()=>move.mutate({item,to:'trash'})},
   ] }
@@ -149,7 +155,7 @@ function MailView({ workspaceId, mailboxId, view, set, setNotice }: MailViewProp
       </section>
       <section className="reader" aria-label="Reading pane">{(editing || !current) && <div className="detail-return-row"><DetailBack className="mobile-back" onClick={() => showList()}>Back to messages</DetailBack>{selected && editing && <ResourceLabels workspaceId={workspaceId} source="mail" id={selected} />}</div>}
         {editing ? <DraftEditor key={editing.id} item={editing} workspaceId={workspaceId} mailboxId={mailboxId} saved={async i => { patchMail(client, mailboxId, i.id, () => i); if (i.status !== 'draft') setNotice(i.sendAt && new Date(i.sendAt).getTime() > Date.now() + 15000 ? { text: `Scheduled for ${displayDate(i.sendAt)}.`, undo: () => undo.mutate(i.id) } : { text: 'Sending…', undo: () => undo.mutate(i.id) }); await refresh(i.id) }} /> : current ? <>
-          <ActionRow label="Message tools" className="toolbar"><DetailBack onClick={() => showList()}>Back to messages</DetailBack><ResourceLabels workspaceId={workspaceId} source="mail" id={current.id} /><ActionButton aria-label={current.starred ? 'Unstar' : 'Star'} aria-pressed={current.starred} onClick={() => flags.mutate({ id: current.id, values: { starred: !current.starred } })}><Star size={18} fill={current.starred ? 'currentColor' : 'none'} /></ActionButton>{current.folder !== 'archive' && current.folder !== 'trash' && <ActionButton disabled={move.isPending || current.status === 'queued'} onClick={() => move.mutate({ item: current, to: 'archive' })} aria-label="Archive"><Archive size={18} aria-hidden="true" /><span className="action-label">Archive</span></ActionButton>}{current.folder !== 'trash' && <ActionButton disabled={move.isPending || current.status === 'queued'} onClick={() => move.mutate({ item: current, to: 'trash' })} aria-label="Trash"><Trash2 size={18} aria-hidden="true" /><span className="action-label">Trash</span></ActionButton>}{(current.folder === 'trash' || current.folder === 'archive') && <ActionButton disabled={move.isPending} onClick={() => move.mutate({ item: current, to: restoreFolder(current) })} aria-label={current.folder === 'trash' ? 'Restore' : `Move to ${folderName(restoreFolder(current))}`}><Undo2 size={18} aria-hidden="true" /><span className="action-label">{current.folder === 'trash' ? 'Restore' : `Move to ${folderName(restoreFolder(current))}`}</span></ActionButton>}</ActionRow>
+          <ActionRow label="Message tools" className="toolbar"><DetailBack onClick={() => showList()}>Back to messages</DetailBack><ResourceLabels workspaceId={workspaceId} source="mail" id={current.id} /><ActionButton aria-label={current.starred ? 'Unstar' : 'Star'} aria-pressed={current.starred} onClick={() => flags.mutate({ id: current.id, values: { starred: !current.starred } })}><Star size={18} fill={current.starred ? 'currentColor' : 'none'} /></ActionButton>{current.status === 'received' && <ActionButton onClick={() => filterLike(current)} aria-label="Filter messages like this"><Filter size={18} aria-hidden="true" /><span className="action-label">Filter</span></ActionButton>}{current.folder !== 'archive' && current.folder !== 'trash' && <ActionButton disabled={move.isPending || current.status === 'queued'} onClick={() => move.mutate({ item: current, to: 'archive' })} aria-label="Archive"><Archive size={18} aria-hidden="true" /><span className="action-label">Archive</span></ActionButton>}{current.folder !== 'trash' && <ActionButton disabled={move.isPending || current.status === 'queued'} onClick={() => move.mutate({ item: current, to: 'trash' })} aria-label="Trash"><Trash2 size={18} aria-hidden="true" /><span className="action-label">Trash</span></ActionButton>}{(current.folder === 'trash' || current.folder === 'archive') && <ActionButton disabled={move.isPending} onClick={() => move.mutate({ item: current, to: restoreFolder(current) })} aria-label={current.folder === 'trash' ? 'Restore' : `Move to ${folderName(restoreFolder(current))}`}><Undo2 size={18} aria-hidden="true" /><span className="action-label">{current.folder === 'trash' ? 'Restore' : `Move to ${folderName(restoreFolder(current))}`}</span></ActionButton>}</ActionRow>
           <h3 className="title">{current.subject || '(No subject)'}</h3><p className="small quiet">From {current.fromAddress} · To {current.toAddress}</p>
           <p className="small quiet">{current.status === 'received' ? `Received ${displayDate(current.createdAt)}` : !detail.data?.canManage && current.deliveryReason ? `${current.deliveryReason} · ${displayDate(current.updatedAt)}` : `${deliveryStatus(current.status)} · ${displayDate(current.status === 'queued' && current.sendAt ? current.sendAt : current.updatedAt)}${current.deliveryReason ? ` · ${current.deliveryReason}` : ''}`}</p>
           {!!detail.data?.deliveries?.length && <details className="mail-delivery"><summary>Delivery by recipient</summary><ul>{detail.data.deliveries.map(d => <li key={d.id}><strong>{d.recipient}</strong> · {detail.data?.canManage ? <>{d.transport === 'smip' ? 'Verified SMIP' : d.transport === 'provider' ? 'Configured provider' : 'Verifying domain'} · {deliveryStatus(d.state)}<small className="quiet"> · {d.reason.replaceAll('_', ' ')}</small></> : recipientState(d.state)}</li>)}</ul></details>}

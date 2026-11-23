@@ -119,3 +119,31 @@ UPDATE mailbox SET signature=$2,sender_name=$3 WHERE id=$1 RETURNING *;
 SELECT (CASE WHEN m.private THEN COALESCE(u.name,'') ELSE w.name END)::text AS name
 FROM mailbox m JOIN workspace w ON w.id=m.workspace_id LEFT JOIN auth_user u ON u.subject=m.owner_subject
 WHERE m.id=$1;
+
+-- name: ListMailFilters :many
+SELECT * FROM mail_filter WHERE mailbox_id=$1 ORDER BY position,created_at,id;
+-- name: ListActiveMailFilters :many
+SELECT * FROM mail_filter WHERE mailbox_id=$1 AND enabled ORDER BY position,created_at,id;
+-- name: GetMailFilter :one
+SELECT * FROM mail_filter WHERE id=$1 AND mailbox_id=$2;
+-- name: CountMailFilters :one
+SELECT count(*)::int FROM mail_filter WHERE mailbox_id=$1;
+-- name: CreateMailFilter :one
+INSERT INTO mail_filter(mailbox_id,from_contains,to_contains,subject_contains,has_words,label_id,skip_inbox,mark_read,star,trash,enabled,position)
+VALUES(sqlc.arg(mailbox_id),sqlc.arg(from_contains),sqlc.arg(to_contains),sqlc.arg(subject_contains),sqlc.arg(has_words),sqlc.narg(label_id),sqlc.arg(skip_inbox),sqlc.arg(mark_read),sqlc.arg(star),sqlc.arg(trash),sqlc.arg(enabled),
+(SELECT coalesce(max(f.position),0)+1 FROM mail_filter f WHERE f.mailbox_id=sqlc.arg(mailbox_id))) RETURNING *;
+-- name: UpdateMailFilter :one
+UPDATE mail_filter SET from_contains=sqlc.arg(from_contains),to_contains=sqlc.arg(to_contains),subject_contains=sqlc.arg(subject_contains),has_words=sqlc.arg(has_words),
+label_id=sqlc.narg(label_id),skip_inbox=sqlc.arg(skip_inbox),mark_read=sqlc.arg(mark_read),star=sqlc.arg(star),trash=sqlc.arg(trash),enabled=sqlc.arg(enabled)
+WHERE id=sqlc.arg(id) AND mailbox_id=sqlc.arg(mailbox_id) RETURNING *;
+-- name: DeleteMailFilter :execrows
+DELETE FROM mail_filter WHERE id=$1 AND mailbox_id=$2;
+-- name: FileFilteredMail :one
+-- What a filter does to one message: only ever out of the Inbox, never back.
+UPDATE mail_item SET folder=sqlc.arg(folder),unread=unread AND NOT sqlc.arg(mark_read)::bool,starred=starred OR sqlc.arg(star)::bool
+WHERE id=sqlc.arg(id) AND folder='inbox' RETURNING *;
+-- name: ListInboxForFilters :many
+-- Received Inbox mail, newest first, for "also apply to mail already in the Inbox".
+SELECT * FROM mail_item WHERE mailbox_id=sqlc.arg(mailbox_id) AND folder='inbox' AND status='received'
+AND (sqlc.narg(before_time)::timestamptz IS NULL OR (updated_at,id) < (sqlc.narg(before_time)::timestamptz,sqlc.arg(before_id)::uuid))
+ORDER BY updated_at DESC,id DESC LIMIT sqlc.arg(page_limit);

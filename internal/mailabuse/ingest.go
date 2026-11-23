@@ -10,6 +10,7 @@ import (
 	"github.com/agim/lidza/pkg/router"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/mailfilter"
 	"thura/internal/push"
 	"thura/internal/rspamd"
 	"thura/schema"
@@ -156,8 +157,18 @@ func Enqueue(ctx context.Context, tx pgx.Tx, box q.Mailbox, item q.MailItem, p q
 	}
 	// Clean mail reached the Inbox now: notify its readers in the same
 	// transaction. Held mail notifies when the worker releases it there.
+	// The mailbox's filters file it first: mail a filter takes out of the
+	// Inbox does not notify, and its readers' logs say why.
 	if state == "clean" && item.Folder == q.MailFolderInbox {
-		if err = push.MailArrived(ctx, tx, item.ID, person.State == "person"); err != nil {
+		if item, err = mailfilter.Arrive(ctx, queries, item); err != nil {
+			return item, err
+		}
+		if item.Folder == q.MailFolderInbox {
+			err = push.MailArrived(ctx, tx, item.ID, person.State == "person")
+		} else {
+			err = push.MailFiltered(ctx, tx, item.ID)
+		}
+		if err != nil {
 			return item, err
 		}
 	}

@@ -1453,6 +1453,57 @@ func (v LabelPin) Validate() error {
 	return errs.Result()
 }
 
+// MailFilter is a row of the mail_filter table.
+type MailFilter struct {
+	ID              string    `json:"id" db:"id"`
+	MailboxID       string    `json:"mailboxId" db:"mailbox_id"`
+	FromContains    string    `json:"fromContains" db:"from_contains"`
+	ToContains      string    `json:"toContains" db:"to_contains"`
+	SubjectContains string    `json:"subjectContains" db:"subject_contains"`
+	HasWords        string    `json:"hasWords" db:"has_words"`
+	LabelID         *string   `json:"labelId" db:"label_id"`
+	SkipInbox       bool      `json:"skipInbox" db:"skip_inbox"`
+	MarkRead        bool      `json:"markRead" db:"mark_read"`
+	Star            bool      `json:"star" db:"star"`
+	Trash           bool      `json:"trash" db:"trash"`
+	Enabled         bool      `json:"enabled" db:"enabled"`
+	Position        int       `json:"position" db:"position"`
+	CreatedAt       time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Validate applies the rules of MailFilter from schema.lidza.
+func (v MailFilter) Validate() error {
+	var errs validate.Errors
+	if v.MailboxID == "" {
+		errs.Add("mailboxId", "required", "required")
+	}
+	if v.FromContains == "" {
+		errs.Add("fromContains", "required", "required")
+	}
+	if len(v.FromContains) > 500 {
+		errs.Add("fromContains", "max", "at most 500 character(s)")
+	}
+	if v.ToContains == "" {
+		errs.Add("toContains", "required", "required")
+	}
+	if len(v.ToContains) > 500 {
+		errs.Add("toContains", "max", "at most 500 character(s)")
+	}
+	if v.SubjectContains == "" {
+		errs.Add("subjectContains", "required", "required")
+	}
+	if len(v.SubjectContains) > 500 {
+		errs.Add("subjectContains", "max", "at most 500 character(s)")
+	}
+	if v.HasWords == "" {
+		errs.Add("hasWords", "required", "required")
+	}
+	if len(v.HasWords) > 500 {
+		errs.Add("hasWords", "max", "at most 500 character(s)")
+	}
+	return errs.Result()
+}
+
 // AuditEvent is a row of the audit_event table.
 type AuditEvent struct {
 	ID        string          `json:"id" db:"id"`
@@ -5152,6 +5203,90 @@ func (v MailLabelChange) Validate() error {
 	var errs validate.Errors
 	if v.LabelID == "" {
 		errs.Add("labelId", "required", "required")
+	}
+	return errs.Result()
+}
+
+// MailFilterList is an API type.
+type MailFilterList struct {
+	Items []MailFilter `json:"items"`
+}
+
+// Validate applies the rules of MailFilterList from schema.lidza.
+func (v MailFilterList) Validate() error {
+	var errs validate.Errors
+	for _, x := range v.Items {
+		if err := x.Validate(); err != nil {
+			errs.Add("items", "nested", err.Error())
+			break
+		}
+	}
+	return errs.Result()
+}
+
+// MailFilterInput is an API type.
+type MailFilterInput struct {
+	FromContains    *string `json:"fromContains"`
+	ToContains      *string `json:"toContains"`
+	SubjectContains *string `json:"subjectContains"`
+	HasWords        *string `json:"hasWords"`
+	LabelID         *string `json:"labelId"`
+	LabelName       *string `json:"labelName"`
+	SkipInbox       *bool   `json:"skipInbox"`
+	MarkRead        *bool   `json:"markRead"`
+	Star            *bool   `json:"star"`
+	Trash           *bool   `json:"trash"`
+	Enabled         *bool   `json:"enabled"`
+	ApplyExisting   *bool   `json:"applyExisting"`
+}
+
+// Validate applies the rules of MailFilterInput from schema.lidza.
+func (v MailFilterInput) Validate() error {
+	var errs validate.Errors
+	if v.FromContains != nil {
+		x := *v.FromContains
+		if len(x) > 500 {
+			errs.Add("fromContains", "max", "at most 500 character(s)")
+		}
+	}
+	if v.ToContains != nil {
+		x := *v.ToContains
+		if len(x) > 500 {
+			errs.Add("toContains", "max", "at most 500 character(s)")
+		}
+	}
+	if v.SubjectContains != nil {
+		x := *v.SubjectContains
+		if len(x) > 500 {
+			errs.Add("subjectContains", "max", "at most 500 character(s)")
+		}
+	}
+	if v.HasWords != nil {
+		x := *v.HasWords
+		if len(x) > 500 {
+			errs.Add("hasWords", "max", "at most 500 character(s)")
+		}
+	}
+	if v.LabelName != nil {
+		x := *v.LabelName
+		if len(x) > 40 {
+			errs.Add("labelName", "max", "at most 40 character(s)")
+		}
+	}
+	return errs.Result()
+}
+
+// MailFilterResult is an API type.
+type MailFilterResult struct {
+	Filter  MailFilter `json:"filter"`
+	Applied int        `json:"applied"`
+}
+
+// Validate applies the rules of MailFilterResult from schema.lidza.
+func (v MailFilterResult) Validate() error {
+	var errs validate.Errors
+	if err := v.Filter.Validate(); err != nil {
+		errs.Add("filter", "nested", err.Error())
 	}
 	return errs.Result()
 }

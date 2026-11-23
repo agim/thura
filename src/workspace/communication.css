@@ -480,6 +480,15 @@
 #orbit-workspace.zero-workspace .notification-choice small { color: var(--quiet); font-size: 12px; font-weight: 400; }
 #orbit-workspace.zero-workspace .notification-device-row > span:first-child { display: grid; gap: 2px; }
 #orbit-workspace.zero-workspace .notification-device-row strong, #orbit-workspace.zero-workspace .notification-removed-row strong, #orbit-workspace.zero-workspace .notification-recent-row strong { font-weight: 600; color: var(--ink); }
+#orbit-workspace.zero-workspace .mail-filter-row { align-items: flex-start; flex-wrap: wrap; }
+#orbit-workspace.zero-workspace .mail-filter-row > span:first-child { display: grid; gap: 4px; flex: 1 1 240px; }
+#orbit-workspace.zero-workspace .mail-filter-row .notification-row-actions { align-items: center; }
+#orbit-workspace.zero-workspace .mail-filter-fields { display: grid; gap: 12px; margin: 0; padding: 14px; border: 1px solid var(--line); border-radius: var(--app-radius-control); min-width: 0; }
+#orbit-workspace.zero-workspace .mail-filter-fields legend { padding-inline: 6px; font-weight: 600; font-size: 13px; }
+#orbit-workspace.zero-workspace .mail-filter-on { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+#orbit-workspace.zero-workspace .mail-filter-on input { width: 18px; height: 18px; }
+#orbit-workspace.zero-workspace .mail-filter-field { display: grid; gap: 4px; }
+#orbit-workspace.zero-workspace .mail-filter-field > small { color: var(--quiet); font-size: 12px; }
 #orbit-workspace.zero-workspace .notification-row-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 #orbit-workspace.zero-workspace .notification-error { color: var(--color-danger); font-size: 12px; overflow-wrap: anywhere; }
 #orbit-workspace.zero-workspace .settings-form p.notification-error { color: var(--color-danger); }

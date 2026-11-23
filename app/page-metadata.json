@@ -109,6 +109,11 @@
     "description": "Manage your Thura workspace preferences.",
     "noIndex": true
   },
+  "/app/settings/filters": {
+    "title": "Mail filters \u00b7 Thura",
+    "description": "File new mail automatically with filters.",
+    "noIndex": true
+  },
   "/app/settings/calendar": {
     "title": "Calendar settings \u00b7 Thura",
     "description": "Manage your Thura workspace preferences.",

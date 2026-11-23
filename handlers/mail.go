@@ -289,6 +289,28 @@ func DeleteMailLabel(ctx context.Context, r *router.Request[router.None]) (route
 func ChangeMailLabel(ctx context.Context, r *router.Request[schema.MailLabelChange]) (router.None, error) {
 	return router.None{}, mailbox.ChangeLabel(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Param("id"), r.Body)
 }
+
+// Mail filters are a mailbox's own (internal/mailbox, internal/mailfilter).
+func ListMailFilters(ctx context.Context, r *router.Request[router.None]) (schema.MailFilterList, error) {
+	return mailbox.ListFilters(ctx, r.Param("workspaceId"), r.Param("mailboxId"))
+}
+func CreateMailFilter(ctx context.Context, r *router.Request[schema.MailFilterInput]) (schema.MailFilterResult, error) {
+	out, err := mailbox.SaveFilter(ctx, r.Param("workspaceId"), r.Param("mailboxId"), "", r.Body)
+	if err == nil {
+		r.Status(http.StatusCreated)
+	}
+	return out, err
+}
+func UpdateMailFilter(ctx context.Context, r *router.Request[schema.MailFilterInput]) (schema.MailFilterResult, error) {
+	id := r.Param("filterId")
+	if id == "" {
+		return schema.MailFilterResult{}, router.Errorf(404, "filter not found")
+	}
+	return mailbox.SaveFilter(ctx, r.Param("workspaceId"), r.Param("mailboxId"), id, r.Body)
+}
+func DeleteMailFilter(ctx context.Context, r *router.Request[router.None]) (router.None, error) {
+	return router.None{}, mailbox.DeleteFilter(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Param("filterId"))
+}
 func UpdateMailSignature(ctx context.Context, r *router.Request[schema.MailSignatureInput]) (schema.MailboxView, error) {
 	return mailbox.UpdateSettings(ctx, r.Param("workspaceId"), r.Param("mailboxId"), r.Body)
 }

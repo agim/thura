@@ -20,6 +20,7 @@ const skips: Record<string, string> = {
   people_only: 'Skipped: not from a real person (Only from real people is on)',
   open: 'Skipped: you had it open',
   spam: 'Skipped: spam/held',
+  filtered: 'Skipped: a mail filter moved it out of your Inbox',
   own: 'Skipped: your own action',
   off: 'Skipped: turned off under Notify me about',
 }

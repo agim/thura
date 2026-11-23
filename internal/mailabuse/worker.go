@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	q "thura/db/queries/gen"
+	"thura/internal/mailfilter"
 	"thura/internal/push"
 	"thura/internal/assistant"
 	"thura/internal/rspamd"
@@ -422,8 +423,21 @@ func Screen(ctx context.Context, raw json.RawMessage) error {
 		if err = queries.MoveScreenedMail(ctx, q.MoveScreenedMailParams{ID: item.ID, Folder: q.MailFolderInbox}); err != nil {
 			return err
 		}
-		// Screening released it to the Inbox: this is when it arrives.
-		if err = push.MailArrived(ctx, finish, item.ID, personState == "person"); err != nil {
+		// Screening released it to the Inbox: this is when it arrives, and
+		// when the mailbox's filters file it.
+		released, err := queries.GetMailItem(ctx, item.ID)
+		if err != nil {
+			return err
+		}
+		if released, err = mailfilter.Arrive(ctx, queries, released); err != nil {
+			return err
+		}
+		if released.Folder == q.MailFolderInbox {
+			err = push.MailArrived(ctx, finish, item.ID, personState == "person")
+		} else {
+			err = push.MailFiltered(ctx, finish, item.ID)
+		}
+		if err != nil {
 			return err
 		}
 	}

@@ -971,6 +971,51 @@ type MailLabelChange {
  labelId uuid
  applied bool
 }
+// A mailbox's filters, as in Gmail: each rule matches new mail that reaches
+// the Inbox and files it (apply a label, skip the Inbox, mark as read, star,
+// or move to Trash). Criteria are case-insensitive "contains" texts, all of
+// the filled ones must match; a comma or OR separates alternatives. Mail
+// held as Spam is never filtered. A deleted label takes its filters along.
+model MailFilter {
+ id uuid @id @default(uuid())
+ mailboxId uuid @ref(Mailbox, cascade) @index
+ fromContains string @max(500) @default("")
+ toContains string @max(500) @default("")
+ subjectContains string @max(500) @default("")
+ hasWords string @max(500) @default("")
+ labelId uuid? @ref(MailLabel, cascade) @index
+ skipInbox bool @default(false)
+ markRead bool @default(false)
+ star bool @default(false)
+ trash bool @default(false)
+ enabled bool @default(true)
+ position int @default(0)
+ createdAt time @default(now())
+}
+type MailFilterList {
+ items MailFilter[]
+}
+// labelName files into a label by name, creating it when the workspace has
+// none by that name; applyExisting also files matching mail already in the
+// Inbox.
+type MailFilterInput {
+ fromContains string? @max(500)
+ toContains string? @max(500)
+ subjectContains string? @max(500)
+ hasWords string? @max(500)
+ labelId uuid?
+ labelName string? @max(40)
+ skipInbox bool?
+ markRead bool?
+ star bool?
+ trash bool?
+ enabled bool?
+ applyExisting bool?
+}
+type MailFilterResult {
+ filter MailFilter
+ applied int
+}
 type MailSignatureInput {
  signature string? @max(5000)
  senderName string? @max(120)

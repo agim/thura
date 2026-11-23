@@ -555,6 +555,25 @@ CREATE TABLE label_pin (
 CREATE INDEX label_pin_label_id_idx ON label_pin (label_id);
 CREATE UNIQUE INDEX label_pin_workspace_id_subject_label_id_app_key ON label_pin (workspace_id, subject, label_id, app);
 
+CREATE TABLE mail_filter (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  mailbox_id uuid NOT NULL REFERENCES mailbox(id) ON DELETE CASCADE,
+  from_contains varchar(500) NOT NULL DEFAULT '',
+  to_contains varchar(500) NOT NULL DEFAULT '',
+  subject_contains varchar(500) NOT NULL DEFAULT '',
+  has_words varchar(500) NOT NULL DEFAULT '',
+  label_id uuid REFERENCES mail_label(id) ON DELETE CASCADE,
+  skip_inbox boolean NOT NULL DEFAULT false,
+  mark_read boolean NOT NULL DEFAULT false,
+  star boolean NOT NULL DEFAULT false,
+  trash boolean NOT NULL DEFAULT false,
+  enabled boolean NOT NULL DEFAULT true,
+  position integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX mail_filter_mailbox_id_idx ON mail_filter (mailbox_id);
+CREATE INDEX mail_filter_label_id_idx ON mail_filter (label_id);
+
 CREATE TABLE audit_event (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   at timestamptz NOT NULL DEFAULT now(),

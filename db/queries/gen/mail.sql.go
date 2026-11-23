@@ -135,6 +135,17 @@ func (q *Queries) ClaimInitialMailbox(ctx context.Context, arg ClaimInitialMailb
 	return result.RowsAffected(), nil
 }
 
+const countMailFilters = `-- name: CountMailFilters :one
+SELECT count(*)::int FROM mail_filter WHERE mailbox_id=$1
+`
+
+func (q *Queries) CountMailFilters(ctx context.Context, mailboxID string) (int32, error) {
+	row := q.db.QueryRow(ctx, countMailFilters, mailboxID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createDraft = `-- name: CreateDraft :one
 INSERT INTO mail_item(mailbox_id,author_id,folder,from_address,to_address,cc,bcc,subject,text_body,html_body,thread_id)
 VALUES($1,$2,'drafts',$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, delivery_reason, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at
@@ -193,6 +204,60 @@ func (q *Queries) CreateDraft(ctx context.Context, arg CreateDraftParams) (MailI
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createMailFilter = `-- name: CreateMailFilter :one
+INSERT INTO mail_filter(mailbox_id,from_contains,to_contains,subject_contains,has_words,label_id,skip_inbox,mark_read,star,trash,enabled,position)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
+(SELECT coalesce(max(f.position),0)+1 FROM mail_filter f WHERE f.mailbox_id=$1)) RETURNING id, mailbox_id, from_contains, to_contains, subject_contains, has_words, label_id, skip_inbox, mark_read, star, trash, enabled, position, created_at
+`
+
+type CreateMailFilterParams struct {
+	MailboxID       string  `json:"mailbox_id"`
+	FromContains    string  `json:"from_contains"`
+	ToContains      string  `json:"to_contains"`
+	SubjectContains string  `json:"subject_contains"`
+	HasWords        string  `json:"has_words"`
+	LabelID         *string `json:"label_id"`
+	SkipInbox       bool    `json:"skip_inbox"`
+	MarkRead        bool    `json:"mark_read"`
+	Star            bool    `json:"star"`
+	Trash           bool    `json:"trash"`
+	Enabled         bool    `json:"enabled"`
+}
+
+func (q *Queries) CreateMailFilter(ctx context.Context, arg CreateMailFilterParams) (MailFilter, error) {
+	row := q.db.QueryRow(ctx, createMailFilter,
+		arg.MailboxID,
+		arg.FromContains,
+		arg.ToContains,
+		arg.SubjectContains,
+		arg.HasWords,
+		arg.LabelID,
+		arg.SkipInbox,
+		arg.MarkRead,
+		arg.Star,
+		arg.Trash,
+		arg.Enabled,
+	)
+	var i MailFilter
+	err := row.Scan(
+		&i.ID,
+		&i.MailboxID,
+		&i.FromContains,
+		&i.ToContains,
+		&i.SubjectContains,
+		&i.HasWords,
+		&i.LabelID,
+		&i.SkipInbox,
+		&i.MarkRead,
+		&i.Star,
+		&i.Trash,
+		&i.Enabled,
+		&i.Position,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -276,6 +341,74 @@ func (q *Queries) DeleteMailAttachment(ctx context.Context, arg DeleteMailAttach
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const deleteMailFilter = `-- name: DeleteMailFilter :execrows
+DELETE FROM mail_filter WHERE id=$1 AND mailbox_id=$2
+`
+
+type DeleteMailFilterParams struct {
+	ID        string `json:"id"`
+	MailboxID string `json:"mailbox_id"`
+}
+
+func (q *Queries) DeleteMailFilter(ctx context.Context, arg DeleteMailFilterParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteMailFilter, arg.ID, arg.MailboxID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const fileFilteredMail = `-- name: FileFilteredMail :one
+UPDATE mail_item SET folder=$1,unread=unread AND NOT $2::bool,starred=starred OR $3::bool
+WHERE id=$4 AND folder='inbox' RETURNING id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, delivery_reason, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at
+`
+
+type FileFilteredMailParams struct {
+	Folder   MailFolder `json:"folder"`
+	MarkRead bool       `json:"mark_read"`
+	Star     bool       `json:"star"`
+	ID       string     `json:"id"`
+}
+
+// What a filter does to one message: only ever out of the Inbox, never back.
+func (q *Queries) FileFilteredMail(ctx context.Context, arg FileFilteredMailParams) (MailItem, error) {
+	row := q.db.QueryRow(ctx, fileFilteredMail,
+		arg.Folder,
+		arg.MarkRead,
+		arg.Star,
+		arg.ID,
+	)
+	var i MailItem
+	err := row.Scan(
+		&i.ID,
+		&i.MailboxID,
+		&i.AuthorID,
+		&i.Folder,
+		&i.FromAddress,
+		&i.ToAddress,
+		&i.Cc,
+		&i.Bcc,
+		&i.Subject,
+		&i.TextBody,
+		&i.HTMLBody,
+		&i.Status,
+		&i.Starred,
+		&i.Unread,
+		&i.ProviderID,
+		&i.DeliveryReason,
+		&i.RawKey,
+		&i.ExternalID,
+		&i.ThreadID,
+		&i.MessageID,
+		&i.InReplyTo,
+		&i.ReferencesHeader,
+		&i.SendAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const findInboundMail = `-- name: FindInboundMail :one
@@ -377,6 +510,37 @@ func (q *Queries) GetMailAttachment(ctx context.Context, id string) (MailAttachm
 		&i.Size,
 		&i.ObjectKey,
 		&i.ContentID,
+	)
+	return i, err
+}
+
+const getMailFilter = `-- name: GetMailFilter :one
+SELECT id, mailbox_id, from_contains, to_contains, subject_contains, has_words, label_id, skip_inbox, mark_read, star, trash, enabled, position, created_at FROM mail_filter WHERE id=$1 AND mailbox_id=$2
+`
+
+type GetMailFilterParams struct {
+	ID        string `json:"id"`
+	MailboxID string `json:"mailbox_id"`
+}
+
+func (q *Queries) GetMailFilter(ctx context.Context, arg GetMailFilterParams) (MailFilter, error) {
+	row := q.db.QueryRow(ctx, getMailFilter, arg.ID, arg.MailboxID)
+	var i MailFilter
+	err := row.Scan(
+		&i.ID,
+		&i.MailboxID,
+		&i.FromContains,
+		&i.ToContains,
+		&i.SubjectContains,
+		&i.HasWords,
+		&i.LabelID,
+		&i.SkipInbox,
+		&i.MarkRead,
+		&i.Star,
+		&i.Trash,
+		&i.Enabled,
+		&i.Position,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -532,6 +696,110 @@ func (q *Queries) InsertInboundMail(ctx context.Context, arg InsertInboundMailPa
 	return i, err
 }
 
+const listActiveMailFilters = `-- name: ListActiveMailFilters :many
+SELECT id, mailbox_id, from_contains, to_contains, subject_contains, has_words, label_id, skip_inbox, mark_read, star, trash, enabled, position, created_at FROM mail_filter WHERE mailbox_id=$1 AND enabled ORDER BY position,created_at,id
+`
+
+func (q *Queries) ListActiveMailFilters(ctx context.Context, mailboxID string) ([]MailFilter, error) {
+	rows, err := q.db.Query(ctx, listActiveMailFilters, mailboxID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MailFilter
+	for rows.Next() {
+		var i MailFilter
+		if err := rows.Scan(
+			&i.ID,
+			&i.MailboxID,
+			&i.FromContains,
+			&i.ToContains,
+			&i.SubjectContains,
+			&i.HasWords,
+			&i.LabelID,
+			&i.SkipInbox,
+			&i.MarkRead,
+			&i.Star,
+			&i.Trash,
+			&i.Enabled,
+			&i.Position,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listInboxForFilters = `-- name: ListInboxForFilters :many
+SELECT id, mailbox_id, author_id, folder, from_address, to_address, cc, bcc, subject, text_body, html_body, status, starred, unread, provider_id, delivery_reason, raw_key, external_id, thread_id, message_id, in_reply_to, references_header, send_at, created_at, updated_at FROM mail_item WHERE mailbox_id=$1 AND folder='inbox' AND status='received'
+AND ($2::timestamptz IS NULL OR (updated_at,id) < ($2::timestamptz,$3::uuid))
+ORDER BY updated_at DESC,id DESC LIMIT $4
+`
+
+type ListInboxForFiltersParams struct {
+	MailboxID  string     `json:"mailbox_id"`
+	BeforeTime *time.Time `json:"before_time"`
+	BeforeID   string     `json:"before_id"`
+	PageLimit  int32      `json:"page_limit"`
+}
+
+// Received Inbox mail, newest first, for "also apply to mail already in the Inbox".
+func (q *Queries) ListInboxForFilters(ctx context.Context, arg ListInboxForFiltersParams) ([]MailItem, error) {
+	rows, err := q.db.Query(ctx, listInboxForFilters,
+		arg.MailboxID,
+		arg.BeforeTime,
+		arg.BeforeID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MailItem
+	for rows.Next() {
+		var i MailItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.MailboxID,
+			&i.AuthorID,
+			&i.Folder,
+			&i.FromAddress,
+			&i.ToAddress,
+			&i.Cc,
+			&i.Bcc,
+			&i.Subject,
+			&i.TextBody,
+			&i.HTMLBody,
+			&i.Status,
+			&i.Starred,
+			&i.Unread,
+			&i.ProviderID,
+			&i.DeliveryReason,
+			&i.RawKey,
+			&i.ExternalID,
+			&i.ThreadID,
+			&i.MessageID,
+			&i.InReplyTo,
+			&i.ReferencesHeader,
+			&i.SendAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listItemLabels = `-- name: ListItemLabels :many
 SELECT l.id, l.workspace_id, l.mailbox_id, l.name, l.system_key FROM mail_label l JOIN mail_tag t ON t.label_id=l.id WHERE t.item_id=$1 ORDER BY l.name,l.id
 `
@@ -659,6 +927,45 @@ func (q *Queries) ListMailAttachments(ctx context.Context, itemID string) ([]Mai
 			&i.Size,
 			&i.ObjectKey,
 			&i.ContentID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMailFilters = `-- name: ListMailFilters :many
+SELECT id, mailbox_id, from_contains, to_contains, subject_contains, has_words, label_id, skip_inbox, mark_read, star, trash, enabled, position, created_at FROM mail_filter WHERE mailbox_id=$1 ORDER BY position,created_at,id
+`
+
+func (q *Queries) ListMailFilters(ctx context.Context, mailboxID string) ([]MailFilter, error) {
+	rows, err := q.db.Query(ctx, listMailFilters, mailboxID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MailFilter
+	for rows.Next() {
+		var i MailFilter
+		if err := rows.Scan(
+			&i.ID,
+			&i.MailboxID,
+			&i.FromContains,
+			&i.ToContains,
+			&i.SubjectContains,
+			&i.HasWords,
+			&i.LabelID,
+			&i.SkipInbox,
+			&i.MarkRead,
+			&i.Star,
+			&i.Trash,
+			&i.Enabled,
+			&i.Position,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1319,6 +1626,62 @@ func (q *Queries) UpdateDraft(ctx context.Context, arg UpdateDraftParams) (MailI
 		&i.SendAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateMailFilter = `-- name: UpdateMailFilter :one
+UPDATE mail_filter SET from_contains=$1,to_contains=$2,subject_contains=$3,has_words=$4,
+label_id=$5,skip_inbox=$6,mark_read=$7,star=$8,trash=$9,enabled=$10
+WHERE id=$11 AND mailbox_id=$12 RETURNING id, mailbox_id, from_contains, to_contains, subject_contains, has_words, label_id, skip_inbox, mark_read, star, trash, enabled, position, created_at
+`
+
+type UpdateMailFilterParams struct {
+	FromContains    string  `json:"from_contains"`
+	ToContains      string  `json:"to_contains"`
+	SubjectContains string  `json:"subject_contains"`
+	HasWords        string  `json:"has_words"`
+	LabelID         *string `json:"label_id"`
+	SkipInbox       bool    `json:"skip_inbox"`
+	MarkRead        bool    `json:"mark_read"`
+	Star            bool    `json:"star"`
+	Trash           bool    `json:"trash"`
+	Enabled         bool    `json:"enabled"`
+	ID              string  `json:"id"`
+	MailboxID       string  `json:"mailbox_id"`
+}
+
+func (q *Queries) UpdateMailFilter(ctx context.Context, arg UpdateMailFilterParams) (MailFilter, error) {
+	row := q.db.QueryRow(ctx, updateMailFilter,
+		arg.FromContains,
+		arg.ToContains,
+		arg.SubjectContains,
+		arg.HasWords,
+		arg.LabelID,
+		arg.SkipInbox,
+		arg.MarkRead,
+		arg.Star,
+		arg.Trash,
+		arg.Enabled,
+		arg.ID,
+		arg.MailboxID,
+	)
+	var i MailFilter
+	err := row.Scan(
+		&i.ID,
+		&i.MailboxID,
+		&i.FromContains,
+		&i.ToContains,
+		&i.SubjectContains,
+		&i.HasWords,
+		&i.LabelID,
+		&i.SkipInbox,
+		&i.MarkRead,
+		&i.Star,
+		&i.Trash,
+		&i.Enabled,
+		&i.Position,
+		&i.CreatedAt,
 	)
 	return i, err
 }

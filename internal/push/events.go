@@ -42,17 +42,23 @@ func senderName(from string) string {
 // preview is the sender's name and the subject; the body never leaves the
 // server.
 func MailArrived(ctx context.Context, tx pgx.Tx, itemID string, person bool) error {
-	return mailEvent(ctx, tx, itemID, person, false)
+	return mailEvent(ctx, tx, itemID, person, "")
 }
 
 // MailHeld records, for the readers of a mailbox, that a message was held
 // (Spam, quarantine) instead of reaching the Inbox, so "Recent
 // notifications" can say why it did not notify. Nothing is sent.
 func MailHeld(ctx context.Context, tx pgx.Tx, itemID string) error {
-	return mailEvent(ctx, tx, itemID, false, true)
+	return mailEvent(ctx, tx, itemID, false, SkipSpam)
 }
 
-func mailEvent(ctx context.Context, tx pgx.Tx, itemID string, person, held bool) error {
+// MailFiltered records, for the readers of a mailbox, that one of its
+// filters took a message out of the Inbox as it arrived. Nothing is sent.
+func MailFiltered(ctx context.Context, tx pgx.Tx, itemID string) error {
+	return mailEvent(ctx, tx, itemID, false, SkipFiltered)
+}
+
+func mailEvent(ctx context.Context, tx pgx.Tx, itemID string, person bool, skip string) error {
 	queries := q.New(tx)
 	m, err := queries.PushMailArrival(ctx, itemID)
 	if err != nil {
@@ -77,9 +83,12 @@ func mailEvent(ctx context.Context, tx pgx.Tx, itemID string, person, held bool)
 		Tag:  "mail-" + m.ID,
 		View: &View{Path: "/app/mail", Params: map[string]string{"folder": "inbox"}, Defaults: map[string]string{"folder": "inbox"}, Loose: map[string]string{"workspace": m.WorkspaceID, "mailbox": m.MailboxID}},
 	}
-	if held || m.Folder != q.MailFolderInbox {
+	if skip == "" && m.Folder != q.MailFolderInbox {
+		skip = SkipSpam
+	}
+	if skip != "" {
 		e.URL = link("/app/mail", "workspace", m.WorkspaceID, "mailbox", m.MailboxID, "folder", string(m.Folder), "message", m.ID)
-		return Skip(ctx, tx, m.WorkspaceID, recipients, e, SkipSpam)
+		return Skip(ctx, tx, m.WorkspaceID, recipients, e, skip)
 	}
 	_, err = Notify(ctx, tx, m.WorkspaceID, recipients, e)
 	return err

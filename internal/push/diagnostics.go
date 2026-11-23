@@ -31,6 +31,7 @@ const (
 	SkipPeopleOnly = "people_only" // mail not from a real person, "Only mail from real people" chosen
 	SkipOpen       = "open"        // a focused tab showed the view (reported by the service worker)
 	SkipSpam       = "spam"        // mail went to Spam or was held
+	SkipFiltered   = "filtered"    // a mail filter took it out of the Inbox
 	SkipOwn        = "own"         // the member's own action
 	SkipOff        = "off"         // the member turned this kind off
 )

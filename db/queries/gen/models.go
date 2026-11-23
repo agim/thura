@@ -606,6 +606,23 @@ type MailDelivery struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
+type MailFilter struct {
+	ID              string    `json:"id"`
+	MailboxID       string    `json:"mailbox_id"`
+	FromContains    string    `json:"from_contains"`
+	ToContains      string    `json:"to_contains"`
+	SubjectContains string    `json:"subject_contains"`
+	HasWords        string    `json:"has_words"`
+	LabelID         *string   `json:"label_id"`
+	SkipInbox       bool      `json:"skip_inbox"`
+	MarkRead        bool      `json:"mark_read"`
+	Star            bool      `json:"star"`
+	Trash           bool      `json:"trash"`
+	Enabled         bool      `json:"enabled"`
+	Position        int32     `json:"position"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
 type MailFilterFeedback struct {
 	ID              string    `json:"id"`
 	WorkspaceID     string    `json:"workspace_id"`
