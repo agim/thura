@@ -99,9 +99,16 @@ window opens. Links outside `/app/` are replaced by `/app/mail`.
 
 ### Permission
 
-Thura never asks on page load. **Turn on notifications on this device** in
-Settings → Notifications asks the browser, in the click handler itself (Safari
-on iPhone and iPad only asks during the tap). The section
+Thura never asks the browser on page load. A member who never chose sees a
+one-time offer under the app navigation ("Get notified on this device about
+new mail, chat messages and reminders", `src/components/NotificationPrompt.tsx`)
+with **Turn on notifications** and **Not now**. It shows only where the
+browser can notify, notifications are not blocked, this device is not
+registered and the member has not turned it off; "Not now" is remembered on
+the device (`thura:push-offer`) and the offer never returns. The browser is
+asked only from that button or from **Turn on notifications on this device**
+in Settings → Notifications, in the click handler itself (Safari on iPhone
+and iPad only asks during the tap). The section
 shows the state: on, off, blocked by the browser (with how to allow it again in
 the site settings), unsupported, or, on iPhone and iPad outside the Home Screen
 app, that Thura must be added to the Home Screen first.

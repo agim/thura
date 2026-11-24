@@ -108,6 +108,35 @@ function recall(workspaceId: string) {
   try { return window.localStorage.getItem(remembered(workspaceId)) } catch { return null }
 }
 
+/** pushChoice is what this browser remembers for a workspace: its endpoint hash (on), 'off', or null (never chosen). */
+export function pushChoice(workspaceId: string) {
+  return recall(workspaceId)
+}
+
+// The offer to turn notifications on (NotificationPrompt) is dismissed once per device.
+const offerKey = 'thura:push-offer'
+export function pushOfferDismissed() {
+  try { return window.localStorage.getItem(offerKey) === 'dismissed' } catch { return true }
+}
+export function dismissPushOffer() {
+  try { window.localStorage.setItem(offerKey, 'dismissed') } catch { /* private mode: it shows again next time */ }
+}
+
+/**
+ * registerPush turns notifications on for this browser in a workspace: the
+ * permission asked in the click (askPermission), the browser's subscription
+ * and the member's device on the server. `saved` is null when the member did
+ * not allow notifications.
+ */
+export async function registerPush<T>(workspaceId: string, publicKey: string, asked: Promise<NotificationPermission>, fresh: boolean, save: (keys: ReturnType<typeof subscriptionKeys> & { label: string }) => Promise<T>) {
+  const result = await subscribe(publicKey, asked, fresh)
+  if (!result.subscription) return { permission: result.permission, saved: null, hash: null }
+  const saved = await save({ ...subscriptionKeys(result.subscription), label: deviceLabel() })
+  const hash = await endpointHash(result.subscription.endpoint)
+  rememberPush(workspaceId, hash)
+  return { permission: result.permission, saved, hash }
+}
+
 /** rememberPush records that this browser has notifications on (its endpoint hash) or turned off ('off') in a workspace. */
 export function rememberPush(workspaceId: string, value: string) {
   try { window.localStorage.setItem(remembered(workspaceId), value) } catch { /* private mode: nothing to remember */ }

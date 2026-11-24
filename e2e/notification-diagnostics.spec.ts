@@ -145,6 +145,54 @@ for (const width of [390, 1440]) {
     await expect(row).toHaveCount(0)
   })
 
+  test(`the workspace offers notifications once and turns them on from the offer at ${width}px`, async ({ page, context }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await context.grantPermissions(['notifications'])
+    await fakePush(page, `${origin}/push/${randomUUID()}`)
+    await signIn(page, '/app/mail', 'Inbox')
+    const offer = page.getByRole('region', { name: 'Turn on notifications', exact: true })
+    await expect(offer).toBeVisible({ timeout: 20000 })
+    await expect(offer).toContainText('Get notified on this device')
+    await expectNoSidewaysScroll(page)
+    // The offer stays while the member moves between apps.
+    await page.getByRole('link', { name: 'Calendar', exact: true }).click()
+    await expect(offer).toBeVisible()
+    await offer.getByRole('button', { name: 'Turn on notifications', exact: true }).click()
+    await expect(page.locator('.app-notice')).toContainText('Notifications are on for this device.')
+    await expect(offer).toHaveCount(0)
+
+    // Settings agrees, and after "Turn off" the offer does not come back.
+    await page.goto('/app/settings/notifications')
+    const state = page.locator('.notification-state')
+    await expect(state).toHaveText('Notifications are on for this device.')
+    await page.getByRole('button', { name: 'Turn off on this device', exact: true }).click()
+    await expect(state).toHaveText('Notifications are off for this device.')
+    await page.goto('/app/mail')
+    await expect(page.getByRole('heading', { name: 'Inbox', exact: true }).first()).toBeVisible()
+    await page.waitForTimeout(1500)
+    await expect(offer).toHaveCount(0)
+  })
+
+  test(`"Not now" dismisses the notification offer for good at ${width}px`, async ({ page, context }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await context.grantPermissions(['notifications'])
+    await fakePush(page, `${origin}/push/${randomUUID()}`)
+    await signIn(page, '/app/mail', 'Inbox')
+    const offer = page.getByRole('region', { name: 'Turn on notifications', exact: true })
+    await expect(offer).toBeVisible({ timeout: 20000 })
+    await offer.getByRole('button', { name: 'Not now', exact: true }).click()
+    await expect(offer).toHaveCount(0)
+    await expect(page.locator('.app-notice')).toHaveText('You can turn notifications on later in Settings → Notifications.')
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'Inbox', exact: true }).first()).toBeVisible()
+    await page.waitForTimeout(1500)
+    await expect(offer).toHaveCount(0)
+    // Settings still offers it: nothing was turned on.
+    await page.goto('/app/settings/notifications')
+    await expect(page.locator('.notification-state')).toHaveText('Notifications are off for this device.')
+    await expect(offer).toHaveCount(0)
+  })
+
   test(`a device test reports delivery and recent notifications say why one was skipped at ${width}px`, async ({ page, context }) => {
     await page.setViewportSize({ width, height: 900 })
     await context.grantPermissions(['notifications'])

@@ -8,7 +8,7 @@ import { userError } from '../lib/errors'
 import { displayDate } from '../lib/display-date'
 import { ago, currentError, kindLabel, lastNotification, logStatus } from '../lib/notification-diagnostics'
 import { onPushChanged } from '../pwa'
-import { askPermission, rememberPush, currentSubscription, deviceLabel, endpointHash, pushPermission, pushSupport, subscribe, subscriptionKeys, type PushPermission } from '../lib/push'
+import { askPermission, rememberPush, currentSubscription, endpointHash, pushPermission, pushSupport, registerPush, type PushPermission } from '../lib/push'
 
 // New mail is a choice of three, stored as mail + mailPeopleOnly.
 type MailChoice = 'all' | 'people' | 'none'
@@ -82,14 +82,10 @@ export function NotificationSettings({ workspaceId }: { workspaceId: string }) {
       const publicKey = settings.data?.publicKey
       if (!publicKey) throw new Error('Notifications are not available on this server.')
       // A device the push service reported gone needs a new address.
-      const result = await subscribe(publicKey, asked, !!removedHere)
+      const result = await registerPush(workspaceId, publicKey, asked, !!removedHere, keys => api.subscribePushDevice({ workspaceId }, keys))
       setPermission(result.permission)
-      if (!result.subscription) return null
-      const saved = await api.subscribePushDevice({ workspaceId }, { ...subscriptionKeys(result.subscription), label: deviceLabel() })
-      const next = await endpointHash(result.subscription.endpoint)
-      rememberPush(workspaceId, next)
-      setHash(next)
-      return saved
+      if (result.hash) setHash(result.hash)
+      return result.saved
     },
     onSuccess: saved => { if (saved) { store(saved); show({ text: 'Notifications are on for this device.' }) } },
   })
